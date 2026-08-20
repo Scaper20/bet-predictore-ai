@@ -38,8 +38,16 @@ export interface LeagueFit {
   homeAdvantage: number;
   /** Dixon-Coles low-score dependency parameter. */
   rho: number;
-  /** Mean goals per team per match across the sample. */
+  /**
+   * Fitted rate for a hypothetical exactly-average matchup, excluding home
+   * advantage. This is NOT the league's mean goal rate: because rates are
+   * exponential in the ratings, the mean of exp(...) across real fixtures
+   * exceeds exp(mean), so this sits below `observedGoalRate`. Used to project
+   * fixtures; never show it to users as "the league average".
+   */
   baseRate: number;
+  /** Weighted mean goals per team per match actually observed in the sample. */
+  observedGoalRate: number;
   matchesUsed: number;
   /** Half-life in days used for recency weighting. */
   halfLifeDays: number;
@@ -136,6 +144,7 @@ export function fitLeague(results: ResultRow[], opts: FitOptions = {}): LeagueFi
       homeAdvantage: 0.25,
       rho: -0.05,
       baseRate: 1.35,
+      observedGoalRate: 1.35,
       matchesUsed: 0,
       halfLifeDays: cfg.halfLifeDays,
       logLikelihood: Number.NEGATIVE_INFINITY,
@@ -276,6 +285,7 @@ export function fitLeague(results: ResultRow[], opts: FitOptions = {}): LeagueFi
     homeAdvantage: homeAdv,
     rho,
     baseRate: Math.exp(intercept),
+    observedGoalRate: observedRate,
     matchesUsed: m,
     halfLifeDays: cfg.halfLifeDays,
     logLikelihood: ll,

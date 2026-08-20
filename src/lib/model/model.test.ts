@@ -379,3 +379,45 @@ describe("data sufficiency gate", () => {
     expect(p.markets.home + p.markets.draw + p.markets.away).toBeCloseTo(1, 9);
   });
 });
+
+describe("reported goal rates", () => {
+  it("reports the observed league rate, not the average-matchup baseline", () => {
+    const rows = simpleSeason();
+    const fit = fitLeague(rows);
+
+    // The observed rate must match the sample it was fitted on.
+    const decay = Math.log(2) / (fit.halfLifeDays * 86_400_000);
+    const now = Date.now();
+    let wSum = 0;
+    let goals = 0;
+    for (const r of rows) {
+      const w = Math.exp(-decay * Math.max(0, now - r.date));
+      wSum += w * 2;
+      goals += w * (r.homeGoals + r.awayGoals);
+    }
+    expect(fit.observedGoalRate).toBeCloseTo(goals / wSum, 9);
+
+    // And it must not be confused with baseRate: rates are exponential in the
+    // ratings, so the average-matchup baseline sits below the observed mean
+    // whenever teams differ from one another at all.
+    expect(fit.baseRate).toBeLessThan(fit.observedGoalRate);
+  });
+
+  it("collapses the two only when every team is identical", () => {
+    // No spread in the ratings means no Jensen gap.
+    const names = ["A", "B", "C", "D"];
+    const rows: ResultRow[] = [];
+    let d = Date.now() - 30 * 86_400_000;
+    for (let rep = 0; rep < 6; rep++) {
+      for (let i = 0; i < names.length; i++) {
+        for (let j = 0; j < names.length; j++) {
+          if (i === j) continue;
+          d += 3_600_000;
+          rows.push(row(names[i], names[j], 1, 1, d));
+        }
+      }
+    }
+    const fit = fitLeague(rows);
+    expect(fit.baseRate).toBeCloseTo(fit.observedGoalRate, 2);
+  });
+});

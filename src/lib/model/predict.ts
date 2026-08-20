@@ -78,7 +78,10 @@ export interface Prediction {
   model: {
     homeAdvantage: number;
     rho: number;
+    /** Fitted average-matchup rate; see LeagueFit.baseRate. */
     baseRate: number;
+    /** Goals per team per match actually observed in the training sample. */
+    observedGoalRate: number;
     matchesUsed: number;
     /** 0-100: how much history backs this particular prediction. */
     dataQuality: number;
@@ -198,6 +201,7 @@ export function buildPrediction(
       homeAdvantage: fit.homeAdvantage,
       rho: fit.rho,
       baseRate: fit.baseRate,
+      observedGoalRate: fit.observedGoalRate,
       matchesUsed: fit.matchesUsed,
       dataQuality,
       uncertainty,

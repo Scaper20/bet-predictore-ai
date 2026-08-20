@@ -1,12 +1,16 @@
 {
-  "name": "bet-predictore-ai",
+  "name": "naijaodds",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "smoke": "tsx scripts/smoke-providers.ts",
+    "smoke:predict": "tsx scripts/smoke-predict.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.120.0",
@@ -27,5 +31,6 @@
     "tsx": "^4.23.12",
     "typescript": "^5",
     "vitest": "^4.1.11"
-  }
+  },
+  "description": "AI-assisted football prediction and betting analysis for the Nigerian market"
 }
