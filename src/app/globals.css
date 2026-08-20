@@ -1,0 +1,148 @@
+@import "tailwindcss";
+
+/* ============================================================
+   Naija Odds — design system
+   Dark, data-dense, neon-green accent (Nigeria green + "money")
+   ============================================================ */
+
+@theme {
+  /* Surfaces */
+  --color-canvas: #060a10;
+  /* Named 'shell' rather than 'base': a --color-base token makes Tailwind
+     generate text-base as a colour utility, which collides with the built-in
+     text-base font-size utility and silently blacks out headings. */
+  --color-shell: #0a1018;
+  --color-surface: #0f1723;
+  --color-surface-2: #141f2e;
+  --color-surface-3: #1b2839;
+  --color-line: #1e2b3d;
+  --color-line-strong: #2b3d55;
+
+  /* Text */
+  --color-ink: #e9f0f8;
+  --color-ink-muted: #8ea3bd;
+  --color-ink-dim: #5b708c;
+
+  /* Brand */
+  --color-brand: #00e585;
+  --color-brand-strong: #00c874;
+  --color-brand-dim: #0a7d4e;
+  --color-brand-ink: #04150d;
+
+  /* Data accents */
+  --color-cyan: #22d3ee;
+  --color-amber: #ffb020;
+  --color-rose: #ff4d6d;
+  --color-violet: #a78bfa;
+
+  /* Fonts */
+  --font-display: var(--font-sora), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-mono-jb), ui-monospace, SFMono-Regular, monospace;
+
+  /* Motion */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@layer base {
+  html {
+    background-color: var(--color-canvas);
+    color: var(--color-ink);
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    font-family: var(--font-sans);
+    font-feature-settings: "cv02", "cv03", "cv04";
+  }
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    letter-spacing: -0.025em;
+    text-wrap: balance;
+  }
+  /* Stat numbers should never jitter while polling */
+  .tnum { font-variant-numeric: tabular-nums; }
+
+  ::selection { background: var(--color-brand); color: var(--color-brand-ink); }
+
+  :focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: var(--color-shell); }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-surface-3);
+    border-radius: 999px;
+    border: 2px solid var(--color-shell);
+  }
+  ::-webkit-scrollbar-thumb:hover { background: var(--color-line-strong); }
+}
+
+@layer utilities {
+  /* Neon glow used on primary CTAs and live indicators */
+  .glow-brand { box-shadow: 0 0 0 1px color-mix(in oklab, var(--color-brand) 40%, transparent), 0 8px 30px -6px color-mix(in oklab, var(--color-brand) 45%, transparent); }
+  .glow-soft  { box-shadow: 0 10px 40px -12px rgb(0 0 0 / 0.8); }
+
+  .text-gradient-brand {
+    background: linear-gradient(100deg, var(--color-brand) 0%, #7dffc4 45%, var(--color-cyan) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Hairline card border that reads well on near-black */
+  .card {
+    background: linear-gradient(180deg, var(--color-surface) 0%, var(--color-shell) 100%);
+    border: 1px solid var(--color-line);
+    border-radius: 1rem;
+  }
+  .card-hover {
+    transition: border-color .2s var(--ease-out-expo), transform .2s var(--ease-out-expo), box-shadow .2s var(--ease-out-expo);
+  }
+  .card-hover:hover {
+    border-color: var(--color-line-strong);
+    transform: translateY(-2px);
+    box-shadow: 0 18px 40px -20px rgb(0 0 0 / 0.9);
+  }
+
+  /* Subtle grid backdrop for hero sections */
+  .bg-grid {
+    background-image:
+      linear-gradient(to right, color-mix(in oklab, var(--color-line) 55%, transparent) 1px, transparent 1px),
+      linear-gradient(to bottom, color-mix(in oklab, var(--color-line) 55%, transparent) 1px, transparent 1px);
+    background-size: 56px 56px;
+  }
+  .mask-fade-b { mask-image: linear-gradient(to bottom, black 0%, black 55%, transparent 100%); }
+  .mask-fade-x { mask-image: linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%); }
+
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { scrollbar-width: none; }
+}
+
+/* Marquee ticker (StatSniper/PickEngine-style repeating banner) */
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.animate-marquee { animation: marquee var(--marquee-duration, 40s) linear infinite; }
+.marquee-paused:hover .animate-marquee { animation-play-state: paused; }
+
+@keyframes pulse-ring {
+  0%   { box-shadow: 0 0 0 0 color-mix(in oklab, var(--color-rose) 70%, transparent); }
+  70%  { box-shadow: 0 0 0 7px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+.live-dot { animation: pulse-ring 1.8s ease-out infinite; }
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: none; }
+}
+.animate-rise { animation: rise .6s var(--ease-out-expo) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-marquee, .live-dot, .animate-rise { animation: none !important; }
+  .card-hover:hover { transform: none; }
+}

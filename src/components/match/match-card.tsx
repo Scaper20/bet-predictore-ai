@@ -1,0 +1,129 @@
+import Link from "next/link";
+import type { Match } from "@/lib/types";
+import type { Prediction } from "@/lib/model/predict";
+import { Badge, LiveDot, ProbabilityBar } from "@/components/ui/primitives";
+import { isLive, kickoffTime, percent, relativeDay, statusLabel } from "@/lib/format";
+import { Crest } from "@/components/ui/crest";
+
+/** Compact fixture row used on the live and fixtures lists. */
+export function MatchCard({ match, prediction }: { match: Match; prediction?: Prediction }) {
+  const live = isLive(match);
+
+  return (
+    <Link
+      href={`/match/${encodeURIComponent(match.id)}`}
+      className="card card-hover block p-4 sm:p-5"
+    >
+      <div className="flex items-center gap-3">
+        <div className="flex min-w-0 items-center gap-2">
+          {match.league.logo ? (
+            <Crest src={match.league.logo} name={match.league.name} size={18} />
+          ) : null}
+          <span className="truncate text-xs font-medium text-ink-muted">{match.league.name}</span>
+        </div>
+
+        <div className="ml-auto flex shrink-0 items-center gap-2">
+          {live ? (
+            <Badge tone="live">
+              <LiveDot />
+              {statusLabel(match)}
+            </Badge>
+          ) : (
+            <span className="tnum text-xs font-medium text-ink-muted">
+              {relativeDay(match.kickoff)} · {kickoffTime(match.kickoff)}
+            </span>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-2.5">
+        <TeamRow
+          team={match.home}
+          score={match.score.home}
+          showScore={live || match.status === "finished"}
+          winning={
+            match.score.home !== null &&
+            match.score.away !== null &&
+            match.score.home > match.score.away
+          }
+        />
+        <TeamRow
+          team={match.away}
+          score={match.score.away}
+          showScore={live || match.status === "finished"}
+          winning={
+            match.score.home !== null &&
+            match.score.away !== null &&
+            match.score.away > match.score.home
+          }
+        />
+      </div>
+
+      {prediction && prediction.sufficiency.publishable && (
+        <div className="mt-4 border-t border-line pt-4">
+          <div className="mb-2.5 flex items-center justify-between gap-2">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-dim">
+              Model read
+            </span>
+            {prediction.topPick && (
+              <Badge tone="brand">{prediction.topPick.label}</Badge>
+            )}
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <Outcome label="1" value={prediction.markets.home} />
+            <Outcome label="X" value={prediction.markets.draw} />
+            <Outcome label="2" value={prediction.markets.away} />
+          </div>
+        </div>
+      )}
+
+      {prediction && !prediction.sufficiency.publishable && (
+        <div className="mt-4 border-t border-line pt-3">
+          <p className="text-[11px] leading-relaxed text-ink-dim">
+            Not enough completed matches in this competition to publish a pick.
+          </p>
+        </div>
+      )}
+    </Link>
+  );
+}
+
+function TeamRow({
+  team,
+  score,
+  showScore,
+  winning,
+}: {
+  team: Match["home"];
+  score: number | null;
+  showScore: boolean;
+  winning: boolean;
+}) {
+  return (
+    <div className="flex items-center gap-3">
+      <Crest src={team.crest} name={team.name} size={26} />
+      <span className={`min-w-0 flex-1 truncate text-sm ${winning ? "font-semibold text-ink" : "text-ink"}`}>
+        {team.name}
+      </span>
+      {showScore && (
+        <span className={`tnum text-base font-bold ${winning ? "text-brand" : "text-ink"}`}>
+          {score ?? 0}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function Outcome({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-lg bg-surface-2 px-2.5 py-2">
+      <div className="flex items-baseline justify-between gap-1">
+        <span className="text-[11px] font-semibold text-ink-dim">{label}</span>
+        <span className="tnum text-xs font-bold text-ink">{percent(value)}</span>
+      </div>
+      <div className="mt-1.5">
+        <ProbabilityBar value={value} tone={value > 0.45 ? "brand" : "neutral"} />
+      </div>
+    </div>
+  );
+}
