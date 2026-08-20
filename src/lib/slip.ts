@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * Bet slip, persisted to localStorage.
  *
@@ -5,8 +7,6 @@
  * components need to agree on, so a module-level store with a subscribe hook
  * is the whole requirement.
  */
-
-"use client";
 
 import { useCallback, useSyncExternalStore } from "react";
 

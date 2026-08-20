@@ -18,6 +18,16 @@ const inflight = new Map<string, Promise<unknown>>();
 /** Stale entries are only evicted on access, plus this periodic sweep cap. */
 const MAX_ENTRIES = 500;
 
+/**
+ * How long to keep serving a stale value after the loader fails.
+ *
+ * Without this, an upstream outage means every single request retries the
+ * failing call: the stale entry is already expired, so it never short-circuits.
+ * Extending its life briefly on failure turns a hammering loop into one retry
+ * per cooldown while still returning real (if slightly old) data.
+ */
+const STALE_COOLDOWN_MS = 15_000;
+
 export async function cached<T>(
   key: string,
   ttlMs: number,
@@ -37,8 +47,12 @@ export async function cached<T>(
       if (store.size > MAX_ENTRIES) sweep();
       return value;
     } catch (err) {
-      // Serve stale data rather than an error page when upstream blips.
-      if (hit) return hit.value;
+      // Serve stale data rather than an error page when upstream blips, and
+      // back off before trying again so a hard-down provider is not hammered.
+      if (hit) {
+        store.set(key, { value: hit.value, expiresAt: Date.now() + STALE_COOLDOWN_MS });
+        return hit.value;
+      }
       throw err;
     } finally {
       inflight.delete(key);
