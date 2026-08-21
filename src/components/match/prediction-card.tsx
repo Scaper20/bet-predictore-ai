@@ -7,6 +7,7 @@ import { Crest } from "@/components/ui/crest";
 /** Richer card for the predictions grid: the model's read, front and centre. */
 export function PredictionCard({ prediction }: { prediction: Prediction }) {
   const { match, markets, topPick, sufficiency, model } = prediction;
+  const homeLeads = markets.home >= markets.away;
 
   return (
     <Link
@@ -25,12 +26,16 @@ export function PredictionCard({ prediction }: { prediction: Prediction }) {
         <div className="flex items-center gap-3">
           <Crest src={match.home.crest} name={match.home.name} size={28} />
           <span className="min-w-0 flex-1 truncate text-sm font-medium">{match.home.name}</span>
-          <span className="tnum text-sm font-bold text-brand">{percent(markets.home)}</span>
+          <span className={`tnum text-sm font-bold ${homeLeads ? "text-brand" : "text-ink-muted"}`}>
+            {percent(markets.home)}
+          </span>
         </div>
         <div className="flex items-center gap-3">
           <Crest src={match.away.crest} name={match.away.name} size={28} />
           <span className="min-w-0 flex-1 truncate text-sm font-medium">{match.away.name}</span>
-          <span className="tnum text-sm font-bold text-ink-muted">{percent(markets.away)}</span>
+          <span className={`tnum text-sm font-bold ${homeLeads ? "text-ink-muted" : "text-brand"}`}>
+            {percent(markets.away)}
+          </span>
         </div>
       </div>
 

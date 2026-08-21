@@ -70,9 +70,17 @@ export function MatchCard({ match, prediction }: { match: Match; prediction?: Pr
             )}
           </div>
           <div className="grid grid-cols-3 gap-2">
-            <Outcome label="1" value={prediction.markets.home} />
-            <Outcome label="X" value={prediction.markets.draw} />
-            <Outcome label="2" value={prediction.markets.away} />
+            {(() => {
+              const { home, draw, away } = prediction.markets;
+              const top = Math.max(home, draw, away);
+              return (
+                <>
+                  <Outcome label="1" value={home} isTop={home === top} />
+                  <Outcome label="X" value={draw} isTop={draw === top} />
+                  <Outcome label="2" value={away} isTop={away === top} />
+                </>
+              );
+            })()}
           </div>
         </div>
       )}
@@ -114,15 +122,17 @@ function TeamRow({
   );
 }
 
-function Outcome({ label, value }: { label: string; value: number }) {
+function Outcome({ label, value, isTop }: { label: string; value: number; isTop: boolean }) {
   return (
-    <div className="rounded-lg bg-surface-2 px-2.5 py-2">
+    <div className={`rounded-lg px-2.5 py-2 ${isTop ? "bg-brand/8" : "bg-surface-2"}`}>
       <div className="flex items-baseline justify-between gap-1">
         <span className="text-[11px] font-semibold text-ink-dim">{label}</span>
-        <span className="tnum text-xs font-bold text-ink">{percent(value)}</span>
+        <span className={`tnum text-xs font-bold ${isTop ? "text-brand" : "text-ink"}`}>
+          {percent(value)}
+        </span>
       </div>
       <div className="mt-1.5">
-        <ProbabilityBar value={value} tone={value > 0.45 ? "brand" : "neutral"} />
+        <ProbabilityBar value={value} tone={isTop ? "brand" : "neutral"} />
       </div>
     </div>
   );

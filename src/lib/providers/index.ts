@@ -193,10 +193,47 @@ export async function getUpcoming(days = 7, leagueCode?: string): Promise<Match[
   });
 }
 
+/**
+ * Single-fixture lookup, with a fallback to the aggregated feeds.
+ *
+ * Every other getter in this file tolerates individual provider failures via
+ * `gather()` and a merge across all three feeds. This one can't merge — a
+ * match id is provider-specific — so a rate limit or transient outage on the
+ * one provider that owns this id used to 404 a fixture the user just clicked
+ * from a list that rendered it fine seconds earlier (that list came from the
+ * merged, multi-provider feed). Falling back to those same cached feeds
+ * recovers exactly that case at near-zero extra cost, since they're normally
+ * already warm.
+ */
 export async function getMatch(id: string): Promise<Match | null> {
+  // Caught here rather than trusted to each adapter: fd/sdb's fetchMatch
+  // already swallow their own errors, but af's doesn't, and the fallback
+  // below must run regardless of which adapter a future change touches.
+  const direct = await fetchDirect(id).catch(() => null);
+  if (direct) return direct;
+  return findInFeeds(id);
+}
+
+async function fetchDirect(id: string): Promise<Match | null> {
   if (id.startsWith("fd:")) return fd.fetchMatch(id);
   if (id.startsWith("af:")) return af.fetchMatch(id);
   if (id.startsWith("sdb:")) return sdb.fetchMatch(id);
+  return null;
+}
+
+async function findInFeeds(id: string): Promise<Match | null> {
+  const today = upcomingDates(1)[0];
+  const yesterday = upcomingDates(1, new Date(Date.now() - 86_400_000))[0];
+  const groups = await gather<Match>([
+    getLive(),
+    getUpcoming(7),
+    getByDate(today),
+    getByDate(yesterday),
+  ]);
+  for (const group of groups) {
+    const match = group.find((m) => m.id === id);
+    if (match) return match;
+  }
   return null;
 }
 

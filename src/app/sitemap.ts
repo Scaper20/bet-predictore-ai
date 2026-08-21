@@ -17,6 +17,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${SITE}/live`, lastModified: now, changeFrequency: "always", priority: 0.8 },
     { url: `${SITE}/fixtures`, lastModified: now, changeFrequency: "hourly", priority: 0.8 },
     { url: `${SITE}/trends`, lastModified: now, changeFrequency: "daily", priority: 0.7 },
+    { url: `${SITE}/track-record`, lastModified: now, changeFrequency: "daily", priority: 0.6 },
     { url: `${SITE}/slip`, lastModified: now, changeFrequency: "monthly", priority: 0.4 },
     { url: `${SITE}/how-it-works`, lastModified: now, changeFrequency: "monthly", priority: 0.6 },
     { url: `${SITE}/responsible-gambling`, lastModified: now, changeFrequency: "monthly", priority: 0.5 },

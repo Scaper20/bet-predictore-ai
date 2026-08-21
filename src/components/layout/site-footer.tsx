@@ -8,6 +8,7 @@ const COLUMNS = [
       { href: "/fixtures", label: "Fixtures" },
       { href: "/predictions", label: "AI Predictions" },
       { href: "/trends", label: "Betting Trends" },
+      { href: "/track-record", label: "Track Record" },
       { href: "/slip", label: "Bet Slip Builder" },
     ],
   },

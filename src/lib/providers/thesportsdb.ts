@@ -321,12 +321,20 @@ export async function fetchStandings(league: LeagueDef, season?: string): Promis
 export async function fetchMatch(rawId: string): Promise<Match | null> {
   const id = rawId.replace(/^sdb:/, "");
   return cached(`sdb:event:${id}`, 30_000, async () => {
-    const data = await getJson<{ events?: SdbEvent[] | null }>(
-      `${BASE}/lookupevent.php?id=${encodeURIComponent(id)}`,
-      { provider: "thesportsdb" },
-    );
-    const first = data.events?.[0];
-    return first ? toMatch(first) : null;
+    try {
+      const data = await getJson<{ events?: SdbEvent[] | null }>(
+        `${BASE}/lookupevent.php?id=${encodeURIComponent(id)}`,
+        { provider: "thesportsdb" },
+      );
+      const first = data.events?.[0];
+      return first ? toMatch(first) : null;
+    } catch {
+      // The shared public test key rate-limits hard under real traffic — a
+      // failure here must not 404 a fixture the user just saw rendered in a
+      // list. getMatch() in providers/index.ts falls back to the already
+      // cached, multi-provider live/upcoming feeds when this comes back null.
+      return null;
+    }
   });
 }
 
