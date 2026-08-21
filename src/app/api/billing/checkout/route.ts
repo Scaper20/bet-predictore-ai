@@ -6,10 +6,9 @@ import { initializeTransaction } from "@/lib/paystack/client";
 import { planCodeFor } from "@/lib/paystack/plan-codes";
 import { nairaToKobo } from "@/lib/paystack/money";
 import { planById } from "@/lib/pricing";
+import { SITE_URL as SITE } from "@/lib/site-url";
 
 type Cycle = "monthly" | "yearly";
-
-const SITE = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://betrix.ai").replace(/\/$/, "");
 
 export async function POST(request: Request) {
   const supabase = await supabaseServer();

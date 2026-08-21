@@ -1,7 +1,6 @@
 import type { MetadataRoute } from "next";
 import { LEAGUES } from "@/lib/leagues";
-
-const SITE = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "https://betrix.ai";
+import { SITE_URL as SITE } from "@/lib/site-url";
 
 /**
  * Static routes plus a landing page per league.

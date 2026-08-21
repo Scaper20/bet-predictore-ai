@@ -1,12 +1,11 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Sora, JetBrains_Mono } from "next/font/google";
+import { SITE_URL as SITE } from "@/lib/site-url";
 import "./globals.css";
 
 const sora = Sora({ variable: "--font-sora", subsets: ["latin"], display: "swap" });
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"], display: "swap" });
 const mono = JetBrains_Mono({ variable: "--font-mono-jb", subsets: ["latin"], display: "swap" });
-
-const SITE = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://betrix.ai").replace(/\/$/, "");
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE),
