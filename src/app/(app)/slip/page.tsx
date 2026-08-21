@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { PageHeader } from "@/components/ui/page-header";
 import { SlipView } from "@/components/match/slip-view";
+import { QuickSlip } from "@/components/slip/quick-slip";
 
 export const metadata: Metadata = {
   title: "Bet Slip Builder",
@@ -19,6 +20,9 @@ export default function SlipPage() {
       />
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <SlipView />
+        <div className="mt-5">
+          <QuickSlip />
+        </div>
       </div>
     </>
   );

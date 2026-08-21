@@ -5,7 +5,8 @@ import { LeagueFilter } from "@/components/match/league-filter";
 import { PredictionCard } from "@/components/match/prediction-card";
 import { CoverageNotice } from "@/components/ui/coverage-notice";
 import { Badge, ButtonLink, EmptyState } from "@/components/ui/primitives";
-import { predictBatch, upcomingFeed } from "@/lib/service";
+import { BestBetOfDay } from "@/components/landing/best-bet-of-day";
+import { predictBatch, upcomingFeed, bestBetOfDay } from "@/lib/service";
 import { leagueByCode } from "@/lib/leagues";
 
 export const metadata: Metadata = {
@@ -27,6 +28,9 @@ export default async function PredictionsPage({
 
   const feed = await upcomingFeed(5, def ? league : undefined).catch(() => null);
   const predictions = feed ? await predictBatch(feed.matches, 18).catch(() => []) : [];
+  // Slate-wide, so only pinned on the unfiltered view — under a specific
+  // league filter it could point somewhere the visitor didn't ask to see.
+  const bestBet = def ? null : await bestBetOfDay().catch(() => null);
 
   const publishable = predictions.filter((p) => p.sufficiency.publishable);
   const withheld = predictions.filter((p) => !p.sufficiency.publishable);
@@ -45,6 +49,8 @@ export default async function PredictionsPage({
         </Suspense>
 
         {feed && <CoverageNotice coverage={feed.coverage} />}
+
+        {bestBet?.topPick && <BestBetOfDay prediction={bestBet} />}
 
         {predictions.length === 0 ? (
           <EmptyState

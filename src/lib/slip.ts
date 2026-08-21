@@ -23,7 +23,9 @@ export interface SlipLeg {
   bookmakerOdds?: number;
 }
 
-const KEY = "naijaodds.slip.v1";
+const KEY = "betrix.slip.v1";
+/** Pre-rebrand key — read once as a fallback so existing users don't lose a live slip. */
+const LEGACY_KEY = "naijaodds.slip.v1";
 
 let legs: SlipLeg[] = [];
 let hydrated = false;
@@ -37,11 +39,12 @@ function hydrate() {
   if (hydrated || typeof window === "undefined") return;
   hydrated = true;
   try {
-    const raw = window.localStorage.getItem(KEY);
+    const raw = window.localStorage.getItem(KEY) ?? window.localStorage.getItem(LEGACY_KEY);
     if (raw) {
       const parsed: unknown = JSON.parse(raw);
       if (Array.isArray(parsed)) legs = parsed as SlipLeg[];
     }
+    window.localStorage.removeItem(LEGACY_KEY);
   } catch {
     // Corrupted or unavailable storage should never break the page.
     legs = [];

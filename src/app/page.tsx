@@ -3,9 +3,10 @@ import { SiteFooter } from "@/components/layout/site-footer";
 import { Hero } from "@/components/landing/hero";
 import { Marquee } from "@/components/landing/marquee";
 import { Faq, Features, FinalCta, HowItWorks, Leagues, Pricing } from "@/components/landing/sections";
+import { BestBetOfDay } from "@/components/landing/best-bet-of-day";
 import { MatchCard } from "@/components/match/match-card";
 import { SectionHeading, ButtonLink, EmptyState } from "@/components/ui/primitives";
-import { liveFeed, upcomingFeed, predictBatch } from "@/lib/service";
+import { liveFeed, upcomingFeed, predictBatch, bestBetOfDay } from "@/lib/service";
 import type { Match } from "@/lib/types";
 
 /*
@@ -17,9 +18,10 @@ export const revalidate = 60;
 
 export default async function HomePage() {
   // Never let a provider outage take down the marketing page.
-  const [live, upcoming] = await Promise.all([
+  const [live, upcoming, bestBet] = await Promise.all([
     liveFeed().catch(() => null),
     upcomingFeed(3).catch(() => null),
+    bestBetOfDay().catch(() => null),
   ]);
 
   const liveMatches = live?.matches ?? [];
@@ -72,6 +74,11 @@ export default async function HomePage() {
           ]}
         />
 
+        {bestBet?.topPick && (
+          <div className="mx-auto max-w-7xl px-4 pt-12 sm:px-6 lg:px-8">
+            <BestBetOfDay prediction={bestBet} />
+          </div>
+        )}
         <TodaysPicks previews={previews} />
         <Features />
         <HowItWorks />

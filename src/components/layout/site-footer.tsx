@@ -37,13 +37,10 @@ export function SiteFooter() {
         <div className="grid gap-10 md:grid-cols-[1.4fr_repeat(3,1fr)]">
           <div>
             <div className="flex items-center gap-2.5">
-              <span className="grid size-8 place-items-center rounded-lg bg-brand text-brand-ink">
-                <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <path d="M3 17l5-6 4 4 6-8" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </span>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/brand/icon-green-96.png" alt="" width={32} height={32} className="size-8 rounded-lg" aria-hidden />
               <span className="font-display text-lg font-bold">
-                Naija<span className="text-brand">Odds</span>
+                Betri<span className="text-brand">X</span>
               </span>
             </div>
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-ink-muted">
@@ -91,7 +88,7 @@ export function SiteFooter() {
         </div>
 
         <div className="mt-8 flex flex-col gap-3 border-t border-line pt-8 text-xs text-ink-dim sm:flex-row sm:items-center sm:justify-between">
-          <p>© {new Date().getFullYear()} NaijaOdds. Built for Nigeria, made for Africa.</p>
+          <p>© {new Date().getFullYear()} BetriX. Built for Nigeria, made for Africa.</p>
           <p>
             Match data from football-data.org, API-Football and TheSportsDB. Not affiliated with
             any bookmaker.

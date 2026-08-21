@@ -151,6 +151,46 @@ export function CorrectScorePanel({ prediction }: { prediction: Prediction }) {
   );
 }
 
+export function AsianHandicapPanel({ prediction }: { prediction: Prediction }) {
+  const { asianHandicap: lines, match } = prediction;
+  // The full ±2 range is mostly academic at the extremes — the tradeable
+  // range punters actually use is the middle of the table.
+  const core = lines.filter((l) => Math.abs(l.line) <= 1.5);
+
+  return (
+    <Panel title="Asian handicap" hint={`${match.home.shortName} line`}>
+      <div className="space-y-3">
+        {core.map((l) => (
+          <div key={l.line} className="grid grid-cols-[3.5rem_1fr_1fr] items-center gap-3">
+            <span className="tnum text-xs font-semibold text-ink-muted">
+              {l.line === 0 ? "0" : l.line > 0 ? `+${l.line}` : l.line}
+            </span>
+            <BarCell label={match.home.shortName} value={l.home} />
+            <BarCell label={match.away.shortName} value={l.away} />
+          </div>
+        ))}
+      </div>
+      <Footnote>
+        Line is applied to {match.home.shortName}. A negative line means they must win by more
+        than that margin to cover; a positive line gives them a head start. Whole lines (0, ±1) can
+        push — your stake is refunded if the match lands exactly on the line.
+      </Footnote>
+    </Panel>
+  );
+}
+
+function BarCell({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="min-w-0">
+      <div className="mb-1 flex items-baseline justify-between gap-2">
+        <span className="truncate text-[11px] text-ink-dim">{label}</span>
+        <span className="tnum text-xs font-semibold">{percent(value)}</span>
+      </div>
+      <ProbabilityBar value={value} tone={value > 0.5 ? "brand" : "neutral"} />
+    </div>
+  );
+}
+
 export function FormPanel({ prediction }: { prediction: Prediction }) {
   const { form, match } = prediction;
   const sides = [

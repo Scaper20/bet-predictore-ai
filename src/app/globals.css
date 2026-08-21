@@ -1,36 +1,49 @@
 @import "tailwindcss";
 
 /* ============================================================
-   Naija Odds — design system
-   Dark, data-dense, neon-green accent (Nigeria green + "money")
+   BetriX — design system
+   Dark-first, data-dense, emerald accent + gold for premium tiers.
+
+   Tokens live as CSS custom properties (Tailwind v4 @theme), so every
+   `bg-brand` / `text-ink` / etc. utility resolves through a variable rather
+   than a literal — the light-mode override block below just redefines the
+   variables and every utility in the app repaints for free.
    ============================================================ */
 
 @theme {
-  /* Surfaces */
-  --color-canvas: #060a10;
+  /* Surfaces (dark, default) */
+  --color-canvas: #05080d;
   /* Named 'shell' rather than 'base': a --color-base token makes Tailwind
      generate text-base as a colour utility, which collides with the built-in
      text-base font-size utility and silently blacks out headings. */
-  --color-shell: #0a1018;
-  --color-surface: #0f1723;
-  --color-surface-2: #141f2e;
-  --color-surface-3: #1b2839;
-  --color-line: #1e2b3d;
-  --color-line-strong: #2b3d55;
+  --color-shell: #0a0f16;
+  --color-surface: #0e1520;
+  --color-surface-2: #131c29;
+  --color-surface-3: #1a2534;
+  --color-line: #1d2838;
+  --color-line-strong: #2c3a4e;
 
   /* Text */
-  --color-ink: #e9f0f8;
-  --color-ink-muted: #8ea3bd;
-  --color-ink-dim: #5b708c;
+  --color-ink: #eef2f7;
+  --color-ink-muted: #8d9db2;
+  --color-ink-dim: #5a6b81;
 
-  /* Brand */
-  --color-brand: #00e585;
-  --color-brand-strong: #00c874;
-  --color-brand-dim: #0a7d4e;
-  --color-brand-ink: #04150d;
+  /* Brand — sampled directly from the logo files (brand logos/*.png):
+     green field #00F48E, navy mark #2A4352, teal wedge #22AFA7. */
+  --color-brand: #00f48e;
+  --color-brand-strong: #00d680;
+  --color-brand-dim: #086b48;
+  /* Navy, not near-black — matches how the logo itself renders text on green. */
+  --color-brand-ink: #2a4352;
 
-  /* Data accents */
-  --color-cyan: #22d3ee;
+  /* Premium accent — VIP tier, upsell badges, "best bet" highlights */
+  --color-gold: #e8b54b;
+  --color-gold-strong: #d1a13a;
+  --color-gold-dim: #7a5c1e;
+  --color-gold-ink: #1a1200;
+
+  /* Data accents. "cyan" is the logo's own teal wedge colour, not a generic cyan. */
+  --color-cyan: #22afa7;
   --color-amber: #ffb020;
   --color-rose: #ff4d6d;
   --color-violet: #a78bfa;
@@ -42,6 +55,34 @@
 
   /* Motion */
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Light mode — opt-in via <html data-theme="light">, set server-side in
+   layout.tsx from the `theme` cookie so there is no flash on load. Brand
+   green is darkened a step so brand-on-white text still clears AA contrast;
+   --color-ink uses the logo's exact navy, matching its white-bg variant. */
+:root[data-theme="light"] {
+  --color-canvas: #f6f8fb;
+  --color-shell: #ffffff;
+  --color-surface: #ffffff;
+  --color-surface-2: #f1f4f9;
+  --color-surface-3: #e6ebf3;
+  --color-line: #e2e8f1;
+  --color-line-strong: #c9d3e3;
+
+  --color-ink: #2a4352;
+  --color-ink-muted: #4c5f70;
+  --color-ink-dim: #7c8fa2;
+
+  --color-brand: #049c6b;
+  --color-brand-strong: #038a5e;
+  --color-brand-dim: #086b47;
+  --color-brand-ink: #2a4352;
+
+  --color-gold: #b8862e;
+  --color-gold-strong: #9c7126;
+  --color-gold-dim: #6b4f1c;
+  --color-gold-ink: #1a1200;
 }
 
 @layer base {

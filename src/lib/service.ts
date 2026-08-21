@@ -142,6 +142,29 @@ export async function trends(days = 3): Promise<TrendSnapshot> {
   });
 }
 
+/**
+ * The single strongest publishable pick across the near-term slate.
+ *
+ * Public, free, no login — a deliberate growth/trust hook: one real,
+ * shareable headline pick out in the open, while the rest of the slate's
+ * depth (value detection, Kelly sizing, Asian handicap) stays behind the
+ * paid gates. Cached slate-wide (not per-user, so this is a normal fit for
+ * the shared provider cache, unlike entitlement reads).
+ */
+export async function bestBetOfDay(): Promise<Prediction | null> {
+  return cached("best-bet-of-day", 30 * 60_000, async () => {
+    const { matches } = await upcomingFeed(2);
+    const predictions = await predictBatch(matches, 30);
+    const candidates = predictions.filter((p) => p.sufficiency.publishable && p.topPick);
+    if (candidates.length === 0) return null;
+
+    const ranked = [...candidates].sort(
+      (a, b) => (b.topPick?.confidence ?? 0) - (a.topPick?.confidence ?? 0),
+    );
+    return ranked[0];
+  });
+}
+
 export function systemStatus() {
   return {
     providers: providerHealth(),

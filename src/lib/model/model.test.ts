@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { poissonPmf, scoreMatrix, deriveMarkets, tau, MAX_GOALS } from "./poisson";
+import { poissonPmf, scoreMatrix, deriveMarkets, deriveAsianHandicap, tau, MAX_GOALS } from "./poisson";
 import { fitLeague, expectedRates, normaliseKey } from "./fit";
 import { assessSufficiency, buildPrediction } from "./predict";
 import type { ResultRow } from "@/lib/types";
@@ -91,6 +91,55 @@ describe("markets", () => {
   it("expected goals are carried through", () => {
     expect(m.expectedGoals.home).toBeCloseTo(1.7, 9);
     expect(m.expectedGoals.total).toBeCloseTo(2.8, 9);
+  });
+});
+
+describe("asian handicap", () => {
+  const grid = scoreMatrix(1.7, 1.1, -0.05);
+  const lines = deriveAsianHandicap(grid);
+
+  it("home+away+push sums to 1 at every line", () => {
+    for (const l of lines) {
+      expect(l.home + l.away + l.push).toBeCloseTo(1, 9);
+    }
+  });
+
+  it("half lines never push", () => {
+    for (const l of lines) {
+      if (!Number.isInteger(l.line)) expect(l.push).toBe(0);
+    }
+  });
+
+  it("home covering a more generous line is at least as likely as a stricter one", () => {
+    const byLine = new Map(lines.map((l) => [l.line, l]));
+    // Home +2 (line=+2) covers in strictly more scorelines than Home -1 (line=-1).
+    expect(byLine.get(2)!.home).toBeGreaterThan(byLine.get(-1)!.home);
+  });
+
+  // Hand-computed against a small fixed grid so the split itself, not just
+  // its invariants, is checked against known values.
+  it("matches a hand-computed split on a known grid", () => {
+    const fixed = [
+      [0.1, 0.05, 0.05],
+      [0.1, 0.2, 0.1],
+      [0.05, 0.1, 0.25],
+    ];
+    const [zero, half, minusHalf] = deriveAsianHandicap(fixed, [0, 0.5, -0.5]);
+
+    // line 0: home wins x>y, away wins x<y, push x=y.
+    expect(zero.home).toBeCloseTo(0.25, 9); // (1,0)+(2,0)+(2,1)
+    expect(zero.away).toBeCloseTo(0.2, 9); // (0,1)+(0,2)+(1,2)
+    expect(zero.push).toBeCloseTo(0.55, 9); // (0,0)+(1,1)+(2,2)
+
+    // line +0.5: home wins x>=y (push mass from line 0 moves to home), no push.
+    expect(half.home).toBeCloseTo(0.8, 9);
+    expect(half.away).toBeCloseTo(0.2, 9);
+    expect(half.push).toBe(0);
+
+    // line -0.5: away wins x<=y (push mass from line 0 moves to away), no push.
+    expect(minusHalf.home).toBeCloseTo(0.25, 9);
+    expect(minusHalf.away).toBeCloseTo(0.75, 9);
+    expect(minusHalf.push).toBe(0);
   });
 });
 

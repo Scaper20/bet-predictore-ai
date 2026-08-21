@@ -155,6 +155,52 @@ export function deriveMarkets(grid: number[][], lambda: number, mu: number): Mar
   };
 }
 
+/**
+ * Asian Handicap lines, home team's perspective. Whole lines (-1, 0, 1) can
+ * push (refund); half lines (-1.5, -0.5, 0.5, 1.5) never can, since a goal
+ * difference is always an integer. Quarter lines (-0.25, 0.75, ...) — split
+ * stake across two adjacent lines — are a v2 extension, not implemented here.
+ */
+export const AH_LINES = [-2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2] as const;
+
+export interface AsianHandicapLine {
+  /** Applied to the home team: -1 means home must win by 2+ to cover. */
+  line: number;
+  /** P(home covers this line). */
+  home: number;
+  /** P(away covers the mirror bet, e.g. "away +1" when line is -1). */
+  away: number;
+  /** P(push/refund) — 0 for half lines, since x-y is always an integer. */
+  push: number;
+}
+
+export function deriveAsianHandicap(
+  grid: number[][],
+  lines: readonly number[] = AH_LINES,
+): AsianHandicapLine[] {
+  const n = grid.length;
+
+  return lines.map((line) => {
+    let home = 0;
+    let away = 0;
+    let push = 0;
+
+    for (let x = 0; x < n; x++) {
+      for (let y = 0; y < n; y++) {
+        const p = grid[x][y];
+        if (p <= 0) continue;
+
+        const margin = x - y + line;
+        if (margin > 0) home += p;
+        else if (margin < 0) away += p;
+        else push += p;
+      }
+    }
+
+    return { line, home, away, push };
+  });
+}
+
 /** Shannon entropy of the 1X2 distribution, normalised to 0..1. */
 export function outcomeEntropy(home: number, draw: number, away: number): number {
   const ps = [home, draw, away].filter((p) => p > 0);

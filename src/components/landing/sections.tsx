@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Badge, ButtonLink, SectionHeading } from "@/components/ui/primitives";
 import { LEAGUES } from "@/lib/leagues";
 import { naira } from "@/lib/format";
+import { PLANS } from "@/lib/pricing";
 
 /* ---------------------------------------------------------------- Features */
 
@@ -157,41 +158,12 @@ export function Leagues() {
 
 /* ----------------------------------------------------------------- Pricing */
 
-const PLANS = [
-  {
-    name: "Free",
-    price: 0,
-    cadence: "forever",
-    description: "Everything you need to stop betting blind.",
-    features: [
-      "Live scores across every tracked league",
-      "Fixtures up to 14 days ahead",
-      "Full 1X2, over/under and BTTS probabilities",
-      "Model transparency: sample size and data quality",
-      "Bet slip builder with true combined odds",
-    ],
-    cta: "Start free",
-    href: "/predictions",
-    highlighted: false,
-  },
-  {
-    name: "Pro",
-    price: 3500,
-    cadence: "per month",
-    description: "For bettors who stake often enough to care about edge.",
-    features: [
-      "Everything in Free",
-      "Value detection against your bookmaker's odds",
-      "Kelly staking guidance, capped and sane",
-      "Correct-score and Asian-handicap breakdowns",
-      "AI match briefings written from the model output",
-      "Early access to new markets",
-    ],
-    cta: "Go Pro",
-    href: "/predictions",
-    highlighted: true,
-  },
-];
+const CTA: Record<string, string> = {
+  free: "Start free",
+  pass: "Get this weekend",
+  pro: "Go Pro",
+  vip: "Go VIP",
+};
 
 export function Pricing() {
   return (
@@ -200,52 +172,51 @@ export function Pricing() {
         <SectionHeading
           eyebrow="Pricing"
           title="Priced for Nigeria"
-          description="Less than a single losing accumulator. Cancel whenever you like."
+          description="From a single matchday to a full season. Cancel whenever you like."
           align="center"
         />
-        <div className="mx-auto mt-12 grid max-w-4xl gap-6 md:grid-cols-2">
-          {PLANS.map((p) => (
-            <div
-              key={p.name}
-              className={`card relative flex flex-col p-7 ${
-                p.highlighted ? "border-brand/40 glow-brand" : ""
-              }`}
-            >
-              {p.highlighted && (
-                <Badge tone="brand" className="absolute -top-3 left-7">
-                  Most popular
-                </Badge>
-              )}
-              <h3 className="text-lg font-semibold">{p.name}</h3>
-              <p className="mt-1 text-sm text-ink-muted">{p.description}</p>
-              <div className="mt-5 flex items-baseline gap-2">
-                <span className="font-display text-4xl font-extrabold">
-                  {p.price === 0 ? "Free" : naira(p.price)}
-                </span>
-                <span className="text-sm text-ink-dim">{p.cadence}</span>
-              </div>
-              <ul className="mt-6 flex-1 space-y-3">
-                {p.features.map((f) => (
-                  <li key={f} className="flex gap-2.5 text-sm text-ink-muted">
-                    <span className="mt-0.5 text-brand" aria-hidden>✓</span>
-                    <span>{f}</span>
-                  </li>
-                ))}
-              </ul>
-              <ButtonLink
-                href={p.href}
-                variant={p.highlighted ? "primary" : "secondary"}
-                className="mt-7 w-full"
+        <div className="mx-auto mt-12 grid max-w-6xl gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {PLANS.map((p) => {
+            const price = p.price.oneOff ?? p.price.monthly;
+            return (
+              <div
+                key={p.id}
+                className={`card relative flex flex-col p-7 ${
+                  p.highlighted ? "border-brand/40 glow-brand" : ""
+                }`}
               >
-                {p.cta}
-              </ButtonLink>
-            </div>
-          ))}
+                {p.highlighted && (
+                  <Badge tone="brand" className="absolute -top-3 left-7">
+                    Most popular
+                  </Badge>
+                )}
+                <h3 className="text-lg font-semibold">{p.name}</h3>
+                <p className="mt-1 text-sm text-ink-muted">{p.description}</p>
+                <div className="mt-5 flex items-baseline gap-2">
+                  <span className="font-display text-4xl font-extrabold">
+                    {!price ? "Free" : naira(price)}
+                  </span>
+                  <span className="text-sm text-ink-dim">{p.cadence}</span>
+                </div>
+                <ul className="mt-6 flex-1 space-y-3">
+                  {p.features.map((f) => (
+                    <li key={f} className="flex gap-2.5 text-sm text-ink-muted">
+                      <span className="mt-0.5 text-brand" aria-hidden>✓</span>
+                      <span>{f}</span>
+                    </li>
+                  ))}
+                </ul>
+                <ButtonLink
+                  href={p.id === "free" ? "/predictions" : `/account/billing?plan=${p.id}`}
+                  variant={p.highlighted ? "primary" : "secondary"}
+                  className="mt-7 w-full"
+                >
+                  {CTA[p.id]}
+                </ButtonLink>
+              </div>
+            );
+          })}
         </div>
-        <p className="mt-8 text-center text-xs text-ink-dim">
-          Pro billing is not wired to a payment processor in this build — the free tier is fully
-          functional today.
-        </p>
       </div>
     </section>
   );

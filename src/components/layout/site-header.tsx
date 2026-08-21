@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { ButtonLink } from "@/components/ui/primitives";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
 
 const NAV = [
   { href: "/live", label: "Live" },
@@ -23,7 +24,7 @@ export function SiteHeader() {
         <Link href="/" className="flex items-center gap-2.5" onClick={() => setOpen(false)}>
           <Logo />
           <span className="font-display text-lg font-bold tracking-tight">
-            Naija<span className="text-brand">Odds</span>
+            Betri<span className="text-brand">X</span>
           </span>
         </Link>
 
@@ -44,21 +45,27 @@ export function SiteHeader() {
           })}
         </nav>
 
-        <div className="ml-auto hidden items-center gap-3 md:flex">
+        <div className="ml-auto hidden items-center gap-2 md:flex">
+          <AccountLink />
+          <ThemeToggle />
           <ButtonLink href="/predictions" variant="primary" className="px-4 py-2">
             Get Today&apos;s Picks
           </ButtonLink>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setOpen((v) => !v)}
-          className="ml-auto grid size-10 place-items-center rounded-lg text-ink-muted hover:bg-surface-2 md:hidden"
-          aria-label={open ? "Close menu" : "Open menu"}
-          aria-expanded={open}
-        >
-          <span className="text-xl leading-none">{open ? "✕" : "☰"}</span>
-        </button>
+        <div className="ml-auto flex items-center gap-1 md:hidden">
+          <AccountLink />
+          <ThemeToggle />
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            className="grid size-10 place-items-center rounded-lg text-ink-muted hover:bg-surface-2"
+            aria-label={open ? "Close menu" : "Open menu"}
+            aria-expanded={open}
+          >
+            <span className="text-xl leading-none">{open ? "✕" : "☰"}</span>
+          </button>
+        </div>
       </div>
 
       {open && (
@@ -82,12 +89,25 @@ export function SiteHeader() {
   );
 }
 
+function AccountLink() {
+  return (
+    <Link
+      href="/account"
+      className="grid size-10 place-items-center rounded-lg text-ink-muted transition-colors hover:bg-surface-2 hover:text-ink"
+      aria-label="Account"
+      title="Account"
+    >
+      <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2">
+        <circle cx="12" cy="8" r="3.5" />
+        <path strokeLinecap="round" d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6" />
+      </svg>
+    </Link>
+  );
+}
+
 function Logo() {
   return (
-    <span className="grid size-8 place-items-center rounded-lg bg-brand text-brand-ink" aria-hidden>
-      <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2.5">
-        <path d="M3 17l5-6 4 4 6-8" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    </span>
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src="/brand/icon-green-96.png" alt="" width={32} height={32} className="size-8 rounded-lg" aria-hidden />
   );
 }

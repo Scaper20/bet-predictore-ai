@@ -57,7 +57,7 @@ export default function ResponsibleGamblingPage() {
             </span>
             <p className="text-sm leading-relaxed text-ink">
               Sports betting in Nigeria is legal and regulated, and restricted to adults aged 18 and
-              over. NaijaOdds does not accept bets or hold funds — it is an analytics product.
+              over. BetriX does not accept bets or hold funds — it is an analytics product.
             </p>
           </div>
         </div>

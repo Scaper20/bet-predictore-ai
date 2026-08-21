@@ -5,7 +5,7 @@ import { ButtonLink } from "@/components/ui/primitives";
 export const metadata: Metadata = {
   title: "How The Model Works",
   description:
-    "The statistics behind NaijaOdds: a Dixon-Coles bivariate Poisson model fitted by weighted " +
+    "The statistics behind BetriX: a Dixon-Coles bivariate Poisson model fitted by weighted " +
     "maximum likelihood on real completed matches.",
 };
 

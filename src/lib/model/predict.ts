@@ -11,7 +11,8 @@
 import type { Match, ResultRow } from "@/lib/types";
 import { leagueByCode, type LeagueDef } from "@/lib/leagues";
 import {
-  deriveMarkets, outcomeEntropy, scoreMatrix, type MarketProbabilities,
+  AH_LINES, deriveAsianHandicap, deriveMarkets, outcomeEntropy, scoreMatrix,
+  type AsianHandicapLine, type MarketProbabilities,
 } from "./poisson";
 import { expectedRates, fitLeague, normaliseKey, type LeagueFit, type TeamRating } from "./fit";
 import { fairOdds } from "./odds";
@@ -54,7 +55,13 @@ export interface Pick {
   /** Human label for the selection. */
   label: string;
   /** Market group for grouping in the UI. */
-  group: "Match Result" | "Goals" | "Both Teams To Score" | "Double Chance" | "Correct Score";
+  group:
+    | "Match Result"
+    | "Goals"
+    | "Both Teams To Score"
+    | "Double Chance"
+    | "Correct Score"
+    | "Asian Handicap";
   probability: number;
   /** Model's own fair price. */
   fairOdds: number;
@@ -66,6 +73,8 @@ export interface Prediction {
   match: Match;
   league: LeagueDef | null;
   markets: MarketProbabilities;
+  /** Every tradeable line; see poisson.ts's AsianHandicapLine for the push/mirror semantics. */
+  asianHandicap: AsianHandicapLine[];
   /** Every market as a ranked list of selections. */
   picks: Pick[];
   /** The single strongest selection, or null when the data cannot support one. */
@@ -169,6 +178,7 @@ export function buildPrediction(
 
   const grid = scoreMatrix(lambda, mu, fit.rho);
   const markets = deriveMarkets(grid, lambda, mu);
+  const asianHandicap = deriveAsianHandicap(grid);
 
   const form = {
     home: teamForm(results, match.home.name),
@@ -179,7 +189,7 @@ export function buildPrediction(
   const dataQuality = scoreDataQuality(fit, homeRating, awayRating);
   const uncertainty = outcomeEntropy(markets.home, markets.draw, markets.away);
 
-  const picks = rankPicks(markets, dataQuality, uncertainty);
+  const picks = rankPicks(markets, asianHandicap, dataQuality, uncertainty);
   const sufficiency = assessSufficiency(
     fit.matchesUsed,
     homeRating?.played ?? 0,
@@ -190,6 +200,7 @@ export function buildPrediction(
     match,
     league,
     markets,
+    asianHandicap,
     picks,
     // A pick is only surfaced when the history behind it justifies one.
     topPick: sufficiency.publishable ? picks[0] ?? null : null,
@@ -237,7 +248,12 @@ function scoreDataQuality(
   return clampPct(100 * (0.4 * leagueScore + 0.3 * homeScore + 0.3 * awayScore));
 }
 
-function rankPicks(m: MarketProbabilities, dataQuality: number, uncertainty: number): Pick[] {
+function rankPicks(
+  m: MarketProbabilities,
+  ah: AsianHandicapLine[],
+  dataQuality: number,
+  uncertainty: number,
+): Pick[] {
   const mk = (
     market: string,
     label: string,
@@ -274,6 +290,11 @@ function rankPicks(m: MarketProbabilities, dataQuality: number, uncertainty: num
     );
   }
 
+  for (const line of ah) {
+    picks.push(mk(`ah:home:${line.line}`, `Home ${formatLine(line.line)}`, "Asian Handicap", line.home));
+    picks.push(mk(`ah:away:${-line.line}`, `Away ${formatLine(-line.line)}`, "Asian Handicap", line.away));
+  }
+
   /*
    * Ranking deliberately does not just sort by probability: "Over 0.5 goals" is
    * ~95% likely in every match and would win every time while being worthless
@@ -299,12 +320,25 @@ const BASELINE: Record<string, number> = {
 };
 
 function pickScore(p: Pick): number {
+  // Handicap lines are constructed to sit near 50/50 by design (that's the
+  // point of a handicap), so "edge over a baseline" isn't a meaningful
+  // concept the way it is for 1X2/O-U — a line just shy of 50/50 isn't a
+  // stronger read than one further off it. Kept out of the headline-pick
+  // race entirely; the Asian Handicap panel reads prediction.asianHandicap
+  // directly rather than relying on ranking here.
+  if (p.group === "Asian Handicap") return -1;
+
   const baseline = BASELINE[p.market] ?? (p.group === "Correct Score" ? 0.09 : 0.5);
   // Edge over baseline, weighted by how confidently the model holds it.
   const edge = p.probability - baseline;
   // Very long shots are excluded from the headline pick however big the edge.
   if (p.probability < 0.35) return edge * 0.15;
   return edge * (0.6 + 0.4 * (p.probability - 0.35));
+}
+
+function formatLine(n: number): string {
+  if (n === 0) return "0";
+  return n > 0 ? `+${n}` : String(n);
 }
 
 export function teamForm(results: ResultRow[], teamName: string, limit = 6): TeamForm {
