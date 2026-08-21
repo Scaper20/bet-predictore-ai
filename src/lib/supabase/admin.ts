@@ -16,6 +16,14 @@ const secretKey = process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_SERVIC
  * predictions-log/settlement crons). Never call this from a Server Action
  * or Route Handler that's acting on the current signed-in user's session —
  * use `supabaseServer()` for that so RLS still applies.
+ *
+ * One narrow, deliberate exception: `deleteAccount` (src/app/actions/account.ts)
+ * calls `auth.admin.deleteUser()` here, because that's the only primitive
+ * that can delete a user's own `auth.users` row at all — there is no
+ * RLS-scoped equivalent. It's safe there specifically because the session is
+ * re-verified via `signInWithPassword` immediately beforehand, and the id
+ * passed is always the one from that freshly-verified session, never
+ * client-supplied.
  */
 export function supabaseAdmin() {
   if (!url || !secretKey) {

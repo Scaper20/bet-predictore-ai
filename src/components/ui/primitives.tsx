@@ -3,7 +3,7 @@ import type { ComponentProps, ReactNode } from "react";
 
 /* ------------------------------------------------------------------ Badges */
 
-type Tone = "brand" | "neutral" | "live" | "amber" | "cyan" | "violet" | "rose";
+export type Tone = "brand" | "neutral" | "live" | "amber" | "cyan" | "violet" | "rose";
 
 const TONES: Record<Tone, string> = {
   brand: "bg-brand/12 text-brand border-brand/25",
@@ -43,7 +43,7 @@ export function LiveDot() {
 
 /* ----------------------------------------------------------------- Buttons */
 
-type ButtonVariant = "primary" | "secondary" | "ghost";
+type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 
 const BUTTONS: Record<ButtonVariant, string> = {
   primary:
@@ -51,6 +51,8 @@ const BUTTONS: Record<ButtonVariant, string> = {
   secondary:
     "bg-surface-2 text-ink border border-line hover:border-line-strong hover:bg-surface-3",
   ghost: "text-ink-muted hover:text-ink hover:bg-surface-2",
+  danger:
+    "bg-rose/12 text-rose border border-rose/30 hover:bg-rose/20 font-semibold",
 };
 
 export function Button({
@@ -139,6 +141,37 @@ export function ProbabilityBar({
         />
       </div>
     </div>
+  );
+}
+
+/* -------------------------------------------------------------------- Form */
+
+export function Input({ className = "", ...props }: ComponentProps<"input">) {
+  return (
+    <input
+      {...props}
+      className={`w-full rounded-lg border border-line bg-surface-2 px-3 py-2.5 text-sm text-ink outline-none transition-colors placeholder:text-ink-dim focus:border-brand/50 disabled:opacity-50 ${className}`}
+    />
+  );
+}
+
+export function Field({
+  label,
+  htmlFor,
+  hint,
+  children,
+}: {
+  label: string;
+  htmlFor?: string;
+  hint?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <label className="block" htmlFor={htmlFor}>
+      <span className="mb-1.5 block text-xs font-medium text-ink-muted">{label}</span>
+      {children}
+      {hint && <span className="mt-1.5 block text-xs text-ink-dim">{hint}</span>}
+    </label>
   );
 }
 

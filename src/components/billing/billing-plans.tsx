@@ -6,7 +6,13 @@ import { naira } from "@/lib/format";
 import { PLANS } from "@/lib/pricing";
 import type { Tier } from "@/lib/entitlements";
 
-export function BillingPlans({ currentTier }: { currentTier: Tier }) {
+export function BillingPlans({
+  currentTier,
+  hasActiveSubscription = false,
+}: {
+  currentTier: Tier;
+  hasActiveSubscription?: boolean;
+}) {
   const [cycle, setCycle] = useState<"monthly" | "yearly">("monthly");
   const [pending, setPending] = useState<Tier | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -53,6 +59,7 @@ export function BillingPlans({ currentTier }: { currentTier: Tier }) {
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {PLANS.map((plan) => {
           const isCurrent = plan.id === currentTier;
+          const blocked = (plan.id === "pro" || plan.id === "vip") && hasActiveSubscription && !isCurrent;
           const price =
             plan.id === "pass"
               ? plan.price.oneOff
@@ -93,10 +100,16 @@ export function BillingPlans({ currentTier }: { currentTier: Tier }) {
                 <Button
                   variant={plan.highlighted ? "primary" : "secondary"}
                   className="mt-5 w-full"
-                  disabled={isCurrent || pending !== null}
+                  disabled={isCurrent || pending !== null || blocked}
                   onClick={() => checkout(plan.id as Exclude<Tier, "free">)}
                 >
-                  {isCurrent ? "Current plan" : pending === plan.id ? "Redirecting…" : `Get ${plan.name}`}
+                  {isCurrent
+                    ? "Current plan"
+                    : blocked
+                      ? "Cancel current plan first"
+                      : pending === plan.id
+                        ? "Redirecting…"
+                        : `Get ${plan.name}`}
                 </Button>
               )}
             </div>

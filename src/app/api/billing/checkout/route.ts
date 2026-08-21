@@ -7,6 +7,7 @@ import { planCodeFor } from "@/lib/paystack/plan-codes";
 import { nairaToKobo } from "@/lib/paystack/money";
 import { planById } from "@/lib/pricing";
 import { SITE_URL as SITE } from "@/lib/site-url";
+import { getSubscriptionRow, hasLivePaidSubscription } from "@/lib/subscriptions";
 
 type Cycle = "monthly" | "yearly";
 
@@ -26,6 +27,20 @@ export async function POST(request: Request) {
 
   if (tier !== "pass" && tier !== "pro" && tier !== "vip") {
     return NextResponse.json({ error: "Invalid plan." }, { status: 400 });
+  }
+
+  if (tier === "pro" || tier === "vip") {
+    // subscriptions is unique on user_id, so a second checkout while one is
+    // already live would leave a second, still-billing Paystack subscription
+    // running while our DB silently overwrites to only track the newest one.
+    // Cancelling the old one first (via Manage Subscription) avoids that.
+    const existing = await getSubscriptionRow(supabase, user.id);
+    if (hasLivePaidSubscription(existing)) {
+      return NextResponse.json(
+        { error: "You already have an active subscription. Cancel it from Manage subscription before switching plans." },
+        { status: 409 }
+      );
+    }
   }
 
   const plan = planById(tier);

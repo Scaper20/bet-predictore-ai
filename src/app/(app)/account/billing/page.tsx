@@ -2,7 +2,11 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { supabaseServer, supabaseConfigured } from "@/lib/supabase/server";
 import { getEntitlement } from "@/lib/entitlements";
+import { getSubscriptionRow, hasLivePaidSubscription } from "@/lib/subscriptions";
 import { BillingPlans } from "@/components/billing/billing-plans";
+import { ManageSubscriptionButton } from "@/components/billing/manage-subscription-button";
+import { BillingHistory, type PaymentRow } from "@/components/billing/billing-history";
+import { SectionHeading } from "@/components/ui/primitives";
 
 export const metadata: Metadata = { title: "Plans & billing" };
 
@@ -25,6 +29,15 @@ export default async function BillingPage() {
   if (!user) redirect("/account/login?next=/account/billing");
 
   const entitlement = await getEntitlement();
+  const subscription = await getSubscriptionRow(supabase, user.id);
+  const { data: payments } = await supabase
+    .from("payments")
+    .select("id, created_at, plan, amount_kobo, status")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(20);
+
+  const hasActiveSubscription = hasLivePaidSubscription(subscription);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">
@@ -36,8 +49,38 @@ export default async function BillingPage() {
         </p>
       </div>
       <div className="mt-10">
-        <BillingPlans currentTier={entitlement.tier} />
+        <BillingPlans currentTier={entitlement.tier} hasActiveSubscription={hasActiveSubscription} />
       </div>
+
+      {(entitlement.tier === "pro" || entitlement.tier === "vip") && subscription?.paystack_subscription_code && (
+        <section className="mt-14">
+          <SectionHeading
+            eyebrow="Subscription"
+            title="Manage your plan"
+            description="Update your card or cancel anytime — you'll be redirected to Paystack's secure page."
+          />
+          <div className="card mt-4 p-6">
+            <ManageSubscriptionButton />
+          </div>
+        </section>
+      )}
+
+      {entitlement.tier === "pass" && (
+        <section className="mt-14">
+          <SectionHeading
+            eyebrow="Subscription"
+            title="Weekend Pass"
+            description="This is a one-time purchase, not a subscription — there's nothing to cancel, and it won't renew or charge you again."
+          />
+        </section>
+      )}
+
+      <section className="mt-14">
+        <SectionHeading eyebrow="History" title="Billing history" />
+        <div className="mt-4">
+          <BillingHistory payments={(payments ?? []) as PaymentRow[]} />
+        </div>
+      </section>
     </div>
   );
 }

@@ -70,3 +70,24 @@ export function verifyTransaction(reference: string) {
     method: "GET",
   });
 }
+
+export interface SubscriptionManageLinkResult {
+  link: string;
+}
+
+/**
+ * A Paystack-hosted page where the customer can update their card or cancel
+ * the subscription themselves — this is the entire "cancel subscription" /
+ * "add or update card" feature: redirect there rather than us ever touching
+ * card data or a cancellation token. Confirmed to exist via a live web
+ * search at implementation time (direct paystack.com doc fetches 403 from
+ * this environment, same limitation noted in the webhook's CONFIDENCE NOTE)
+ * — log `result` on first real use and confirm the `link` key name before
+ * leaning on this further.
+ */
+export function getSubscriptionManageLink(subscriptionCode: string) {
+  return paystackFetch<SubscriptionManageLinkResult>(
+    `/subscription/${encodeURIComponent(subscriptionCode)}/manage/link`,
+    { method: "GET" },
+  );
+}
