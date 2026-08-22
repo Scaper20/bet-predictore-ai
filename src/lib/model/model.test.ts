@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { poissonPmf, scoreMatrix, deriveMarkets, deriveAsianHandicap, tau, MAX_GOALS } from "./poisson";
+import {
+  poissonPmf, scoreMatrix, deriveMarkets, deriveAsianHandicap, deriveLiveWinProbability, tau, MAX_GOALS,
+} from "./poisson";
 import { fitLeague, expectedRates, normaliseKey } from "./fit";
 import { assessSufficiency, buildPrediction } from "./predict";
 import type { ResultRow } from "@/lib/types";
@@ -140,6 +142,55 @@ describe("asian handicap", () => {
     expect(minusHalf.home).toBeCloseTo(0.25, 9);
     expect(minusHalf.away).toBeCloseTo(0.75, 9);
     expect(minusHalf.push).toBe(0);
+  });
+});
+
+describe("live win probability", () => {
+  it("always partitions to 1", () => {
+    for (const [lambda, mu, rho] of [[0.05, 0.05, -0.05], [0.3, 0.2, 0], [0.9, 0.7, -0.08]] as const) {
+      const r = deriveLiveWinProbability(scoreMatrix(lambda, mu, rho), 1, 2);
+      expect(r.home + r.draw + r.away).toBeCloseTo(1, 9);
+    }
+  });
+
+  it("treats zero remaining time as a certain result", () => {
+    // poissonPmf(0,0) returns the literal 1 via a non-computed branch, so
+    // grid[0][0] is exactly 1 and every other cell exactly 0 — the current
+    // score simply becomes the final score.
+    const grid = scoreMatrix(0, 0, -0.05);
+    expect(deriveLiveWinProbability(grid, 2, 1)).toEqual({ home: 1, draw: 0, away: 0 });
+    expect(deriveLiveWinProbability(grid, 1, 1)).toEqual({ home: 0, draw: 1, away: 0 });
+    expect(deriveLiveWinProbability(grid, 0, 3)).toEqual({ home: 0, draw: 0, away: 1 });
+  });
+
+  it("matches a hand-computed split on a known remaining-goals grid", () => {
+    const fixed = [
+      [0.1, 0.05, 0.05],
+      [0.1, 0.2, 0.1],
+      [0.05, 0.1, 0.25],
+    ];
+
+    // Scores level (1-1): final result depends only on which side outscores
+    // the other across the remainder — home wins when remaining i>j.
+    const level = deriveLiveWinProbability(fixed, 1, 1);
+    expect(level.home).toBeCloseTo(0.25, 9); // (1,0)+(2,0)+(2,1)
+    expect(level.draw).toBeCloseTo(0.55, 9); // (0,0)+(1,1)+(2,2)
+    expect(level.away).toBeCloseTo(0.2, 9); // (0,1)+(0,2)+(1,2)
+
+    // Home already 2-1 up: home wins whenever remaining i>=j (a level
+    // remainder is still a home win overall, unlike the scores-level case).
+    const leading = deriveLiveWinProbability(fixed, 2, 1);
+    expect(leading.home).toBeCloseTo(0.8, 9); // (0,0)+(1,0)+(1,1)+(2,0)+(2,1)+(2,2)
+    expect(leading.draw).toBeCloseTo(0.15, 9); // (0,1)+(1,2): away outscores remainder by exactly 1
+    expect(leading.away).toBeCloseTo(0.05, 9); // (0,2): a 2-goal remaining swing
+  });
+
+  it("shows a heavily lopsided read for a large deficit with little time left", () => {
+    const remainingFraction = (90 - 85) / 90; // ~5 minutes left
+    const grid = scoreMatrix(1.4 * remainingFraction, 1.1 * remainingFraction, -0.05);
+    const result = deriveLiveWinProbability(grid, 0, 3); // trailing 0-3 with 5' left
+    expect(result.away).toBeGreaterThan(0.99);
+    expect(result.home).toBeLessThan(0.001);
   });
 });
 

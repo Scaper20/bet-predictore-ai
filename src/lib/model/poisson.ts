@@ -207,3 +207,44 @@ export function outcomeEntropy(home: number, draw: number, away: number): number
   const h = -ps.reduce((acc, p) => acc + p * Math.log(p), 0);
   return h / Math.log(3);
 }
+
+/**
+ * Final-result probability for a match in progress.
+ *
+ * `remainingGrid` is a scoreMatrix() built from the pre-match rates scaled
+ * down to however much time is left (see liveWinProbability() in
+ * service.ts) — so grid[i][j] is P(i more home goals, j more away goals)
+ * for just the rest of the match, not the whole match. This offsets each
+ * cell by the current score before comparing, which a plain deriveMarkets()
+ * call can't do since it assumes the grid already represents the final
+ * score.
+ *
+ * Deliberately 1X2 only, not a live re-derivation of every market: BTTS,
+ * over/under etc. depend on whether each side has *already* scored, not
+ * just what's left in the grid, which is a meaningfully different (and
+ * currently unbuilt) calculation.
+ */
+export function deriveLiveWinProbability(
+  remainingGrid: number[][],
+  currentHome: number,
+  currentAway: number,
+): { home: number; draw: number; away: number } {
+  let home = 0;
+  let draw = 0;
+  let away = 0;
+
+  for (let i = 0; i < remainingGrid.length; i++) {
+    for (let j = 0; j < remainingGrid.length; j++) {
+      const p = remainingGrid[i][j];
+      if (p <= 0) continue;
+
+      const finalHome = currentHome + i;
+      const finalAway = currentAway + j;
+      if (finalHome > finalAway) home += p;
+      else if (finalHome === finalAway) draw += p;
+      else away += p;
+    }
+  }
+
+  return { home, draw, away };
+}

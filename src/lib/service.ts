@@ -13,7 +13,9 @@ import {
 } from "@/lib/providers";
 import { cached } from "@/lib/providers/cache";
 import { buildPrediction, type Prediction } from "@/lib/model/predict";
+import { scoreMatrix, deriveLiveWinProbability } from "@/lib/model/poisson";
 import { writeAnalysis, aiEnabled, type Analysis } from "@/lib/ai/analyst";
+import { isLive } from "@/lib/format";
 
 export interface FixtureFeed {
   matches: Match[];
@@ -61,6 +63,66 @@ export async function matchDetail(id: string): Promise<MatchDetail | null> {
       curated: training.curated,
       rows: training.rows.length,
     },
+  };
+}
+
+export interface LiveProbability {
+  home: number;
+  draw: number;
+  away: number;
+  currentScore: { home: number; away: number };
+  elapsedMinutes: number;
+  /** Same meaning as Prediction.sufficiency.publishable — thin-sample fixtures still compute, but the UI should caveat them the same way it already does pre-match. */
+  publishable: boolean;
+}
+
+/**
+ * A live match's elapsed minutes, clamped for the projection below.
+ *
+ * Provider feeds report `minute` inconsistently at halftime (some carry the
+ * last first-half value, some null it out, some send a non-numeric status
+ * string upstream that never survives to this typed field) — rather than
+ * depend on any one provider's exact behaviour there, halftime is always
+ * treated as exactly 45 elapsed. `?? 45` (not `|| 45`) matters: a genuine
+ * 1st-minute match has `minute: 0`, which is falsy but a real, very-early
+ * elapsed time, not an unknown one (see statusLabel() in format.ts for a
+ * harmless instance of this same mistake in a display-only context — it
+ * isn't harmless here). Extra time is clamped to "no regular time left,"
+ * a reasonable approximation given the model has no ET-specific dynamics.
+ */
+function elapsedMinutesFor(match: Match): number {
+  if (match.status === "halftime") return 45;
+  return Math.min(90, Math.max(0, match.minute ?? 45));
+}
+
+/**
+ * Final-result probability for a match currently in progress, projected
+ * from the same fitted rates used for its pre-match prediction, scaled down
+ * to however much time is left and combined with the current score.
+ *
+ * VIP-only — see api/match/[id]/live-probability/route.ts for the
+ * entitlement check, which happens there, not here, so this stays a plain
+ * data function.
+ */
+export async function liveWinProbability(matchId: string): Promise<LiveProbability | null> {
+  const match = await getMatch(matchId);
+  if (!match || !isLive(match)) return null;
+
+  const training = await getTrainingResults(match);
+  const prediction = buildPrediction(match, training.rows);
+  const { home: lambda, away: mu } = prediction.markets.expectedGoals;
+
+  const elapsedMinutes = elapsedMinutesFor(match);
+  const remainingFraction = Math.max(0, (90 - elapsedMinutes) / 90);
+  const remainingGrid = scoreMatrix(lambda * remainingFraction, mu * remainingFraction, prediction.model.rho);
+
+  const result = deriveLiveWinProbability(remainingGrid, match.score.home ?? 0, match.score.away ?? 0);
+
+  return {
+    ...result,
+    currentScore: { home: match.score.home ?? 0, away: match.score.away ?? 0 },
+    elapsedMinutes,
+    publishable: prediction.sufficiency.publishable,
   };
 }
 

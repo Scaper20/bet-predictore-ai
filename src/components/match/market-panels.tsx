@@ -1,5 +1,6 @@
+import type { Match } from "@/lib/types";
 import type { Prediction } from "@/lib/model/predict";
-import { GOAL_LINES } from "@/lib/model/poisson";
+import { GOAL_LINES, type AsianHandicapLine } from "@/lib/model/poisson";
 import { ProbabilityBar } from "@/components/ui/primitives";
 import { odds, percent } from "@/lib/format";
 
@@ -151,8 +152,13 @@ export function CorrectScorePanel({ prediction }: { prediction: Prediction }) {
   );
 }
 
-export function AsianHandicapPanel({ prediction }: { prediction: Prediction }) {
-  const { asianHandicap: lines, match } = prediction;
+export function AsianHandicapPanel({
+  asianHandicap: lines,
+  match,
+}: {
+  asianHandicap: AsianHandicapLine[];
+  match: Match;
+}) {
   // The full ±2 range is mostly academic at the extremes — the tradeable
   // range punters actually use is the middle of the table.
   const core = lines.filter((l) => Math.abs(l.line) <= 1.5);

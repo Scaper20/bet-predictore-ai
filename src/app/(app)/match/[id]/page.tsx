@@ -3,12 +3,15 @@ import { notFound } from "next/navigation";
 import { Badge, ButtonLink } from "@/components/ui/primitives";
 import { Crest } from "@/components/ui/crest";
 import {
-  AsianHandicapPanel, BttsPanel, CorrectScorePanel, DoubleChancePanel, FormPanel, GoalsPanel,
+  BttsPanel, CorrectScorePanel, DoubleChancePanel, FormPanel, GoalsPanel,
   H2HPanel, OutcomePanel,
 } from "@/components/match/market-panels";
 import { ModelPanel } from "@/components/match/model-panel";
 import { ValueCalculator } from "@/components/match/value-calculator";
 import { AddToSlip } from "@/components/match/add-to-slip";
+import { AsianHandicapClient } from "@/components/match/asian-handicap-client";
+import { AnalysisPanel } from "@/components/match/analysis-panel";
+import { LiveWinProbabilityPanel } from "@/components/match/live-win-probability-panel";
 import { Gate } from "@/components/entitlements/gate";
 import { matchDetail } from "@/lib/service";
 import { kickoffTime, odds, percent, relativeDay, statusLabel, isLive } from "@/lib/format";
@@ -106,7 +109,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="grid gap-5 lg:grid-cols-[1.6fr_1fr]">
           <div className="space-y-5">
-            <AnalysisPanel analysis={analysis} />
+            <AnalysisPanel analysis={analysis} matchId={match.id} />
             <OutcomePanel prediction={prediction} />
             <GoalsPanel prediction={prediction} />
             <div className="grid gap-5 sm:grid-cols-2">
@@ -115,13 +118,18 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
             </div>
             <CorrectScorePanel prediction={prediction} />
             <Gate requires="pass">
-              <AsianHandicapPanel prediction={prediction} />
+              <AsianHandicapClient matchId={match.id} />
             </Gate>
             <FormPanel prediction={prediction} />
             <H2HPanel prediction={prediction} />
           </div>
 
           <aside className="space-y-5 lg:sticky lg:top-20 lg:self-start">
+            {live && (
+              <Gate requires="vip">
+                <LiveWinProbabilityPanel matchId={match.id} />
+              </Gate>
+            )}
             <ModelPanel prediction={prediction} trainedOn={trainedOn} />
             <AddToSlip prediction={prediction} />
             <Gate requires="pass">
@@ -155,82 +163,5 @@ function TeamBlock({ team, align }: { team: { name: string; crest?: string }; al
         {team.name}
       </h1>
     </div>
-  );
-}
-
-function AnalysisPanel({
-  analysis,
-}: {
-  analysis: { headline: string; body: string[]; factors: string[]; source: "claude" | "model" };
-}) {
-  const isAiWritten = analysis.source === "claude";
-  // The deterministic write-up is the free-tier baseline; the AI rewrite is
-  // a Pro perk. matchDetail() computes one shared, cached analysis per match
-  // (not per user — reading the session there would break the page's ISR
-  // caching, see AppLayout's comment), so gating happens here at display
-  // time instead: everyone gets the headline and opening paragraph, the rest
-  // of an AI-written piece sits behind Gate.
-  const [lead, ...rest] = analysis.body;
-
-  return (
-    <section className="card p-5 sm:p-6">
-      <div className="mb-4 flex items-baseline justify-between gap-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-ink-muted">
-          Match analysis
-        </h2>
-        <Badge tone={isAiWritten ? "violet" : "neutral"}>
-          {isAiWritten ? "AI written" : "Model generated"}
-        </Badge>
-      </div>
-
-      <h3 className="font-display text-xl font-bold leading-snug">{analysis.headline}</h3>
-
-      <div className="mt-4 space-y-3.5">
-        {lead && <p className="text-sm leading-relaxed text-ink-muted">{lead}</p>}
-
-        {isAiWritten ? (
-          <Gate
-            requires="pro"
-            fallback={
-              rest.length > 0 || analysis.factors.length > 0 ? (
-                <p className="text-xs text-ink-dim">
-                  The rest of this AI-written briefing is a{" "}
-                  <a href="/account/billing?plan=pro" className="text-brand underline underline-offset-2">
-                    Pro
-                  </a>{" "}
-                  feature.
-                </p>
-              ) : null
-            }
-          >
-            <AnalysisRest body={rest} factors={analysis.factors} />
-          </Gate>
-        ) : (
-          <AnalysisRest body={rest} factors={analysis.factors} />
-        )}
-      </div>
-    </section>
-  );
-}
-
-function AnalysisRest({ body, factors }: { body: string[]; factors: string[] }) {
-  return (
-    <>
-      {body.map((para, i) => (
-        <p key={i} className="text-sm leading-relaxed text-ink-muted">
-          {para}
-        </p>
-      ))}
-      {factors.length > 0 && (
-        <ul className="mt-1.5 space-y-2 border-t border-line pt-5">
-          {factors.map((f, i) => (
-            <li key={i} className="flex gap-2.5 text-xs text-ink-muted">
-              <span className="mt-1 size-1.5 shrink-0 rounded-full bg-brand" aria-hidden />
-              <span>{f}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-    </>
   );
 }

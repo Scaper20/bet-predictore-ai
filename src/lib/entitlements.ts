@@ -46,16 +46,28 @@ export async function getEntitlement(): Promise<Entitlement> {
       .eq("user_id", user.id)
       .maybeSingle();
 
-    if (!data || data.status !== "active") return FREE;
+    // "none" is the only status meaning "never had a paid relationship" —
+    // active/past_due/cancelled all fall through to the expiry check below,
+    // which is what actually decides access.
+    if (!data || data.status === "none") return FREE;
 
     if (data.tier === "pass") {
       const expired = !data.pass_expires_at || new Date(data.pass_expires_at) < new Date();
       return expired ? FREE : { tier: "pass", status: "active" };
     }
 
-    // Pro/VIP: a cancelled-but-not-yet-lapsed subscription keeps access
-    // through the period already paid for.
-    const expired = data.current_period_end ? new Date(data.current_period_end) < new Date() : false;
+    // Pro/VIP: a cancelled-but-not-yet-lapsed, or past_due-but-in-grace-period,
+    // subscription keeps access through the period already paid for.
+    if (!data.current_period_end) {
+      // No period-end on record yet. Only safe to assume "still within the
+      // paid period" for a freshly active subscription — charge.success sets
+      // status:"active" without current_period_end; the paired
+      // subscription.create webhook (which sets it) can land slightly later.
+      // For past_due/cancelled with no period-end ever recorded, there's no
+      // paid-through date to honour.
+      return data.status === "active" ? { tier: data.tier as Tier, status: data.status } : FREE;
+    }
+    const expired = new Date(data.current_period_end) < new Date();
     if (expired) return FREE;
 
     return { tier: data.tier as Tier, status: data.status as Entitlement["status"] };
