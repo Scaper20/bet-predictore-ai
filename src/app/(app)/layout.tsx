@@ -1,6 +1,7 @@
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { EntitlementProvider } from "@/components/entitlements/entitlement-provider";
+import { ChatWidget } from "@/components/support/chat-widget";
 
 /**
  * Shared chrome for every page other than the landing page.
@@ -23,6 +24,7 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
       <SiteHeader />
       <main className="flex-1">{children}</main>
       <SiteFooter />
+      <ChatWidget />
     </EntitlementProvider>
   );
 }

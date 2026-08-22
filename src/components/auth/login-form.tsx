@@ -8,9 +8,12 @@ import { Button } from "@/components/ui/primitives";
 
 const initialState: AuthActionState = { error: null };
 
-export function LoginForm() {
+export function LoginForm({
+  defaultNext = "/account",
+  showSignUpLink = true,
+}: { defaultNext?: string; showSignUpLink?: boolean } = {}) {
   const searchParams = useSearchParams();
-  const next = searchParams.get("next") ?? "/account";
+  const next = searchParams.get("next") ?? defaultNext;
   const [state, formAction, pending] = useActionState(signIn, initialState);
 
   return (
@@ -43,12 +46,14 @@ export function LoginForm() {
         {pending ? "Signing in…" : "Sign in"}
       </Button>
 
-      <p className="text-center text-xs text-ink-dim">
-        No account?{" "}
-        <Link href={`/account/sign-up?next=${encodeURIComponent(next)}`} className="text-brand underline underline-offset-2">
-          Create one
-        </Link>
-      </p>
+      {showSignUpLink && (
+        <p className="text-center text-xs text-ink-dim">
+          No account?{" "}
+          <Link href={`/account/sign-up?next=${encodeURIComponent(next)}`} className="text-brand underline underline-offset-2">
+            Create one
+          </Link>
+        </p>
+      )}
     </form>
   );
 }

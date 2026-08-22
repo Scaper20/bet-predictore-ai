@@ -1,5 +1,6 @@
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
+import { ChatWidget } from "@/components/support/chat-widget";
 import { Hero } from "@/components/landing/hero";
 import { Marquee } from "@/components/landing/marquee";
 import { Faq, Features, FinalCta, HowItWorks, Leagues, Pricing } from "@/components/landing/sections";
@@ -88,6 +89,7 @@ export default async function HomePage() {
         <FinalCta />
       </main>
       <SiteFooter />
+      <ChatWidget />
     </>
   );
 }

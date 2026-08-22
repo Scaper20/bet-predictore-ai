@@ -10,7 +10,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "smoke": "tsx scripts/smoke-providers.ts",
-    "smoke:predict": "tsx scripts/smoke-predict.ts"
+    "smoke:predict": "tsx scripts/smoke-predict.ts",
+    "create-admin": "tsx scripts/create-admin.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.120.0",
@@ -26,6 +27,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv": "^17.4.2",
     "eslint": "^9",
     "eslint-config-next": "16.3.1",
     "playwright": "^1.62.1",
