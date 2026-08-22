@@ -26,6 +26,12 @@
 import "dotenv/config";
 import crypto from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
+// @supabase/supabase-js unconditionally constructs a Realtime client inside
+// createClient(), even though this script never uses realtime — and on
+// Node 20 and below (no native `WebSocket` global; that lands in Node 22)
+// that constructor throws immediately unless an explicit transport is
+// given. `ws` is only ever passed as that transport, never opened.
+import WebSocket from "ws";
 
 function parseArgs() {
   const args = process.argv.slice(2);
@@ -49,7 +55,10 @@ async function main() {
     console.error("Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SECRET_KEY (or SUPABASE_SERVICE_ROLE_KEY) in .env first.");
     process.exit(1);
   }
-  const admin = createClient(url, secretKey, { auth: { autoRefreshToken: false, persistSession: false } });
+  const admin = createClient(url, secretKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+    realtime: { transport: WebSocket as unknown as typeof globalThis.WebSocket },
+  });
 
   let userId: string;
   if (create) {
