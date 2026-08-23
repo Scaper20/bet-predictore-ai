@@ -89,10 +89,17 @@ async function main() {
   }
 
   const oneYearOut = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
-  const row =
+  const row: {
+    user_id: string;
+    tier: Tier;
+    status: "active";
+    updated_at: string;
+    current_period_end?: string;
+    pass_expires_at?: string;
+  } =
     tier === "pass"
-      ? { user_id: userId, tier, status: "active" as const, pass_expires_at: oneYearOut, updated_at: new Date().toISOString() }
-      : { user_id: userId, tier, status: "active" as const, current_period_end: oneYearOut, updated_at: new Date().toISOString() };
+      ? { user_id: userId, tier, status: "active", pass_expires_at: oneYearOut, updated_at: new Date().toISOString() }
+      : { user_id: userId, tier, status: "active", current_period_end: oneYearOut, updated_at: new Date().toISOString() };
 
   const { error: upsertError } = await admin.from("subscriptions").upsert(row, { onConflict: "user_id" });
   if (upsertError) {
