@@ -136,6 +136,24 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="grid gap-5 lg:grid-cols-[1.6fr_1fr]">
           <div className="space-y-5">
+            {live && (
+              <Gate
+                requires="vip"
+                fallback={
+                  <div className="card border-brand/25 bg-brand/[0.04] p-5">
+                    <p className="text-sm font-semibold">🔴 Live win probability</p>
+                    <p className="mt-1 text-xs text-ink-muted">
+                      Updates every ~25s as the match plays out — VIP unlocks this.
+                    </p>
+                    <ButtonLink href="/account/billing?plan=vip" variant="ghost" className="mt-2 px-0 py-1 text-xs">
+                      Unlock VIP →
+                    </ButtonLink>
+                  </div>
+                }
+              >
+                <LiveWinProbabilityPanel matchId={match.id} />
+              </Gate>
+            )}
             <AnalysisPanel analysis={analysis} matchId={match.id} />
             <OutcomePanel prediction={prediction} />
             <GoalsPanel prediction={prediction} />
@@ -152,11 +170,6 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
           </div>
 
           <aside className="space-y-5 lg:sticky lg:top-20 lg:self-start">
-            {live && (
-              <Gate requires="vip">
-                <LiveWinProbabilityPanel matchId={match.id} />
-              </Gate>
-            )}
             <ModelPanel prediction={prediction} trainedOn={trainedOn} />
             <AddToSlip prediction={prediction} />
             <Gate requires="pass">

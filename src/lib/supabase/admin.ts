@@ -39,6 +39,17 @@ const secretKey = process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_SERVIC
  * verified-admin's session, having proven its status through a real,
  * explicit gate, acting on other users' data through a consistently gated
  * path — never a raw, ungated query.
+ *
+ * A third, distinct exception: opportunistic settlement/match-results
+ * capture (src/lib/settlement-runner.ts), triggered from the public,
+ * unauthenticated /api/live Route Handler on every poll. Safe despite being
+ * unauthenticated because every write touches only system-owned tables
+ * (`match_results`, `predictions_log`) using data this code itself just
+ * fetched from the football-data provider — nothing derived from the
+ * visitor's request ever reaches a write. No session is being acted on at
+ * all, on anyone's behalf; it's the same category of "no user owns this
+ * row" reasoning that lets the daily cron do the same writes unauthenticated
+ * (behind CRON_SECRET instead of a request-shape argument).
  */
 export function supabaseAdmin() {
   if (!url || !secretKey) {

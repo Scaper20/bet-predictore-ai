@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { upcomingFeed, predictBatch } from "@/lib/service";
-import { getMatch } from "@/lib/providers";
-import { evaluatePick } from "@/lib/settlement";
+import { runSettlementPass } from "@/lib/settlement-runner";
 
 // Runs the football providers and Supabase's service-role client — both
 // Node-only. Proxy (src/proxy.ts) doesn't touch /api/ at all, so no session
@@ -14,12 +13,17 @@ export const maxDuration = 60;
  * Track Record maintenance: log today/tomorrow's headline picks, then settle
  * any previously-logged pick whose kickoff has passed.
  *
- * Wired up via vercel.json as a daily Vercel Cron job. Vercel signs cron
- * requests with `Authorization: Bearer $CRON_SECRET` when that env var is
- * set — required here (not optional like the rest of this app's Supabase
- * config) because, unlike a read-only page, this endpoint writes to the DB.
- * Safe to trigger more often than daily if you want tighter settlement
- * latency (e.g. an external pinger) — every step here is idempotent.
+ * Wired up via vercel.json as a daily Vercel Cron job (Hobby plan caps cron
+ * to once/day regardless of the schedule string). This is now just the
+ * full-backlog safety net — the actual near-real-time settlement runs
+ * opportunistically off of every /api/live poll (src/app/api/live/route.ts),
+ * which isn't bound by cron frequency at all. This route still matters for
+ * matches nobody had a live view open for.
+ *
+ * Vercel signs cron requests with `Authorization: Bearer $CRON_SECRET` when
+ * that env var is set — required here (not optional like the rest of this
+ * app's Supabase config) because, unlike a read-only page, this endpoint
+ * writes to the DB.
  */
 export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET;
@@ -32,7 +36,7 @@ export async function GET(request: Request) {
 
   const admin = supabaseAdmin();
   const logged = await logUpcomingPicks(admin);
-  const settled = await settlePastPicks(admin);
+  const settled = await runSettlementPass(admin);
 
   return NextResponse.json({ logged, settled });
 }
@@ -61,40 +65,4 @@ async function logUpcomingPicks(admin: ReturnType<typeof supabaseAdmin>): Promis
   const { error } = await admin.from("predictions_log").upsert(rows, { onConflict: "match_id" });
   if (error) throw error;
   return rows.length;
-}
-
-async function settlePastPicks(admin: ReturnType<typeof supabaseAdmin>): Promise<number> {
-  const { data: pending, error } = await admin
-    .from("predictions_log")
-    .select("id, match_id, market")
-    .is("settled_at", null)
-    .lt("kickoff", new Date().toISOString())
-    .limit(200);
-  if (error) throw error;
-  if (!pending || pending.length === 0) return 0;
-
-  let settledCount = 0;
-  for (const row of pending) {
-    // A postponed/abandoned fixture, or one the providers can no longer
-    // resolve, is simply retried on the next run — settled_at stays null
-    // rather than the row being force-closed with a guess.
-    const match = await getMatch(row.match_id as string).catch(() => null);
-    if (!match || match.status !== "finished") continue;
-    if (match.score.home === null || match.score.away === null) continue;
-
-    const result = evaluatePick(row.market as string, match.score.home, match.score.away);
-    if (!result) continue;
-
-    const { error: updateError } = await admin
-      .from("predictions_log")
-      .update({
-        result,
-        actual_home_goals: match.score.home,
-        actual_away_goals: match.score.away,
-        settled_at: new Date().toISOString(),
-      })
-      .eq("id", row.id as string);
-    if (!updateError) settledCount++;
-  }
-  return settledCount;
 }

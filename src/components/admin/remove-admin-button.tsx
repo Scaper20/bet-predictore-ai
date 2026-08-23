@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { removeAdmin, type TeamActionState } from "@/app/actions/admin/team";
+import { Spinner } from "@/components/ui/primitives";
 
 const initialState: TeamActionState = { error: null, message: null };
 
@@ -26,7 +27,12 @@ export function RemoveAdminButton({ targetId, targetEmail }: { targetId: string;
       <input type="hidden" name="targetId" value={targetId} />
       <input type="hidden" name="targetEmail" value={targetEmail} />
       <span className="text-xs text-ink-dim">Confirm?</span>
-      <button type="submit" disabled={pending} className="text-xs font-semibold text-rose hover:text-rose">
+      <button
+        type="submit"
+        disabled={pending}
+        className="inline-flex items-center gap-1.5 text-xs font-semibold text-rose hover:text-rose"
+      >
+        {pending && <Spinner className="size-3" />}
         {pending ? "Removing…" : "Yes, remove"}
       </button>
       <button type="button" onClick={() => setConfirming(false)} className="text-xs text-ink-dim hover:text-ink">

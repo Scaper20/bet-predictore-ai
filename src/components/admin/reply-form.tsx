@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useRef } from "react";
 import { replyToTicket, closeTicket, type TicketActionState } from "@/app/actions/admin/tickets";
-import { Button } from "@/components/ui/primitives";
+import { Button, Spinner } from "@/components/ui/primitives";
 
 const initialState: TicketActionState = { error: null };
 
@@ -30,6 +30,7 @@ export function ReplyForm({ ticketId, closed }: { ticketId: string; closed: bool
             className="w-full resize-none rounded-lg border border-line bg-surface-2 px-3 py-2.5 text-sm text-ink outline-none focus:border-brand/50"
           />
           <Button type="submit" disabled={pending} className="self-end">
+            {pending && <Spinner className="size-3.5" />}
             {pending ? "Sending…" : "Reply"}
           </Button>
         </form>
@@ -41,8 +42,9 @@ export function ReplyForm({ ticketId, closed }: { ticketId: string; closed: bool
         <button
           type="submit"
           disabled={closePending || closed}
-          className="text-xs text-ink-dim underline underline-offset-2 hover:text-ink disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 text-xs text-ink-dim underline underline-offset-2 hover:text-ink disabled:opacity-50"
         >
+          {closePending && <Spinner className="size-3" />}
           {closed ? "Closed" : closePending ? "Closing…" : "Close ticket"}
         </button>
       </form>

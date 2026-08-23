@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useRef } from "react";
 import { addAdmin, type TeamActionState } from "@/app/actions/admin/team";
-import { Button, Field, Input } from "@/components/ui/primitives";
+import { Button, Field, Input, Spinner } from "@/components/ui/primitives";
 
 const initialState: TeamActionState = { error: null, message: null };
 
@@ -24,6 +24,7 @@ export function AddAdminForm() {
         </Field>
       </div>
       <Button type="submit" variant="secondary" disabled={pending}>
+        {pending && <Spinner className="size-3.5" />}
         {pending ? "Adding…" : "Grant access"}
       </Button>
       {state.error && <p className="w-full text-sm text-rose">{state.error}</p>}

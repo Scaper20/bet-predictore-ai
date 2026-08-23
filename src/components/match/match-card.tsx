@@ -59,6 +59,12 @@ export function MatchCard({ match, prediction }: { match: Match; prediction?: Pr
         />
       </div>
 
+      {live && (
+        <p className="mt-3 flex items-center gap-1.5 text-[11px] font-semibold text-brand">
+          ⚡ Live win probability inside
+        </p>
+      )}
+
       {prediction && prediction.sufficiency.publishable && (
         <div className="mt-4 border-t border-line pt-4">
           <div className="mb-2.5 flex items-center justify-between gap-2">

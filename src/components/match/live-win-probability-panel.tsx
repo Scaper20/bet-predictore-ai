@@ -82,9 +82,11 @@ export function LiveWinProbabilityPanel({ matchId }: { matchId: string }) {
   if (ended && !data) return null;
   if (!data) {
     return (
-      <div className="card animate-pulse p-5">
-        <div className="mb-4 h-3 w-32 rounded bg-surface-3" />
-        <div className="space-y-3">
+      <div className="card p-5">
+        <p className="mb-4 text-sm font-semibold uppercase tracking-wider text-ink-muted">
+          Loading live win probability…
+        </p>
+        <div className="animate-pulse space-y-3">
           <div className="h-4 rounded bg-surface-2" />
           <div className="h-4 rounded bg-surface-2" />
           <div className="h-4 rounded bg-surface-2" />

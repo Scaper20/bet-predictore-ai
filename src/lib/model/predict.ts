@@ -131,6 +131,7 @@ export function assessSufficiency(
   matchesUsed: number,
   homePlayed: number,
   awayPlayed: number,
+  teamNames?: { home: string; away: string },
 ): Sufficiency {
   if (matchesUsed < MIN_PUBLISHABLE_MATCHES) {
     return {
@@ -142,10 +143,18 @@ export function assessSufficiency(
     };
   }
   if (homePlayed < MIN_TEAM_APPEARANCES || awayPlayed < MIN_TEAM_APPEARANCES) {
+    const short: string[] = [];
+    if (homePlayed < MIN_TEAM_APPEARANCES) {
+      short.push(`${teamNames?.home ?? "the home side"} (${homePlayed} in our data)`);
+    }
+    if (awayPlayed < MIN_TEAM_APPEARANCES) {
+      short.push(`${teamNames?.away ?? "the away side"} (${awayPlayed} in our data)`);
+    }
     return {
       level: "insufficient",
       reason:
-        "One or both clubs have too few completed matches in the sample for a reliable rating.",
+        `${short.join(" and ")} ${short.length > 1 ? "have" : "has"} fewer than ${MIN_TEAM_APPEARANCES} ` +
+        "completed matches in the sample for a reliable rating.",
       publishable: false,
     };
   }
@@ -194,6 +203,7 @@ export function buildPrediction(
     fit.matchesUsed,
     homeRating?.played ?? 0,
     awayRating?.played ?? 0,
+    { home: match.home.name, away: match.away.name },
   );
 
   return {

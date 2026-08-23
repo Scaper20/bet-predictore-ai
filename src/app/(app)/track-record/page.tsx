@@ -11,9 +11,13 @@ export const metadata: Metadata = {
     "finishes. No cherry-picking — settled automatically, win or lose.",
 };
 
-// Settlement runs once a day (see vercel.json); this can sit well behind
-// that without ever showing stale-looking data.
-export const revalidate = 900;
+// Settlement now runs opportunistically off of every /api/live poll (see
+// src/lib/settlement-runner.ts), not just the daily cron backstop — a
+// finished match can be graded within moments of full time. Rendered
+// dynamically so this page reflects that immediately rather than sitting
+// behind an ISR window; the underlying query is a handful of small, indexed
+// selects, cheap enough per-request.
+export const dynamic = "force-dynamic";
 
 interface PredictionLogRow {
   id: string;

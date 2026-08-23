@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { Button } from "@/components/ui/primitives";
+import { Button, Spinner } from "@/components/ui/primitives";
 
 interface Message {
   id: string;
@@ -175,7 +175,8 @@ export function ChatWidget() {
                 className="w-full rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm outline-none focus:border-brand/50"
               />
               <Button type="submit" disabled={sending || !draft.trim()} className="px-4 py-2 text-xs">
-                Send
+                {sending ? <Spinner className="size-3.5" /> : null}
+                {sending ? "Sending…" : "Send"}
               </Button>
             </form>
           )}
