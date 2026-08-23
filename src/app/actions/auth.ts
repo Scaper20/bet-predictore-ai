@@ -2,6 +2,8 @@
 
 import { redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
+import { sendEmail } from "@/lib/email";
+import { welcomeEmail } from "@/lib/email-templates";
 
 export type AuthActionState = { error: string | null };
 
@@ -30,6 +32,8 @@ export async function signUp(_prev: AuthActionState, formData: FormData): Promis
   const supabase = await supabaseServer();
   const { error } = await supabase.auth.signUp({ email, password });
   if (error) return { error: error.message };
+
+  void sendEmail({ to: email, ...welcomeEmail() });
 
   redirect(next);
 }

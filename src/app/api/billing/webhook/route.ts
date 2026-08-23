@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import crypto from "node:crypto";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { computeWeekendPassExpiry } from "@/lib/paystack/pass-window";
+import { sendEmail } from "@/lib/email";
+import { receiptEmail, subscriptionCanceledEmail } from "@/lib/email-templates";
 import type { Tier } from "@/lib/entitlements";
 
 // Node's crypto module, not Edge-safe — Proxy (formerly middleware) already
@@ -126,6 +128,12 @@ export async function POST(request: Request) {
           },
           { onConflict: "user_id" }
         );
+        if (customerEmail && reference) {
+          void sendEmail({
+            to: customerEmail,
+            ...receiptEmail({ tier: "pass", amountKobo: amount ?? 0, reference, date: now }),
+          });
+        }
         break;
       }
 
@@ -138,6 +146,12 @@ export async function POST(request: Request) {
             { user_id: metaUserId, paystack_customer_code: customerCode, status: "active", updated_at: now },
             { onConflict: "user_id" }
           );
+        }
+        if (customerEmail && reference) {
+          void sendEmail({
+            to: customerEmail,
+            ...receiptEmail({ tier: metaTier, amountKobo: amount ?? 0, reference, date: now }),
+          });
         }
         break;
       }
@@ -163,7 +177,12 @@ export async function POST(request: Request) {
         }
       }
 
-      void amount; // available if amount-based plan disambiguation is ever needed
+      if (customerEmail && reference) {
+        void sendEmail({
+          to: customerEmail,
+          ...receiptEmail({ amountKobo: amount ?? 0, reference, date: now }),
+        });
+      }
       break;
     }
 
@@ -234,10 +253,25 @@ export async function POST(request: Request) {
     case "subscription.not_renew": {
       const subscriptionCode = asString(data.subscription_code);
       if (!subscriptionCode) break;
+
+      const { data: sub } = await admin
+        .from("subscriptions")
+        .select("tier, current_period_end, profiles(email)")
+        .eq("paystack_subscription_code", subscriptionCode)
+        .maybeSingle();
+
       await admin
         .from("subscriptions")
         .update({ status: "cancelled", updated_at: now })
         .eq("paystack_subscription_code", subscriptionCode);
+
+      const profile = sub ? (Array.isArray(sub.profiles) ? sub.profiles[0] : sub.profiles) : undefined;
+      if (profile?.email) {
+        void sendEmail({
+          to: profile.email,
+          ...subscriptionCanceledEmail({ tier: sub?.tier as Tier | undefined, accessUntil: sub?.current_period_end }),
+        });
+      }
       break;
     }
 

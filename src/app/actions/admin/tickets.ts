@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { checkAdmin, logAdminAction } from "@/lib/admin";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { sendEmail } from "@/lib/email";
+import { ticketReplyNotificationEmail } from "@/lib/email-templates";
 
 export type TicketActionState = { error: string | null };
 
@@ -30,6 +32,16 @@ export async function replyToTicket(
 
   // Reply puts the ball back in the user's court.
   await admin.from("support_tickets").update({ status: "pending", updated_at: now }).eq("id", ticketId);
+
+  const { data: ticket } = await admin
+    .from("support_tickets")
+    .select("subject, profiles(email)")
+    .eq("id", ticketId)
+    .maybeSingle();
+  const profile = ticket ? (Array.isArray(ticket.profiles) ? ticket.profiles[0] : ticket.profiles) : undefined;
+  if (ticket && profile?.email) {
+    void sendEmail({ to: profile.email, ...ticketReplyNotificationEmail({ subject: ticket.subject }) });
+  }
 
   revalidatePath(`/admin/tickets/${ticketId}`);
   revalidatePath("/admin/tickets");
