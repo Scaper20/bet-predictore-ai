@@ -1,7 +1,34 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Sora, JetBrains_Mono } from "next/font/google";
 import { SITE_URL as SITE } from "@/lib/site-url";
+import { JsonLd } from "@/components/seo/json-ld";
 import "./globals.css";
+
+/**
+ * Organization + WebSite structured data, sitewide. Deliberately does NOT
+ * include a WebSite.potentialAction SearchAction (the schema that can
+ * unlock Google's "sitelinks search box") — this site has no real
+ * free-text search endpoint, and fabricating one in structured data that
+ * doesn't correspond to actual functionality would be exactly the kind of
+ * dishonest claim this app's pricing/feature copy has deliberately avoided
+ * elsewhere this session.
+ */
+const ORG_JSON_LD = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      name: "BetriX",
+      url: SITE,
+      logo: `${SITE}/brand/icon-green.png`,
+    },
+    {
+      "@type": "WebSite",
+      name: "BetriX",
+      url: SITE,
+    },
+  ],
+};
 
 const sora = Sora({ variable: "--font-sora", subsets: ["latin"], display: "swap" });
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"], display: "swap" });
@@ -79,6 +106,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full bg-canvas text-ink flex flex-col">
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        <JsonLd data={ORG_JSON_LD} />
         {children}
       </body>
     </html>

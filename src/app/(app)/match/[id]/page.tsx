@@ -13,8 +13,33 @@ import { AsianHandicapClient } from "@/components/match/asian-handicap-client";
 import { AnalysisPanel } from "@/components/match/analysis-panel";
 import { LiveWinProbabilityPanel } from "@/components/match/live-win-probability-panel";
 import { Gate } from "@/components/entitlements/gate";
+import { JsonLd } from "@/components/seo/json-ld";
 import { matchDetail } from "@/lib/service";
+import { SITE_URL as SITE } from "@/lib/site-url";
 import { kickoffTime, odds, percent, relativeDay, statusLabel, isLive } from "@/lib/format";
+import type { Match } from "@/lib/types";
+
+/**
+ * SportsEvent structured data — schema.org's real, documented vocabulary
+ * for this (homeTeam/awayTeam/location all confirmed against schema.org
+ * directly, not assumed). This produces valid structured data; it is not a
+ * guarantee of a visible Google rich-result, since Google's specific rich-
+ * result support for this type isn't something either party can confirm
+ * from here.
+ */
+function matchJsonLd(match: Match) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "SportsEvent",
+    name: `${match.home.name} vs ${match.away.name}`,
+    startDate: match.kickoff,
+    sport: "Football",
+    homeTeam: { "@type": "SportsTeam", name: match.home.name },
+    awayTeam: { "@type": "SportsTeam", name: match.away.name },
+    ...(match.venue ? { location: { "@type": "Place", name: match.venue } } : {}),
+    url: `${SITE}/match/${encodeURIComponent(match.id)}`,
+  };
+}
 
 export const revalidate = 60;
 
@@ -49,6 +74,8 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
 
   return (
     <>
+      <JsonLd data={matchJsonLd(match)} />
+
       {/* ------------------------------------------------------ Match header */}
       <div className="border-b border-line bg-shell">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
