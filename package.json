@@ -12,7 +12,8 @@
     "smoke": "tsx scripts/smoke-providers.ts",
     "smoke:predict": "tsx scripts/smoke-predict.ts",
     "smoke:email": "tsx scripts/smoke-email.ts",
-    "create-admin": "tsx scripts/create-admin.ts"
+    "create-admin": "tsx scripts/create-admin.ts",
+    "grant-subscription": "tsx scripts/grant-subscription.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.120.0",
