@@ -56,7 +56,7 @@ export function PredictionCard({ prediction }: { prediction: Prediction }) {
                 <p className="mt-1 truncate text-sm font-semibold text-ink">{topPick.label}</p>
               </div>
               <div className="shrink-0 text-right">
-                <p className="text-[11px] text-ink-dim">Fair odds</p>
+                <p className="text-[11px] text-ink-dim">Fair price</p>
                 <p className="tnum text-sm font-bold text-brand">{odds(topPick.fairOdds)}</p>
               </div>
             </div>

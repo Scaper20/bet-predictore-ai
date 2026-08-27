@@ -63,7 +63,7 @@ export function Button({
   return (
     <button
       {...props}
-      className={`inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm transition-colors disabled:opacity-50 disabled:pointer-events-none ${BUTTONS[variant]} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 rounded-lg px-5 py-3 text-sm transition-colors disabled:opacity-50 disabled:pointer-events-none ${BUTTONS[variant]} ${className}`}
     />
   );
 }
@@ -82,25 +82,23 @@ export function ButtonLink({
   return (
     <Link
       href={href}
-      className={`inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm transition-colors ${BUTTONS[variant]} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 rounded-lg px-5 py-3 text-sm transition-colors ${BUTTONS[variant]} ${className}`}
     >
       {children}
     </Link>
   );
 }
 
-/** Inline loading spinner — `currentColor` stroke so it inherits whatever
- * text color it's dropped into (a button label, a muted status line, etc.). */
+/** Inline loading indicator — a growing, fading ring in `currentColor`, so it
+ * inherits whatever text color it's dropped into (a button label, a muted
+ * status line, etc.) and reads as the same visual language as the live-match
+ * pulse dot rather than a generic spinner. */
 export function Spinner({ className = "size-4" }: { className?: string }) {
   return (
-    <svg className={`animate-spin ${className}`} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-      <path
-        className="opacity-75"
-        fill="currentColor"
-        d="M4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4Z"
-      />
-    </svg>
+    <span className={`relative inline-flex shrink-0 ${className}`} role="status" aria-label="Loading">
+      <span className="absolute inset-0 rounded-full bg-current opacity-20" />
+      <span className="spinner-ring absolute inset-0 rounded-full bg-current" />
+    </span>
   );
 }
 
@@ -151,7 +149,7 @@ export function ProbabilityBar({
         aria-label={label ?? "probability"}
       >
         <div
-          className={`h-full rounded-full ${fill[tone]} transition-[width] duration-500`}
+          className={`bar-fill h-full rounded-full ${fill[tone]} transition-[width] duration-500`}
           style={{ width: `${pct}%` }}
         />
       </div>

@@ -7,7 +7,7 @@ import { odds as fmtOdds, percent } from "@/lib/format";
 import { Badge } from "@/components/ui/primitives";
 
 /**
- * Compares the model against a bookmaker's actual prices.
+ * Compares the model against a reference price the user provides.
  *
  * The margin has to come out before any comparison means anything: a book
  * pricing 1X2 at 2.10/3.40/3.60 is holding about 6%, so a "value" call made
@@ -44,11 +44,11 @@ export function ValueCalculator({ prediction }: { prediction: Prediction }) {
         <h2 className="text-sm font-semibold uppercase tracking-wider text-ink-muted">
           Value finder
         </h2>
-        <span className="shrink-0 text-xs text-ink-dim">Your bookmaker&apos;s odds</span>
+        <span className="shrink-0 text-xs text-ink-dim">Reference price</span>
       </div>
       <p className="mb-5 text-xs leading-relaxed text-ink-dim">
-        Enter all three prices from your betting slip. We strip the bookmaker&apos;s margin, then
-        compare what is left against the model&apos;s own probability.
+        Enter all three prices you&apos;ve been offered. We strip the margin, then compare what is
+        left against the model&apos;s own probability.
       </p>
 
       <div className="grid grid-cols-3 gap-3">
@@ -74,11 +74,11 @@ export function ValueCalculator({ prediction }: { prediction: Prediction }) {
         <div className="mt-5">
           <div className="mb-4 flex flex-wrap items-center gap-2">
             <Badge tone={margin > 0.08 ? "rose" : margin > 0.05 ? "amber" : "brand"}>
-              {percent(margin, 1)} bookmaker margin
+              {percent(margin, 1)} margin
             </Badge>
             <span className="text-[11px] text-ink-dim">
               {margin > 0.08
-                ? "That is a heavy margin — shop around before staking."
+                ? "That is a heavy margin — shop around before acting on it."
                 : margin > 0.05
                   ? "A fairly typical margin for this market."
                   : "A sharp price. Worth taking seriously."}
@@ -113,8 +113,8 @@ export function ValueCalculator({ prediction }: { prediction: Prediction }) {
                       tone={v.expectedValue > 0 ? "brand" : "muted"}
                     />
                     <Cell
-                      label="Suggested stake"
-                      value={v.kellyStake > 0 ? `${(v.kellyStake * 100).toFixed(1)}% bank` : "No bet"}
+                      label="Suggested allocation"
+                      value={v.kellyStake > 0 ? `${(v.kellyStake * 100).toFixed(1)}% bank` : "Skip"}
                       tone={v.kellyStake > 0 ? "brand" : "muted"}
                     />
                   </dl>
@@ -124,13 +124,13 @@ export function ValueCalculator({ prediction }: { prediction: Prediction }) {
           </div>
 
           <p className="mt-5 text-[11px] leading-relaxed text-ink-dim">
-            Stakes are quarter-Kelly and capped at 5% of bankroll. Even a genuine edge loses often
-            — Kelly is a long-run bankroll rule, not a promise about this match.
+            Allocations are quarter-Kelly and capped at 5% of bankroll. Even a genuine edge loses
+            often — Kelly is a long-run bankroll rule, not a promise about this match.
           </p>
         </div>
       ) : (
         <p className="mt-4 text-xs text-ink-dim">
-          Enter all three prices to see where the model disagrees with your bookmaker.
+          Enter all three prices to see where the model disagrees with the price you were offered.
         </p>
       )}
     </section>

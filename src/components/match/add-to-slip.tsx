@@ -18,7 +18,7 @@ export function AddToSlip({ prediction }: { prediction: Prediction }) {
   if (!sufficiency.publishable) {
     return (
       <section className="card p-5 sm:p-6">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-ink-muted">Bet slip</h2>
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-ink-muted">Selections</h2>
         <p className="mt-3 text-xs leading-relaxed text-ink-dim">
           Selections from this fixture are not offered: there is not enough completed history in
           this competition to stand one up.
@@ -32,7 +32,7 @@ export function AddToSlip({ prediction }: { prediction: Prediction }) {
   return (
     <section className="card p-5 sm:p-6">
       <div className="mb-4 flex items-baseline justify-between gap-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-ink-muted">Bet slip</h2>
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-ink-muted">Selections</h2>
         {existing && <span className="text-xs text-brand">On your slip</span>}
       </div>
 
@@ -68,7 +68,7 @@ export function AddToSlip({ prediction }: { prediction: Prediction }) {
             })
           }
         >
-          {existing ? "Update selection" : "Add to slip"}
+          {existing ? "Update selection" : "Add to selections"}
         </Button>
         {existing && (
           <Button variant="secondary" className="py-2.5" onClick={() => remove(match.id)}>

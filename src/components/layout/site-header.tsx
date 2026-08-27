@@ -12,7 +12,7 @@ const NAV = [
   { href: "/predictions", label: "Predictions" },
   { href: "/trends", label: "Trends" },
   { href: "/track-record", label: "Track Record" },
-  { href: "/slip", label: "Bet Slip" },
+  { href: "/slip", label: "Selections" },
 ];
 
 export function SiteHeader() {

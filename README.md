@@ -122,7 +122,7 @@ src/
     ui/             design-system primitives
   lib/
     providers/      three adapters, resolver, TTL cache with request coalescing
-    model/          poisson.ts, fit.ts, predict.ts, odds.ts
+    model/          the prediction engine — fitting, inference, pricing
     ai/             analyst with deterministic fallback
     service.ts      the seam the pages and API routes share
 ```

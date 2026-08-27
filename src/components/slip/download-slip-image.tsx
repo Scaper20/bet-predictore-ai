@@ -54,8 +54,8 @@ export function DownloadSlipImage() {
         <span className="shrink-0 text-xs text-ink-dim">Branded image</span>
       </div>
       <p className="mb-5 text-xs leading-relaxed text-ink-dim">
-        Not a bet slip — no bookmaker can load this. A clean, branded image of your selections to keep as a
-        reference or share, so you don&apos;t need to come back to the site to remember your picks.
+        A clean, branded image of your selections — not a code, nothing to redeem. Keep it as a
+        reference or share it, so you don&apos;t need to come back to the site to remember your picks.
       </p>
 
       <Button type="button" onClick={() => void download()} disabled={pending} className="w-full">

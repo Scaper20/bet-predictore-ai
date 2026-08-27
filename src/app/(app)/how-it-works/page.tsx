@@ -91,8 +91,8 @@ export default function HowItWorksPage() {
           <p>
             The value finder on each match page removes that margin before comparing anything. This
             is not a detail — comparing a model probability against a raw bookmaker price will
-            flag &quot;value&quot; on bets that are actually break-even or worse. Staking guidance
-            uses the Kelly criterion at a quarter stake and is capped at 5% of bankroll.
+            flag &quot;value&quot; on selections that are actually break-even or worse. Allocation
+            guidance uses the Kelly criterion at a quarter stake and is capped at 5% of bankroll.
           </p>
         </Section>
 
