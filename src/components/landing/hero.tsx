@@ -22,46 +22,10 @@ export function Hero({
         aria-hidden
       />
 
-      <div className="relative mx-auto grid max-w-7xl gap-14 px-4 py-16 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:gap-10 lg:py-24 lg:px-8">
+      <div className="relative mx-auto grid max-w-7xl gap-14 px-4 py-16 sm:px-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-center lg:gap-10 lg:py-24 lg:px-8">
+        {/* Live board leads: today's real predictions, not marketing copy, is
+            the first thing anyone sees. */}
         <div className="animate-rise">
-          <Badge tone="brand" className="mb-6">
-            🇳🇬 Built in Nigeria, for Nigerian football fans
-          </Badge>
-
-          <h1 className="font-display text-[2.75rem] leading-[1.05] font-extrabold sm:text-6xl lg:text-[4.2rem]">
-            Predict. Analyse.
-            <br />
-            <span className="text-gradient-brand">Decide smarter.</span>
-          </h1>
-
-          <p className="mt-6 max-w-xl text-lg leading-relaxed text-ink-muted">
-            Every prediction on this site is fitted to <strong className="text-ink">real completed
-            matches</strong> — not vibes, not recycled tipster picks. See the probability, see the
-            sample size behind it, then decide for yourself.
-          </p>
-
-          <div className="mt-8 flex flex-wrap gap-3">
-            <ButtonLink href="/predictions">See today&apos;s predictions →</ButtonLink>
-            <ButtonLink href="/live" variant="secondary">
-              {liveCount > 0 ? (
-                <>
-                  <LiveDot /> {liveCount} matches live now
-                </>
-              ) : (
-                "Live scores"
-              )}
-            </ButtonLink>
-          </div>
-
-          <dl className="mt-12 grid max-w-lg grid-cols-3 gap-6">
-            <Stat value="12+" label="Leagues covered" />
-            <Stat value="Free" label="No card required" />
-            <Stat value="18+" label="Bet responsibly" />
-          </dl>
-        </div>
-
-        {/* Live board: real fixtures straight from the feed. */}
-        <div className="animate-rise" style={{ animationDelay: "120ms" }}>
           <div className="card glow-soft overflow-hidden">
             <div className="flex items-center gap-2 border-b border-line px-5 py-3.5">
               {liveCount > 0 ? <LiveDot /> : <span className="size-2 rounded-full bg-ink-dim" />}
@@ -134,6 +98,43 @@ export function Hero({
           <p className="mt-3 text-center text-xs text-ink-dim">
             Pulled live from football-data.org, API-Football and TheSportsDB.
           </p>
+        </div>
+
+        <div className="animate-rise" style={{ animationDelay: "120ms" }}>
+          <Badge tone="brand" className="mb-6">
+            🇳🇬 Built in Nigeria, for Nigerian football fans
+          </Badge>
+
+          <h1 className="font-display text-[2.75rem] leading-[1.05] font-extrabold sm:text-6xl lg:text-[4.2rem]">
+            Predict. Analyse.
+            <br />
+            <span className="text-gradient-brand">Decide smarter.</span>
+          </h1>
+
+          <p className="mt-6 max-w-xl text-lg leading-relaxed text-ink-muted">
+            Every prediction on this site is fitted to <strong className="text-ink">real completed
+            matches</strong> — not vibes, not recycled tipster picks. See the probability, see the
+            sample size behind it, then decide for yourself.
+          </p>
+
+          <div className="mt-8 flex flex-wrap gap-3">
+            <ButtonLink href="/predictions">See today&apos;s predictions →</ButtonLink>
+            <ButtonLink href="/live" variant="secondary">
+              {liveCount > 0 ? (
+                <>
+                  <LiveDot /> {liveCount} matches live now
+                </>
+              ) : (
+                "Live scores"
+              )}
+            </ButtonLink>
+          </div>
+
+          <dl className="mt-12 grid max-w-lg grid-cols-3 gap-6">
+            <Stat value="12+" label="Leagues covered" />
+            <Stat value="Free" label="No card required" />
+            <Stat value="18+" label="Bet responsibly" />
+          </dl>
         </div>
       </div>
     </section>

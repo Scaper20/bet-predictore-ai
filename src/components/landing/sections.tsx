@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Badge, ButtonLink, SectionHeading } from "@/components/ui/primitives";
+import { Reveal } from "@/components/ui/reveal";
 import { LEAGUES } from "@/lib/leagues";
 import { naira } from "@/lib/format";
 import { PLANS } from "@/lib/pricing";
@@ -54,22 +55,24 @@ const FEATURES = [
 export function Features() {
   return (
     <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8 lg:py-28">
-      <SectionHeading
-        eyebrow="What you get"
-        title="Everything you need to read a match properly"
-        description="Most tipster sites hand you a pick and ask you to trust them. This one hands you the numbers and the sample size behind them."
-      />
-      <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {FEATURES.map((f) => (
-          <div key={f.title} className="card card-hover p-6">
-            <div className="grid size-11 place-items-center rounded-xl bg-surface-2 text-xl">
-              {f.icon}
+      <Reveal>
+        <SectionHeading
+          eyebrow="What you get"
+          title="Everything you need to read a match properly"
+          description="Most tipster sites hand you a pick and ask you to trust them. This one hands you the numbers and the sample size behind them."
+        />
+        <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {FEATURES.map((f) => (
+            <div key={f.title} className="card card-hover p-6">
+              <div className="grid size-11 place-items-center rounded-lg bg-surface-2 text-xl">
+                {f.icon}
+              </div>
+              <h3 className="mt-4 text-base font-semibold">{f.title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-ink-muted">{f.body}</p>
             </div>
-            <h3 className="mt-4 text-base font-semibold">{f.title}</h3>
-            <p className="mt-2 text-sm leading-relaxed text-ink-muted">{f.body}</p>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      </Reveal>
     </section>
   );
 }
@@ -104,26 +107,28 @@ export function HowItWorks() {
   return (
     <section className="border-y border-line bg-shell">
       <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8 lg:py-28">
-        <SectionHeading
-          eyebrow="How it works"
-          title="Three steps, no black box"
-          description="You can check every stage of this on the match pages. That is the point."
-          align="center"
-        />
-        <div className="mt-14 grid gap-6 md:grid-cols-3">
-          {STEPS.map((s) => (
-            <div key={s.n} className="relative card p-7">
-              <span className="font-display text-5xl font-extrabold text-brand/15">{s.n}</span>
-              <h3 className="mt-3 text-lg font-semibold">{s.title}</h3>
-              <p className="mt-2.5 text-sm leading-relaxed text-ink-muted">{s.body}</p>
-            </div>
-          ))}
-        </div>
-        <div className="mt-10 text-center">
-          <ButtonLink href="/how-it-works" variant="secondary">
-            Read the full method
-          </ButtonLink>
-        </div>
+        <Reveal>
+          <SectionHeading
+            eyebrow="How it works"
+            title="Three steps, no black box"
+            description="You can check every stage of this on the match pages. That is the point."
+            align="center"
+          />
+          <div className="mt-14 grid gap-6 md:grid-cols-3">
+            {STEPS.map((s) => (
+              <div key={s.n} className="relative card p-7">
+                <span className="font-display text-5xl font-extrabold text-brand/15">{s.n}</span>
+                <h3 className="mt-3 text-lg font-semibold">{s.title}</h3>
+                <p className="mt-2.5 text-sm leading-relaxed text-ink-muted">{s.body}</p>
+              </div>
+            ))}
+          </div>
+          <div className="mt-10 text-center">
+            <ButtonLink href="/how-it-works" variant="secondary">
+              Read the full method
+            </ButtonLink>
+          </div>
+        </Reveal>
       </div>
     </section>
   );
@@ -134,24 +139,26 @@ export function HowItWorks() {
 export function Leagues() {
   return (
     <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8 lg:py-24">
-      <SectionHeading
-        eyebrow="Coverage"
-        title="The leagues that matter most in Nigeria"
-        description="Ordered by how much they actually matter here — not by European convention."
-      />
-      <div className="mt-10 flex flex-wrap gap-2.5">
-        {LEAGUES.map((l) => (
-          <Link
-            key={l.code}
-            href={`/fixtures?league=${l.code}`}
-            className="card card-hover flex items-center gap-2.5 px-4 py-3"
-          >
-            <span className="text-lg" aria-hidden>{l.flag}</span>
-            <span className="text-sm font-medium">{l.shortName}</span>
-            <span className="text-xs text-ink-dim">{l.country}</span>
-          </Link>
-        ))}
-      </div>
+      <Reveal>
+        <SectionHeading
+          eyebrow="Coverage"
+          title="The leagues that matter most in Nigeria"
+          description="Ordered by how much they actually matter here — not by European convention."
+        />
+        <div className="mt-10 flex flex-wrap gap-2.5">
+          {LEAGUES.map((l) => (
+            <Link
+              key={l.code}
+              href={`/fixtures?league=${l.code}`}
+              className="card card-hover flex items-center gap-2.5 px-4 py-3"
+            >
+              <span className="text-lg" aria-hidden>{l.flag}</span>
+              <span className="text-sm font-medium">{l.shortName}</span>
+              <span className="text-xs text-ink-dim">{l.country}</span>
+            </Link>
+          ))}
+        </div>
+      </Reveal>
     </section>
   );
 }
@@ -169,6 +176,7 @@ export function Pricing() {
   return (
     <section className="border-y border-line bg-shell">
       <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8 lg:py-28">
+        <Reveal>
         <SectionHeading
           eyebrow="Pricing"
           title="Priced for Nigeria"
@@ -217,6 +225,7 @@ export function Pricing() {
             );
           })}
         </div>
+        </Reveal>
       </div>
     </section>
   );
@@ -254,20 +263,22 @@ const FAQS = [
 export function Faq() {
   return (
     <section className="mx-auto max-w-4xl px-4 py-20 sm:px-6 lg:px-8 lg:py-28">
-      <SectionHeading eyebrow="Questions" title="Straight answers" align="center" />
-      <div className="mt-12 space-y-3">
-        {FAQS.map((f) => (
-          <details key={f.q} className="card group px-5 py-4 [&_summary::-webkit-details-marker]:hidden">
-            <summary className="flex cursor-pointer items-center gap-4 text-sm font-semibold">
-              {f.q}
-              <span className="ml-auto shrink-0 text-ink-dim transition-transform group-open:rotate-45" aria-hidden>
-                +
-              </span>
-            </summary>
-            <p className="mt-3 text-sm leading-relaxed text-ink-muted">{f.a}</p>
-          </details>
-        ))}
-      </div>
+      <Reveal>
+        <SectionHeading eyebrow="Questions" title="Straight answers" align="center" />
+        <div className="mt-12 space-y-3">
+          {FAQS.map((f) => (
+            <details key={f.q} className="card group px-5 py-4 [&_summary::-webkit-details-marker]:hidden">
+              <summary className="flex cursor-pointer items-center gap-4 text-sm font-semibold">
+                {f.q}
+                <span className="ml-auto shrink-0 text-ink-dim transition-transform group-open:rotate-45" aria-hidden>
+                  +
+                </span>
+              </summary>
+              <p className="mt-3 text-sm leading-relaxed text-ink-muted">{f.a}</p>
+            </details>
+          ))}
+        </div>
+      </Reveal>
     </section>
   );
 }
@@ -283,21 +294,23 @@ export function FinalCta() {
         aria-hidden
       />
       <div className="relative mx-auto max-w-3xl px-4 py-24 text-center sm:px-6 lg:px-8">
-        <h2 className="font-display text-3xl font-extrabold sm:text-5xl">
-          Stop guessing.
-          <br />
-          <span className="text-gradient-brand">Start reading the numbers.</span>
-        </h2>
-        <p className="mx-auto mt-5 max-w-xl text-base text-ink-muted">
-          Free to use, no card, no sign-up wall. Open today&apos;s slate and see what the model
-          makes of it.
-        </p>
-        <div className="mt-8 flex flex-wrap justify-center gap-3">
-          <ButtonLink href="/predictions">Open today&apos;s predictions</ButtonLink>
-          <ButtonLink href="/how-it-works" variant="secondary">
-            How the model works
-          </ButtonLink>
-        </div>
+        <Reveal>
+          <h2 className="font-display text-3xl font-extrabold sm:text-5xl">
+            Stop guessing.
+            <br />
+            <span className="text-gradient-brand">Start reading the numbers.</span>
+          </h2>
+          <p className="mx-auto mt-5 max-w-xl text-base text-ink-muted">
+            Free to use, no card, no sign-up wall. Open today&apos;s slate and see what the model
+            makes of it.
+          </p>
+          <div className="mt-8 flex flex-wrap justify-center gap-3">
+            <ButtonLink href="/predictions">Open today&apos;s predictions</ButtonLink>
+            <ButtonLink href="/how-it-works" variant="secondary">
+              How the model works
+            </ButtonLink>
+          </div>
+        </Reveal>
       </div>
     </section>
   );

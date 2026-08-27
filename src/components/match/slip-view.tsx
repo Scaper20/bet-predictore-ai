@@ -13,7 +13,7 @@ export function SlipView() {
     return (
       <EmptyState
         icon="🧾"
-        title="Your slip is empty"
+        title="No selections yet"
         description="Add selections from any match page and this builds the true combined probability — plus what the combined pick is really worth against the price you have been offered."
         action={<ButtonLink href="/predictions" variant="secondary">Browse predictions</ButtonLink>}
       />

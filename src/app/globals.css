@@ -49,8 +49,8 @@
   --color-violet: #a78bfa;
 
   /* Fonts */
-  --font-display: var(--font-sora), ui-sans-serif, system-ui, sans-serif;
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-heading), "Arial Narrow", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-body), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-mono-jb), ui-monospace, SFMono-Regular, monospace;
 
   /* Motion */
@@ -97,7 +97,8 @@
   }
   h1, h2, h3, h4 {
     font-family: var(--font-display);
-    letter-spacing: -0.025em;
+    font-weight: 700;
+    letter-spacing: -0.01em;
     text-wrap: balance;
   }
   /* Stat numbers should never jitter while polling */
@@ -133,11 +134,14 @@
     color: transparent;
   }
 
-  /* Hairline card border that reads well on near-black */
+  /* Hairline card border that reads well on near-black. Radius is
+     deliberately tighter than the old rounded-2xl default — full roundness
+     is reserved for pills/badges/avatars so the corner treatment reads as a
+     choice rather than a template default. */
   .card {
     background: linear-gradient(180deg, var(--color-surface) 0%, var(--color-shell) 100%);
     border: 1px solid var(--color-line);
-    border-radius: 1rem;
+    border-radius: 0.75rem;
   }
   .card-hover {
     transition: border-color .2s var(--ease-out-expo), transform .2s var(--ease-out-expo), box-shadow .2s var(--ease-out-expo);
@@ -183,7 +187,33 @@
 }
 .animate-rise { animation: rise .6s var(--ease-out-expo) both; }
 
+/* Pre-reveal state for <Reveal>: hidden until scrolled into view. Reduced
+   motion is handled here, in CSS, rather than in JS state — content simply
+   never starts hidden, no animation to skip. */
+.reveal-pending { opacity: 0; }
 @media (prefers-reduced-motion: reduce) {
-  .animate-marquee, .live-dot, .animate-rise { animation: none !important; }
+  .reveal-pending { opacity: 1; }
+}
+
+/* Probability-bar fill-in: the bar is already laid out at its real width,
+   this just scales it in from the left on mount. A separate mechanism from
+   the transition-[width] on the fill element itself, which still handles
+   later value changes (e.g. a live-updating panel). */
+@keyframes bar-grow {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+.bar-fill { transform-origin: left; animation: bar-grow .7s var(--ease-out-expo) both; }
+
+/* Loading spinner: same growing/fading ring language as .live-dot, just
+   filled and centred rather than orbiting a status dot. */
+@keyframes spinner-pulse {
+  0%   { transform: scale(0.35); opacity: 0.9; }
+  100% { transform: scale(1); opacity: 0; }
+}
+.spinner-ring { animation: spinner-pulse 1s ease-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-marquee, .live-dot, .animate-rise, .bar-fill { animation: none !important; }
   .card-hover:hover { transform: none; }
 }
