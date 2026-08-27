@@ -40,7 +40,7 @@ export const PLANS: PlanDefinition[] = [
       "Value detection against your bookmaker's odds",
       "Kelly staking guidance, capped and sane",
       "Asian handicap breakdowns",
-      "Quick-Slip formats for SportyBet, 1xBet and BetKing",
+      "Downloadable, shareable slip image",
     ],
     price: { oneOff: 700 },
     cadence: "Fri–Mon access",
