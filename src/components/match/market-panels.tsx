@@ -32,7 +32,7 @@ export function OutcomePanel({ prediction }: { prediction: Prediction }) {
         ))}
       </div>
       <Footnote>
-        Odds shown are the model&apos;s fair price — what the bet would be worth with no
+        Prices shown are the model&apos;s own fair value — what it would be worth with no
         bookmaker margin attached.
       </Footnote>
     </Panel>
@@ -160,7 +160,7 @@ export function AsianHandicapPanel({
   match: Match;
 }) {
   // The full ±2 range is mostly academic at the extremes — the tradeable
-  // range punters actually use is the middle of the table.
+  // range that matters in practice is the middle of the table.
   const core = lines.filter((l) => Math.abs(l.line) <= 1.5);
 
   return (

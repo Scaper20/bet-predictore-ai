@@ -6,7 +6,7 @@ import { trends } from "@/lib/service";
 import { percent } from "@/lib/format";
 
 export const metadata: Metadata = {
-  title: "Betting Trends",
+  title: "Trends",
   description:
     "What the model reads across the whole upcoming slate: goal expectation, over/under lean, " +
     "BTTS lean and the fixtures it feels most strongly about.",
@@ -20,7 +20,7 @@ export default async function TrendsPage() {
   if (!snapshot || snapshot.total === 0) {
     return (
       <>
-        <PageHeader eyebrow="Trends" title="Betting trends" />
+        <PageHeader eyebrow="Trends" title="Trends" />
         <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
           <EmptyState
             icon="📈"

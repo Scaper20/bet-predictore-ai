@@ -30,17 +30,17 @@ const FEATURES = [
   },
   {
     icon: "🧮",
-    title: "Value, after the bookmaker's cut",
+    title: "Value, margin stripped out",
     body:
-      "Paste in the odds you have been offered. We strip the margin, compare against the " +
-      "model's fair price and tell you the edge and a sane Kelly stake.",
+      "Paste in the price you have been offered. We strip the margin, compare against the " +
+      "model's fair price and tell you the edge and a sane allocation.",
   },
   {
     icon: "🇳🇬",
     title: "Nigeria first",
     body:
       "NPFL and CAF competitions alongside the Premier League. Prices in Naira, kickoff " +
-      "times in WAT, written for how Nigerians actually bet.",
+      "times in WAT, written the way Nigerian football fans actually talk.",
   },
   {
     icon: "🔍",
@@ -136,7 +136,7 @@ export function Leagues() {
     <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8 lg:py-24">
       <SectionHeading
         eyebrow="Coverage"
-        title="The leagues on Nigerian betting slips"
+        title="The leagues that matter most in Nigeria"
         description="Ordered by how much they actually matter here — not by European convention."
       />
       <div className="mt-10 flex flex-wrap gap-2.5">
@@ -243,7 +243,7 @@ const FAQS = [
   },
   {
     q: "Do you cover the NPFL?",
-    a: "Yes, alongside the CAF Champions League and the European competitions Nigerians bet on most. Depth of NPFL data depends on which feeds are configured, and each prediction tells you what it was fitted on.",
+    a: "Yes, alongside the CAF Champions League and the European competitions Nigerians follow most. Depth of NPFL data depends on which feeds are configured, and each prediction tells you what it was fitted on.",
   },
   {
     q: "Is this legal in Nigeria?",

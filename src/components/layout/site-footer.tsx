@@ -7,9 +7,9 @@ const COLUMNS = [
       { href: "/live", label: "Live Scores" },
       { href: "/fixtures", label: "Fixtures" },
       { href: "/predictions", label: "AI Predictions" },
-      { href: "/trends", label: "Betting Trends" },
+      { href: "/trends", label: "Trends" },
       { href: "/track-record", label: "Track Record" },
-      { href: "/slip", label: "Bet Slip Builder" },
+      { href: "/slip", label: "Selection Builder" },
     ],
   },
   {
@@ -45,7 +45,7 @@ export function SiteFooter() {
               </span>
             </div>
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-ink-muted">
-              Data-driven football insight built for Nigerian bettors. Real fixtures, real
+              Data-driven football insight for Nigerian football fans. Real fixtures, real
               results, and a model that shows its working.
             </p>
           </div>

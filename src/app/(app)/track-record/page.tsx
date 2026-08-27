@@ -55,7 +55,7 @@ async function loadTrackRecord() {
   const winCount = wins.count ?? 0;
   const loseCount = losses.count ?? 0;
   const pushCount = pushes.count ?? 0;
-  const graded = winCount + loseCount; // pushes are excluded from win rate, same convention as bookmakers.
+  const graded = winCount + loseCount; // pushes are excluded from win rate, standard convention for a void result.
 
   return {
     rows: (rows ?? []) as PredictionLogRow[],
@@ -118,7 +118,7 @@ export default async function TrackRecordPage() {
               <ProbabilityBar value={record.winRate ?? 0} tone="brand" />
             </div>
             <p className="mt-3 text-[11px] leading-relaxed text-ink-dim">
-              Pushes excluded from the rate, same convention as a bookmaker settling a void bet.
+              Pushes excluded from the rate, the standard convention for settling a void result.
             </p>
           </div>
           <div className="card p-5">

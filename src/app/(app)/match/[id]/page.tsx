@@ -178,7 +178,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
             <div className="card p-5">
               <p className="text-[11px] leading-relaxed text-ink-dim">
                 Probabilities are estimates from a statistical model, not predictions of fact.
-                Odds shown are fair prices with no margin. Bet responsibly — 18+.
+                Prices shown are fair, with no margin added. Bet responsibly — 18+.
               </p>
               <ButtonLink href="/how-it-works" variant="ghost" className="mt-3 px-0 py-1 text-xs">
                 How this is calculated →

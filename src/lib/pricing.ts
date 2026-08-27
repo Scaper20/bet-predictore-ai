@@ -20,13 +20,13 @@ export const PLANS: PlanDefinition[] = [
   {
     id: "free",
     name: "Free",
-    description: "Everything you need to stop betting blind.",
+    description: "Everything you need to stop guessing.",
     features: [
       "Live scores across every tracked league",
       "Fixtures up to 14 days ahead",
       "Full 1X2, over/under and BTTS probabilities",
       "Model transparency: sample size and data quality",
-      "Bet slip builder with true combined odds",
+      "Selection builder with true combined probability",
     ],
     price: {},
     cadence: "forever",
@@ -37,8 +37,8 @@ export const PLANS: PlanDefinition[] = [
     description: "One matchday slate, full analysis. No subscription.",
     features: [
       "Everything in Free",
-      "Value detection against your bookmaker's odds",
-      "Kelly staking guidance, capped and sane",
+      "Value detection against the price you're offered",
+      "Kelly allocation guidance, capped and sane",
       "Asian handicap breakdowns",
       "Downloadable, shareable slip image",
     ],
@@ -48,7 +48,7 @@ export const PLANS: PlanDefinition[] = [
   {
     id: "pro",
     name: "Pro",
-    description: "For bettors who stake often enough to care about edge.",
+    description: "For analysts who track edge across a full slate.",
     features: [
       "Everything in Weekend Pass, every matchday — no repurchasing week to week",
       "Full AI-written match breakdown, not just the opening paragraph",
@@ -61,7 +61,7 @@ export const PLANS: PlanDefinition[] = [
   {
     id: "vip",
     name: "VIP",
-    description: "For serious, high-volume stakers.",
+    description: "For serious, high-volume analysts.",
     features: [
       "Everything in Pro",
       "Live in-play win-probability, updating as the match unfolds",

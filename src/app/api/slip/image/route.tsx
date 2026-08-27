@@ -103,7 +103,7 @@ export async function GET(request: Request) {
         </div>
 
         <div style={{ display: "flex", marginTop: "auto", paddingTop: 32, fontSize: 18, color: "#5b6b80" }}>
-          Not a bet slip — personal reference only · betrix.com.ng
+          Personal reference only, not redeemable · betrix.com.ng
         </div>
       </div>
     ),

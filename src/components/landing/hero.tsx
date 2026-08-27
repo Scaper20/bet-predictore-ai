@@ -25,13 +25,13 @@ export function Hero({
       <div className="relative mx-auto grid max-w-7xl gap-14 px-4 py-16 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:gap-10 lg:py-24 lg:px-8">
         <div className="animate-rise">
           <Badge tone="brand" className="mb-6">
-            🇳🇬 Built in Nigeria, for Nigerian bettors
+            🇳🇬 Built in Nigeria, for Nigerian football fans
           </Badge>
 
           <h1 className="font-display text-[2.75rem] leading-[1.05] font-extrabold sm:text-6xl lg:text-[4.2rem]">
             Predict. Analyse.
             <br />
-            <span className="text-gradient-brand">Bet smarter.</span>
+            <span className="text-gradient-brand">Decide smarter.</span>
           </h1>
 
           <p className="mt-6 max-w-xl text-lg leading-relaxed text-ink-muted">

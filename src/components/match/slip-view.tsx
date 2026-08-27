@@ -14,7 +14,7 @@ export function SlipView() {
       <EmptyState
         icon="🧾"
         title="Your slip is empty"
-        description="Add selections from any match page and this builds the true combined probability — plus what the accumulator is really worth against the price you have been offered."
+        description="Add selections from any match page and this builds the true combined probability — plus what the combined pick is really worth against the price you have been offered."
         action={<ButtonLink href="/predictions" variant="secondary">Browse predictions</ButtonLink>}
       />
     );
@@ -67,12 +67,12 @@ export function SlipView() {
                 <p className="tnum mt-0.5 text-sm font-bold">{percent(l.probability)}</p>
               </div>
               <div>
-                <p className="text-[10px] uppercase tracking-wider text-ink-dim">Fair odds</p>
+                <p className="text-[10px] uppercase tracking-wider text-ink-dim">Fair price</p>
                 <p className="tnum mt-0.5 text-sm font-bold">{odds(l.fairOdds)}</p>
               </div>
               <label className="block">
                 <span className="mb-1 block text-[10px] uppercase tracking-wider text-ink-dim">
-                  Your odds
+                  Your price
                 </span>
                 <input
                   type="text"
@@ -98,7 +98,7 @@ export function SlipView() {
       <aside className="lg:sticky lg:top-20 lg:self-start">
         <div className="card p-5 sm:p-6">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-ink-muted">
-            Accumulator
+            Combined pick
           </h2>
 
           <div className="mt-5 space-y-4">
@@ -117,7 +117,7 @@ export function SlipView() {
             <dl className="grid grid-cols-2 gap-4 border-t border-line pt-4">
               <div>
                 <dt className="text-[10px] uppercase tracking-wider text-ink-dim">
-                  {usingRealOdds ? "Your combined odds" : "Fair combined odds"}
+                  {usingRealOdds ? "Your combined price" : "Fair combined price"}
                 </dt>
                 <dd className="tnum mt-0.5 text-lg font-bold">{odds(acc.decimalOdds)}</dd>
               </div>
@@ -140,9 +140,9 @@ export function SlipView() {
           <div className="mt-5 space-y-3 border-t border-line pt-5">
             {!usingRealOdds && (
               <p className="text-[11px] leading-relaxed text-ink-dim">
-                Priced at the model&apos;s fair odds, so the expected return sits at zero by
-                construction. Enter your bookmaker&apos;s actual prices above to see whether the
-                bet is really worth taking.
+                Priced at the model&apos;s fair price, so the expected return sits at zero by
+                construction. Enter the actual prices you&apos;ve been offered above to see
+                whether it&apos;s really worth taking.
               </p>
             )}
 
@@ -159,11 +159,11 @@ export function SlipView() {
 
             {legs.length >= 5 && (
               <div className="rounded-lg border border-rose/25 bg-rose/5 p-3">
-                <Badge tone="rose">Long accumulator</Badge>
+                <Badge tone="rose">Long combo</Badge>
                 <p className="mt-2 text-[11px] leading-relaxed text-ink-muted">
                   At {legs.length} legs this lands roughly {percent(acc.probability, 2)} of the
-                  time. Long accumulators are where bookmaker margin compounds hardest against
-                  you — the payout looks big because it almost never pays.
+                  time. Long combined picks are where margin compounds hardest against you — the
+                  payout looks big because it almost never pays.
                 </p>
               </div>
             )}
