@@ -51,10 +51,13 @@
 
 ```bash
 npm run lint
+npx next typegen   # first checkout only — generates the route types tsc needs
 npx tsc --noEmit
 npm test
 npm run build
 ```
 
-All four run in CI on every PR into `dev` or `Main/Production`; running them locally first saves a
-round trip.
+All of these run in CI on every PR into `dev` or `Main/Production`; running them locally first
+saves a round trip. `next typegen` only needs to be re-run after adding/removing a route — running
+`next dev` or `next build` regenerates the same types as a side effect, so this step is easy to
+forget if you've already had the dev server running.
