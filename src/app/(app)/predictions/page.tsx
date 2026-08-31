@@ -10,7 +10,7 @@ import { predictBatch, upcomingFeed, bestBetOfDay } from "@/lib/service";
 import { leagueByCode } from "@/lib/leagues";
 
 export const metadata: Metadata = {
-  title: "AI Football Predictions",
+  title: "Today's Football Predictions",
   description:
     "Football predictions fitted on real completed matches: 1X2, over/under, BTTS and " +
     "correct score probabilities with the sample size behind every number.",

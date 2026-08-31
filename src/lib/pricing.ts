@@ -51,7 +51,7 @@ export const PLANS: PlanDefinition[] = [
     description: "For analysts who track edge across a full slate.",
     features: [
       "Everything in Weekend Pass, every matchday — no repurchasing week to week",
-      "Full AI-written match breakdown, not just the opening paragraph",
+      "Full enhanced match breakdown, not just the opening paragraph",
       "The model's key factors spelled out for every fixture",
     ],
     price: { monthly: 3500, yearly: 33600 },

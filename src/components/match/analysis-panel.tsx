@@ -4,7 +4,7 @@ import { Gate } from "@/components/entitlements/gate";
 import { AnalysisRestClient } from "./analysis-rest-client";
 
 /**
- * When the analysis is AI-written (source: "claude"), everything past the
+ * When the analysis is enhanced (source: "claude"), everything past the
  * lead paragraph is a Pro perk. matchDetail() computes one shared, cached
  * analysis per match (not per user — reading the session there would break
  * the page's ISR caching, see (app)/layout.tsx's comment), so this can't
@@ -26,7 +26,7 @@ export function AnalysisPanel({ analysis, matchId }: { analysis: Analysis; match
           Match analysis
         </h2>
         <Badge tone={isAiWritten ? "violet" : "neutral"}>
-          {isAiWritten ? "AI written" : "Model generated"}
+          {isAiWritten ? "Enhanced" : "Model generated"}
         </Badge>
       </div>
 
@@ -41,7 +41,7 @@ export function AnalysisPanel({ analysis, matchId }: { analysis: Analysis; match
             fallback={
               analysis.body.length > 1 || analysis.factors.length > 0 ? (
                 <p className="text-xs text-ink-dim">
-                  The rest of this AI-written briefing is a{" "}
+                  The rest of this enhanced breakdown is a{" "}
                   <a href="/account/billing?plan=pro" className="text-brand underline underline-offset-2">
                     Pro
                   </a>{" "}

@@ -6,7 +6,7 @@ const COLUMNS = [
     links: [
       { href: "/live", label: "Live Scores" },
       { href: "/fixtures", label: "Fixtures" },
-      { href: "/predictions", label: "AI Predictions" },
+      { href: "/predictions", label: "Predictions" },
       { href: "/trends", label: "Trends" },
       { href: "/track-record", label: "Track Record" },
       { href: "/slip", label: "Selection Builder" },

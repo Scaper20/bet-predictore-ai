@@ -21,7 +21,7 @@ export async function GET(
 
     // Real, server-side enforcement: this used to return matchDetail()
     // wholesale to anyone, unauthenticated — Asian Handicap lines and the
-    // full AI analysis body were retrievable by a bare curl regardless of
+    // full enhanced analysis body were retrievable by a bare curl regardless of
     // tier. Redact based on the caller's actual entitlement instead of
     // relying on the client-side <Gate> to just not render it.
     const entitlement = await getEntitlement();
