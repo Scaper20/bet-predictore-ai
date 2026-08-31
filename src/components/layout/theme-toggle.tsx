@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useState, useSyncExternalStore, useTransition } from "react";
 import { setTheme as setThemeAction } from "@/app/actions/theme";
 
 type Theme = "dark" | "light";
@@ -11,6 +11,18 @@ function readCookieTheme(): Theme {
   if (typeof document === "undefined") return "dark";
   const match = document.cookie.match(/(?:^|; )theme=(dark|light)/);
   return match?.[1] === "light" ? "light" : "dark";
+}
+
+// Nothing outside this component mutates the cookie while it's mounted, so
+// there is nothing to subscribe to — this pair exists purely to give
+// useSyncExternalStore a hydration-safe way to read the cookie once: the
+// server snapshot matches layout.tsx's static "dark" default, and the real
+// value is read only after hydration, avoiding a mismatch warning.
+function subscribeNoop() {
+  return () => {};
+}
+function getServerSnapshotTheme(): Theme {
+  return "dark";
 }
 
 function applyThemeLocally(theme: Theme) {
@@ -24,12 +36,9 @@ function applyThemeLocally(theme: Theme) {
  * server-side — it would force the whole app out of static rendering).
  */
 export function ThemeToggle() {
-  const [theme, setTheme] = useState<Theme>("dark");
+  const initialTheme = useSyncExternalStore(subscribeNoop, readCookieTheme, getServerSnapshotTheme);
+  const [theme, setTheme] = useState<Theme>(initialTheme);
   const [, startTransition] = useTransition();
-
-  useEffect(() => {
-    setTheme(readCookieTheme());
-  }, []);
 
   const toggle = () => {
     const next: Theme = theme === "dark" ? "light" : "dark";
