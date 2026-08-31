@@ -16,7 +16,14 @@ export default async function AdminLoginPage() {
     <div className="mx-auto max-w-sm px-4 py-16 sm:px-6">
       <h1 className="font-display text-2xl font-bold">Admin sign in</h1>
 
-      {gate.reason === "forbidden" ? (
+      {gate.reason === "not_configured" ? (
+        <div className="card mt-6 p-6">
+          <p className="text-sm text-ink-muted">
+            This deployment hasn&apos;t configured Supabase, so there&apos;s no admin account to sign
+            in with. Live scores, fixtures and predictions all work without it.
+          </p>
+        </div>
+      ) : gate.reason === "forbidden" ? (
         <div className="card mt-6 p-6">
           <p className="text-sm text-ink-muted">
             You&apos;re signed in, but that account doesn&apos;t have admin dashboard access.
