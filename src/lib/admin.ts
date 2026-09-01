@@ -2,7 +2,7 @@ import "server-only";
 
 import { cache } from "react";
 import { redirect } from "next/navigation";
-import { supabaseServer } from "@/lib/supabase/server";
+import { supabaseServer, supabaseConfigured } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export interface AdminIdentity {
@@ -12,7 +12,7 @@ export interface AdminIdentity {
 
 type Gate =
   | { ok: true; identity: AdminIdentity }
-  | { ok: false; reason: "unauthenticated" | "forbidden" };
+  | { ok: false; reason: "unauthenticated" | "forbidden" | "not_configured" };
 
 /**
  * Core lookup, memoized per-request via React's cache() — request-scoped
@@ -24,6 +24,12 @@ type Gate =
  * re-verifying identity on every call.
  */
 const getGate = cache(async (): Promise<Gate> => {
+  // Same degrade-gracefully posture as (app)/account/page.tsx: an
+  // unconfigured deployment shouldn't throw during prerendering, and a
+  // visitor hitting /admin should see why, not an unauthenticated prompt
+  // that can never succeed.
+  if (!supabaseConfigured) return { ok: false, reason: "not_configured" };
+
   const supabase = await supabaseServer();
   const {
     data: { user },
@@ -48,7 +54,7 @@ export const getAdminGate = getGate;
  */
 export async function requireAdmin(): Promise<AdminIdentity> {
   const gate = await getGate();
-  if (!gate.ok) redirect(gate.reason === "unauthenticated" ? "/admin/login" : "/admin/login?denied=1");
+  if (!gate.ok) redirect(gate.reason === "forbidden" ? "/admin/login?denied=1" : "/admin/login");
   return gate.identity;
 }
 
@@ -66,9 +72,17 @@ export type AdminCheckResult =
 export async function checkAdmin(): Promise<AdminCheckResult> {
   const gate = await getGate();
   if (!gate.ok) {
-    return gate.reason === "unauthenticated"
-      ? { ok: false, status: 401, error: "Sign in as an admin to do this." }
-      : { ok: false, status: 403, error: "You don't have permission to do this." };
+    if (gate.reason === "forbidden") {
+      return { ok: false, status: 403, error: "You don't have permission to do this." };
+    }
+    return {
+      ok: false,
+      status: 401,
+      error:
+        gate.reason === "not_configured"
+          ? "Admin access isn't configured for this deployment."
+          : "Sign in as an admin to do this.",
+    };
   }
   return { ok: true, identity: gate.identity };
 }

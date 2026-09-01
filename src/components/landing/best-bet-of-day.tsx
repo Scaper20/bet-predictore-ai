@@ -5,7 +5,7 @@ import { odds, percent } from "@/lib/format";
 
 /**
  * The one deep pick given away free, no login. Headline numbers only — the
- * full panel stack (value, Kelly, Asian handicap, AI briefing) still lives
+ * full panel stack (value, Kelly, Asian handicap, enhanced briefing) still lives
  * behind /match/[id]'s normal gates, so this reads as a hook, not a giveaway
  * of the whole paid experience.
  */

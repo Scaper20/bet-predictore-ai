@@ -13,7 +13,8 @@
     "smoke:predict": "tsx scripts/smoke-predict.ts",
     "smoke:email": "tsx scripts/smoke-email.ts",
     "create-admin": "tsx scripts/create-admin.ts",
-    "grant-subscription": "tsx scripts/grant-subscription.ts"
+    "grant-subscription": "tsx scripts/grant-subscription.ts",
+    "prepare": "husky"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.120.0",
@@ -26,6 +27,8 @@
     "server-only": "^0.0.1"
   },
   "devDependencies": {
+    "@commitlint/cli": "^20.5.3",
+    "@commitlint/config-conventional": "^20.5.3",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
@@ -34,6 +37,7 @@
     "dotenv": "^17.4.2",
     "eslint": "^9",
     "eslint-config-next": "16.3.1",
+    "husky": "^9.1.7",
     "playwright": "^1.62.1",
     "tailwindcss": "^4",
     "tsx": "^4.23.12",
@@ -41,5 +45,5 @@
     "vitest": "^4.1.11",
     "ws": "^8.21.3"
   },
-  "description": "BetriX — AI-assisted football prediction and betting analysis for the Nigerian market"
+  "description": "BetriX — Model-driven football prediction and betting analysis for the Nigerian market"
 }

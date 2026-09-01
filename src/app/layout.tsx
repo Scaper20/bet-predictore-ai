@@ -42,7 +42,7 @@ const mono = JetBrains_Mono({ variable: "--font-mono-jb", subsets: ["latin"], di
 export const metadata: Metadata = {
   metadataBase: new URL(SITE),
   title: {
-    default: "BetriX — AI Football Predictions & Live Trends",
+    default: "BetriX — Football Predictions & Live Trends",
     template: "%s · BetriX",
   },
   description:
@@ -50,21 +50,21 @@ export const metadata: Metadata = {
     "fixtures, and a statistical model fitted on actual results — not guesswork.",
   keywords: [
     "football predictions Nigeria", "soccer prediction tips", "NPFL predictions",
-    "Premier League predictions", "AI football analysis", "live scores Nigeria",
+    "Premier League predictions", "football prediction model", "live scores Nigeria",
     "over 2.5 goals prediction", "BTTS tips", "value bets",
   ],
   openGraph: {
     type: "website",
     locale: "en_NG",
     siteName: "BetriX",
-    title: "BetriX — AI Football Predictions Built for Nigeria",
+    title: "BetriX — Football Predictions Built on Real Data",
     description:
       "Real fixtures, real live scores, and a Dixon-Coles model fitted on actual results. " +
       "Know the numbers before you decide.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "BetriX — AI Football Predictions",
+    title: "BetriX — Football Predictions",
     description: "Data-driven football insight for Nigerian football fans.",
   },
   robots: { index: true, follow: true },

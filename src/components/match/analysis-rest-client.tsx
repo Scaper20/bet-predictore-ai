@@ -9,7 +9,7 @@ interface ApiAnalysis {
   entitlement: { tier: "free" | "pass" | "pro" | "vip" };
 }
 
-/** Fetches the rest of the AI-written analysis from the entitlement-checked
+/** Fetches the rest of the enhanced analysis from the entitlement-checked
  * /api/match/[id] route — see analysis-panel.tsx for why this can't be a
  * server-passed prop. */
 export function AnalysisRestClient({ matchId }: { matchId: string }) {
