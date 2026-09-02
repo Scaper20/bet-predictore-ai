@@ -9,6 +9,7 @@ import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { AccountMenu } from "@/components/layout/account-menu";
 import { SlipButton } from "@/components/layout/slip-button";
 import { useEntitlement } from "@/components/entitlements/entitlement-provider";
+import { useAuthHint } from "@/components/entitlements/use-auth-hint";
 import { sportPath, sportFromPathname } from "@/lib/routes";
 
 /**
@@ -42,6 +43,13 @@ export function SiteHeader() {
   // load-bearing for every ISR route on the site.
   const { entitlement, loading } = useEntitlement();
 
+  // While that fetch is in flight, the bx_auth cookie says which of the two
+  // clusters to paint. It is a hint, not a permission: `entitlement` still
+  // decides everything the moment it lands, and the hint never gates content.
+  const hint = useAuthHint();
+  const signedIn = loading ? hint : entitlement.signedIn;
+  const resolving = signedIn === null;
+
   return (
     <header className="sticky top-0 z-50 border-b border-line bg-canvas/85 backdrop-blur-xl">
       <Container className="flex h-16 items-center gap-4">
@@ -71,9 +79,9 @@ export function SiteHeader() {
 
         <div className="ml-auto hidden items-center gap-2 md:flex">
           <SlipButton sport={sport} />
-          {loading ? (
+          {resolving ? (
             <AuthPlaceholder />
-          ) : entitlement.signedIn ? (
+          ) : signedIn ? (
             <>
               {entitlement.tier === "free" && (
                 <ButtonLink href="/pricing" variant="secondary" className="px-4 py-2">
@@ -138,8 +146,8 @@ export function SiteHeader() {
 
           {/* The CTA sits last on mobile: it is the closest thing to the
               thumb, and it is what the menu is for. */}
-          {!loading &&
-            (entitlement.signedIn ? (
+          {!resolving &&
+            (signedIn ? (
               <div className="mt-2 space-y-2">
                 <ButtonLink href="/account" variant="secondary" className="w-full">
                   Your account
@@ -167,12 +175,14 @@ export function SiteHeader() {
 }
 
 /**
- * Holds the space while the entitlement fetch resolves.
+ * Holds the space when there is nothing to go on — no hint cookie yet and the
+ * entitlement fetch still in flight, which in practice means a first-ever
+ * visit before proxy.ts has set one.
  *
  * The alternative — assuming logged-out and rendering the sign-up CTA — puts
- * "Create free account" in front of someone who already has one on every
- * single page load. A neutral shape for ~100ms is the cheaper mistake, and
- * unlike <Gate> there is nothing here that failing open would leak.
+ * "Create free account" in front of someone who already has one. A neutral
+ * shape is the cheaper mistake, and unlike <Gate> there is nothing here that
+ * failing open would leak.
  */
 function AuthPlaceholder() {
   return <div className="size-10 rounded-full bg-surface-2" aria-hidden />;
