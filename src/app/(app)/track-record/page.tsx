@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { PageHeader } from "@/components/ui/page-header";
 import { Badge, EmptyState, ProbabilityBar } from "@/components/ui/primitives";
+import { CalibrationSection } from "@/components/track-record/calibration-section";
 import { supabasePublic } from "@/lib/supabase/public";
+import { computeCalibration } from "@/lib/calibration";
 import { kickoffDay, percent } from "@/lib/format";
 
 export const metadata: Metadata = {
@@ -40,7 +43,7 @@ async function loadTrackRecord() {
   const supabase = supabasePublic();
   if (!supabase) return null;
 
-  const [{ data: rows }, wins, losses, pushes] = await Promise.all([
+  const [{ data: rows }, wins, losses, pushes, { data: graded }] = await Promise.all([
     supabase
       .from("predictions_log")
       .select("*")
@@ -50,19 +53,23 @@ async function loadTrackRecord() {
     supabase.from("predictions_log").select("*", { count: "exact", head: true }).eq("result", "win"),
     supabase.from("predictions_log").select("*", { count: "exact", head: true }).eq("result", "lose"),
     supabase.from("predictions_log").select("*", { count: "exact", head: true }).eq("result", "push"),
+    // Unbounded and only 2 columns — feeds the Calibration Score badge, which
+    // must reflect every settled pick ever made, not just the 50 shown above.
+    supabase.from("predictions_log").select("probability, result").not("settled_at", "is", null),
   ]);
 
   const winCount = wins.count ?? 0;
   const loseCount = losses.count ?? 0;
   const pushCount = pushes.count ?? 0;
-  const graded = winCount + loseCount; // pushes are excluded from win rate, standard convention for a void result.
+  const gradedCount = winCount + loseCount; // pushes are excluded from win rate, standard convention for a void result.
 
   return {
     rows: (rows ?? []) as PredictionLogRow[],
     winCount,
     loseCount,
     pushCount,
-    winRate: graded > 0 ? winCount / graded : null,
+    winRate: gradedCount > 0 ? winCount / gradedCount : null,
+    calibration: computeCalibration(graded ?? []),
   };
 }
 
@@ -108,7 +115,7 @@ export default async function TrackRecordPage() {
       />
 
       <div className="mx-auto max-w-7xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
-        <section className="grid gap-4 sm:grid-cols-3">
+        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="card p-5">
             <p className="text-xs font-medium uppercase tracking-wider text-ink-dim">Win rate</p>
             <p className="tnum mt-2 font-display text-3xl font-extrabold">
@@ -140,6 +147,7 @@ export default async function TrackRecordPage() {
               Showing the {record.rows.length} most recent below.
             </p>
           </div>
+          <CalibrationSection initial={record.calibration} />
         </section>
 
         <section className="space-y-3">
@@ -155,7 +163,10 @@ export default async function TrackRecordPage() {
 function TrackRecordRow({ row }: { row: PredictionLogRow }) {
   const tone = row.result === "win" ? "brand" : row.result === "lose" ? "rose" : "neutral";
   return (
-    <div className="card flex flex-wrap items-center gap-4 p-4 sm:p-5">
+    <Link
+      href={`/matches/${encodeURIComponent(row.match_id)}`}
+      className="card flex flex-wrap items-center gap-4 p-4 transition-colors hover:border-line-strong sm:p-5"
+    >
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2 text-xs text-ink-dim">
           <span className="font-medium text-ink-muted">{row.league}</span>
@@ -176,6 +187,7 @@ function TrackRecordRow({ row }: { row: PredictionLogRow }) {
         </p>
       </div>
       <Badge tone={tone}>{row.result?.toUpperCase() ?? "PENDING"}</Badge>
-    </div>
+      <span className="text-ink-dim" aria-hidden>→</span>
+    </Link>
   );
 }
