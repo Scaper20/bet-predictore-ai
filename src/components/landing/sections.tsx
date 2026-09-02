@@ -1,10 +1,9 @@
 import Link from "next/link";
-import { Badge, ButtonLink, SectionHeading } from "@/components/ui/primitives";
+import { ButtonLink, SectionHeading } from "@/components/ui/primitives";
+import { PricingTable } from "@/components/pricing/pricing-table";
 import { Container, containerClass } from "@/components/ui/container";
 import { Reveal } from "@/components/ui/reveal";
 import { LEAGUES } from "@/lib/leagues";
-import { naira } from "@/lib/format";
-import { PLANS } from "@/lib/pricing";
 import { sportPath } from "@/lib/routes";
 
 /* ---------------------------------------------------------------- Features */
@@ -167,66 +166,31 @@ export function Leagues() {
 
 /* ----------------------------------------------------------------- Pricing */
 
-const CTA: Record<string, string> = {
-  free: "Start free",
-  pass: "Get this weekend",
-  pro: "Go Pro",
-  vip: "Go VIP",
-};
-
 export function Pricing() {
   return (
     <section className="border-y border-line bg-shell">
       <Container className="py-20 lg:py-28">
         <Reveal>
-        <SectionHeading
-          eyebrow="Pricing"
-          title="Priced for Nigeria"
-          description="From a single matchday to a full season. Cancel whenever you like."
-          align="center"
-        />
-        <div className="mx-auto mt-12 grid max-w-6xl gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {PLANS.map((p) => {
-            const price = p.price.oneOff ?? p.price.monthly;
-            return (
-              <div
-                key={p.id}
-                className={`card relative flex flex-col p-7 ${
-                  p.highlighted ? "border-brand/40 glow-brand" : ""
-                }`}
-              >
-                {p.highlighted && (
-                  <Badge tone="brand" className="absolute -top-3 left-7">
-                    Most popular
-                  </Badge>
-                )}
-                <h3 className="text-lg font-semibold">{p.name}</h3>
-                <p className="mt-1 text-sm text-ink-muted">{p.description}</p>
-                <div className="mt-5 flex items-baseline gap-2">
-                  <span className="font-display text-4xl font-extrabold">
-                    {!price ? "Free" : naira(price)}
-                  </span>
-                  <span className="text-sm text-ink-dim">{p.cadence}</span>
-                </div>
-                <ul className="mt-6 flex-1 space-y-3">
-                  {p.features.map((f) => (
-                    <li key={f} className="flex gap-2.5 text-sm text-ink-muted">
-                      <span className="mt-0.5 text-brand" aria-hidden>✓</span>
-                      <span>{f}</span>
-                    </li>
-                  ))}
-                </ul>
-                <ButtonLink
-                  href={p.id === "free" ? "/predictions" : `/account/billing?plan=${p.id}`}
-                  variant={p.highlighted ? "primary" : "secondary"}
-                  className="mt-7 w-full"
-                >
-                  {CTA[p.id]}
-                </ButtonLink>
-              </div>
-            );
-          })}
-        </div>
+          <SectionHeading
+            eyebrow="Pricing"
+            title="Priced for Nigeria"
+            description="From a single matchday to a full season. Cancel whenever you like."
+            align="center"
+          />
+          {/* Same cards as /pricing and /account/billing — see pricing-table.tsx
+              for why all three stopped having their own copy of this. */}
+          <div className="mt-12">
+            <PricingTable
+              hrefFor={(plan) =>
+                plan.id === "free" ? "/account/sign-up" : `/account/billing?plan=${plan.id}`
+              }
+            />
+          </div>
+          <div className="mt-8 text-center">
+            <ButtonLink href="/pricing" variant="secondary">
+              Compare every plan
+            </ButtonLink>
+          </div>
         </Reveal>
       </Container>
     </section>

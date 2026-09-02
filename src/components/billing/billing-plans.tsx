@@ -69,10 +69,10 @@ export function BillingPlans({
           const perMonthYearly = plan.id === "pro" && cycle === "yearly" && plan.price.yearly ? plan.price.yearly / 12 : null;
 
           return (
-            <div key={plan.id} className={`card relative flex flex-col p-7 ${plan.highlighted ? "border-brand/40 glow-brand" : ""}`}>
-              {plan.highlighted && (
+            <div key={plan.id} className={`card relative flex flex-col p-7 ${plan.badge ? "border-brand/40 glow-brand" : ""}`}>
+              {plan.badge && (
                 <Badge tone="brand" className="absolute -top-3 left-6">
-                  Most popular
+                  {plan.badge}
                 </Badge>
               )}
               <h3 className="text-base font-semibold">{plan.name}</h3>
@@ -98,7 +98,7 @@ export function BillingPlans({
                 </Button>
               ) : (
                 <Button
-                  variant={plan.highlighted ? "primary" : "secondary"}
+                  variant={plan.badge ? "primary" : "secondary"}
                   className="mt-5 w-full"
                   disabled={isCurrent || pending !== null || blocked}
                   onClick={() => checkout(plan.id as Exclude<Tier, "free">)}

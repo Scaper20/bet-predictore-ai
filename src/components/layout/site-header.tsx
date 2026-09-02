@@ -6,25 +6,41 @@ import { useState } from "react";
 import { ButtonLink } from "@/components/ui/primitives";
 import { Container } from "@/components/ui/container";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
+import { AccountMenu } from "@/components/layout/account-menu";
+import { SlipButton } from "@/components/layout/slip-button";
+import { useEntitlement } from "@/components/entitlements/entitlement-provider";
 import { sportPath, sportFromPathname } from "@/lib/routes";
 
+/**
+ * Four items, down from six.
+ *
+ * Trends and Selections came out. Trends is a browsing surface for people
+ * already invested, so it keeps its footer link and a route in from
+ * /predictions; Selections became the counter in the right-hand cluster,
+ * which is a better shape for it. Track Record earned its place: deleting
+ * /how-it-works made the settled record the site's entire trust argument, and
+ * a trust argument nobody can find does not work.
+ */
 const NAV = [
   { route: "live", label: "Live" },
-  { route: "fixtures", label: "Fixtures" },
   { route: "predictions", label: "Predictions" },
-  { route: "trends", label: "Trends" },
+  { route: "fixtures", label: "Fixtures" },
   { route: "trackRecord", label: "Track Record" },
-  { route: "slip", label: "Selections" },
 ] as const;
 
 export function SiteHeader() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
-  // This header renders in the (app) layout, above the [sport] segment, so it
-  // has no params to read — the active sport comes off the pathname instead.
+  // Renders in the (app) layout, above the [sport] segment, so there are no
+  // params to read — the active sport comes off the pathname.
   const sport = sportFromPathname(pathname);
   const nav = NAV.map((item) => ({ ...item, href: sportPath(item.route, sport) }));
+
+  // Auth state comes from the entitlement context, never from cookies() in a
+  // layout — see the comment in (app)/layout.tsx for why that distinction is
+  // load-bearing for every ISR route on the site.
+  const { entitlement, loading } = useEntitlement();
 
   return (
     <header className="sticky top-0 z-50 border-b border-line bg-canvas/85 backdrop-blur-xl">
@@ -54,16 +70,35 @@ export function SiteHeader() {
         </nav>
 
         <div className="ml-auto hidden items-center gap-2 md:flex">
-          <AccountLink />
-          <ThemeToggle />
-          <ButtonLink href={sportPath("predictions", sport)} variant="primary" className="px-4 py-2">
-            Get Today&apos;s Picks
-          </ButtonLink>
+          <SlipButton sport={sport} />
+          {loading ? (
+            <AuthPlaceholder />
+          ) : entitlement.signedIn ? (
+            <>
+              {entitlement.tier === "free" && (
+                <ButtonLink href="/pricing" variant="secondary" className="px-4 py-2">
+                  Upgrade
+                </ButtonLink>
+              )}
+              <AccountMenu tier={entitlement.tier} email={entitlement.email} />
+            </>
+          ) : (
+            <>
+              <Link
+                href="/account/login"
+                className="rounded-lg px-3 py-2 text-sm font-medium text-ink-muted transition-colors hover:text-ink"
+              >
+                Sign in
+              </Link>
+              <ButtonLink href="/account/sign-up" variant="primary" className="px-4 py-2">
+                Create free account
+              </ButtonLink>
+            </>
+          )}
         </div>
 
         <div className="ml-auto flex items-center gap-1 md:hidden">
-          <AccountLink />
-          <ThemeToggle />
+          <SlipButton sport={sport} />
           <button
             type="button"
             onClick={() => setOpen((v) => !v)}
@@ -88,29 +123,59 @@ export function SiteHeader() {
               {item.label}
             </Link>
           ))}
-          <ButtonLink href={sportPath("predictions", sport)} className="mt-2 w-full">
-            Get Today&apos;s Picks
-          </ButtonLink>
+          <Link
+            href={sportPath("trends", sport)}
+            onClick={() => setOpen(false)}
+            className="block rounded-lg px-3 py-3 text-sm font-medium text-ink-muted hover:bg-surface-2 hover:text-ink"
+          >
+            Trends
+          </Link>
+
+          <div className="mt-2 flex items-center justify-between border-t border-line px-3 pt-3">
+            <span className="text-xs text-ink-muted">Theme</span>
+            <ThemeToggle />
+          </div>
+
+          {/* The CTA sits last on mobile: it is the closest thing to the
+              thumb, and it is what the menu is for. */}
+          {!loading &&
+            (entitlement.signedIn ? (
+              <div className="mt-2 space-y-2">
+                <ButtonLink href="/account" variant="secondary" className="w-full">
+                  Your account
+                </ButtonLink>
+                {entitlement.tier === "free" && (
+                  <ButtonLink href="/pricing" className="w-full">
+                    See plans
+                  </ButtonLink>
+                )}
+              </div>
+            ) : (
+              <div className="mt-2 space-y-2">
+                <ButtonLink href="/account/sign-up" className="w-full">
+                  Create free account
+                </ButtonLink>
+                <ButtonLink href="/account/login" variant="secondary" className="w-full">
+                  Sign in
+                </ButtonLink>
+              </div>
+            ))}
         </nav>
       )}
     </header>
   );
 }
 
-function AccountLink() {
-  return (
-    <Link
-      href="/account"
-      className="grid size-10 place-items-center rounded-lg text-ink-muted transition-colors hover:bg-surface-2 hover:text-ink"
-      aria-label="Account"
-      title="Account"
-    >
-      <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2">
-        <circle cx="12" cy="8" r="3.5" />
-        <path strokeLinecap="round" d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6" />
-      </svg>
-    </Link>
-  );
+/**
+ * Holds the space while the entitlement fetch resolves.
+ *
+ * The alternative — assuming logged-out and rendering the sign-up CTA — puts
+ * "Create free account" in front of someone who already has one on every
+ * single page load. A neutral shape for ~100ms is the cheaper mistake, and
+ * unlike <Gate> there is nothing here that failing open would leak.
+ */
+function AuthPlaceholder() {
+  return <div className="size-10 rounded-full bg-surface-2" aria-hidden />;
 }
 
 function Logo() {

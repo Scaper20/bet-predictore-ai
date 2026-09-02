@@ -34,6 +34,7 @@ const COLUMNS = [
   {
     title: "About",
     links: [
+      { href: "/pricing", label: "Pricing" },
       { href: sportPath("trackRecord"), label: "Our Track Record" },
       { href: "/responsible-gambling", label: "Responsible Gambling" },
     ],
