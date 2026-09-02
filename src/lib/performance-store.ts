@@ -37,28 +37,50 @@ export async function settledRecords(
     const supabase = supabasePublic();
     if (!supabase) return summarise([]);
 
-    let query = supabase
-      .from("predictions_log")
-      .select("league, market, model_id, result")
-      .eq("sport", sport)
-      .not("settled_at", "is", null)
-      .not("result", "is", null)
-      // Defensive cap, matching admin-analytics. Not expected to bind at this
-      // app's volume, but an unbounded select on a public page should not be
-      // one busy season away from a problem.
-      .limit(5000);
+    const cutoff =
+      sinceDays === undefined
+        ? undefined
+        : new Date(Date.now() - sinceDays * 86_400_000).toISOString();
 
-    if (sinceDays !== undefined) {
-      const cutoff = new Date(Date.now() - sinceDays * 86_400_000).toISOString();
-      query = query.gte("kickoff", cutoff);
+    const run = async (columns: string) => {
+      let query = supabase
+        .from("predictions_log")
+        .select(columns)
+        .eq("sport", sport)
+        .not("settled_at", "is", null)
+        .not("result", "is", null)
+        // Defensive cap, matching admin-analytics. Not expected to bind at
+        // this app's volume, but an unbounded select on a public page should
+        // not be one busy season away from a problem.
+        .limit(5000);
+
+      if (cutoff) query = query.gte("kickoff", cutoff);
+      return query;
+    };
+
+    const withModel = await run("league, market, model_id, result");
+    if (!withModel.error && withModel.data) {
+      return summarise(withModel.data as unknown as SettledRow[]);
     }
 
-    const { data, error } = await query;
-    // Performance figures are a trust surface, never an authorization
-    // boundary: a failed read degrades to "no record yet", which every caller
-    // already renders, rather than breaking the page.
-    if (error || !data) return summarise([]);
+    // model_id arrives in migration 0012. Until that is applied, selecting it
+    // is a 400 from PostgREST and every figure on the track record silently
+    // reads zero — while the settled log right beside it lists fifty rows.
+    // Falling back keeps the numbers right whichever order code and migration
+    // land in, and summarise() already attributes a missing model_id to the
+    // active model.
+    const withoutModel = await run("league, market, result");
+    if (withoutModel.error || !withoutModel.data) {
+      // Performance figures are a trust surface, never an authorization
+      // boundary: a genuinely failed read degrades to "no record yet", which
+      // every caller already renders, rather than breaking the page.
+      return summarise([]);
+    }
 
-    return summarise(data as SettledRow[]);
+    const rows = (withoutModel.data as unknown as Omit<SettledRow, "model_id">[]).map((r) => ({
+      ...r,
+      model_id: null,
+    }));
+    return summarise(rows);
   });
 }
