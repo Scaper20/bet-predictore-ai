@@ -8,6 +8,7 @@ import { Badge, ButtonLink, EmptyState } from "@/components/ui/primitives";
 import { BestBetOfDay } from "@/components/landing/best-bet-of-day";
 import { predictBatch, upcomingFeed, bestBetOfDay } from "@/lib/service";
 import { leagueByCode } from "@/lib/leagues";
+import { containerClass } from "@/components/ui/container";
 
 export const metadata: Metadata = {
   title: "Today's Football Predictions",
@@ -43,7 +44,7 @@ export default async function PredictionsPage({
         description="Each fixture is modelled against its own competition's completed results. Where the history is too thin, no pick is published — that fixture is listed separately below."
       />
 
-      <div className="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
+      <div className={`${containerClass()} space-y-6 py-8`}>
         <Suspense fallback={<div className="h-10" />}>
           <LeagueFilter />
         </Suspense>

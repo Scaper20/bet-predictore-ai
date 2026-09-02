@@ -3,6 +3,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { LiveBoard } from "@/components/match/live-board";
 import { CoverageNotice } from "@/components/ui/coverage-notice";
 import { liveFeed } from "@/lib/service";
+import { containerClass } from "@/components/ui/container";
 
 export const metadata: Metadata = {
   title: "Live Football Scores",
@@ -24,7 +25,7 @@ export default async function LivePage() {
         title="Live scores"
         description="Every match currently in play across the competitions we track. Scores and the clock come straight from the feed and refresh automatically."
       />
-      <div className="mx-auto max-w-7xl space-y-6 px-4 py-10 sm:px-6 lg:px-8">
+      <div className={`${containerClass()} space-y-6 py-10`}>
         {feed && <CoverageNotice coverage={feed.coverage} />}
         {feed ? (
           <LiveBoard initial={feed.matches} />

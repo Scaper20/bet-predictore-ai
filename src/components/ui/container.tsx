@@ -41,9 +41,10 @@ export type ContainerWidth = keyof typeof WIDTHS;
 const GUTTER = "px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16";
 
 /**
- * The convention: use `<Container>` where the wrapper is a plain div, and
- * `containerClass()` where the element is semantic (`<section>`, `<article>`,
- * `<footer>`) so the landmark isn't buried under an extra wrapper.
+ * Reach for `containerClass()` when the element already exists and carries its
+ * own semantics — a `<section>`, `<article>` or `<footer>` shouldn't gain a
+ * wrapper div just to get a width. `<Container>` is for new markup where the
+ * wrapper is a plain div anyway.
  */
 export function containerClass(width: ContainerWidth = "page"): string {
   return `mx-auto w-full ${WIDTHS[width]} ${GUTTER}`;

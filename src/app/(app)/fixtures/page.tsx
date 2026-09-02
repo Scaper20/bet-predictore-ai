@@ -8,6 +8,7 @@ import { ButtonLink, EmptyState } from "@/components/ui/primitives";
 import { upcomingFeed } from "@/lib/service";
 import { groupByDay } from "@/lib/format";
 import { leagueByCode } from "@/lib/leagues";
+import { containerClass } from "@/components/ui/container";
 
 export const metadata: Metadata = {
   title: "Football Fixtures",
@@ -38,7 +39,7 @@ export default async function FixturesPage({
         description={`Kickoff times shown in West Africa Time. Looking ${window} day${window === 1 ? "" : "s"} ahead.`}
       />
 
-      <div className="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
+      <div className={`${containerClass()} space-y-6 py-8`}>
         <Suspense fallback={<div className="h-10" />}>
           <LeagueFilter />
         </Suspense>

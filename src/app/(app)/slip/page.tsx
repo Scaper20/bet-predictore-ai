@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { PageHeader } from "@/components/ui/page-header";
 import { SlipView } from "@/components/match/slip-view";
 import { DownloadSlipImage } from "@/components/slip/download-slip-image";
+import { containerClass } from "@/components/ui/container";
 
 export const metadata: Metadata = {
   title: "Selection Builder",
@@ -18,7 +19,7 @@ export default function SlipPage() {
         title="Selection builder"
         description="Combine selections and see what the accumulator is really worth. Your slip is stored on this device only — nothing is sent anywhere."
       />
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <div className={`${containerClass()} py-8`}>
         <SlipView />
         <div className="mt-5">
           <DownloadSlipImage />

@@ -1,11 +1,12 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { containerClass } from "@/components/ui/container";
 
 export default function Loading() {
   return (
     <>
       {/* ------------------------------------------------------ Match header */}
       <div className="border-b border-line bg-shell">
-        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className={`${containerClass()} py-8`}>
           <div className="mb-6 flex flex-wrap items-center gap-3">
             <Skeleton className="size-[22px] shrink-0 rounded-full" />
             <Skeleton className="h-3 w-32" />
@@ -26,7 +27,7 @@ export default function Loading() {
       </div>
 
       {/* ------------------------------------------------------------- Body */}
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <div className={`${containerClass()} py-8`}>
         <div className="grid gap-5 lg:grid-cols-[1.6fr_1fr]">
           <div className="space-y-5">
             <PanelSkeleton lines={4} />

@@ -18,6 +18,7 @@ import { matchDetail } from "@/lib/service";
 import { SITE_URL as SITE } from "@/lib/site-url";
 import { kickoffTime, odds, percent, relativeDay, statusLabel, isLive } from "@/lib/format";
 import type { Match } from "@/lib/types";
+import { containerClass } from "@/components/ui/container";
 
 /**
  * SportsEvent structured data — schema.org's real, documented vocabulary
@@ -78,7 +79,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
 
       {/* ------------------------------------------------------ Match header */}
       <div className="border-b border-line bg-shell">
-        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className={`${containerClass()} py-8`}>
           <div className="mb-6 flex flex-wrap items-center gap-3">
             {match.league.logo && <Crest src={match.league.logo} name={match.league.name} size={22} />}
             <span className="text-sm font-medium text-ink-muted">{match.league.name}</span>
@@ -133,7 +134,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
       </div>
 
       {/* ------------------------------------------------------------- Body */}
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <div className={`${containerClass()} py-8`}>
         <div className="grid gap-5 lg:grid-cols-[1.6fr_1fr]">
           <div className="space-y-5">
             {live && (

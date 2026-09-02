@@ -3,6 +3,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Badge, EmptyState, ProbabilityBar } from "@/components/ui/primitives";
 import { supabasePublic } from "@/lib/supabase/public";
 import { kickoffDay, percent } from "@/lib/format";
+import { containerClass } from "@/components/ui/container";
 
 export const metadata: Metadata = {
   title: "Track Record",
@@ -73,7 +74,7 @@ export default async function TrackRecordPage() {
     return (
       <>
         <PageHeader eyebrow="Track Record" title="Every published pick, graded" />
-        <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+        <div className={`${containerClass()} py-10`}>
           <EmptyState
             icon="📊"
             title="Not available yet"
@@ -88,7 +89,7 @@ export default async function TrackRecordPage() {
     return (
       <>
         <PageHeader eyebrow="Track Record" title="Every published pick, graded" />
-        <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+        <div className={`${containerClass()} py-10`}>
           <EmptyState
             icon="📊"
             title="No settled picks yet"
@@ -107,7 +108,7 @@ export default async function TrackRecordPage() {
         description="The single headline pick shown for each fixture, logged before kickoff and graded automatically against the final score. Nothing here is curated after the fact."
       />
 
-      <div className="mx-auto max-w-7xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
+      <div className={`${containerClass()} space-y-8 py-8`}>
         <section className="grid gap-4 sm:grid-cols-3">
           <div className="card p-5">
             <p className="text-xs font-medium uppercase tracking-wider text-ink-dim">Win rate</p>

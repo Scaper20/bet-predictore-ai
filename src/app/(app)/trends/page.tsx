@@ -4,6 +4,7 @@ import { PredictionCard } from "@/components/match/prediction-card";
 import { EmptyState, ButtonLink, ProbabilityBar } from "@/components/ui/primitives";
 import { trends } from "@/lib/service";
 import { percent } from "@/lib/format";
+import { containerClass } from "@/components/ui/container";
 
 export const metadata: Metadata = {
   title: "Trends",
@@ -21,7 +22,7 @@ export default async function TrendsPage() {
     return (
       <>
         <PageHeader eyebrow="Trends" title="Trends" />
-        <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+        <div className={`${containerClass()} py-10`}>
           <EmptyState
             icon="📈"
             title="No slate to analyse yet"
@@ -41,7 +42,7 @@ export default async function TrendsPage() {
         description={`Aggregated across ${snapshot.total} upcoming fixtures over the next three days, of which ${snapshot.publishable} have enough history to model properly.`}
       />
 
-      <div className="mx-auto max-w-7xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
+      <div className={`${containerClass()} space-y-8 py-8`}>
         <section className="grid gap-4 sm:grid-cols-3">
           <TrendCard
             label="Average expected goals"
