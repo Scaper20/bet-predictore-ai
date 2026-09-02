@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { supabaseServer, supabaseConfigured } from "@/lib/supabase/server";
 import { getPreferencesFor, hasOnboarded } from "@/lib/preferences";
 import { safeNext } from "@/lib/safe-redirect";
+import { POST_AUTH_DESTINATION } from "@/lib/routes";
 import { LoginForm } from "@/components/auth/login-form";
 import { Container } from "@/components/ui/container";
 
@@ -15,7 +16,7 @@ export default async function LoginPage({
   searchParams?: Promise<{ next?: string }>;
 }) {
   const params = await searchParams;
-  const next = safeNext(params?.next);
+  const next = safeNext(params?.next, POST_AUTH_DESTINATION);
 
   if (supabaseConfigured) {
     const supabase = await supabaseServer();

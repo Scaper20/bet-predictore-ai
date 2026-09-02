@@ -35,6 +35,20 @@ export function matchPath(id: string, sport: SportId = DEFAULT_SPORT): string {
 }
 
 /**
+ * Where a session starts when the user did not ask for anywhere specific.
+ *
+ * Sign-up, sign-in and the end of onboarding all land here. For You is the
+ * page the questionnaire exists to fill, so finishing onboarding and arriving
+ * anywhere else makes the questions look like paperwork.
+ *
+ * This is only the fallback. A `next` carried through the flow — from a gate
+ * on a match page, say — still wins, and must: sending someone to their feed
+ * instead of back to the thing they were reading is the same bug in a nicer
+ * outfit.
+ */
+export const POST_AUTH_DESTINATION = sportPath("forYou");
+
+/**
  * The active sport for a client component, read off the pathname.
  *
  * The header is the real caller: it renders above the [sport] segment so it

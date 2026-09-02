@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { supabaseServer, supabaseConfigured } from "@/lib/supabase/server";
 import { safeNext } from "@/lib/safe-redirect";
+import { POST_AUTH_DESTINATION } from "@/lib/routes";
 import { leagueByCode } from "@/lib/leagues";
 import { DEFAULT_SPORT } from "@/lib/sports";
 import { DIGEST_CHOICES, TOTAL_STEPS, USAGE_INTENTS } from "@/lib/onboarding";
@@ -36,7 +37,7 @@ export async function saveOnboardingStep(
     return { error: "Something went wrong — try again." };
   }
 
-  const next = safeNext(formData.get("next"));
+  const next = safeNext(formData.get("next"), POST_AUTH_DESTINATION);
   const skipped = formData.get("intent") === "skip";
 
   const supabase = await supabaseServer();
@@ -107,5 +108,5 @@ export async function saveOnboardingStep(
  * than the answers are worth.
  */
 export async function skipOnboarding(formData: FormData) {
-  redirect(safeNext(formData.get("next")));
+  redirect(safeNext(formData.get("next"), POST_AUTH_DESTINATION));
 }

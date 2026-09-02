@@ -6,6 +6,7 @@ import { getPreferencesFor, hasOnboarded } from "@/lib/preferences";
 import { sendEmail } from "@/lib/email";
 import { welcomeEmail } from "@/lib/email-templates";
 import { safeNext } from "@/lib/safe-redirect";
+import { POST_AUTH_DESTINATION } from "@/lib/routes";
 
 export type AuthActionState = { error: string | null };
 
@@ -14,7 +15,7 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export async function signIn(_prev: AuthActionState, formData: FormData): Promise<AuthActionState> {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
-  const next = safeNext(formData.get("next"));
+  const next = safeNext(formData.get("next"), POST_AUTH_DESTINATION);
 
   if (!email || !password) return { error: "Enter your email and password." };
   if (email.length > 254 || !EMAIL_REGEX.test(email)) {
@@ -40,7 +41,7 @@ export async function signIn(_prev: AuthActionState, formData: FormData): Promis
 export async function signUp(_prev: AuthActionState, formData: FormData): Promise<AuthActionState> {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
-  const next = safeNext(formData.get("next"));
+  const next = safeNext(formData.get("next"), POST_AUTH_DESTINATION);
 
   if (!email || !password) return { error: "Enter an email and a password." };
   if (email.length > 254 || !EMAIL_REGEX.test(email)) {

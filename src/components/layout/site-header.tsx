@@ -10,25 +10,38 @@ import { AccountMenu } from "@/components/layout/account-menu";
 import { SlipButton } from "@/components/layout/slip-button";
 import { useEntitlement } from "@/components/entitlements/entitlement-provider";
 import { useAuthHint } from "@/components/entitlements/use-auth-hint";
-import { sportPath, sportFromPathname } from "@/lib/routes";
+import { sportPath, sportFromPathname, type SportRoute } from "@/lib/routes";
 
 /**
- * Four items, down from six.
+ * The primary nav.
  *
- * Trends and Selections came out. Trends is a browsing surface for people
+ * Trends and Selections stay out: Trends is a browsing surface for people
  * already invested, so it keeps its footer link and a route in from
- * /predictions; Selections became the counter in the right-hand cluster,
- * which is a better shape for it. Track Record earned its place: deleting
+ * /predictions; Selections is the counter in the right-hand cluster, which is
+ * a better shape for it. Track Record earns its place because deleting
  * /how-it-works made the settled record the site's entire trust argument, and
  * a trust argument nobody can find does not work.
+ *
+ * Entries are either sport-scoped (resolved through sportPath) or absolute.
+ * Pricing is the first that is neither a data surface nor under /[sport]/,
+ * which is why this widened from a plain route list.
+ *
+ * Six items plus the logo and the auth cluster do not fit at md — they did not
+ * quite fit at five either — so the desktop nav starts at lg and the sheet
+ * covers everything below.
  */
-const NAV = [
+type NavItem =
+  | { route: SportRoute; label: string }
+  | { href: string; label: string };
+
+const NAV: readonly NavItem[] = [
   { route: "forYou", label: "For You" },
   { route: "live", label: "Live" },
   { route: "predictions", label: "Predictions" },
   { route: "fixtures", label: "Fixtures" },
   { route: "trackRecord", label: "Track Record" },
-] as const;
+  { href: "/pricing", label: "Pricing" },
+];
 
 export function SiteHeader() {
   const pathname = usePathname();
@@ -37,7 +50,10 @@ export function SiteHeader() {
   // Renders in the (app) layout, above the [sport] segment, so there are no
   // params to read — the active sport comes off the pathname.
   const sport = sportFromPathname(pathname);
-  const nav = NAV.map((item) => ({ ...item, href: sportPath(item.route, sport) }));
+  const nav = NAV.map((item) => ({
+    label: item.label,
+    href: "href" in item ? item.href : sportPath(item.route, sport),
+  }));
 
   // Auth state comes from the entitlement context, never from cookies() in a
   // layout — see the comment in (app)/layout.tsx for why that distinction is
@@ -61,7 +77,7 @@ export function SiteHeader() {
           </span>
         </Link>
 
-        <nav className="ml-6 hidden items-center gap-1 md:flex">
+        <nav className="ml-6 hidden items-center gap-1 lg:flex">
           {nav.map((item) => {
             const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
             return (
@@ -78,7 +94,7 @@ export function SiteHeader() {
           })}
         </nav>
 
-        <div className="ml-auto hidden items-center gap-2 md:flex">
+        <div className="ml-auto hidden items-center gap-2 lg:flex">
           <SlipButton sport={sport} />
           {resolving ? (
             <AuthPlaceholder />
@@ -106,7 +122,7 @@ export function SiteHeader() {
           )}
         </div>
 
-        <div className="ml-auto flex items-center gap-1 md:hidden">
+        <div className="ml-auto flex items-center gap-1 lg:hidden">
           <SlipButton sport={sport} />
           <button
             type="button"
@@ -121,7 +137,7 @@ export function SiteHeader() {
       </Container>
 
       {open && (
-        <nav className="border-t border-line bg-canvas px-4 pb-4 pt-2 md:hidden">
+        <nav className="border-t border-line bg-canvas px-4 pb-4 pt-2 lg:hidden">
           {nav.map((item) => (
             <Link
               key={item.href}
