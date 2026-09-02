@@ -1,145 +1,183 @@
-"use client";
-
-import { useState } from "react";
 import { Badge } from "@/components/ui/primitives";
+import { percent } from "@/lib/format";
+import type { ModelDescriptor } from "@/lib/model/registry";
+import { MIN_PUBLISHABLE_SAMPLE, type SettledRecord } from "@/lib/performance";
 
-interface ModelVersionStats {
-  id: string;
-  name: string;
-  sport: string;
-  version: string;
-  accuracy30d: number;
-  roi30d: number;
-  totalPicksLogged: number;
-  topPerformingLeague: string;
-  description: string;
+/**
+ * Model performance, from what actually settled.
+ *
+ * This replaces a hardcoded catalogue of three fictional models — including an
+ * NBA engine for a sport the product does not cover — each carrying invented
+ * accuracy, ROI and pick counts, under a subtitle claiming they were
+ * "evaluated against real bookmaker odds". There are no bookmaker odds
+ * anywhere in this product.
+ *
+ * The rule now: a model shows numbers only if it is `live` AND has cleared
+ * MIN_PUBLISHABLE_SAMPLE graded picks. Everything else is a roadmap entry with
+ * no statistics at all — which still communicates the multi-model direction,
+ * without claiming a record for software that has not run.
+ *
+ * A server component: it renders data the page already resolved, and the sport
+ * tab it replaces was filtering between one real card and one fictional one.
+ */
+
+export interface ModelPerformanceRow {
+  model: ModelDescriptor;
+  record: SettledRecord;
+  /** Best-evidenced competition for this model — null unless it clears the floor. */
+  topLeague: { name: string; winRate: number; sample: number } | null;
+  /** Market families this model has actually graded picks in. */
+  markets: { family: string; record: SettledRecord }[];
 }
 
-const MODELS_CATALOG: ModelVersionStats[] = [
-  {
-    id: "poisson-core-v1.4",
-    name: "Poisson Goal Rating Engine",
-    sport: "Football",
-    version: "v1.4.2",
-    accuracy30d: 78.4,
-    roi30d: 14.6,
-    totalPicksLogged: 1420,
-    topPerformingLeague: "English Premier League",
-    description: "Fits attack/defence parameters from completed league results to calculate bivariate scoreline probabilities.",
-  },
-  {
-    id: "xg-poisson-hybrid",
-    name: "Expected Goals (xG) Bivariate Fit",
-    sport: "Football",
-    version: "v2.0-beta",
-    accuracy30d: 81.2,
-    roi30d: 17.1,
-    totalPicksLogged: 840,
-    topPerformingLeague: "UEFA Champions League",
-    description: "Augments raw scorelines with shot-quality xG metrics for refined long-term edge detection.",
-  },
-  {
-    id: "nba-poss-v1",
-    name: "NBA Pace & Efficiency Model",
-    sport: "Basketball (Upcoming)",
-    version: "v0.9-alpha",
-    accuracy30d: 72.8,
-    roi30d: 9.4,
-    totalPicksLogged: 320,
-    topPerformingLeague: "NBA regular season",
-    description: "Modeled on offensive ratings, pace factor, and back-to-back rest differentials.",
-  },
-];
+const MARKET_LABELS: Record<string, string> = {
+  "1x2": "Match result",
+  dc: "Double chance",
+  ou: "Over / under",
+  btts: "Both teams to score",
+  cs: "Correct score",
+  ah: "Asian handicap",
+};
 
-export function ScalableModelPerformance() {
-  const [activeSport, setActiveSport] = useState<"Football" | "Basketball">("Football");
-
-  const filteredModels = MODELS_CATALOG.filter((m) =>
-    activeSport === "Football" ? m.sport === "Football" : m.sport.startsWith("Basketball")
-  );
+export function ScalableModelPerformance({ rows }: { rows: ModelPerformanceRow[] }) {
+  const live = rows.filter((r) => r.model.status === "live");
+  const roadmap = rows.filter((r) => r.model.status === "development");
 
   return (
-    <section className="space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-line pb-3">
-        <div>
-          <h2 className="font-display text-xl font-bold tracking-tight">
-            ⚡ Model Performance & Architecture Breakdown
-          </h2>
-          <p className="text-xs text-ink-muted">
-            Multi-sport statistical engine metrics evaluated against real bookmaker odds.
-          </p>
-        </div>
-
-        {/* Sport Filter Tabs */}
-        <div className="flex items-center gap-1.5 rounded-lg border border-line bg-surface-1 p-1 self-start sm:self-auto">
-          <button
-            onClick={() => setActiveSport("Football")}
-            className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
-              activeSport === "Football"
-                ? "bg-surface-2 text-ink shadow-xs"
-                : "text-ink-muted hover:text-ink"
-            }`}
-          >
-            ⚽ Football Models
-          </button>
-          <button
-            onClick={() => setActiveSport("Basketball")}
-            className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
-              activeSport === "Basketball"
-                ? "bg-surface-2 text-ink shadow-xs"
-                : "text-ink-muted hover:text-ink"
-            }`}
-          >
-            🏀 Basketball (Beta)
-          </button>
-        </div>
+    <section className="space-y-6">
+      <div className="border-b border-line pb-3">
+        <h2 className="font-display text-xl font-bold tracking-tight">Model performance</h2>
+        <p className="mt-1 text-xs text-ink-muted">
+          Graded against final scores from the match feeds. Win rates exclude pushes, and no rate
+          is shown until a model has {MIN_PUBLISHABLE_SAMPLE} settled picks.
+        </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {filteredModels.map((model) => (
-          <div key={model.id} className="card p-5 space-y-4 hover:border-line-strong transition-colors">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="font-bold text-base text-ink">{model.name}</h3>
-                  <Badge tone="neutral" className="text-[10px] uppercase font-mono">
-                    {model.version}
-                  </Badge>
-                </div>
-                <p className="text-xs text-ink-muted mt-1 leading-relaxed">
-                  {model.description}
-                </p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-2 border-t border-b border-line py-3 text-xs">
-              <div>
-                <span className="text-ink-muted block">30D Accuracy</span>
-                <span className="font-mono text-base font-extrabold text-ink">
-                  {model.accuracy30d}%
-                </span>
-              </div>
-              <div>
-                <span className="text-ink-muted block">30D EV ROI</span>
-                <span className="font-mono text-base font-extrabold text-emerald-400">
-                  +{model.roi30d}%
-                </span>
-              </div>
-              <div>
-                <span className="text-ink-muted block">Logged Picks</span>
-                <span className="font-mono text-base font-extrabold text-ink">
-                  {model.totalPicksLogged}
-                </span>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between text-xs text-ink-muted pt-1">
-              <span>Top Competition: <strong className="text-ink font-semibold">{model.topPerformingLeague}</strong></span>
-              <span className="text-[11px] text-brand font-semibold">Active Engine ✓</span>
-            </div>
-          </div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        {live.map((row) => (
+          <LiveModelCard key={row.model.id} row={row} />
         ))}
       </div>
+
+      {roadmap.length > 0 && (
+        <div className="space-y-3 pt-2">
+          <div>
+            <h3 className="text-sm font-semibold">What we&apos;re building</h3>
+            <p className="mt-1 text-xs text-ink-muted">
+              Specialised models for particular sports and particular kinds of pick. These
+              haven&apos;t published anything yet, so they have no record to show — and we
+              won&apos;t invent one.
+            </p>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {roadmap.map(({ model }) => (
+              <RoadmapModelCard key={model.id} model={model} />
+            ))}
+          </div>
+        </div>
+      )}
     </section>
+  );
+}
+
+function LiveModelCard({ row }: { row: ModelPerformanceRow }) {
+  const { model, record, topLeague, markets } = row;
+  const publishable = record.sample >= MIN_PUBLISHABLE_SAMPLE;
+
+  return (
+    <div className="card space-y-4 p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-base font-bold text-ink">{model.brandName}</h3>
+            <Badge tone="brand" className="text-[10px] uppercase">
+              Live
+            </Badge>
+          </div>
+          <p className="mt-1 text-xs leading-relaxed text-ink-muted">{model.blurb}</p>
+        </div>
+      </div>
+
+      {publishable ? (
+        <>
+          <div className="grid grid-cols-3 gap-2 border-y border-line py-3 text-xs">
+            <div>
+              <span className="block text-ink-muted">Win rate</span>
+              <span className="tnum font-mono text-base font-extrabold text-ink">
+                {percent(record.winRate ?? 0)}
+              </span>
+            </div>
+            <div>
+              <span className="block text-ink-muted">Record</span>
+              <span className="tnum font-mono text-base font-extrabold text-ink">
+                {record.wins}–{record.losses}
+                {record.pushes > 0 && (
+                  <span className="text-ink-muted">–{record.pushes}</span>
+                )}
+              </span>
+            </div>
+            <div>
+              <span className="block text-ink-muted">Graded picks</span>
+              <span className="tnum font-mono text-base font-extrabold text-ink">
+                {record.sample}
+              </span>
+            </div>
+          </div>
+
+          {markets.length > 0 && (
+            <div className="space-y-1.5">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
+                By market
+              </p>
+              {markets.map(({ family, record: mr }) => (
+                <div key={family} className="flex items-center justify-between text-xs">
+                  <span className="text-ink-muted">{MARKET_LABELS[family] ?? family}</span>
+                  <span className="tnum font-mono font-semibold">
+                    {percent(mr.winRate ?? 0)}{" "}
+                    <span className="font-normal text-ink-muted">({mr.sample})</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {topLeague && (
+            <p className="border-t border-line pt-3 text-xs text-ink-muted">
+              Strongest competition:{" "}
+              <strong className="font-semibold text-ink">{topLeague.name}</strong>{" "}
+              <span className="tnum">
+                {percent(topLeague.winRate)} from {topLeague.sample}
+              </span>
+            </p>
+          )}
+        </>
+      ) : (
+        <p className="border-t border-line pt-3 text-xs leading-relaxed text-ink-muted">
+          {record.sample === 0
+            ? "No picks have settled yet."
+            : `Only ${record.sample} settled ${record.sample === 1 ? "pick" : "picks"} so far.`}{" "}
+          A win rate from a sample this small says more about the fixtures than the model, so
+          there is nothing worth quoting until it reaches {MIN_PUBLISHABLE_SAMPLE}.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function RoadmapModelCard({ model }: { model: ModelDescriptor }) {
+  return (
+    <div className="rounded-xl border border-dashed border-line bg-surface-1/40 p-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <h4 className="text-sm font-semibold text-ink-muted">{model.brandName}</h4>
+        <Badge tone="neutral" className="text-[10px] uppercase">
+          In development
+        </Badge>
+      </div>
+      <p className="mt-1 text-[11px] font-medium uppercase tracking-wider text-ink-dim">
+        {model.sportLabel}
+      </p>
+      <p className="mt-2 text-xs leading-relaxed text-ink-muted">{model.blurb}</p>
+    </div>
   );
 }
