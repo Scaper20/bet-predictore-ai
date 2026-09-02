@@ -246,7 +246,27 @@
   .skeleton { animation: none; background: var(--color-surface-2); }
 }
 
+/* Dialog entrance. The backdrop fades and the panel rises a little with it,
+   so a modal reads as arriving from the page rather than being cut in.
+
+   These exist because the record-detail modal was carrying `animate-in
+   fade-in duration-200` — classes from tailwindcss-animate, which this
+   project does not install and never has, so they matched nothing and the
+   dialog appeared instantly. Short durations on purpose: this fires on a
+   click the user just made, so it must not feel like latency. */
+@keyframes overlay-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes dialog-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to   { opacity: 1; transform: none; }
+}
+.animate-overlay-in { animation: overlay-in .18s ease-out both; }
+.animate-dialog-in  { animation: dialog-in .22s var(--ease-out-expo) both; }
+
 @media (prefers-reduced-motion: reduce) {
   .animate-marquee, .live-dot, .animate-rise, .bar-fill { animation: none !important; }
+  .animate-overlay-in, .animate-dialog-in { animation: none !important; }
   .card-hover:hover { transform: none; }
 }
