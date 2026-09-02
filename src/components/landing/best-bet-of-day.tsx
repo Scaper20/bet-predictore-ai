@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Prediction } from "@/lib/model/predict";
 import { Badge } from "@/components/ui/primitives";
 import { odds, percent } from "@/lib/format";
+import { matchPath } from "@/lib/routes";
 
 /**
  * The one deep pick given away free, no login. Headline numbers only — the
@@ -15,7 +16,7 @@ export function BestBetOfDay({ prediction }: { prediction: Prediction | null }) 
 
   return (
     <Link
-      href={`/match/${encodeURIComponent(match.id)}`}
+      href={matchPath(match.id)}
       className="card card-hover flex flex-wrap items-center gap-4 border-brand/30 p-5 sm:p-7"
     >
       <Badge tone="brand">Best bet today</Badge>

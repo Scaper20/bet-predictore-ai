@@ -9,6 +9,7 @@ import { upcomingFeed } from "@/lib/service";
 import { groupByDay } from "@/lib/format";
 import { leagueByCode } from "@/lib/leagues";
 import { containerClass } from "@/components/ui/container";
+import { sportPath } from "@/lib/routes";
 
 export const metadata: Metadata = {
   title: "Football Fixtures",
@@ -51,7 +52,7 @@ export default async function FixturesPage({
             icon="📅"
             title={def ? `No ${def.shortName} fixtures in this window` : "No fixtures in this window"}
             description="Nothing scheduled that the configured feeds can see. Try a different league or widen the window — no placeholder fixtures are ever shown here."
-            action={<ButtonLink href="/fixtures?days=14" variant="secondary">Look 14 days ahead</ButtonLink>}
+            action={<ButtonLink href={`${sportPath("fixtures")}?days=14`} variant="secondary">Look 14 days ahead</ButtonLink>}
           />
         ) : (
           groups.map((group) => (

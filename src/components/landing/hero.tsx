@@ -3,6 +3,7 @@ import { Badge, ButtonLink, LiveDot } from "@/components/ui/primitives";
 import { Container } from "@/components/ui/container";
 import { kickoffTime, percent, relativeDay, statusLabel } from "@/lib/format";
 import { Crest } from "@/components/ui/crest";
+import { sportPath } from "@/lib/routes";
 
 export function Hero({
   liveCount,
@@ -119,8 +120,8 @@ export function Hero({
           </p>
 
           <div className="mt-8 flex flex-wrap gap-3">
-            <ButtonLink href="/predictions">See today&apos;s predictions →</ButtonLink>
-            <ButtonLink href="/live" variant="secondary">
+            <ButtonLink href={sportPath("predictions")}>See today&apos;s predictions →</ButtonLink>
+            <ButtonLink href={sportPath("live")} variant="secondary">
               {liveCount > 0 ? (
                 <>
                   <LiveDot /> {liveCount} matches live now

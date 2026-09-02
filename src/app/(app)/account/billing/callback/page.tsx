@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { verifyTransaction } from "@/lib/paystack/client";
 import { ButtonLink } from "@/components/ui/primitives";
+import { sportPath } from "@/lib/routes";
 
 export const metadata: Metadata = { title: "Payment" };
 
@@ -55,7 +56,7 @@ export default async function BillingCallbackPage({
       )}
       <div className="mt-6 flex justify-center gap-3">
         <ButtonLink href="/account">Go to account</ButtonLink>
-        <Link href="/predictions" className="inline-flex items-center px-4 text-sm text-ink-muted underline underline-offset-2">
+        <Link href={sportPath("predictions")} className="inline-flex items-center px-4 text-sm text-ink-muted underline underline-offset-2">
           Back to predictions
         </Link>
       </div>

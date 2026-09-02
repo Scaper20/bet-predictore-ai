@@ -5,6 +5,7 @@ import { EmptyState, ButtonLink, ProbabilityBar } from "@/components/ui/primitiv
 import { trends } from "@/lib/service";
 import { percent } from "@/lib/format";
 import { containerClass } from "@/components/ui/container";
+import { sportPath } from "@/lib/routes";
 
 export const metadata: Metadata = {
   title: "Trends",
@@ -27,7 +28,7 @@ export default async function TrendsPage() {
             icon="📈"
             title="No slate to analyse yet"
             description="Trends are computed across the upcoming fixtures the feeds return. When there are none, there is nothing honest to summarise."
-            action={<ButtonLink href="/fixtures" variant="secondary">Browse fixtures</ButtonLink>}
+            action={<ButtonLink href={sportPath("fixtures")} variant="secondary">Browse fixtures</ButtonLink>}
           />
         </div>
       </>

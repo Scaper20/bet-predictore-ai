@@ -5,6 +5,7 @@ import { useSlip } from "@/lib/slip";
 import { accumulator } from "@/lib/model/odds";
 import { Badge, Button, ButtonLink, EmptyState, ProbabilityBar } from "@/components/ui/primitives";
 import { kickoffTime, odds, percent, relativeDay } from "@/lib/format";
+import { sportPath, matchPath } from "@/lib/routes";
 
 export function SlipView() {
   const { legs, remove, clear, setBookmakerOdds } = useSlip();
@@ -15,7 +16,7 @@ export function SlipView() {
         icon="🧾"
         title="No selections yet"
         description="Add selections from any match page and this builds the true combined probability — plus what the combined pick is really worth against the price you have been offered."
-        action={<ButtonLink href="/predictions" variant="secondary">Browse predictions</ButtonLink>}
+        action={<ButtonLink href={sportPath("predictions")} variant="secondary">Browse predictions</ButtonLink>}
       />
     );
   }
@@ -44,7 +45,7 @@ export function SlipView() {
                   {l.league} · {relativeDay(l.kickoff)} {kickoffTime(l.kickoff)}
                 </p>
                 <Link
-                  href={`/match/${encodeURIComponent(l.matchId)}`}
+                  href={matchPath(l.matchId)}
                   className="mt-1 block truncate text-sm font-semibold hover:text-brand"
                 >
                   {l.fixture}

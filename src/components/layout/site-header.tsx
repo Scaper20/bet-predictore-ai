@@ -6,19 +6,25 @@ import { useState } from "react";
 import { ButtonLink } from "@/components/ui/primitives";
 import { Container } from "@/components/ui/container";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
+import { sportPath, sportFromPathname } from "@/lib/routes";
 
 const NAV = [
-  { href: "/live", label: "Live" },
-  { href: "/fixtures", label: "Fixtures" },
-  { href: "/predictions", label: "Predictions" },
-  { href: "/trends", label: "Trends" },
-  { href: "/track-record", label: "Track Record" },
-  { href: "/slip", label: "Selections" },
-];
+  { route: "live", label: "Live" },
+  { route: "fixtures", label: "Fixtures" },
+  { route: "predictions", label: "Predictions" },
+  { route: "trends", label: "Trends" },
+  { route: "trackRecord", label: "Track Record" },
+  { route: "slip", label: "Selections" },
+] as const;
 
 export function SiteHeader() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+
+  // This header renders in the (app) layout, above the [sport] segment, so it
+  // has no params to read — the active sport comes off the pathname instead.
+  const sport = sportFromPathname(pathname);
+  const nav = NAV.map((item) => ({ ...item, href: sportPath(item.route, sport) }));
 
   return (
     <header className="sticky top-0 z-50 border-b border-line bg-canvas/85 backdrop-blur-xl">
@@ -31,7 +37,7 @@ export function SiteHeader() {
         </Link>
 
         <nav className="ml-6 hidden items-center gap-1 md:flex">
-          {NAV.map((item) => {
+          {nav.map((item) => {
             const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
             return (
               <Link
@@ -50,7 +56,7 @@ export function SiteHeader() {
         <div className="ml-auto hidden items-center gap-2 md:flex">
           <AccountLink />
           <ThemeToggle />
-          <ButtonLink href="/predictions" variant="primary" className="px-4 py-2">
+          <ButtonLink href={sportPath("predictions", sport)} variant="primary" className="px-4 py-2">
             Get Today&apos;s Picks
           </ButtonLink>
         </div>
@@ -72,7 +78,7 @@ export function SiteHeader() {
 
       {open && (
         <nav className="border-t border-line bg-canvas px-4 pb-4 pt-2 md:hidden">
-          {NAV.map((item) => (
+          {nav.map((item) => (
             <Link
               key={item.href}
               href={item.href}
@@ -82,7 +88,7 @@ export function SiteHeader() {
               {item.label}
             </Link>
           ))}
-          <ButtonLink href="/predictions" className="mt-2 w-full">
+          <ButtonLink href={sportPath("predictions", sport)} className="mt-2 w-full">
             Get Today&apos;s Picks
           </ButtonLink>
         </nav>

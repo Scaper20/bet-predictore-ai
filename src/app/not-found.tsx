@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ButtonLink } from "@/components/ui/primitives";
+import { sportPath } from "@/lib/routes";
 
 export default function NotFound() {
   return (
@@ -11,8 +12,8 @@ export default function NotFound() {
           The fixture may have finished and rolled out of the feed, or the link may be wrong.
         </p>
         <div className="mt-7 flex flex-wrap justify-center gap-3">
-          <ButtonLink href="/predictions">Today&apos;s predictions</ButtonLink>
-          <ButtonLink href="/live" variant="secondary">Live scores</ButtonLink>
+          <ButtonLink href={sportPath("predictions")}>Today&apos;s predictions</ButtonLink>
+          <ButtonLink href={sportPath("live")} variant="secondary">Live scores</ButtonLink>
         </div>
         <Link href="/" className="mt-6 text-xs text-ink-dim underline underline-offset-4 hover:text-ink">
           Back to home

@@ -5,6 +5,7 @@ import { Reveal } from "@/components/ui/reveal";
 import { LEAGUES } from "@/lib/leagues";
 import { naira } from "@/lib/format";
 import { PLANS } from "@/lib/pricing";
+import { sportPath } from "@/lib/routes";
 
 /* ---------------------------------------------------------------- Features */
 
@@ -150,7 +151,7 @@ export function Leagues() {
           {LEAGUES.map((l) => (
             <Link
               key={l.code}
-              href={`/fixtures?league=${l.code}`}
+              href={`${sportPath("fixtures")}?league=${l.code}`}
               className="card card-hover flex items-center gap-2.5 px-4 py-3"
             >
               <span className="text-lg" aria-hidden>{l.flag}</span>
@@ -306,7 +307,7 @@ export function FinalCta() {
             makes of it.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
-            <ButtonLink href="/predictions">Open today&apos;s predictions</ButtonLink>
+            <ButtonLink href={sportPath("predictions")}>Open today&apos;s predictions</ButtonLink>
             <ButtonLink href="/how-it-works" variant="secondary">
               How the model works
             </ButtonLink>

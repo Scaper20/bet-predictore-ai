@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Analysis } from "@/lib/ai/analyst";
 import { Badge } from "@/components/ui/primitives";
 import { Gate } from "@/components/entitlements/gate";
@@ -42,9 +43,9 @@ export function AnalysisPanel({ analysis, matchId }: { analysis: Analysis; match
               analysis.body.length > 1 || analysis.factors.length > 0 ? (
                 <p className="text-xs text-ink-dim">
                   The rest of this enhanced breakdown is a{" "}
-                  <a href="/account/billing?plan=pro" className="text-brand underline underline-offset-2">
+                  <Link href="/account/billing?plan=pro" className="text-brand underline underline-offset-2">
                     Pro
-                  </a>{" "}
+                  </Link>{" "}
                   feature.
                 </p>
               ) : null

@@ -9,6 +9,7 @@ import { BestBetOfDay } from "@/components/landing/best-bet-of-day";
 import { predictBatch, upcomingFeed, bestBetOfDay } from "@/lib/service";
 import { leagueByCode } from "@/lib/leagues";
 import { containerClass } from "@/components/ui/container";
+import { sportPath } from "@/lib/routes";
 
 export const metadata: Metadata = {
   title: "Today's Football Predictions",
@@ -58,7 +59,7 @@ export default async function PredictionsPage({
             icon="🎯"
             title="No fixtures to model right now"
             description="Predictions appear as soon as the feeds carry upcoming matches. Nothing is invented to fill the page."
-            action={<ButtonLink href="/fixtures" variant="secondary">Browse fixtures</ButtonLink>}
+            action={<ButtonLink href={sportPath("fixtures")} variant="secondary">Browse fixtures</ButtonLink>}
           />
         ) : (
           <>

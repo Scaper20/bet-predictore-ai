@@ -1,26 +1,34 @@
 import Link from "next/link";
 import { Container } from "@/components/ui/container";
+import { sportPath } from "@/lib/routes";
 
+/*
+ * The footer renders in the (app) layout, above the [sport] segment, so it
+ * has no route param to read and no pathname (it is a Server Component).
+ * Its sport-scoped links therefore resolve against DEFAULT_SPORT, which is
+ * exactly right while there is one sport and is the first thing to revisit
+ * when there are two.
+ */
 const COLUMNS = [
   {
     title: "Product",
     links: [
-      { href: "/live", label: "Live Scores" },
-      { href: "/fixtures", label: "Fixtures" },
-      { href: "/predictions", label: "Predictions" },
-      { href: "/trends", label: "Trends" },
-      { href: "/track-record", label: "Track Record" },
-      { href: "/slip", label: "Selection Builder" },
+      { href: sportPath("live"), label: "Live Scores" },
+      { href: sportPath("fixtures"), label: "Fixtures" },
+      { href: sportPath("predictions"), label: "Predictions" },
+      { href: sportPath("trends"), label: "Trends" },
+      { href: sportPath("trackRecord"), label: "Track Record" },
+      { href: sportPath("slip"), label: "Selection Builder" },
     ],
   },
   {
     title: "Leagues",
     links: [
-      { href: "/fixtures?league=premier-league", label: "Premier League" },
-      { href: "/fixtures?league=npfl", label: "NPFL" },
-      { href: "/fixtures?league=champions-league", label: "Champions League" },
-      { href: "/fixtures?league=la-liga", label: "La Liga" },
-      { href: "/fixtures?league=caf-champions-league", label: "CAF Champions League" },
+      { href: `${sportPath("fixtures")}?league=premier-league`, label: "Premier League" },
+      { href: `${sportPath("fixtures")}?league=npfl`, label: "NPFL" },
+      { href: `${sportPath("fixtures")}?league=champions-league`, label: "Champions League" },
+      { href: `${sportPath("fixtures")}?league=la-liga`, label: "La Liga" },
+      { href: `${sportPath("fixtures")}?league=caf-champions-league`, label: "CAF Champions League" },
     ],
   },
   {
