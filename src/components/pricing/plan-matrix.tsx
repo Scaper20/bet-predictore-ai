@@ -17,7 +17,19 @@ export function PlanMatrix() {
   const ordered = [...PLANS].sort((a, b) => a.order - b.order);
 
   return (
-    <div className="no-scrollbar -mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+    /*
+     * `relative` is load-bearing, not decoration.
+     *
+     * Every Cell below renders an `sr-only` span, and Tailwind's sr-only is
+     * `position: absolute`. Absolutely-positioned boxes are clipped by an
+     * ancestor's overflow only when that ancestor is their containing block —
+     * so without a positioned wrapper these forty-odd spans resolved against
+     * the initial containing block, at the scrolled table's x≈700, and leaked
+     * the full 44rem table width into document.scrollWidth. The page then
+     * scrolled sideways to 683px on a 375px phone while the table itself
+     * scrolled correctly, which is a confusing way to be broken.
+     */
+    <div className="no-scrollbar relative -mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
       <table className="w-full min-w-[44rem] border-collapse text-sm">
         <caption className="sr-only">
           Feature comparison across the Free, Weekend Pass, Pro and VIP plans

@@ -42,7 +42,7 @@ export function IntervalToggle({ value }: { value: "monthly" | "yearly" }) {
       {(["monthly", "yearly"] as const).map((option) => (
         <label
           key={option}
-          className={`cursor-pointer rounded-md px-3.5 py-1.5 font-medium transition-colors has-focus-visible:outline has-focus-visible:outline-2 has-focus-visible:outline-brand has-focus-visible:outline-offset-2 ${
+          className={`cursor-pointer rounded-md px-4 py-2.5 font-medium transition-colors has-focus-visible:outline has-focus-visible:outline-2 has-focus-visible:outline-brand has-focus-visible:outline-offset-2 ${
             value === option ? "bg-brand text-brand-ink" : "text-ink-muted hover:text-ink"
           }`}
         >

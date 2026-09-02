@@ -13,14 +13,19 @@ export function MatchCard({ match, prediction }: { match: Match; prediction?: Pr
   return (
     <Link
       href={matchPath(match.id)}
-      className="card card-hover block p-4 sm:p-5"
+      className="card card-hover block min-w-0 p-4 sm:p-5"
     >
       <div className="flex items-center gap-3">
         <div className="flex min-w-0 items-center gap-2">
           {match.league.logo ? (
             <Crest src={match.league.logo} name={match.league.name} size={18} />
           ) : null}
-          <span className="truncate text-xs font-medium text-ink-muted">{match.league.name}</span>
+          {/* min-w-0 on the span as well as the row: a flex item's default
+              min-width is its min-content width, so without it a long
+              competition name refuses to ellipsise and widens the card. */}
+          <span className="min-w-0 truncate text-xs font-medium text-ink-muted">
+            {match.league.name}
+          </span>
         </div>
 
         <div className="ml-auto flex shrink-0 items-center gap-2">

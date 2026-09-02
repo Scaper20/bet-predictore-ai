@@ -97,13 +97,13 @@ export function RecordDetailModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+      className="animate-overlay-in fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
       onClick={onClose}
     >
       <div
         ref={dialog}
         onClick={(e) => e.stopPropagation()}
-        className="card relative max-h-[90vh] w-full max-w-lg overflow-y-auto border-line-strong bg-canvas p-6 shadow-2xl"
+        className="card animate-dialog-in relative max-h-[90vh] w-full max-w-lg overflow-y-auto border-line-strong bg-canvas p-6 shadow-2xl"
         role="dialog"
         aria-modal="true"
         aria-labelledby="record-modal-title"

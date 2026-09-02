@@ -70,7 +70,15 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-50 border-b border-line bg-canvas/85 backdrop-blur-xl">
       <Container className="flex h-16 items-center gap-4">
-        <Link href="/" className="flex items-center gap-2.5" onClick={() => setOpen(false)}>
+        {/* -mx-1.5 px-1.5 py-2 rather than a bare inline row: the logo is the
+            "go home" control on every page and measured 32px tall, which is a
+            fiddly tap on a phone. The negative margin keeps it optically
+            flush with the container edge. */}
+        <Link
+          href="/"
+          className="-mx-1.5 flex shrink-0 items-center gap-2.5 rounded-lg px-1.5 py-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+          onClick={() => setOpen(false)}
+        >
           <Logo />
           <span className="font-display text-lg font-bold tracking-tight">
             Betri<span className="text-brand">X</span>

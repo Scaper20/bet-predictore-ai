@@ -13,11 +13,21 @@ export function PredictionCard({ prediction }: { prediction: Prediction }) {
   return (
     <Link
       href={matchPath(match.id)}
-      className="card card-hover flex flex-col p-5"
+      /*
+       * min-w-0: as a grid item this defaults to min-width:auto, i.e. its
+       * min-content width. On a 320px screen that sized the single grid track
+       * to 327px inside a 288px container and pushed the whole page sideways.
+       * With it, the track wins and the truncating text inside gives way.
+       */
+      className="card card-hover flex min-w-0 flex-col p-5"
     >
       <div className="flex items-center gap-2">
         {match.league.logo ? <Crest src={match.league.logo} name={match.league.name} size={18} /> : null}
-        <span className="truncate text-xs font-medium text-ink-muted">{match.league.name}</span>
+        {/* min-w-0 is what makes the truncate actually bite. A flex item
+            defaults to min-width:auto, i.e. its min-content width, so a long
+            competition name ("American USL League One") pushed the whole card
+            past the viewport at 320px instead of ellipsising. */}
+        <span className="min-w-0 truncate text-xs font-medium text-ink-muted">{match.league.name}</span>
         <span className="tnum ml-auto shrink-0 text-xs text-ink-dim">
           {relativeDay(match.kickoff)} · {kickoffTime(match.kickoff)}
         </span>
