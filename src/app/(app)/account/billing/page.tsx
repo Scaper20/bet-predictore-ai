@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { supabaseServer, supabaseConfigured } from "@/lib/supabase/server";
 import { getEntitlement } from "@/lib/entitlements";
@@ -41,7 +42,20 @@ export default async function BillingPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-2xl text-center">
+      {/*
+        Billing is its own route because it owns the Paystack callback, which
+        means the account page's section rail is not on screen here. This is
+        the way back — without it the page is a dead end you have to use the
+        browser button to escape.
+      */}
+      <Link
+        href="/account"
+        className="text-sm text-ink-muted underline underline-offset-2 hover:text-ink"
+      >
+        ← Back to account
+      </Link>
+
+      <div className="mx-auto mt-8 max-w-2xl text-center">
         <h1 className="font-display text-3xl font-bold">Plans &amp; billing</h1>
         <p className="mt-3 text-sm text-ink-muted">
           From a single matchday to a full season. Payments are handled by Paystack — cancel a subscription anytime

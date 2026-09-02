@@ -2,9 +2,12 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { supabaseServer } from "@/lib/supabase/server";
+import { supabaseServer, supabaseConfigured } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getSubscriptionRow, hasLivePaidSubscription } from "@/lib/subscriptions";
+import { leagueByCode } from "@/lib/leagues";
+import { DEFAULT_SPORT } from "@/lib/sports";
+import { DIGEST_CHOICES, USAGE_INTENTS } from "@/lib/onboarding";
 
 export type AccountActionState = { error: string | null; message: string | null };
 
@@ -144,4 +147,58 @@ export async function signOutAllDevices() {
   const supabase = await supabaseServer();
   await supabase.auth.signOut({ scope: "global" });
   redirect("/");
+}
+
+/**
+ * Edits the answers given during onboarding.
+ *
+ * Shares the user_preferences table with the onboarding wizard rather than
+ * duplicating it, so someone who skipped the questions at sign-up can fill
+ * them in later from the account page and get exactly the same result. It
+ * does NOT stamp onboarded_at: finishing the wizard and editing preferences
+ * afterwards are different events, and conflating them would lose the "never
+ * completed setup" signal the funnel is measured on.
+ */
+export async function updatePreferences(
+  _prev: AccountActionState,
+  formData: FormData,
+): Promise<AccountActionState> {
+  if (!supabaseConfigured) {
+    return { error: "Accounts aren't set up on this deployment.", message: null };
+  }
+
+  const supabase = await supabaseServer();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "You need to be signed in.", message: null };
+
+  const leagues = formData
+    .getAll("leagues")
+    .map(String)
+    .filter((code) => leagueByCode(code) !== undefined);
+
+  const intent = String(formData.get("usageIntent") ?? "");
+  const digest = String(formData.get("digest") ?? "");
+
+  const { error } = await supabase.from("user_preferences").upsert(
+    {
+      user_id: user.id,
+      leagues,
+      sports: [...new Set(leagues.map((code) => leagueByCode(code)?.sport ?? DEFAULT_SPORT))],
+      usage_intent: USAGE_INTENTS.includes(intent as (typeof USAGE_INTENTS)[number])
+        ? intent
+        : null,
+      digest: DIGEST_CHOICES.includes(digest as (typeof DIGEST_CHOICES)[number])
+        ? digest
+        : "none",
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "user_id" },
+  );
+
+  if (error) return { error: "Couldn't save your preferences.", message: null };
+
+  revalidatePath("/account");
+  return { error: null, message: "Preferences saved." };
 }
