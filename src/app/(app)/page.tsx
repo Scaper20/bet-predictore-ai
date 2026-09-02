@@ -5,9 +5,10 @@ import { BestBetOfDay } from "@/components/landing/best-bet-of-day";
 import { MatchCard } from "@/components/match/match-card";
 import { SectionHeading, ButtonLink, EmptyState } from "@/components/ui/primitives";
 import { Container, containerClass } from "@/components/ui/container";
-import { liveFeed, upcomingFeed, predictBatch, bestBetOfDay } from "@/lib/service";
-import type { Match } from "@/lib/types";
-import { sportPath } from "@/lib/routes";
+import { liveFeed, upcomingFeed, predictBatch, bestBetOfDay, featuredFeed } from "@/lib/service";
+import { FeaturedBoard } from "@/components/landing/featured-board";
+import { toFeaturedRow } from "@/lib/featured";
+import { matchPath, sportPath } from "@/lib/routes";
 
 /*
  * Revalidate every minute. The landing page shows real live scores, so it
@@ -18,46 +19,26 @@ export const revalidate = 60;
 
 export default async function HomePage() {
   // Never let a provider outage take down the marketing page.
-  const [live, upcoming, bestBet] = await Promise.all([
+  const [live, upcoming, featured, bestBet] = await Promise.all([
     liveFeed().catch(() => null),
     upcomingFeed(3).catch(() => null),
+    featuredFeed(4).catch(() => []),
     bestBetOfDay().catch(() => null),
   ]);
 
   const liveMatches = live?.matches ?? [];
   const upcomingMatches = upcoming?.matches ?? [];
 
-  // The hero board prefers live games, then falls back to what is next up.
-  const featured: Match[] = (liveMatches.length > 0 ? liveMatches : upcomingMatches).slice(0, 4);
+  // The board is curated by featured.ts; the grid below it is simply the next
+  // few publishable fixtures, which is a different job and reads differently.
+  const rows = featured.map((f) => toFeaturedRow(f, matchPath(f.prediction.match.id)));
 
   const previewSource = upcomingMatches.length > 0 ? upcomingMatches : liveMatches;
-
-  // The hero board and the picks grid can show different fixtures, so both
-  // sets are predicted together and then read back by id.
-  const predictionTargets = dedupeById([...featured, ...previewSource.slice(0, 6)]);
-  const predictions = await predictBatch(predictionTargets, predictionTargets.length).catch(() => []);
-  const byId = new Map(predictions.map((p) => [p.match.id, p]));
-
-  const previews = previewSource
-    .map((m) => byId.get(m.id))
-    .filter((p): p is NonNullable<typeof p> => p !== undefined);
-
-  const heroProbabilities = featured.map((m) => {
-    const p = byId.get(m.id);
-    return p
-      ? { home: p.markets.home, draw: p.markets.draw, away: p.markets.away }
-      : { home: 0, draw: 0, away: 0 };
-  });
+  const previews = await predictBatch(previewSource.slice(0, 6), 6).catch(() => []);
 
   return (
     <>
-      <Hero
-        liveCount={liveMatches.length}
-        featured={featured}
-        featuredProbabilities={
-          heroProbabilities.some((p) => p.home > 0) ? heroProbabilities : undefined
-        }
-      />
+      <Hero liveCount={liveMatches.length} board={<FeaturedBoard rows={rows} />} />
 
       <Marquee
         items={[
@@ -86,12 +67,6 @@ export default async function HomePage() {
       <FinalCta />
     </>
   );
-}
-
-function dedupeById(matches: Match[]): Match[] {
-  const seen = new Map<string, Match>();
-  for (const m of matches) if (!seen.has(m.id)) seen.set(m.id, m);
-  return [...seen.values()];
 }
 
 function TodaysPicks({ previews }: { previews: Awaited<ReturnType<typeof predictBatch>> }) {

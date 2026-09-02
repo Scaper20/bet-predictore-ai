@@ -18,6 +18,7 @@ import { writeAnalysis, aiEnabled, type Analysis } from "@/lib/ai/analyst";
 import { isLive } from "@/lib/format";
 import { leagueByCode } from "@/lib/leagues";
 import { sportOrDefault } from "@/lib/sports";
+import { selectFeatured, shortlist, type FeaturedMatch } from "@/lib/featured";
 
 export interface FixtureFeed {
   matches: Match[];
@@ -232,6 +233,49 @@ export async function bestBetOfDay(): Promise<Prediction | null> {
       (a, b) => (b.topPick?.confidence ?? 0) - (a.topPick?.confidence ?? 0),
     );
     return ranked[0];
+  });
+}
+
+/**
+ * The homepage's featured board.
+ *
+ * Cached for five minutes rather than the thirty bestBetOfDay uses, because
+ * this board carries live fixtures: a half-hour-old "Live now" row with a
+ * stale scoreline is worse than no board at all. Five minutes is still long
+ * enough that the shortlist's per-league training fetches are shared across
+ * effectively every visitor.
+ *
+ * The SELECTION is what gets cached here, deliberately. Scores are patched on
+ * the client from /api/live, so the four fixtures stay put while the numbers
+ * move — re-ranking every thirty seconds would pull a match out from under
+ * someone mid-click.
+ */
+export async function featuredFeed(slots = 4): Promise<FeaturedMatch[]> {
+  return cached(`featured:${slots}`, 5 * 60_000, async () => {
+    const [live, upcoming] = await Promise.all([
+      getLive().catch(() => []),
+      getUpcoming(3).catch(() => []),
+    ]);
+
+    const now = Date.now();
+    const seen = new Set<string>();
+    const pool = [...live, ...upcoming].filter((m) => {
+      if (seen.has(m.id)) return false;
+      seen.add(m.id);
+      return true;
+    });
+
+    // Shortlist BEFORE predicting: predictBatch fetches training once per
+    // distinct competition, so the cost of this board is measured in leagues,
+    // not fixtures.
+    const candidates = shortlist(pool, now);
+    if (candidates.length === 0) return [];
+
+    const predictions = await predictBatch(candidates, candidates.length);
+    return selectFeatured(
+      predictions.map((prediction) => ({ prediction })),
+      { now, slots },
+    );
   });
 }
 
