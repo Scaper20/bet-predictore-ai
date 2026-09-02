@@ -14,6 +14,7 @@ import { AsianHandicapClient } from "@/components/match/asian-handicap-client";
 import { AnalysisPanel } from "@/components/match/analysis-panel";
 import { LiveWinProbabilityPanel } from "@/components/match/live-win-probability-panel";
 import { Gate } from "@/components/entitlements/gate";
+import { DepthGate } from "@/components/entitlements/depth-gate";
 import { JsonLd } from "@/components/seo/json-ld";
 import { matchDetail } from "@/lib/service";
 import { SITE_URL as SITE } from "@/lib/site-url";
@@ -157,13 +158,28 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
               </Gate>
             )}
             <AnalysisPanel analysis={analysis} matchId={match.id} />
+
+            {/*
+              Free, and server-rendered: the headline read, the 1X2 split,
+              form and head-to-head. That is what a crawler indexes and what
+              earns the click from search, so it must never sit behind the
+              wall — see the note in src/lib/gating.ts.
+            */}
             <OutcomePanel prediction={prediction} />
-            <GoalsPanel prediction={prediction} />
-            <div className="grid gap-5 sm:grid-cols-2">
-              <BttsPanel prediction={prediction} />
-              <DoubleChancePanel prediction={prediction} />
-            </div>
-            <CorrectScorePanel prediction={prediction} />
+
+            {/*
+              Depth needs an account. Every market beyond 1X2 comes off the
+              same scoreline distribution, so this is one decision, not five.
+            */}
+            <DepthGate reason="See every market on this match">
+              <GoalsPanel prediction={prediction} />
+              <div className="grid gap-5 sm:grid-cols-2">
+                <BttsPanel prediction={prediction} />
+                <DoubleChancePanel prediction={prediction} />
+              </div>
+              <CorrectScorePanel prediction={prediction} />
+            </DepthGate>
+
             <Gate requires="pass">
               <AsianHandicapClient matchId={match.id} />
             </Gate>
@@ -172,7 +188,14 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
           </div>
 
           <aside className="space-y-5 lg:sticky lg:top-20 lg:self-start">
-            <ModelPanel prediction={prediction} trainedOn={trainedOn} />
+            {/*
+              Sample size, data quality and confidence are the "show your
+              working" panel — the reason to trust a number rather than the
+              number itself. Worth an account, not a payment.
+            */}
+            <DepthGate reason="See the sample size behind this prediction">
+              <ModelPanel prediction={prediction} trainedOn={trainedOn} />
+            </DepthGate>
             <AddToSlip prediction={prediction} />
             <Gate requires="pass">
               <ValueCalculator prediction={prediction} />

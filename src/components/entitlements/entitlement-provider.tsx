@@ -4,7 +4,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import type { Entitlement, Tier } from "@/lib/entitlements";
 
 const EntitlementContext = createContext<{ entitlement: Entitlement; loading: boolean }>({
-  entitlement: { tier: "free", status: "none" },
+  entitlement: { tier: "free", status: "none", signedIn: false },
   loading: true,
 });
 
@@ -24,7 +24,7 @@ export function EntitlementProvider({
   children: ReactNode;
   initial?: Entitlement;
 }) {
-  const [entitlement, setEntitlement] = useState<Entitlement>(initial ?? { tier: "free", status: "none" });
+  const [entitlement, setEntitlement] = useState<Entitlement>(initial ?? { tier: "free", status: "none", signedIn: false });
   const [loading, setLoading] = useState(!initial);
 
   useEffect(() => {
