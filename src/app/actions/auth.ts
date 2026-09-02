@@ -36,7 +36,11 @@ export async function signUp(_prev: AuthActionState, formData: FormData): Promis
 
   void sendEmail({ to: email, ...welcomeEmail() });
 
-  redirect(next);
+  // Straight into onboarding, carrying the original destination so whatever
+  // they were trying to reach still happens once the questions are answered.
+  // Nothing here is mandatory — /onboarding offers a skip on every step and
+  // forwards to `next` either way.
+  redirect(`/onboarding?next=${encodeURIComponent(next)}`);
 }
 
 export async function signOut() {
