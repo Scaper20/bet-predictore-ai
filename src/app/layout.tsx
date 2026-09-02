@@ -35,6 +35,7 @@ const heading = Big_Shoulders({
   subsets: ["latin"],
   weight: ["600", "700", "800"],
   display: "swap",
+  adjustFontFallback: false,
 });
 const body = Public_Sans({ variable: "--font-body", subsets: ["latin"], display: "swap" });
 const mono = JetBrains_Mono({ variable: "--font-mono-jb", subsets: ["latin"], display: "swap" });
@@ -110,7 +111,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${heading.variable} ${body.variable} ${mono.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-canvas text-ink flex flex-col">
-        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        <script
+          id="theme-init"
+          dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }}
+          suppressHydrationWarning
+        />
         <JsonLd data={ORG_JSON_LD} />
         {children}
       </body>

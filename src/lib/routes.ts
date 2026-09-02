@@ -15,6 +15,7 @@ import { DEFAULT_SPORT, isSportId, type SportId } from "@/lib/sports";
  */
 
 export const SPORT_ROUTES = {
+  forYou: "for-you",
   live: "live",
   fixtures: "fixtures",
   predictions: "predictions",

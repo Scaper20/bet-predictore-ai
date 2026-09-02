@@ -23,6 +23,7 @@ import { sportPath, sportFromPathname } from "@/lib/routes";
  * a trust argument nobody can find does not work.
  */
 const NAV = [
+  { route: "forYou", label: "For You" },
   { route: "live", label: "Live" },
   { route: "predictions", label: "Predictions" },
   { route: "fixtures", label: "Fixtures" },

@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import { PageHeader } from "@/components/ui/page-header";
-import { Badge, EmptyState, ProbabilityBar } from "@/components/ui/primitives";
+import { EmptyState, ProbabilityBar } from "@/components/ui/primitives";
 import { supabasePublic } from "@/lib/supabase/public";
-import { kickoffDay, percent } from "@/lib/format";
+import { percent } from "@/lib/format";
 import { containerClass } from "@/components/ui/container";
+import { TrackRecordInteractive } from "@/components/track-record/track-record-interactive";
+import type { TrackRecordMatch } from "@/components/track-record/record-detail-modal";
 
 export const metadata: Metadata = {
   title: "Track Record",
@@ -12,30 +14,7 @@ export const metadata: Metadata = {
     "finishes. No cherry-picking — settled automatically, win or lose.",
 };
 
-// Settlement now runs opportunistically off of every /api/live poll (see
-// src/lib/settlement-runner.ts), not just the daily cron backstop — a
-// finished match can be graded within moments of full time. Rendered
-// dynamically so this page reflects that immediately rather than sitting
-// behind an ISR window; the underlying query is a handful of small, indexed
-// selects, cheap enough per-request.
 export const dynamic = "force-dynamic";
-
-interface PredictionLogRow {
-  id: string;
-  match_id: string;
-  league: string;
-  home_name: string;
-  away_name: string;
-  kickoff: string;
-  market: string;
-  label: string;
-  probability: number;
-  fair_odds: number;
-  result: "win" | "lose" | "push" | null;
-  actual_home_goals: number | null;
-  actual_away_goals: number | null;
-  settled_at: string | null;
-}
 
 async function loadTrackRecord() {
   const supabase = supabasePublic();
@@ -56,10 +35,10 @@ async function loadTrackRecord() {
   const winCount = wins.count ?? 0;
   const loseCount = losses.count ?? 0;
   const pushCount = pushes.count ?? 0;
-  const graded = winCount + loseCount; // pushes are excluded from win rate, standard convention for a void result.
+  const graded = winCount + loseCount;
 
   return {
-    rows: (rows ?? []) as PredictionLogRow[],
+    rows: (rows ?? []) as TrackRecordMatch[],
     winCount,
     loseCount,
     pushCount,
@@ -108,75 +87,45 @@ export default async function TrackRecordPage() {
         description="The single headline pick shown for each fixture, logged before kickoff and graded automatically against the final score. Nothing here is curated after the fact."
       />
 
-      <div className={`${containerClass()} space-y-8 py-10`}>
+      <div className={`${containerClass()} space-y-10 py-10`}>
+        {/* KPI Stats Overview */}
         <section className="grid gap-4 sm:grid-cols-3">
           <div className="card p-5">
-            <p className="text-xs font-medium uppercase tracking-wider text-ink-dim">Win rate</p>
+            <p className="text-xs font-medium uppercase tracking-wider text-ink-muted">Win rate</p>
             <p className="tnum mt-2 font-display text-3xl font-extrabold">
               {record.winRate !== null ? percent(record.winRate) : "—"}
             </p>
             <div className="mt-4">
               <ProbabilityBar value={record.winRate ?? 0} tone="brand" />
             </div>
-            <p className="mt-3 text-[11px] leading-relaxed text-ink-dim">
-              Pushes excluded from the rate, the standard convention for settling a void result.
+            <p className="mt-3 text-[11px] leading-relaxed text-ink-muted">
+              Pushes excluded from the rate, standard convention for settling void results.
             </p>
           </div>
           <div className="card p-5">
-            <p className="text-xs font-medium uppercase tracking-wider text-ink-dim">Record</p>
+            <p className="text-xs font-medium uppercase tracking-wider text-ink-muted">Record</p>
             <p className="tnum mt-2 font-display text-3xl font-extrabold">
               {record.winCount}–{record.loseCount}
               {record.pushCount > 0 && <span className="text-ink-muted">–{record.pushCount}</span>}
             </p>
-            <p className="mt-3 text-[11px] leading-relaxed text-ink-dim">
+            <p className="mt-3 text-[11px] leading-relaxed text-ink-muted">
               Win–Lose{record.pushCount > 0 ? "–Push" : ""}, across every settled fixture.
             </p>
           </div>
           <div className="card p-5">
-            <p className="text-xs font-medium uppercase tracking-wider text-ink-dim">Settled picks</p>
+            <p className="text-xs font-medium uppercase tracking-wider text-ink-muted">Settled picks</p>
             <p className="tnum mt-2 font-display text-3xl font-extrabold">
               {record.winCount + record.loseCount + record.pushCount}
             </p>
-            <p className="mt-3 text-[11px] leading-relaxed text-ink-dim">
-              Showing the {record.rows.length} most recent below.
+            <p className="mt-3 text-[11px] leading-relaxed text-ink-muted">
+              Logged automatically before kickoff.
             </p>
           </div>
         </section>
 
-        <section className="space-y-3">
-          {record.rows.map((row) => (
-            <TrackRecordRow key={row.id} row={row} />
-          ))}
-        </section>
+        {/* Interactive Track Record Container */}
+        <TrackRecordInteractive rows={record.rows} />
       </div>
     </>
-  );
-}
-
-function TrackRecordRow({ row }: { row: PredictionLogRow }) {
-  const tone = row.result === "win" ? "brand" : row.result === "lose" ? "rose" : "neutral";
-  return (
-    <div className="card flex flex-wrap items-center gap-4 p-4 sm:p-5">
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-2 text-xs text-ink-dim">
-          <span className="font-medium text-ink-muted">{row.league}</span>
-          <span>·</span>
-          <span>{kickoffDay(row.kickoff)}</span>
-        </div>
-        <p className="mt-1 truncate text-sm font-semibold text-ink">
-          {row.home_name} <span className="text-ink-dim">vs</span> {row.away_name}
-          {row.actual_home_goals !== null && row.actual_away_goals !== null && (
-            <span className="tnum ml-2 text-ink-muted">
-              ({row.actual_home_goals}-{row.actual_away_goals})
-            </span>
-          )}
-        </p>
-        <p className="mt-1 text-xs text-ink-muted">
-          Pick: <span className="font-medium text-ink">{row.label}</span>{" "}
-          <span className="tnum">({percent(row.probability, 1)})</span>
-        </p>
-      </div>
-      <Badge tone={tone}>{row.result?.toUpperCase() ?? "PENDING"}</Badge>
-    </div>
   );
 }
