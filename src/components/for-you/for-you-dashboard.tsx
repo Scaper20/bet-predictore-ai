@@ -294,8 +294,15 @@ function PickRow({
         </span>
       </div>
 
-      <h3 className={`mt-2 font-semibold ${featured ? "text-lg" : "text-base"}`}>
-        <Link href={pick.href} className="hover:text-brand">
+      {/* The link gets its own vertical padding rather than inheriting the
+          text's line box: as a bare inline it measured 19-22px tall, under the
+          24px WCAG 2.5.8 floor and awkward to hit on a phone. The negative
+          margin keeps the card's rhythm unchanged. */}
+      <h3 className={`mt-1.5 font-semibold ${featured ? "text-lg" : "text-base"}`}>
+        <Link
+          href={pick.href}
+          className="-mx-1 inline-block rounded px-1 py-1.5 transition-colors hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+        >
           {pick.homeTeam} <span className="font-normal text-ink-muted">vs</span> {pick.awayTeam}
         </Link>
       </h3>
@@ -389,10 +396,13 @@ function AccaCard({
         {acca.legs.map((leg) => (
           <li key={leg.matchId} className="flex items-start justify-between gap-3 text-xs">
             <div className="min-w-0">
-              <Link href={leg.href} className="font-semibold text-ink hover:text-brand">
+              <Link
+                href={leg.href}
+                className="-mx-1 inline-block rounded px-1 py-1 font-semibold text-ink transition-colors hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+              >
                 {leg.fixture}
               </Link>
-              <p className="mt-0.5 text-ink-muted">
+              <p className="text-ink-muted">
                 {leg.group}: <span className="font-medium text-brand">{leg.selection}</span>
               </p>
             </div>

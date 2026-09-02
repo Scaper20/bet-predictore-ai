@@ -15,7 +15,13 @@ export default function NotFound() {
           <ButtonLink href={sportPath("predictions")}>Today&apos;s predictions</ButtonLink>
           <ButtonLink href={sportPath("live")} variant="secondary">Live scores</ButtonLink>
         </div>
-        <Link href="/" className="mt-6 text-xs text-ink-dim underline underline-offset-4 hover:text-ink">
+        {/* Padded to a real tap target rather than left as a 16px text line —
+            this is the last thing on a dead end, so it needs to be easy to
+            hit on a phone. */}
+        <Link
+          href="/"
+          className="mt-4 rounded px-3 py-2.5 text-xs text-ink-dim underline underline-offset-4 transition-colors hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+        >
           Back to home
         </Link>
       </div>
