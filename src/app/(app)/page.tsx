@@ -62,7 +62,7 @@ export default async function HomePage() {
       <Marquee
         items={[
           "Real fixtures only",
-          "Dixon-Coles goal model",
+          "Fitted on completed matches",
           "Live scores",
           "Value after the vig",
           "NPFL + CAF covered",

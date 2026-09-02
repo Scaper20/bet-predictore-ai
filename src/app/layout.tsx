@@ -59,7 +59,7 @@ export const metadata: Metadata = {
     siteName: "BetriX",
     title: "BetriX — Football Predictions Built on Real Data",
     description:
-      "Real fixtures, real live scores, and a Dixon-Coles model fitted on actual results. " +
+      "Real fixtures, real live scores, and a statistical model fitted on actual results. " +
       "Know the numbers before you decide.",
   },
   twitter: {

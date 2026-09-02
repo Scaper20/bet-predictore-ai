@@ -69,7 +69,7 @@ export function ModelPanel({
         <Item
           label="Low-score correction"
           value={model.rho.toFixed(3)}
-          hint="Dixon-Coles rho: how much tight games deviate from independent scoring"
+          hint="Low-score correction: how much tight games deviate from independent scoring"
         />
         <Item
           label="League goal rate"

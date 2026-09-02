@@ -25,6 +25,16 @@ const nextConfig: NextConfig = {
         destination: `/${DEFAULT_SPORT}/match/:id`,
         permanent: true,
       },
+      /*
+       * /how-it-works is gone. It sent visitors to the track record rather
+       * than 404ing them, because the page's job was to earn trust and the
+       * settled record now does that job — with results rather than a formula.
+       */
+      {
+        source: "/how-it-works",
+        destination: `/${DEFAULT_SPORT}/track-record`,
+        permanent: true,
+      },
     ];
   },
 };

@@ -34,7 +34,7 @@ const COLUMNS = [
   {
     title: "About",
     links: [
-      { href: "/how-it-works", label: "How The Model Works" },
+      { href: sportPath("trackRecord"), label: "Our Track Record" },
       { href: "/responsible-gambling", label: "Responsible Gambling" },
     ],
   },
@@ -97,12 +97,16 @@ export function SiteFooter() {
           </div>
         </div>
 
+        {/*
+          The data-provider credit that used to sit here is gone — naming the
+          upstream feeds told visitors nothing they could act on and pinned the
+          product to a particular set of suppliers. "Not affiliated with any
+          bookmaker" stays: that one is a positioning statement, and the thing
+          this audience actually needs to know.
+        */}
         <div className="mt-8 flex flex-col gap-3 border-t border-line pt-8 text-xs text-ink-dim sm:flex-row sm:items-center sm:justify-between">
           <p>© {new Date().getFullYear()} BetriX. Built for Nigeria, made for Africa.</p>
-          <p>
-            Match data from football-data.org, API-Football and TheSportsDB. Not affiliated with
-            any bookmaker.
-          </p>
+          <p>Not affiliated with any bookmaker.</p>
         </div>
       </Container>
     </footer>

@@ -14,8 +14,8 @@ const FEATURES = [
     icon: "📊",
     title: "A real model, not a hunch",
     body:
-      "Dixon-Coles goal modelling with time-weighted attack and defence ratings, fitted by " +
-      "maximum likelihood on completed matches. The same maths quant desks use.",
+      "Time-weighted attack and defence ratings, fitted by maximum likelihood on completed " +
+      "matches. The same maths quant desks use.",
   },
   {
     icon: "⚡",
@@ -126,8 +126,8 @@ export function HowItWorks() {
             ))}
           </div>
           <div className="mt-10 text-center">
-            <ButtonLink href="/how-it-works" variant="secondary">
-              Read the full method
+            <ButtonLink href={sportPath("trackRecord")} variant="secondary">
+              See the settled record
             </ButtonLink>
           </div>
         </Reveal>
@@ -245,8 +245,8 @@ const FAQS = [
     a: "They are probabilities, not forecasts. A 60% home win means the model expects that outcome roughly six times in ten — which also means four times in ten it will not happen. We publish the sample size and data quality behind every number so you can judge how much weight it deserves.",
   },
   {
-    q: "What model do you use?",
-    a: "A Dixon-Coles bivariate Poisson model. Team attack and defence ratings, home advantage and a low-score dependency correction are fitted by weighted maximum likelihood on completed matches, with recent games weighted more heavily.",
+    q: "How are the probabilities produced?",
+    a: "Team attack and defence ratings, home advantage and a low-score correction are fitted on completed matches, with recent games weighted more heavily. Those rates expand into a full scoreline distribution, and every market is read off that same distribution — so the numbers can never contradict each other.",
   },
   {
     q: "Why does a match sometimes have no pick?",
@@ -303,13 +303,13 @@ export function FinalCta() {
             <span className="text-gradient-brand">Start reading the numbers.</span>
           </h2>
           <p className="mx-auto mt-5 max-w-xl text-base text-ink-muted">
-            Free to use, no card, no sign-up wall. Open today&apos;s slate and see what the model
-            makes of it.
+            Free to start, no card. Create an account to unlock every market on every match,
+            follow your leagues, and keep your selections in sync across devices.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             <ButtonLink href={sportPath("predictions")}>Open today&apos;s predictions</ButtonLink>
-            <ButtonLink href="/how-it-works" variant="secondary">
-              How the model works
+            <ButtonLink href={sportPath("trackRecord")} variant="secondary">
+              See the settled record
             </ButtonLink>
           </div>
         </Reveal>

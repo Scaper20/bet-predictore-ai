@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Badge, ButtonLink } from "@/components/ui/primitives";
 import { Crest } from "@/components/ui/crest";
+import { sportPath } from "@/lib/routes";
 import {
   BttsPanel, CorrectScorePanel, DoubleChancePanel, FormPanel, GoalsPanel,
   H2HPanel, OutcomePanel,
@@ -181,8 +182,12 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
                 Probabilities are estimates from a statistical model, not predictions of fact.
                 Prices shown are fair, with no margin added. Bet responsibly — 18+.
               </p>
-              <ButtonLink href="/how-it-works" variant="ghost" className="mt-3 px-0 py-1 text-xs">
-                How this is calculated →
+              <ButtonLink
+                href={sportPath("trackRecord")}
+                variant="ghost"
+                className="mt-3 px-0 py-1 text-xs"
+              >
+                See our settled record →
               </ButtonLink>
             </div>
           </aside>

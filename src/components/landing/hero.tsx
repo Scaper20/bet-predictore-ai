@@ -98,7 +98,7 @@ export function Hero({
           </div>
 
           <p className="mt-3 text-center text-xs text-ink-dim">
-            Pulled live from football-data.org, API-Football and TheSportsDB.
+            Real fixtures, straight from the live feeds.
           </p>
         </div>
 
