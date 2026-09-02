@@ -1,54 +1,90 @@
-import "server-only";
+import { leagueByCode, type LeagueDef } from "@/lib/leagues";
+// Type-only, so no `server-only` module is pulled into the runtime graph —
+// these erase at compile time and never reach the test environment.
+import type { UserPreferences } from "@/lib/preferences";
+import type { Entitlement } from "@/lib/entitlements";
+import type { SettledRecord } from "@/lib/performance";
+import type { SportId } from "@/lib/sports";
+import type { Prediction } from "@/lib/model/predict";
+import type { Match } from "@/lib/types";
 
-import { getPreferences, type UserPreferences } from "@/lib/preferences";
-import { getEntitlement, type Entitlement } from "@/lib/entitlements";
-import { LEAGUES, leagueByCode, type LeagueDef } from "@/lib/leagues";
-import { upcomingFeed, predictBatch } from "@/lib/service";
-import { supabaseServer } from "@/lib/supabase/server";
+/**
+ * The personalised feed: shapes and selection rules.
+ *
+ * Pure — the fetching lives in for-you-feed.ts, matching the
+ * settlement.ts / settlement-runner.ts split already used here, because
+ * `import "server-only"` throws under vitest and these rules need tests.
+ *
+ * Two rules define this module, and both exist because the previous version
+ * broke them:
+ *
+ * 1. NOTHING here is invented. Every number rendered on the For You page
+ *    traces to either the fitted model or a settled row in predictions_log.
+ *    The old version derived a "bookmaker price" from the confidence score's
+ *    remainder and an "EV edge" floored at +8% — figures a user would act on
+ *    financially, computed from nothing. There is no odds feed in this
+ *    product, so there is no EV to show, and the honest surface is the fair
+ *    price plus the sample size behind it.
+ *
+ * 2. The personalised zone is STRICTLY within the user's followed leagues,
+ *    structurally rather than by a filter that can fall through. The old
+ *    version ended with `userLeaguePicks.length > 0 ? userLeaguePicks : rawPicks`
+ *    — so an EPL follower with a quiet week silently got the entire unfiltered
+ *    slate, under a heading that still said "customized for your followed
+ *    leagues". Slate-wide content now lives in its own fields and is labelled
+ *    as slate-wide in the UI.
+ */
+
+/** Legs in a suggested accumulator, and the minimum worth showing. */
+export const ACCA_LEGS = 3;
+export const ACCA_MIN_LEGS = 2;
 
 export interface PersonalizedPick {
   id: string;
+  href: string;
   homeTeam: string;
   awayTeam: string;
-  homeFlag?: string;
-  awayFlag?: string;
-  league: LeagueDef;
+  league: { code: string | null; name: string; shortName: string; flag?: string };
   kickoff: string;
+  status: Match["status"];
   market: string;
+  group: string;
   label: string;
   probability: number;
+  /** The model's own break-even price. There is no bookmaker price to show. */
   fairOdds: number;
-  bookmakerOdds: number;
-  expectedValueEV: number;
   confidence: number;
-  reason: string;
-  isGated: boolean;
+  /** Real evidence behind the pick, straight off the fitted model. */
+  matchesUsed: number;
+  dataQuality: number;
 }
 
-export interface CustomAccaLeg {
+export interface AccaLeg {
   matchId: string;
+  href: string;
   fixture: string;
   league: string;
+  kickoff: string;
   market: string;
+  group: string;
   selection: string;
-  odds: number;
   probability: number;
+  fairOdds: number;
 }
 
-export interface CustomAcca {
-  title: string;
-  description: string;
-  legs: CustomAccaLeg[];
-  totalOdds: number;
-  combinedProb: number;
-  expectedReturnNgn: number;
+export interface AccaSuggestion {
+  legs: AccaLeg[];
+  /** Product of the legs' probabilities, treating them as independent. */
+  combinedProbability: number;
+  /** The break-even price for that combined probability. */
+  combinedFairOdds: number;
 }
 
-export interface LeagueModelStat {
+export interface LeagueRecordRow {
   league: LeagueDef;
-  accuracy30d: number;
-  roi30d: number;
-  matchesSettled: number;
+  record: SettledRecord;
+  /** False when the sample is too thin to quote a rate — show a note instead. */
+  publishable: boolean;
 }
 
 export interface ForYouFeedPayload {
@@ -56,189 +92,106 @@ export interface ForYouFeedPayload {
   userEmail: string | null;
   signedIn: boolean;
   tier: Entitlement["tier"];
+  sport: SportId;
   preferences: UserPreferences;
   followedLeagues: LeagueDef[];
-  heroPick: PersonalizedPick;
-  customAcca: CustomAcca;
-  upcomingMatches: PersonalizedPick[];
-  leagueStats: LeagueModelStat[];
+  /** True when these are our defaults, not the user's answers. */
+  usingDefaults: boolean;
+
+  /** STRICTLY inside followedLeagues. Empty is a valid, rendered answer. */
+  inYourLeagues: PersonalizedPick[];
+  /** Null when fewer than ACCA_MIN_LEGS are available in those leagues. */
+  acca: AccaSuggestion | null;
+  /** Settled record per followed league. Real, or flagged unpublishable. */
+  leagueRecords: LeagueRecordRow[];
+
+  /** Slate-wide. Labelled as such in the UI — the brief's explicit carve-out. */
+  bestBet: PersonalizedPick | null;
+  quickPicks: PersonalizedPick[];
+
+  updatedAt: string;
 }
 
-const DEFAULT_LEAGUE_CODES = ["premier-league", "champions-league", "la-liga"];
+/**
+ * Structural guarantee that rule 2 above holds.
+ *
+ * Typed on the minimal shape so it can be unit-tested without constructing a
+ * whole Prediction. An empty result is the correct answer for a quiet week —
+ * callers render an empty state, they do not widen the net.
+ */
+export function inFollowedLeagues<T extends { league: { code: string | null } }>(
+  picks: T[],
+  followed: ReadonlySet<string>,
+): T[] {
+  return picks.filter((p) => p.league.code !== null && followed.has(p.league.code));
+}
 
-export async function getForYouFeed(): Promise<ForYouFeedPayload> {
-  const entitlement = await getEntitlement();
-  const prefs = await getPreferences();
+/** Prediction → the projection that crosses to the client. */
+export function toPersonalizedPick(prediction: Prediction, sport: SportId): PersonalizedPick | null {
+  const pick = prediction.topPick;
+  if (!pick) return null;
 
-  // 1. Fetch user display_name from profiles if signed in
-  let userName: string | null = null;
-  if (entitlement.signedIn && entitlement.email) {
-    try {
-      const supabase = await supabaseServer();
-      if (supabase) {
-        const { data: userRes } = await supabase.auth.getUser();
-        if (userRes?.user) {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("display_name")
-            .eq("id", userRes.user.id)
-            .maybeSingle();
-
-          if (profile?.display_name && profile.display_name.trim().length > 0) {
-            userName = profile.display_name.trim();
-          }
-        }
-      }
-    } catch {
-      // Fall back to email handle below
-    }
-    if (!userName && entitlement.email) {
-      userName = entitlement.email.split("@")[0] ?? "Member";
-    }
-  }
-
-  // 2. Resolve user's followed leagues
-  let leagueDefs: LeagueDef[] = prefs.leagues
-    .map((code) => leagueByCode(code))
-    .filter((l): l is LeagueDef => l !== undefined);
-
-  if (leagueDefs.length === 0) {
-    leagueDefs = DEFAULT_LEAGUE_CODES.map((code) => leagueByCode(code)!).filter(Boolean);
-  }
-
-  const primaryLeague = leagueDefs[0] ?? LEAGUES[0];
-
-  // 3. Fetch real upcoming fixtures & predictions batch from BetriX pipeline
-  let rawPicks: PersonalizedPick[] = [];
-  try {
-    const { matches } = await upcomingFeed(7);
-    const predictions = await predictBatch(matches, 24);
-
-    rawPicks = predictions
-      .filter((p) => p.topPick !== null)
-      .map((p) => {
-        const lDef = p.league ?? primaryLeague;
-        const pick = p.topPick!;
-        const fairOdds = pick.fairOdds;
-        // Estimate market bookmaker odds (~1.12 to 1.25 multiplier on fair odds for EV demonstration)
-        const bookmakerOdds = Number((fairOdds * (1 + (pick.confidence % 15 + 5) / 100)).toFixed(2));
-        const ev = Math.round(((bookmakerOdds - fairOdds) / fairOdds) * 100);
-
-        return {
-          id: p.match.id,
-          homeTeam: p.match.home.name,
-          awayTeam: p.match.away.name,
-          league: lDef,
-          kickoff: p.match.kickoff,
-          market: pick.market,
-          label: pick.label,
-          probability: pick.probability,
-          fairOdds,
-          bookmakerOdds,
-          expectedValueEV: Math.max(8, ev),
-          confidence: Math.round(pick.confidence),
-          reason: `Selected based on BetriX ratings (${p.model.matchesUsed} matches fitted, ${p.model.dataQuality}% data quality).`,
-          isGated: entitlement.tier === "free",
-        };
-      });
-  } catch {
-    // If provider API is offline, rawPicks stays empty and fallback kicks in
-  }
-
-  // Filter picks matching user's followed leagues
-  const followedLeagueCodes = new Set(leagueDefs.map((l) => l.code));
-  const userLeaguePicks = rawPicks.filter((p) => followedLeagueCodes.has(p.league.code));
-  const displayPicks = userLeaguePicks.length > 0 ? userLeaguePicks : rawPicks;
-
-  // 4. Hero Pick selection
-  const heroPick: PersonalizedPick = displayPicks[0] ?? {
-    id: "match-hero-fallback",
-    homeTeam: "Arsenal",
-    awayTeam: "Chelsea",
-    league: primaryLeague,
-    kickoff: new Date(Date.now() + 86400000 * 1.5).toISOString(),
-    market: prefs.usageIntent === "accas" ? "btts:yes" : "1x2:home",
-    label: prefs.usageIntent === "accas" ? "Both Teams To Score" : "Arsenal Win (1)",
-    probability: 0.68,
-    fairOdds: 1.47,
-    bookmakerOdds: 1.75,
-    expectedValueEV: 19.0,
-    confidence: 86,
-    reason: `Selected for your interest in ${primaryLeague.shortName} and ${prefs.usageIntent} strategies.`,
-    isGated: entitlement.tier === "free",
-  };
-
-  // 5. Dynamic Personalized Acca Builder (strictly from user's chosen leagues)
-  const accaCandidates = displayPicks.slice(0, 4);
-  const accaLegs: CustomAccaLeg[] = accaCandidates.map((p) => ({
-    matchId: p.id,
-    fixture: `${p.homeTeam} vs ${p.awayTeam}`,
-    league: p.league.shortName,
-    market: p.market.startsWith("1x2") ? "Match Result" : p.market.startsWith("btts") ? "BTTS" : "Goals",
-    selection: p.label,
-    odds: p.bookmakerOdds,
-    probability: p.probability,
-  }));
-
-  if (accaLegs.length < 2) {
-    // Fallback legs if upcoming slate has fewer than 2 fixtures
-    accaLegs.push(
-      {
-        matchId: "m-f1",
-        fixture: "Real Madrid vs Barcelona",
-        league: "La Liga",
-        market: "Goals",
-        selection: "Over 2.5 Goals",
-        odds: 1.65,
-        probability: 0.70,
-      },
-      {
-        matchId: "m-f2",
-        fixture: "Inter Milan vs AC Milan",
-        league: "Serie A",
-        market: "BTTS",
-        selection: "Yes (BTTS)",
-        odds: 1.80,
-        probability: 0.65,
-      }
-    );
-  }
-
-  const totalOdds = Number(accaLegs.reduce((acc, leg) => acc * leg.odds, 1).toFixed(2));
-  const combinedProb = accaLegs.reduce((acc, leg) => acc * leg.probability, 1);
-  const stakeNgn = 5000;
-  const expectedReturnNgn = Math.round(stakeNgn * totalOdds);
-
-  const customAcca: CustomAcca = {
-    title: `${primaryLeague.shortName} & Followed Leagues Value Slip`,
-    description: `Auto-generated ${accaLegs.length}-fold accumulator customized for your followed leagues (${leagueDefs.map((l) => l.shortName).join(", ")}).`,
-    legs: accaLegs,
-    totalOdds,
-    combinedProb,
-    expectedReturnNgn,
-  };
-
-  // 6. Upcoming Matches Feed
-  const upcomingMatches = displayPicks.slice(1, 6);
-
-  // 7. League Model Accuracy Stats
-  const leagueStats: LeagueModelStat[] = leagueDefs.map((league) => ({
-    league,
-    accuracy30d: 76.5 + (league.rank % 5) * 2.1,
-    roi30d: 12.4 + (league.rank % 4) * 1.8,
-    matchesSettled: 48 + league.rank * 6,
-  }));
+  const { match, model } = prediction;
+  const def = match.league.code ? leagueByCode(match.league.code) : undefined;
 
   return {
-    userName,
-    userEmail: entitlement.email,
-    signedIn: entitlement.signedIn,
-    tier: entitlement.tier,
-    preferences: prefs,
-    followedLeagues: leagueDefs,
-    heroPick,
-    customAcca,
-    upcomingMatches,
-    leagueStats,
+    id: match.id,
+    href: `/${sport}/match/${encodeURIComponent(match.id)}`,
+    homeTeam: match.home.name,
+    awayTeam: match.away.name,
+    league: {
+      code: match.league.code ?? null,
+      name: def?.name ?? match.league.name,
+      shortName: def?.shortName ?? match.league.name,
+      flag: def?.flag,
+    },
+    kickoff: match.kickoff,
+    status: match.status,
+    market: pick.market,
+    group: pick.group,
+    label: pick.label,
+    probability: pick.probability,
+    fairOdds: pick.fairOdds,
+    confidence: Math.round(pick.confidence),
+    matchesUsed: model.matchesUsed,
+    dataQuality: model.dataQuality,
+  };
+}
+
+/**
+ * Builds an accumulator from picks already scoped to the user's leagues.
+ *
+ * Pure, and it never pads: fewer than ACCA_MIN_LEGS returns null so the UI can
+ * say why, rather than topping the slip up with fixtures from competitions the
+ * user did not ask for — which is what the old fictional fallback legs
+ * ("Real Madrid vs Barcelona") were papering over.
+ */
+export function buildAcca(picks: PersonalizedPick[]): AccaSuggestion | null {
+  const legs = [...picks]
+    .sort((a, b) => b.confidence - a.confidence)
+    .slice(0, ACCA_LEGS);
+
+  if (legs.length < ACCA_MIN_LEGS) return null;
+
+  // Independence is an assumption, not a fact — two fixtures in one
+  // competition on one weekend are correlated. The UI states this next to the
+  // number rather than presenting the product as an exact answer.
+  const combinedProbability = legs.reduce((acc, leg) => acc * leg.probability, 1);
+
+  return {
+    legs: legs.map((p) => ({
+      matchId: p.id,
+      href: p.href,
+      fixture: `${p.homeTeam} vs ${p.awayTeam}`,
+      league: p.league.shortName,
+      kickoff: p.kickoff,
+      market: p.market,
+      group: p.group,
+      selection: p.label,
+      probability: p.probability,
+      fairOdds: p.fairOdds,
+    })),
+    combinedProbability,
+    combinedFairOdds: combinedProbability > 0 ? 1 / combinedProbability : 0,
   };
 }
