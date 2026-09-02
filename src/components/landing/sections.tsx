@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Badge, ButtonLink, SectionHeading } from "@/components/ui/primitives";
+import { Container, containerClass } from "@/components/ui/container";
 import { Reveal } from "@/components/ui/reveal";
 import { LEAGUES } from "@/lib/leagues";
 import { naira } from "@/lib/format";
@@ -54,7 +55,7 @@ const FEATURES = [
 
 export function Features() {
   return (
-    <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8 lg:py-28">
+    <section className={`${containerClass()} py-20 lg:py-28`}>
       <Reveal>
         <SectionHeading
           eyebrow="What you get"
@@ -106,7 +107,7 @@ const STEPS = [
 export function HowItWorks() {
   return (
     <section className="border-y border-line bg-shell">
-      <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8 lg:py-28">
+      <Container className="py-20 lg:py-28">
         <Reveal>
           <SectionHeading
             eyebrow="How it works"
@@ -129,7 +130,7 @@ export function HowItWorks() {
             </ButtonLink>
           </div>
         </Reveal>
-      </div>
+      </Container>
     </section>
   );
 }
@@ -138,7 +139,7 @@ export function HowItWorks() {
 
 export function Leagues() {
   return (
-    <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8 lg:py-24">
+    <section className={`${containerClass()} py-20 lg:py-24`}>
       <Reveal>
         <SectionHeading
           eyebrow="Coverage"
@@ -175,7 +176,7 @@ const CTA: Record<string, string> = {
 export function Pricing() {
   return (
     <section className="border-y border-line bg-shell">
-      <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8 lg:py-28">
+      <Container className="py-20 lg:py-28">
         <Reveal>
         <SectionHeading
           eyebrow="Pricing"
@@ -226,7 +227,7 @@ export function Pricing() {
           })}
         </div>
         </Reveal>
-      </div>
+      </Container>
     </section>
   );
 }

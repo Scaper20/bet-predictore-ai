@@ -7,6 +7,7 @@ import { Faq, Features, FinalCta, HowItWorks, Leagues, Pricing } from "@/compone
 import { BestBetOfDay } from "@/components/landing/best-bet-of-day";
 import { MatchCard } from "@/components/match/match-card";
 import { SectionHeading, ButtonLink, EmptyState } from "@/components/ui/primitives";
+import { Container, containerClass } from "@/components/ui/container";
 import { liveFeed, upcomingFeed, predictBatch, bestBetOfDay } from "@/lib/service";
 import type { Match } from "@/lib/types";
 
@@ -76,9 +77,9 @@ export default async function HomePage() {
         />
 
         {bestBet?.topPick && (
-          <div className="mx-auto max-w-7xl px-4 pt-12 sm:px-6 lg:px-8">
+          <Container className="pt-12">
             <BestBetOfDay prediction={bestBet} />
-          </div>
+          </Container>
         )}
         <TodaysPicks previews={previews} />
         <Features />
@@ -104,7 +105,7 @@ function TodaysPicks({ previews }: { previews: Awaited<ReturnType<typeof predict
   const usable = previews.filter((p) => p.sufficiency.publishable).slice(0, 6);
 
   return (
-    <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8 lg:py-24">
+    <section className={`${containerClass()} py-20 lg:py-24`}>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <SectionHeading
           eyebrow="Live from the model"

@@ -1,5 +1,6 @@
 import type { Match } from "@/lib/types";
 import { Badge, ButtonLink, LiveDot } from "@/components/ui/primitives";
+import { Container } from "@/components/ui/container";
 import { kickoffTime, percent, relativeDay, statusLabel } from "@/lib/format";
 import { Crest } from "@/components/ui/crest";
 
@@ -22,7 +23,7 @@ export function Hero({
         aria-hidden
       />
 
-      <div className="relative mx-auto grid max-w-7xl gap-14 px-4 py-16 sm:px-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-center lg:gap-10 lg:py-24 lg:px-8">
+      <Container className="relative grid gap-14 py-16 lg:grid-cols-[1.1fr_0.9fr] lg:items-center lg:gap-10 lg:py-24">
         {/* Live board leads: today's real predictions, not marketing copy, is
             the first thing anyone sees. */}
         <div className="animate-rise">
@@ -136,7 +137,7 @@ export function Hero({
             <Stat value="18+" label="Bet responsibly" />
           </dl>
         </div>
-      </div>
+      </Container>
     </section>
   );
 }
