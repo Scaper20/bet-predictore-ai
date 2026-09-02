@@ -96,7 +96,7 @@ export function SlipView() {
       </div>
 
       <aside className="lg:sticky lg:top-20 lg:self-start">
-        <div className="card p-5 sm:p-6">
+        <div className="card p-5 sm:p-7">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-ink-muted">
             Combined pick
           </h2>

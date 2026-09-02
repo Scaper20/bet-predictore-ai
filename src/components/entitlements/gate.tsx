@@ -34,7 +34,7 @@ export function Gate({
 
 function UpsellTeaser({ requires }: { requires: Tier }) {
   return (
-    <div className="card flex flex-col items-center gap-3 border-dashed p-6 text-center">
+    <div className="card flex flex-col items-center gap-3 border-dashed p-7 text-center">
       <span className="grid size-9 place-items-center rounded-full bg-surface-2 text-lg" aria-hidden>
         🔒
       </span>

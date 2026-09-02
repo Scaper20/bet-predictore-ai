@@ -16,7 +16,7 @@ export function BestBetOfDay({ prediction }: { prediction: Prediction | null }) 
   return (
     <Link
       href={`/match/${encodeURIComponent(match.id)}`}
-      className="card card-hover flex flex-wrap items-center gap-4 border-brand/30 p-5 sm:p-6"
+      className="card card-hover flex flex-wrap items-center gap-4 border-brand/30 p-5 sm:p-7"
     >
       <Badge tone="brand">Best bet today</Badge>
       <div className="min-w-0 flex-1">

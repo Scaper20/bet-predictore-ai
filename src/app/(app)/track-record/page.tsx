@@ -108,7 +108,7 @@ export default async function TrackRecordPage() {
         description="The single headline pick shown for each fixture, logged before kickoff and graded automatically against the final score. Nothing here is curated after the fact."
       />
 
-      <div className={`${containerClass()} space-y-8 py-8`}>
+      <div className={`${containerClass()} space-y-8 py-10`}>
         <section className="grid gap-4 sm:grid-cols-3">
           <div className="card p-5">
             <p className="text-xs font-medium uppercase tracking-wider text-ink-dim">Win rate</p>

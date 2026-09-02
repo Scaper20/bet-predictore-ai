@@ -69,7 +69,7 @@ export function BillingPlans({
           const perMonthYearly = plan.id === "pro" && cycle === "yearly" && plan.price.yearly ? plan.price.yearly / 12 : null;
 
           return (
-            <div key={plan.id} className={`card relative flex flex-col p-6 ${plan.highlighted ? "border-brand/40 glow-brand" : ""}`}>
+            <div key={plan.id} className={`card relative flex flex-col p-7 ${plan.highlighted ? "border-brand/40 glow-brand" : ""}`}>
               {plan.highlighted && (
                 <Badge tone="brand" className="absolute -top-3 left-6">
                   Most popular

@@ -6,7 +6,7 @@ export default function Loading() {
     <>
       {/* ------------------------------------------------------ Match header */}
       <div className="border-b border-line bg-shell">
-        <div className={`${containerClass()} py-8`}>
+        <div className={`${containerClass()} py-10`}>
           <div className="mb-6 flex flex-wrap items-center gap-3">
             <Skeleton className="size-[22px] shrink-0 rounded-full" />
             <Skeleton className="h-3 w-32" />
@@ -27,7 +27,7 @@ export default function Loading() {
       </div>
 
       {/* ------------------------------------------------------------- Body */}
-      <div className={`${containerClass()} py-8`}>
+      <div className={`${containerClass()} py-10`}>
         <div className="grid gap-5 lg:grid-cols-[1.6fr_1fr]">
           <div className="space-y-5">
             <PanelSkeleton lines={4} />
@@ -46,7 +46,7 @@ export default function Loading() {
 
 function PanelSkeleton({ lines }: { lines: number }) {
   return (
-    <div className="card p-5 sm:p-6">
+    <div className="card p-5 sm:p-7">
       <div className="mb-5 flex items-baseline justify-between gap-3">
         <Skeleton className="h-3 w-28" />
         <Skeleton className="h-3 w-14" />

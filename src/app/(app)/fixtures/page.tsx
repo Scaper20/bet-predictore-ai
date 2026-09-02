@@ -39,7 +39,7 @@ export default async function FixturesPage({
         description={`Kickoff times shown in West Africa Time. Looking ${window} day${window === 1 ? "" : "s"} ahead.`}
       />
 
-      <div className={`${containerClass()} space-y-6 py-8`}>
+      <div className={`${containerClass()} space-y-6 py-10`}>
         <Suspense fallback={<div className="h-10" />}>
           <LeagueFilter />
         </Suspense>
@@ -63,7 +63,7 @@ export default async function FixturesPage({
                   {group.matches.length} match{group.matches.length === 1 ? "" : "es"}
                 </span>
               </h2>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 {group.matches.map((m) => (
                   <MatchCard key={m.id} match={m} />
                 ))}

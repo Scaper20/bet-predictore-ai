@@ -42,7 +42,7 @@ export default async function TrendsPage() {
         description={`Aggregated across ${snapshot.total} upcoming fixtures over the next three days, of which ${snapshot.publishable} have enough history to model properly.`}
       />
 
-      <div className={`${containerClass()} space-y-8 py-8`}>
+      <div className={`${containerClass()} space-y-8 py-10`}>
         <section className="grid gap-4 sm:grid-cols-3">
           <TrendCard
             label="Average expected goals"
@@ -84,7 +84,7 @@ export default async function TrendsPage() {
               description="No upcoming fixture currently has enough history behind it to make a confident read."
             />
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {snapshot.standouts.map((p) => (
                 <PredictionCard key={p.match.id} prediction={p} />
               ))}

@@ -127,7 +127,7 @@ function TodaysPicks({ previews }: { previews: Awaited<ReturnType<typeof predict
           />
         </div>
       ) : (
-        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {usable.map((p) => (
             <MatchCard key={p.match.id} match={p.match} prediction={p} />
           ))}

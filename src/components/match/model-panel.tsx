@@ -19,7 +19,7 @@ export function ModelPanel({
   const { model, sufficiency, ratings, match } = prediction;
 
   return (
-    <section className="card p-5 sm:p-6">
+    <section className="card p-5 sm:p-7">
       <div className="mb-5 flex items-baseline justify-between gap-3">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-ink-muted">
           Under the hood

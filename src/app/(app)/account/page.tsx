@@ -48,7 +48,7 @@ export default async function AccountPage() {
       <div>
         <h1 className="font-display text-2xl font-bold">Account</h1>
 
-        <div className="card mt-6 p-6">
+        <div className="card mt-6 p-7">
           <p className="text-xs font-medium uppercase tracking-wider text-ink-muted">Signed in as</p>
           <p className="mt-1 text-sm font-semibold">{user.email}</p>
 
@@ -68,14 +68,14 @@ export default async function AccountPage() {
 
       <section>
         <SectionHeading eyebrow="Profile" title="Your details" />
-        <div className="card mt-4 p-6">
+        <div className="card mt-4 p-7">
           <ProfileForm initialDisplayName={displayName} />
         </div>
       </section>
 
       <section>
         <SectionHeading eyebrow="Security" title="Login & security" />
-        <div className="card mt-4 divide-y divide-line p-6">
+        <div className="card mt-4 divide-y divide-line p-7">
           <div className="pb-6">
             <h3 className="mb-4 text-sm font-semibold">Change email</h3>
             <ChangeEmailForm currentEmail={user.email ?? ""} />
@@ -111,7 +111,7 @@ export default async function AccountPage() {
 
       <section>
         <SectionHeading eyebrow="Danger zone" title="Delete account" />
-        <div className="card mt-4 border-rose/25 p-6">
+        <div className="card mt-4 border-rose/25 p-7">
           <DeleteAccountForm hasActiveSubscription={hasActiveSubscription} />
         </div>
       </section>

@@ -44,7 +44,7 @@ export default async function PredictionsPage({
         description="Each fixture is modelled against its own competition's completed results. Where the history is too thin, no pick is published — that fixture is listed separately below."
       />
 
-      <div className={`${containerClass()} space-y-6 py-8`}>
+      <div className={`${containerClass()} space-y-6 py-10`}>
         <Suspense fallback={<div className="h-10" />}>
           <LeagueFilter />
         </Suspense>
@@ -70,7 +70,7 @@ export default async function PredictionsPage({
                   </h2>
                   <Badge tone="brand">{publishable.length}</Badge>
                 </div>
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                   {publishable.map((p) => (
                     <PredictionCard key={p.match.id} prediction={p} />
                   ))}
@@ -91,7 +91,7 @@ export default async function PredictionsPage({
                   competition does not have enough completed matches behind it to stand a
                   selection on. They are shown so you know they exist, not so you bet them.
                 </p>
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                   {withheld.map((p) => (
                     <PredictionCard key={p.match.id} prediction={p} />
                   ))}

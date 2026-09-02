@@ -59,7 +59,7 @@ export default async function BillingPage() {
             title="Manage your plan"
             description="Update your card or cancel anytime — you'll be redirected to Paystack's secure page."
           />
-          <div className="card mt-4 p-6">
+          <div className="card mt-4 p-7">
             <ManageSubscriptionButton />
           </div>
         </section>
