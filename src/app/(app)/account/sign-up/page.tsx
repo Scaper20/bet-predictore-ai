@@ -88,7 +88,7 @@ export default async function SignUpPage({
             </div>
 
             <Suspense fallback={<div className="skeleton h-48 rounded-lg" />}>
-              <SignUpForm />
+              <SignUpForm defaultNext={next} />
             </Suspense>
           </div>
         </div>

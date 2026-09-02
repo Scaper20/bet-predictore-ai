@@ -8,9 +8,11 @@ import { Button, Spinner } from "@/components/ui/primitives";
 
 const initialState: AuthActionState = { error: null };
 
-export function SignUpForm() {
+export function SignUpForm({
+  defaultNext = "/account",
+}: { defaultNext?: string } = {}) {
   const searchParams = useSearchParams();
-  const next = searchParams.get("next") ?? "/account";
+  const next = searchParams.get("next") ?? defaultNext;
   const [state, formAction, pending] = useActionState(signUp, initialState);
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
