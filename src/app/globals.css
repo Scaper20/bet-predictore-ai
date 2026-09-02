@@ -55,6 +55,17 @@
 
   /* Motion */
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Page widths. Tailwind's --container-* namespace generates max-w-page /
+     max-w-shell, so the scale lives here with the rest of the system rather
+     than as an arbitrary value hardcoded into a component.
+
+     90rem lands the cap exactly on 1440, the most common desktop width, and
+     leaves the gutter ramp in container.tsx to absorb everything above it —
+     below 1280 the content column is narrower than it used to be (more
+     lateral air), above 1440 it gains roughly one card's width. */
+  --container-page: 90rem;
+  --container-shell: 104rem;
 }
 
 /* Light mode — opt-in via <html data-theme="light">, set server-side in
