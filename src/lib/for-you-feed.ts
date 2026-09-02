@@ -24,8 +24,16 @@ import {
  * this module is the I/O.
  */
 
-/** How far ahead to look inside a followed competition. */
-const HORIZON_DAYS = 5;
+/**
+ * How far ahead to look inside a followed competition.
+ *
+ * Wider than the predictions page's 5 because this feed is narrow by design:
+ * scoped to a handful of competitions, a short window lands on an empty page
+ * through most of an international break. The scoped provider call costs the
+ * same either way — it is one league endpoint per competition regardless of
+ * the horizon — so the extra days are free.
+ */
+const HORIZON_DAYS = 7;
 
 /** Ceiling on fixtures sent for prediction, after league scoping. */
 const PREDICT_LIMIT = 18;
