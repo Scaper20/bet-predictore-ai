@@ -16,6 +16,8 @@ import { buildPrediction, type Prediction } from "@/lib/model/predict";
 import { scoreMatrix, deriveLiveWinProbability } from "@/lib/model/poisson";
 import { writeAnalysis, aiEnabled, type Analysis } from "@/lib/ai/analyst";
 import { isLive } from "@/lib/format";
+import { leagueByCode } from "@/lib/leagues";
+import { sportOrDefault } from "@/lib/sports";
 
 export interface FixtureFeed {
   matches: Match[];
@@ -91,8 +93,14 @@ export interface LiveProbability {
  * a reasonable approximation given the model has no ET-specific dynamics.
  */
 function elapsedMinutesFor(match: Match): number {
-  if (match.status === "halftime") return 45;
-  return Math.min(90, Math.max(0, match.minute ?? 45));
+  // Period/regulation length come from the sport descriptor rather than
+  // literal 45/90, so a second sport doesn't silently inherit football's clock.
+  const sport = sportOrDefault(leagueByCode(match.league.code ?? "")?.sport);
+  if (match.status === "halftime") return sport.periodMinutes;
+  return Math.min(
+    sport.regulationMinutes,
+    Math.max(0, match.minute ?? sport.periodMinutes),
+  );
 }
 
 /**
