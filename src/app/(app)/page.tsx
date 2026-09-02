@@ -1,6 +1,3 @@
-import { SiteHeader } from "@/components/layout/site-header";
-import { SiteFooter } from "@/components/layout/site-footer";
-import { ChatWidget } from "@/components/support/chat-widget";
 import { Hero } from "@/components/landing/hero";
 import { Marquee } from "@/components/landing/marquee";
 import { Faq, Features, FinalCta, HowItWorks, Leagues, Pricing } from "@/components/landing/sections";
@@ -53,44 +50,39 @@ export default async function HomePage() {
 
   return (
     <>
-      <SiteHeader />
-      <main>
-        <Hero
-          liveCount={liveMatches.length}
-          featured={featured}
-          featuredProbabilities={
-            heroProbabilities.some((p) => p.home > 0) ? heroProbabilities : undefined
-          }
-        />
+      <Hero
+        liveCount={liveMatches.length}
+        featured={featured}
+        featuredProbabilities={
+          heroProbabilities.some((p) => p.home > 0) ? heroProbabilities : undefined
+        }
+      />
 
-        <Marquee
-          items={[
-            "Real fixtures only",
-            "Dixon-Coles goal model",
-            "Live scores",
-            "Value after the vig",
-            "NPFL + CAF covered",
-            "Sample size on every pick",
-            "Naira pricing",
-            "18+ bet responsibly",
-          ]}
-        />
+      <Marquee
+        items={[
+          "Real fixtures only",
+          "Dixon-Coles goal model",
+          "Live scores",
+          "Value after the vig",
+          "NPFL + CAF covered",
+          "Sample size on every pick",
+          "Naira pricing",
+          "18+ bet responsibly",
+        ]}
+      />
 
-        {bestBet?.topPick && (
-          <Container className="pt-12">
-            <BestBetOfDay prediction={bestBet} />
-          </Container>
-        )}
-        <TodaysPicks previews={previews} />
-        <Features />
-        <HowItWorks />
-        <Leagues />
-        <Pricing />
-        <Faq />
-        <FinalCta />
-      </main>
-      <SiteFooter />
-      <ChatWidget />
+      {bestBet?.topPick && (
+        <Container className="pt-12">
+          <BestBetOfDay prediction={bestBet} />
+        </Container>
+      )}
+      <TodaysPicks previews={previews} />
+      <Features />
+      <HowItWorks />
+      <Leagues />
+      <Pricing />
+      <Faq />
+      <FinalCta />
     </>
   );
 }
