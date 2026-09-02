@@ -74,6 +74,18 @@ const getSnapshot = () => {
 const EMPTY: SlipLeg[] = [];
 const getServerSnapshot = () => EMPTY;
 
+export function clearSlip() {
+  legs = [];
+  try {
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem(KEY);
+      window.localStorage.removeItem(LEGACY_KEY);
+    }
+  } catch {}
+  persist();
+  emit();
+}
+
 export function useSlip() {
   const value = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
@@ -98,9 +110,7 @@ export function useSlip() {
   }, []);
 
   const clear = useCallback(() => {
-    legs = [];
-    persist();
-    emit();
+    clearSlip();
   }, []);
 
   return { legs: value, add, remove, clear, setBookmakerOdds };

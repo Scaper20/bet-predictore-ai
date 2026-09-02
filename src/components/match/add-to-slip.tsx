@@ -17,7 +17,7 @@ export function AddToSlip({ prediction }: { prediction: Prediction }) {
 
   if (!sufficiency.publishable) {
     return (
-      <section className="card p-5 sm:p-6">
+      <section className="card p-5 sm:p-7">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-ink-muted">Selections</h2>
         <p className="mt-3 text-xs leading-relaxed text-ink-dim">
           Selections from this fixture are not offered: there is not enough completed history in
@@ -30,7 +30,7 @@ export function AddToSlip({ prediction }: { prediction: Prediction }) {
   const pick = options.find((p) => p.market === selected) ?? options[0];
 
   return (
-    <section className="card p-5 sm:p-6">
+    <section className="card p-5 sm:p-7">
       <div className="mb-4 flex items-baseline justify-between gap-3">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-ink-muted">Selections</h2>
         {existing && <span className="text-xs text-brand">On your slip</span>}

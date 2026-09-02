@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Analysis } from "@/lib/ai/analyst";
 import { Badge } from "@/components/ui/primitives";
 import { Gate } from "@/components/entitlements/gate";
@@ -20,7 +21,7 @@ export function AnalysisPanel({ analysis, matchId }: { analysis: Analysis; match
   const lead = analysis.body[0];
 
   return (
-    <section className="card p-5 sm:p-6">
+    <section className="card p-5 sm:p-7">
       <div className="mb-4 flex items-baseline justify-between gap-3">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-ink-muted">
           Match analysis
@@ -42,9 +43,9 @@ export function AnalysisPanel({ analysis, matchId }: { analysis: Analysis; match
               analysis.body.length > 1 || analysis.factors.length > 0 ? (
                 <p className="text-xs text-ink-dim">
                   The rest of this enhanced breakdown is a{" "}
-                  <a href="/account/billing?plan=pro" className="text-brand underline underline-offset-2">
+                  <Link href="/account/billing?plan=pro" className="text-brand underline underline-offset-2">
                     Pro
-                  </a>{" "}
+                  </Link>{" "}
                   feature.
                 </p>
               ) : null

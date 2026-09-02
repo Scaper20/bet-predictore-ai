@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { Badge, ButtonLink, SectionHeading } from "@/components/ui/primitives";
+import { ButtonLink, SectionHeading } from "@/components/ui/primitives";
+import { PricingTable } from "@/components/pricing/pricing-table";
+import { Container, containerClass } from "@/components/ui/container";
 import { Reveal } from "@/components/ui/reveal";
 import { LEAGUES } from "@/lib/leagues";
-import { naira } from "@/lib/format";
-import { PLANS } from "@/lib/pricing";
+import { sportPath } from "@/lib/routes";
 
 /* ---------------------------------------------------------------- Features */
 
@@ -12,8 +13,8 @@ const FEATURES = [
     icon: "📊",
     title: "A real model, not a hunch",
     body:
-      "Dixon-Coles goal modelling with time-weighted attack and defence ratings, fitted by " +
-      "maximum likelihood on completed matches. The same maths quant desks use.",
+      "Time-weighted attack and defence ratings, fitted by maximum likelihood on completed " +
+      "matches. The same maths quant desks use.",
   },
   {
     icon: "⚡",
@@ -54,7 +55,7 @@ const FEATURES = [
 
 export function Features() {
   return (
-    <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8 lg:py-28">
+    <section className={`${containerClass()} py-20 lg:py-28`}>
       <Reveal>
         <SectionHeading
           eyebrow="What you get"
@@ -63,7 +64,7 @@ export function Features() {
         />
         <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {FEATURES.map((f) => (
-            <div key={f.title} className="card card-hover p-6">
+            <div key={f.title} className="card card-hover p-7">
               <div className="grid size-11 place-items-center rounded-lg bg-surface-2 text-xl">
                 {f.icon}
               </div>
@@ -106,7 +107,7 @@ const STEPS = [
 export function HowItWorks() {
   return (
     <section className="border-y border-line bg-shell">
-      <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8 lg:py-28">
+      <Container className="py-20 lg:py-28">
         <Reveal>
           <SectionHeading
             eyebrow="How it works"
@@ -124,12 +125,12 @@ export function HowItWorks() {
             ))}
           </div>
           <div className="mt-10 text-center">
-            <ButtonLink href="/how-it-works" variant="secondary">
-              Read the full method
+            <ButtonLink href={sportPath("trackRecord")} variant="secondary">
+              See the settled record
             </ButtonLink>
           </div>
         </Reveal>
-      </div>
+      </Container>
     </section>
   );
 }
@@ -138,7 +139,7 @@ export function HowItWorks() {
 
 export function Leagues() {
   return (
-    <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8 lg:py-24">
+    <section className={`${containerClass()} py-20 lg:py-24`}>
       <Reveal>
         <SectionHeading
           eyebrow="Coverage"
@@ -149,7 +150,7 @@ export function Leagues() {
           {LEAGUES.map((l) => (
             <Link
               key={l.code}
-              href={`/fixtures?league=${l.code}`}
+              href={`${sportPath("fixtures")}?league=${l.code}`}
               className="card card-hover flex items-center gap-2.5 px-4 py-3"
             >
               <span className="text-lg" aria-hidden>{l.flag}</span>
@@ -165,68 +166,33 @@ export function Leagues() {
 
 /* ----------------------------------------------------------------- Pricing */
 
-const CTA: Record<string, string> = {
-  free: "Start free",
-  pass: "Get this weekend",
-  pro: "Go Pro",
-  vip: "Go VIP",
-};
-
 export function Pricing() {
   return (
     <section className="border-y border-line bg-shell">
-      <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8 lg:py-28">
+      <Container className="py-20 lg:py-28">
         <Reveal>
-        <SectionHeading
-          eyebrow="Pricing"
-          title="Priced for Nigeria"
-          description="From a single matchday to a full season. Cancel whenever you like."
-          align="center"
-        />
-        <div className="mx-auto mt-12 grid max-w-6xl gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {PLANS.map((p) => {
-            const price = p.price.oneOff ?? p.price.monthly;
-            return (
-              <div
-                key={p.id}
-                className={`card relative flex flex-col p-7 ${
-                  p.highlighted ? "border-brand/40 glow-brand" : ""
-                }`}
-              >
-                {p.highlighted && (
-                  <Badge tone="brand" className="absolute -top-3 left-7">
-                    Most popular
-                  </Badge>
-                )}
-                <h3 className="text-lg font-semibold">{p.name}</h3>
-                <p className="mt-1 text-sm text-ink-muted">{p.description}</p>
-                <div className="mt-5 flex items-baseline gap-2">
-                  <span className="font-display text-4xl font-extrabold">
-                    {!price ? "Free" : naira(price)}
-                  </span>
-                  <span className="text-sm text-ink-dim">{p.cadence}</span>
-                </div>
-                <ul className="mt-6 flex-1 space-y-3">
-                  {p.features.map((f) => (
-                    <li key={f} className="flex gap-2.5 text-sm text-ink-muted">
-                      <span className="mt-0.5 text-brand" aria-hidden>✓</span>
-                      <span>{f}</span>
-                    </li>
-                  ))}
-                </ul>
-                <ButtonLink
-                  href={p.id === "free" ? "/predictions" : `/account/billing?plan=${p.id}`}
-                  variant={p.highlighted ? "primary" : "secondary"}
-                  className="mt-7 w-full"
-                >
-                  {CTA[p.id]}
-                </ButtonLink>
-              </div>
-            );
-          })}
-        </div>
+          <SectionHeading
+            eyebrow="Pricing"
+            title="Priced for Nigeria"
+            description="From a single matchday to a full season. Cancel whenever you like."
+            align="center"
+          />
+          {/* Same cards as /pricing and /account/billing — see pricing-table.tsx
+              for why all three stopped having their own copy of this. */}
+          <div className="mt-12">
+            <PricingTable
+              hrefFor={(plan) =>
+                plan.id === "free" ? "/account/sign-up" : `/account/billing?plan=${plan.id}`
+              }
+            />
+          </div>
+          <div className="mt-8 text-center">
+            <ButtonLink href="/pricing" variant="secondary">
+              Compare every plan
+            </ButtonLink>
+          </div>
         </Reveal>
-      </div>
+      </Container>
     </section>
   );
 }
@@ -243,8 +209,8 @@ const FAQS = [
     a: "They are probabilities, not forecasts. A 60% home win means the model expects that outcome roughly six times in ten — which also means four times in ten it will not happen. We publish the sample size and data quality behind every number so you can judge how much weight it deserves.",
   },
   {
-    q: "What model do you use?",
-    a: "A Dixon-Coles bivariate Poisson model. Team attack and defence ratings, home advantage and a low-score dependency correction are fitted by weighted maximum likelihood on completed matches, with recent games weighted more heavily.",
+    q: "How are the probabilities produced?",
+    a: "Team attack and defence ratings, home advantage and a low-score correction are fitted on completed matches, with recent games weighted more heavily. Those rates expand into a full scoreline distribution, and every market is read off that same distribution — so the numbers can never contradict each other.",
   },
   {
     q: "Why does a match sometimes have no pick?",
@@ -301,13 +267,13 @@ export function FinalCta() {
             <span className="text-gradient-brand">Start reading the numbers.</span>
           </h2>
           <p className="mx-auto mt-5 max-w-xl text-base text-ink-muted">
-            Free to use, no card, no sign-up wall. Open today&apos;s slate and see what the model
-            makes of it.
+            Free to start, no card. Create an account to unlock every market on every match,
+            follow your leagues, and keep your selections in sync across devices.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
-            <ButtonLink href="/predictions">Open today&apos;s predictions</ButtonLink>
-            <ButtonLink href="/how-it-works" variant="secondary">
-              How the model works
+            <ButtonLink href={sportPath("predictions")}>Open today&apos;s predictions</ButtonLink>
+            <ButtonLink href={sportPath("trackRecord")} variant="secondary">
+              See the settled record
             </ButtonLink>
           </div>
         </Reveal>

@@ -3,6 +3,7 @@ import type { Prediction } from "@/lib/model/predict";
 import { Badge, ProbabilityBar } from "@/components/ui/primitives";
 import { kickoffTime, odds, percent, relativeDay } from "@/lib/format";
 import { Crest } from "@/components/ui/crest";
+import { matchPath } from "@/lib/routes";
 
 /** Richer card for the predictions grid: the model's read, front and centre. */
 export function PredictionCard({ prediction }: { prediction: Prediction }) {
@@ -11,7 +12,7 @@ export function PredictionCard({ prediction }: { prediction: Prediction }) {
 
   return (
     <Link
-      href={`/match/${encodeURIComponent(match.id)}`}
+      href={matchPath(match.id)}
       className="card card-hover flex flex-col p-5"
     >
       <div className="flex items-center gap-2">

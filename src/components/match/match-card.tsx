@@ -4,6 +4,7 @@ import type { Prediction } from "@/lib/model/predict";
 import { Badge, LiveDot, ProbabilityBar } from "@/components/ui/primitives";
 import { isLive, kickoffTime, percent, relativeDay, statusLabel } from "@/lib/format";
 import { Crest } from "@/components/ui/crest";
+import { matchPath } from "@/lib/routes";
 
 /** Compact fixture row used on the live and fixtures lists. */
 export function MatchCard({ match, prediction }: { match: Match; prediction?: Prediction }) {
@@ -11,7 +12,7 @@ export function MatchCard({ match, prediction }: { match: Match; prediction?: Pr
 
   return (
     <Link
-      href={`/match/${encodeURIComponent(match.id)}`}
+      href={matchPath(match.id)}
       className="card card-hover block p-4 sm:p-5"
     >
       <div className="flex items-center gap-3">

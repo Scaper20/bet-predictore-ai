@@ -6,9 +6,13 @@
  * home-market differentiator no global product bothers to cover well.
  */
 
+import type { SportId } from "@/lib/sports";
+
 export interface LeagueDef {
   /** Internal slug used in URLs. */
   code: string;
+  /** Which sport this competition belongs to — see src/lib/sports.ts. */
+  sport: SportId;
   name: string;
   shortName: string;
   country: string;
@@ -28,6 +32,7 @@ export interface LeagueDef {
 export const LEAGUES: LeagueDef[] = [
   {
     code: "premier-league",
+    sport: "football",
     name: "English Premier League",
     shortName: "EPL",
     country: "England",
@@ -37,6 +42,7 @@ export const LEAGUES: LeagueDef[] = [
   },
   {
     code: "champions-league",
+    sport: "football",
     name: "UEFA Champions League",
     shortName: "UCL",
     country: "Europe",
@@ -46,6 +52,7 @@ export const LEAGUES: LeagueDef[] = [
   },
   {
     code: "la-liga",
+    sport: "football",
     name: "Spanish La Liga",
     shortName: "La Liga",
     country: "Spain",
@@ -55,6 +62,7 @@ export const LEAGUES: LeagueDef[] = [
   },
   {
     code: "serie-a",
+    sport: "football",
     name: "Italian Serie A",
     shortName: "Serie A",
     country: "Italy",
@@ -64,6 +72,7 @@ export const LEAGUES: LeagueDef[] = [
   },
   {
     code: "bundesliga",
+    sport: "football",
     name: "German Bundesliga",
     shortName: "Bundesliga",
     country: "Germany",
@@ -73,6 +82,7 @@ export const LEAGUES: LeagueDef[] = [
   },
   {
     code: "ligue-1",
+    sport: "football",
     name: "French Ligue 1",
     shortName: "Ligue 1",
     country: "France",
@@ -82,6 +92,7 @@ export const LEAGUES: LeagueDef[] = [
   },
   {
     code: "npfl",
+    sport: "football",
     name: "Nigeria Professional Football League",
     shortName: "NPFL",
     country: "Nigeria",
@@ -91,6 +102,7 @@ export const LEAGUES: LeagueDef[] = [
   },
   {
     code: "championship",
+    sport: "football",
     name: "English Championship",
     shortName: "Championship",
     country: "England",
@@ -100,6 +112,7 @@ export const LEAGUES: LeagueDef[] = [
   },
   {
     code: "eredivisie",
+    sport: "football",
     name: "Dutch Eredivisie",
     shortName: "Eredivisie",
     country: "Netherlands",
@@ -109,6 +122,7 @@ export const LEAGUES: LeagueDef[] = [
   },
   {
     code: "primeira-liga",
+    sport: "football",
     name: "Portuguese Primeira Liga",
     shortName: "Primeira Liga",
     country: "Portugal",
@@ -118,6 +132,7 @@ export const LEAGUES: LeagueDef[] = [
   },
   {
     code: "caf-champions-league",
+    sport: "football",
     name: "CAF Champions League",
     shortName: "CAF CL",
     country: "Africa",
@@ -127,6 +142,7 @@ export const LEAGUES: LeagueDef[] = [
   },
   {
     code: "brasileirao",
+    sport: "football",
     name: "Brazilian Série A",
     shortName: "Brasileirão",
     country: "Brazil",

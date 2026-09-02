@@ -52,6 +52,38 @@ export async function proxy(request: NextRequest, event: NextFetchEvent) {
   // this runs in the user's own request context, writing their own row,
   // exactly what profiles_update_own already permits (see admin.ts's doc
   // comment for why the service-role client is never used for this).
+  /*
+   * A non-httpOnly hint so the header can pick its shape at hydration rather
+   * than after a round trip to /api/entitlements.
+   *
+   * The header cannot read the session itself: doing that means cookies() in
+   * the shared layout, which opts every route below it out of static
+   * rendering (see the comment in (app)/layout.tsx). So it renders a neutral
+   * placeholder and swaps once the tier arrives — and for an anonymous
+   * visitor that means the sign-up CTA, the single most important element on
+   * the page for this work, shows up a network round trip late.
+   *
+   * This carries no identity and no claim of any kind: it says only "there
+   * was a session on the last request", it is trivially forgeable by anyone
+   * who cares to, and NOTHING may authorize on it. Every real check still
+   * goes through getEntitlement() server-side. It is a hint about which of
+   * two buttons to paint.
+   *
+   * Written only when the value actually changes — roughly once per sign-in
+   * and once per sign-out — so it does not attach Set-Cookie to responses
+   * that would otherwise be cacheable.
+   */
+  const hint = user ? "1" : "0";
+  if (request.cookies.get("bx_auth")?.value !== hint) {
+    response.cookies.set("bx_auth", hint, {
+      httpOnly: false,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 30,
+    });
+  }
+
   if (user) {
     const cutoff = new Date(Date.now() - 10 * 60 * 1000).toISOString();
     event.waitUntil(

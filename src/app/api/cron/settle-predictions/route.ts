@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { upcomingFeed, predictBatch } from "@/lib/service";
 import { runSettlementPass } from "@/lib/settlement-runner";
+import { ACTIVE_MODEL_ID } from "@/lib/model/registry";
 
 // Runs the football providers and Supabase's service-role client — both
 // Node-only. Proxy (src/proxy.ts) doesn't touch /api/ at all, so no session
@@ -58,6 +59,10 @@ async function logUpcomingPicks(admin: ReturnType<typeof supabaseAdmin>): Promis
       label: p.topPick!.label,
       probability: p.topPick!.probability,
       fair_odds: p.topPick!.fairOdds,
+      // Stamped rather than left to the column default, so the attribution is
+      // correct on the day a second model starts writing here — the default
+      // only exists to backfill rows written before 0012.
+      model_id: ACTIVE_MODEL_ID,
     }));
 
   if (rows.length === 0) return 0;
