@@ -7,6 +7,8 @@ import { CoverageNotice } from "@/components/ui/coverage-notice";
 import { Badge, ButtonLink, EmptyState } from "@/components/ui/primitives";
 import { BestBetOfDay } from "@/components/landing/best-bet-of-day";
 import { predictBatch, upcomingFeed, bestBetOfDay } from "@/lib/service";
+import { getPreferences } from "@/lib/preferences";
+import type { Prediction } from "@/lib/model/predict";
 import { leagueByCode } from "@/lib/leagues";
 import { containerClass } from "@/components/ui/container";
 import { sportPath } from "@/lib/routes";
@@ -34,7 +36,35 @@ export default async function PredictionsPage({
   // league filter it could point somewhere the visitor didn't ask to see.
   const bestBet = def ? null : await bestBetOfDay().catch(() => null);
 
-  const publishable = predictions.filter((p) => p.sufficiency.publishable);
+  /*
+   * Followed competitions float to the top of the unfiltered view.
+   *
+   * This is what makes the onboarding questionnaire honest: the leagues
+   * someone picked at sign-up have to visibly change what they see, or they
+   * learn the questions were theatre. Deliberately a re-ordering, not a
+   * filter — hiding everything else would make the page feel broken and
+   * strand a user whose leagues have nothing on today.
+   *
+   * getPreferences() reads cookies, which pins this route to dynamic
+   * rendering. Checked against a build before relying on it: this page was
+   * ALREADY dynamic, because the provider layer fetches with
+   * `cache: "no-store"` — the `revalidate` above has never actually produced
+   * a static page here, and what keeps the rate-limited feeds safe is the
+   * in-memory provider cache, not this route's cache mode.
+   *
+   * So the session read costs nothing here. It would cost everything in a
+   * shared layout, which is what the comment in (app)/layout.tsx is about.
+   */
+  const preferences = await getPreferences();
+  const followed = new Set(preferences.leagues);
+  const byFollowed = (a: Prediction, b: Prediction) => {
+    const rank = (p: Prediction) => (followed.has(p.match.league.code ?? "") ? 0 : 1);
+    return rank(a) - rank(b);
+  };
+
+  const publishable = predictions
+    .filter((p) => p.sufficiency.publishable)
+    .sort(def ? undefined : byFollowed);
   const withheld = predictions.filter((p) => !p.sufficiency.publishable);
 
   return (
