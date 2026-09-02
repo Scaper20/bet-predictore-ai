@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Container } from "@/components/ui/container";
 
 const COLUMNS = [
   {
@@ -34,7 +35,7 @@ const COLUMNS = [
 export function SiteFooter() {
   return (
     <footer className="mt-auto border-t border-line bg-shell">
-      <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
+      <Container className="py-14">
         <div className="grid gap-10 md:grid-cols-[1.4fr_repeat(3,1fr)]">
           <div>
             <div className="flex items-center gap-2.5">
@@ -95,7 +96,7 @@ export function SiteFooter() {
             any bookmaker.
           </p>
         </div>
-      </div>
+      </Container>
     </footer>
   );
 }

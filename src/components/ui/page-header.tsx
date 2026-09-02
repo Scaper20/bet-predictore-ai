@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Container } from "@/components/ui/container";
 
 export function PageHeader({
   eyebrow,
@@ -13,7 +14,7 @@ export function PageHeader({
 }) {
   return (
     <div className="border-b border-line bg-shell">
-      <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+      <Container className="py-10">
         <div className="flex flex-wrap items-end justify-between gap-5">
           <div className="max-w-2xl">
             {eyebrow && (
@@ -28,7 +29,7 @@ export function PageHeader({
           </div>
           {actions && <div className="flex shrink-0 flex-wrap gap-2">{actions}</div>}
         </div>
-      </div>
+      </Container>
     </div>
   );
 }

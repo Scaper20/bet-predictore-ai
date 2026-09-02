@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { ButtonLink } from "@/components/ui/primitives";
+import { Container } from "@/components/ui/container";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 
 const NAV = [
@@ -21,7 +22,7 @@ export function SiteHeader() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-line bg-canvas/85 backdrop-blur-xl">
-      <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 sm:px-6 lg:px-8">
+      <Container className="flex h-16 items-center gap-4">
         <Link href="/" className="flex items-center gap-2.5" onClick={() => setOpen(false)}>
           <Logo />
           <span className="font-display text-lg font-bold tracking-tight">
@@ -67,7 +68,7 @@ export function SiteHeader() {
             <span className="text-xl leading-none">{open ? "✕" : "☰"}</span>
           </button>
         </div>
-      </div>
+      </Container>
 
       {open && (
         <nav className="border-t border-line bg-canvas px-4 pb-4 pt-2 md:hidden">
