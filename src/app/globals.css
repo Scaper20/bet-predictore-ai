@@ -246,6 +246,24 @@
   .skeleton { animation: none; background: var(--color-surface-2); }
 }
 
+/* Height of the mobile bottom navigation bar. Declared here rather than in
+   @theme because three separate things have to agree on it — the bar itself,
+   the spacer that keeps the footer clear of it, and the floating controls
+   that sit above it — and a token they all read is the only way that stays
+   true. Not inside a media query: the value is constant, and what varies is
+   which rules reference it. */
+:root { --bottom-nav-h: 3.5rem; }
+
+/* Floating controls clear the bottom bar on mobile and sit at their normal
+   inset above lg, where the bar does not exist. 1.5rem matches bottom-6, so
+   the desktop position is byte-identical to what these had before. */
+.lift-above-bottom-nav {
+  bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom) + 1rem);
+}
+@media (min-width: 1024px) {
+  .lift-above-bottom-nav { bottom: 1.5rem; }
+}
+
 /* Dialog entrance. The backdrop fades and the panel rises a little with it,
    so a modal reads as arriving from the page rather than being cut in.
 

@@ -7,35 +7,33 @@ import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { useOverlay } from "@/components/ui/use-overlay";
 import type { Tier } from "@/lib/entitlements";
 
+export interface DrawerSection {
+  title: string;
+  links: { href: string; label: string }[];
+}
+
 /**
- * The mobile menu, as a layer rather than a block.
+ * The secondary navigation surface, as a layer rather than a block.
  *
  * It used to render inside <header> in normal flow, so opening it grew the
  * header from 65px to 565px and pushed the page's <h1> down 500px — measured,
- * not estimated. The page visibly lurched down on open and back up on close,
- * which is the single thing that made the mobile chrome feel unfinished.
+ * not estimated. A menu is a temporary layer, so it belongs out of flow: the
+ * page keeps its layout and its scroll position while the panel covers it.
  *
- * A menu is a temporary layer, so it belongs out of flow. The page keeps its
- * layout and its scroll position; the panel covers it and the backdrop
- * dismisses it.
- *
- * Contents are deliberately unchanged from the panel this replaces — this
- * commit changes HOW the menu appears, not what is in it. Re-sorting belongs
- * with the bottom navigation, where "More" becomes the trigger and the
- * primary destinations leave this list.
+ * Since the bottom bar took the five most-used destinations, what is left here
+ * is genuinely secondary, and grouping it says so. An undifferentiated list of
+ * every route would just be the site map again, one tap further away.
  */
 export function MobileDrawer({
   open,
   onClose,
-  items,
-  trendsHref,
+  sections,
   signedIn,
   tier,
 }: {
   open: boolean;
   onClose: () => void;
-  items: { href: string; label: string }[];
-  trendsHref: string;
+  sections: DrawerSection[];
   /** null while the entitlement fetch is still in flight. */
   signedIn: boolean | null;
   tier: Tier;
@@ -101,30 +99,30 @@ export function MobileDrawer({
           </button>
         </div>
 
-        <nav className="flex-1 overflow-y-auto px-3 py-3">
-          {items.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={onClose}
-              className="block rounded-lg px-3 py-3 text-sm font-medium text-ink-muted transition-colors hover:bg-surface-2 hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
-            >
-              {item.label}
-            </Link>
+        <div className="flex-1 overflow-y-auto px-3 py-4">
+          {sections.map((section) => (
+            <section key={section.title} className="mb-5">
+              <h2 className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-dim">
+                {section.title}
+              </h2>
+              {section.links.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  onClick={onClose}
+                  className="block rounded-lg px-3 py-2.5 text-sm font-medium text-ink-muted transition-colors hover:bg-surface-2 hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </section>
           ))}
-          <Link
-            href={trendsHref}
-            onClick={onClose}
-            className="block rounded-lg px-3 py-3 text-sm font-medium text-ink-muted transition-colors hover:bg-surface-2 hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
-          >
-            Trends
-          </Link>
 
-          <div className="mt-2 flex items-center justify-between border-t border-line px-3 pt-4">
+          <div className="flex items-center justify-between border-t border-line px-3 pt-4">
             <span className="text-xs text-ink-muted">Theme</span>
             <ThemeToggle />
           </div>
-        </nav>
+        </div>
 
         {/* Pinned to the bottom of the panel: it is both the closest thing to
             the thumb and the reason most people open this menu. */}

@@ -2,11 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
 import { ButtonLink } from "@/components/ui/primitives";
 import { Container } from "@/components/ui/container";
 import { AccountMenu } from "@/components/layout/account-menu";
-import { MobileDrawer } from "@/components/layout/mobile-drawer";
 import { SlipButton } from "@/components/layout/slip-button";
 import { useEntitlement } from "@/components/entitlements/entitlement-provider";
 import { useAuthHint } from "@/components/entitlements/use-auth-hint";
@@ -27,8 +25,10 @@ import { sportPath, sportFromPathname, type SportRoute } from "@/lib/routes";
  * which is why this widened from a plain route list.
  *
  * Six items plus the logo and the auth cluster do not fit at md — they did not
- * quite fit at five either — so the desktop nav starts at lg and the sheet
- * covers everything below.
+ * quite fit at five either — so this nav starts at lg. Below that it is not a
+ * narrower version of itself: navigation moves to the bottom bar and the
+ * drawer behind it (see mobile-nav.tsx), and this header keeps only identity
+ * and the sign-up CTA.
  */
 type NavItem =
   | { route: SportRoute; label: string }
@@ -45,8 +45,6 @@ const NAV: readonly NavItem[] = [
 
 export function SiteHeader() {
   const pathname = usePathname();
-  const [open, setOpen] = useState(false);
-
   // Renders in the (app) layout, above the [sport] segment, so there are no
   // params to read — the active sport comes off the pathname.
   const sport = sportFromPathname(pathname);
@@ -68,7 +66,6 @@ export function SiteHeader() {
   const resolving = signedIn === null;
 
   return (
-    <>
     <header className="sticky top-0 z-50 border-b border-line bg-canvas/85 backdrop-blur-xl">
       <Container className="flex h-16 items-center gap-4">
         {/* -mx-1.5 px-1.5 py-2 rather than a bare inline row: the logo is the
@@ -78,7 +75,6 @@ export function SiteHeader() {
         <Link
           href="/"
           className="-mx-1.5 flex shrink-0 items-center gap-2.5 rounded-lg px-1.5 py-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
-          onClick={() => setOpen(false)}
         >
           <Logo />
           <span className="font-display text-lg font-bold tracking-tight">
@@ -131,38 +127,22 @@ export function SiteHeader() {
           )}
         </div>
 
-        <div className="ml-auto flex items-center gap-1 lg:hidden">
-          <SlipButton sport={sport} />
-          <button
-            type="button"
-            onClick={() => setOpen((v) => !v)}
-            className="grid size-10 place-items-center rounded-lg text-ink-muted hover:bg-surface-2"
-            aria-label={open ? "Close menu" : "Open menu"}
-            aria-expanded={open}
-          >
-            <span className="text-xl leading-none">{open ? "✕" : "☰"}</span>
-          </button>
+        {/*
+          No hamburger. Navigation on mobile lives in the bottom bar, whose
+          "More" tab opens the drawer — a second trigger in the hardest-to-
+          reach corner of the screen was two systems competing for one job.
+          What is left is the one thing the bar cannot carry: the reason an
+          anonymous visitor is here.
+        */}
+        <div className="ml-auto flex items-center lg:hidden">
+          {!resolving && !signedIn && (
+            <ButtonLink href="/account/sign-up" variant="primary" className="px-3.5 py-2 text-xs">
+              Sign up
+            </ButtonLink>
+          )}
         </div>
       </Container>
     </header>
-
-    {/*
-      A SIBLING of <header>, not a child — this placement is load-bearing.
-      The header carries `backdrop-blur-xl`, and an ancestor with a
-      backdrop-filter becomes the containing block for `position: fixed`
-      descendants. Nested inside, the drawer's `inset-0` resolved against the
-      header's own 64px box instead of the viewport, and the panel rendered as
-      a 320x64 strip pinned under the top bar.
-    */}
-    <MobileDrawer
-      open={open}
-      onClose={() => setOpen(false)}
-      items={nav}
-      trendsHref={sportPath("trends", sport)}
-      signedIn={resolving ? null : signedIn}
-      tier={entitlement.tier}
-    />
-    </>
   );
 }
 
