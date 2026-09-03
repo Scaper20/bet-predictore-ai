@@ -72,16 +72,25 @@ export function ButtonLink({
   href,
   variant = "primary",
   className = "",
+  onClick,
   children,
 }: {
   href: string;
   variant?: ButtonVariant;
   className?: string;
+  /**
+   * Optional side effect on navigation. Added for the mobile drawer, which
+   * has to close itself when a CTA inside it is followed — the chrome lives
+   * in the layout, so a client-side navigation does not unmount it and the
+   * panel would otherwise still be open on the next page.
+   */
+  onClick?: () => void;
   children: ReactNode;
 }) {
   return (
     <Link
       href={href}
+      onClick={onClick}
       className={`inline-flex items-center justify-center gap-2 rounded-lg px-5 py-3 text-sm transition-colors ${BUTTONS[variant]} ${className}`}
     >
       {children}

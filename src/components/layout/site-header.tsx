@@ -5,8 +5,8 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { ButtonLink } from "@/components/ui/primitives";
 import { Container } from "@/components/ui/container";
-import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { AccountMenu } from "@/components/layout/account-menu";
+import { MobileDrawer } from "@/components/layout/mobile-drawer";
 import { SlipButton } from "@/components/layout/slip-button";
 import { useEntitlement } from "@/components/entitlements/entitlement-provider";
 import { useAuthHint } from "@/components/entitlements/use-auth-hint";
@@ -68,6 +68,7 @@ export function SiteHeader() {
   const resolving = signedIn === null;
 
   return (
+    <>
     <header className="sticky top-0 z-50 border-b border-line bg-canvas/85 backdrop-blur-xl">
       <Container className="flex h-16 items-center gap-4">
         {/* -mx-1.5 px-1.5 py-2 rather than a bare inline row: the logo is the
@@ -143,59 +144,25 @@ export function SiteHeader() {
           </button>
         </div>
       </Container>
-
-      {open && (
-        <nav className="border-t border-line bg-canvas px-4 pb-4 pt-2 lg:hidden">
-          {nav.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={() => setOpen(false)}
-              className="block rounded-lg px-3 py-3 text-sm font-medium text-ink-muted hover:bg-surface-2 hover:text-ink"
-            >
-              {item.label}
-            </Link>
-          ))}
-          <Link
-            href={sportPath("trends", sport)}
-            onClick={() => setOpen(false)}
-            className="block rounded-lg px-3 py-3 text-sm font-medium text-ink-muted hover:bg-surface-2 hover:text-ink"
-          >
-            Trends
-          </Link>
-
-          <div className="mt-2 flex items-center justify-between border-t border-line px-3 pt-3">
-            <span className="text-xs text-ink-muted">Theme</span>
-            <ThemeToggle />
-          </div>
-
-          {/* The CTA sits last on mobile: it is the closest thing to the
-              thumb, and it is what the menu is for. */}
-          {!resolving &&
-            (signedIn ? (
-              <div className="mt-2 space-y-2">
-                <ButtonLink href="/account" variant="secondary" className="w-full">
-                  Your account
-                </ButtonLink>
-                {entitlement.tier === "free" && (
-                  <ButtonLink href="/pricing" className="w-full">
-                    See plans
-                  </ButtonLink>
-                )}
-              </div>
-            ) : (
-              <div className="mt-2 space-y-2">
-                <ButtonLink href="/account/sign-up" className="w-full">
-                  Create free account
-                </ButtonLink>
-                <ButtonLink href="/account/login" variant="secondary" className="w-full">
-                  Sign in
-                </ButtonLink>
-              </div>
-            ))}
-        </nav>
-      )}
     </header>
+
+    {/*
+      A SIBLING of <header>, not a child — this placement is load-bearing.
+      The header carries `backdrop-blur-xl`, and an ancestor with a
+      backdrop-filter becomes the containing block for `position: fixed`
+      descendants. Nested inside, the drawer's `inset-0` resolved against the
+      header's own 64px box instead of the viewport, and the panel rendered as
+      a 320x64 strip pinned under the top bar.
+    */}
+    <MobileDrawer
+      open={open}
+      onClose={() => setOpen(false)}
+      items={nav}
+      trendsHref={sportPath("trends", sport)}
+      signedIn={resolving ? null : signedIn}
+      tier={entitlement.tier}
+    />
+    </>
   );
 }
 

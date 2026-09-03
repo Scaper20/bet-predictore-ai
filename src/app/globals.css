@@ -262,11 +262,19 @@
   from { opacity: 0; transform: translateY(8px) scale(0.98); }
   to   { opacity: 1; transform: none; }
 }
+/* Side panel: slides in from the trailing edge. Slightly longer than the
+   dialog because it travels the full width of the panel rather than 8px, and
+   a fast slide over that distance reads as a jump. */
+@keyframes drawer-in {
+  from { transform: translateX(100%); }
+  to   { transform: none; }
+}
 .animate-overlay-in { animation: overlay-in .18s ease-out both; }
 .animate-dialog-in  { animation: dialog-in .22s var(--ease-out-expo) both; }
+.animate-drawer-in  { animation: drawer-in .26s var(--ease-out-expo) both; }
 
 @media (prefers-reduced-motion: reduce) {
   .animate-marquee, .live-dot, .animate-rise, .bar-fill { animation: none !important; }
-  .animate-overlay-in, .animate-dialog-in { animation: none !important; }
+  .animate-overlay-in, .animate-dialog-in, .animate-drawer-in { animation: none !important; }
   .card-hover:hover { transform: none; }
 }
