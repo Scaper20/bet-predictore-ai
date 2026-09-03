@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/ui/page-header";
-import { EmptyState, ProbabilityBar } from "@/components/ui/primitives";
+import { EmptyState } from "@/components/ui/primitives";
 import { supabasePublic } from "@/lib/supabase/public";
-import { percent } from "@/lib/format";
 import { containerClass } from "@/components/ui/container";
 import { TrackRecordInteractive } from "@/components/track-record/track-record-interactive";
 import {
@@ -12,7 +11,7 @@ import {
 } from "@/components/track-record/scalable-model-performance";
 import type { TrackRecordMatch } from "@/components/track-record/record-detail-modal";
 import { settledRecords } from "@/lib/performance-store";
-import { EMPTY_RECORD, MIN_PUBLISHABLE_SAMPLE, isPublishable } from "@/lib/performance";
+import { EMPTY_RECORD, isPublishable } from "@/lib/performance";
 import { allModels } from "@/lib/model/registry";
 import { isSportId, type SportId } from "@/lib/sports";
 
@@ -102,7 +101,6 @@ export default async function TrackRecordPage({ params }: PageProps<"/[sport]/tr
   }
 
   const { rows, breakdown } = record;
-  const { overall } = breakdown;
 
   if (rows.length === 0) {
     return (
@@ -129,46 +127,13 @@ export default async function TrackRecordPage({ params }: PageProps<"/[sport]/tr
       />
 
       <div className={`${containerClass()} space-y-10 py-10`}>
-        <section className="grid gap-4 sm:grid-cols-3">
-          <div className="card p-5">
-            <p className="text-xs font-medium uppercase tracking-wider text-ink-muted">Win rate</p>
-            <p className="tnum mt-2 font-display text-3xl font-extrabold">
-              {isPublishable(overall) && overall.winRate !== null
-                ? percent(overall.winRate)
-                : "—"}
-            </p>
-            <div className="mt-4">
-              <ProbabilityBar value={overall.winRate ?? 0} tone="brand" />
-            </div>
-            <p className="mt-3 text-[11px] leading-relaxed text-ink-muted">
-              {isPublishable(overall)
-                ? "Pushes excluded from the rate, standard convention for settling void results."
-                : `Held back until ${MIN_PUBLISHABLE_SAMPLE} picks have graded — a rate from fewer says more about the fixtures than the model.`}
-            </p>
-          </div>
-          <div className="card p-5">
-            <p className="text-xs font-medium uppercase tracking-wider text-ink-muted">Record</p>
-            <p className="tnum mt-2 font-display text-3xl font-extrabold">
-              {overall.wins}–{overall.losses}
-              {overall.pushes > 0 && <span className="text-ink-muted">–{overall.pushes}</span>}
-            </p>
-            <p className="mt-3 text-[11px] leading-relaxed text-ink-muted">
-              Win–Lose{overall.pushes > 0 ? "–Push" : ""}, across every settled fixture.
-            </p>
-          </div>
-          <div className="card p-5">
-            <p className="text-xs font-medium uppercase tracking-wider text-ink-muted">
-              Settled picks
-            </p>
-            <p className="tnum mt-2 font-display text-3xl font-extrabold">
-              {overall.wins + overall.losses + overall.pushes}
-            </p>
-            <p className="mt-3 text-[11px] leading-relaxed text-ink-muted">
-              Logged automatically before kickoff.
-            </p>
-          </div>
-        </section>
-
+        {/*
+         * No separate overall-stats strip here. It used to duplicate the
+         * live model's own card in ScalableModelPerformance below — the same
+         * win rate, record and graded count, rendered twice on one page.
+         * With one model that is pure repetition; once a second model is
+         * live, "overall" stops being a single meaningful number anyway.
+         */}
         <ScalableModelPerformance rows={modelRows(breakdown)} />
 
         <TrackRecordInteractive rows={rows} />
