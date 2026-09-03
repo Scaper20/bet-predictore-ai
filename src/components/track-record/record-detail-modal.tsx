@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useRef } from "react";
 import { Badge, Button } from "@/components/ui/primitives";
 import { kickoffDay, kickoffTime, odds, percent } from "@/lib/format";
 import { isModelId, modelById, ACTIVE_MODEL_ID } from "@/lib/model/registry";
+import { useOverlay } from "@/components/ui/use-overlay";
 
 export interface TrackRecordMatch {
   id: string;
@@ -32,10 +32,6 @@ const MARKET_LABELS: Record<string, string> = {
   ah: "Asian handicap",
 };
 
-/** Elements that can hold focus, for the tab trap below. */
-const FOCUSABLE =
-  'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])';
-
 export function RecordDetailModal({
   match,
   onClose,
@@ -43,50 +39,11 @@ export function RecordDetailModal({
   match: TrackRecordMatch | null;
   onClose: () => void;
 }) {
-  const dialog = useRef<HTMLDivElement>(null);
-  const closeButton = useRef<HTMLButtonElement>(null);
-  // Whatever had focus when the dialog opened, so it can be handed back.
-  const restoreTo = useRef<HTMLElement | null>(null);
-
-  useEffect(() => {
-    if (!match) return;
-
-    restoreTo.current = document.activeElement as HTMLElement | null;
-    document.body.style.overflow = "hidden";
-    closeButton.current?.focus();
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        onClose();
-        return;
-      }
-      if (e.key !== "Tab") return;
-
-      // Without this, Tab walks straight out of the dialog and into the page
-      // behind it, which is still there and still scrollable-to by keyboard.
-      const nodes = dialog.current?.querySelectorAll<HTMLElement>(FOCUSABLE);
-      if (!nodes || nodes.length === 0) return;
-      const first = nodes[0];
-      const last = nodes[nodes.length - 1];
-
-      if (e.shiftKey && document.activeElement === first) {
-        e.preventDefault();
-        last.focus();
-      } else if (!e.shiftKey && document.activeElement === last) {
-        e.preventDefault();
-        first.focus();
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.body.style.overflow = "";
-      window.removeEventListener("keydown", handleKeyDown);
-      // Back to the row that opened it, so a keyboard user does not land at
-      // the top of the document.
-      restoreTo.current?.focus?.();
-    };
-  }, [match, onClose]);
+  // Scroll lock, Escape, tab trap and focus restoration — see use-overlay.ts.
+  const { containerRef: dialog, initialFocusRef: closeButton } = useOverlay<
+    HTMLDivElement,
+    HTMLButtonElement
+  >(match !== null, onClose);
 
   if (!match) return null;
 
