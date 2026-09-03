@@ -52,7 +52,7 @@ const SECTIONS = [
 export default async function AccountPage() {
   if (!supabaseConfigured) {
     return (
-      <Container width="form" className="py-16 text-center">
+      <Container width="form" className="py-10 sm:py-16 text-center">
         <h1 className="font-display text-2xl font-bold">Accounts aren&apos;t set up yet</h1>
         <p className="mt-2 text-sm text-ink-muted">
           This deployment hasn&apos;t configured Supabase. Live scores, fixtures and predictions
@@ -85,7 +85,7 @@ export default async function AccountPage() {
     .filter((l): l is NonNullable<typeof l> => l !== undefined);
 
   return (
-    <Container width="shell" className="py-10">
+    <Container width="shell" className="py-7 sm:py-10">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-3xl font-bold sm:text-4xl">
@@ -164,10 +164,10 @@ export default async function AccountPage() {
           description="Everything here shapes what you see first."
         />
         <div className="mt-6 grid gap-6 lg:grid-cols-[1.4fr_1fr] lg:items-start">
-          <div className="card p-7">
+          <div className="card p-5 sm:p-7">
             <PreferencesForm leagues={LEAGUES} preferences={preferences} />
           </div>
-          <div className="card p-7">
+          <div className="card p-5 sm:p-7">
             <h3 className="mb-4 text-sm font-semibold">Your details</h3>
             <ProfileForm initialDisplayName={displayName} />
           </div>
@@ -176,7 +176,7 @@ export default async function AccountPage() {
 
       <section id="billing" className="scroll-mt-32 pt-14">
         <SectionHeading eyebrow="Plan & billing" title="What you're on" />
-        <div className="card mt-6 flex flex-wrap items-center gap-5 p-7">
+        <div className="card mt-6 flex flex-wrap items-center gap-5 p-5 sm:p-7">
           <div className="min-w-[14rem] flex-1">
             <Badge tone={paid ? "brand" : "neutral"}>{TIER_LABEL[entitlement.tier]}</Badge>
             <p className="mt-3 text-sm text-ink-muted">
@@ -197,7 +197,7 @@ export default async function AccountPage() {
       <section id="security" className="scroll-mt-32 pt-14">
         <SectionHeading eyebrow="Security" title="Login & security" />
         <div className="mt-6 grid gap-6 lg:grid-cols-2 lg:items-start">
-          <div className="card divide-y divide-line p-7">
+          <div className="card divide-y divide-line p-5 sm:p-7">
             <div className="pb-6">
               <h3 className="mb-4 text-sm font-semibold">Change email</h3>
               <ChangeEmailForm currentEmail={user.email ?? ""} />
@@ -208,7 +208,7 @@ export default async function AccountPage() {
             </div>
           </div>
 
-          <div className="card p-7">
+          <div className="card p-5 sm:p-7">
             <h3 className="mb-1 text-sm font-semibold">Sessions</h3>
             <p className="mb-4 text-xs text-ink-dim">
               Sign out of this device, or everywhere you&apos;re signed in.
@@ -245,7 +245,7 @@ export default async function AccountPage() {
 
       <section id="danger" className="scroll-mt-32 pb-4 pt-14">
         <SectionHeading eyebrow="Danger zone" title="Delete account" />
-        <div className="card mt-6 max-w-2xl border-rose/25 p-7">
+        <div className="card mt-6 max-w-2xl border-rose/25 p-5 sm:p-7">
           <DeleteAccountForm hasActiveSubscription={hasActiveSubscription} />
         </div>
       </section>

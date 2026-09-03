@@ -89,7 +89,7 @@ export default async function TrackRecordPage({ params }: PageProps<"/[sport]/tr
     return (
       <>
         <PageHeader eyebrow="Track Record" title="Every published pick, graded" />
-        <div className={`${containerClass()} py-10`}>
+        <div className={`${containerClass()} py-7 sm:py-10`}>
           <EmptyState
             icon="○"
             title="Not available yet"
@@ -106,7 +106,7 @@ export default async function TrackRecordPage({ params }: PageProps<"/[sport]/tr
     return (
       <>
         <PageHeader eyebrow="Track Record" title="Every published pick, graded" />
-        <div className={`${containerClass()} space-y-10 py-10`}>
+        <div className={`${containerClass()} space-y-10 py-7 sm:py-10`}>
           <EmptyState
             icon="○"
             title="No settled picks yet"
@@ -126,7 +126,7 @@ export default async function TrackRecordPage({ params }: PageProps<"/[sport]/tr
         description="The single headline pick shown for each fixture, logged before kickoff and graded automatically against the final score. Nothing here is curated after the fact."
       />
 
-      <div className={`${containerClass()} space-y-10 py-10`}>
+      <div className={`${containerClass()} space-y-10 py-7 sm:py-10`}>
         {/*
          * No separate overall-stats strip here. It used to duplicate the
          * live model's own card in ScalableModelPerformance below — the same

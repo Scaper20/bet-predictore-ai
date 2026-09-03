@@ -211,7 +211,7 @@ export function EmptyState({
   icon?: string;
 }) {
   return (
-    <div className="card grid place-items-center px-6 py-16 text-center">
+    <div className="card grid place-items-center px-6 py-10 sm:py-16 text-center">
       <div className="mb-4 grid size-12 place-items-center rounded-full bg-surface-2 text-xl text-ink-dim">
         {icon}
       </div>

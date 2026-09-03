@@ -49,7 +49,7 @@ export default function ResponsibleGamblingPage() {
         description="This site exists to make betting better informed. It should never make it heavier."
       />
 
-      <article className="mx-auto max-w-3xl space-y-10 px-4 py-12 sm:px-6 lg:px-8">
+      <article className="mx-auto max-w-3xl space-y-10 px-4 py-8 sm:py-12 sm:px-6 lg:px-8">
         <div className="rounded-2xl border border-amber/25 bg-amber/5 p-6">
           <div className="flex items-center gap-3">
             <span className="grid size-10 shrink-0 place-items-center rounded-full border border-amber/40 text-sm font-bold text-amber">

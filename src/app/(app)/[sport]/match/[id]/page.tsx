@@ -81,7 +81,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
 
       {/* ------------------------------------------------------ Match header */}
       <div className="border-b border-line bg-shell">
-        <div className={`${containerClass()} py-10`}>
+        <div className={`${containerClass()} py-7 sm:py-10`}>
           <div className="mb-6 flex flex-wrap items-center gap-3">
             {match.league.logo && <Crest src={match.league.logo} name={match.league.name} size={22} />}
             <span className="text-sm font-medium text-ink-muted">{match.league.name}</span>
@@ -136,7 +136,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
       </div>
 
       {/* ------------------------------------------------------------- Body */}
-      <div className={`${containerClass()} py-10`}>
+      <div className={`${containerClass()} py-7 sm:py-10`}>
         <div className="grid gap-5 lg:grid-cols-[1.6fr_1fr]">
           <div className="space-y-5">
             {live && (

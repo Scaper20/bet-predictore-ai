@@ -50,7 +50,7 @@ export function PricingTable({
         return (
           <div
             key={plan.id}
-            className={`card relative flex flex-col p-7 ${
+            className={`card relative flex flex-col p-5 sm:p-7 ${
               plan.badge ? "border-brand/40 glow-brand" : ""
             } ${current ? "border-brand/40" : ""}`}
           >

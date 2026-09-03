@@ -59,7 +59,7 @@ export default async function PricingPage({ searchParams }: PageProps<"/pricing"
         description="From a single matchday to a full season. Start free, upgrade when the numbers are earning their keep, cancel whenever."
       />
 
-      <Container className="py-10">
+      <Container className="py-7 sm:py-10">
         <div className="flex flex-col items-center gap-3">
           <IntervalToggle value={interval} />
           {proSaving && (
@@ -82,7 +82,7 @@ export default async function PricingPage({ searchParams }: PageProps<"/pricing"
       </Container>
 
       <section className="border-y border-line bg-shell">
-        <Container className="py-16">
+        <Container className="py-10 sm:py-16">
           <SectionHeading
             eyebrow="Compare"
             title="What each plan includes"
@@ -95,7 +95,7 @@ export default async function PricingPage({ searchParams }: PageProps<"/pricing"
         </Container>
       </section>
 
-      <Container className="py-16">
+      <Container className="py-10 sm:py-16">
         <div className="grid gap-12 lg:grid-cols-[1.3fr_1fr]">
           <div>
             <SectionHeading eyebrow="Billing" title="Questions about paying" />
@@ -121,7 +121,7 @@ export default async function PricingPage({ searchParams }: PageProps<"/pricing"
           </div>
 
           <div className="space-y-6">
-            <div className="card p-7">
+            <div className="card p-5 sm:p-7">
               <h2 className="font-display text-xl font-bold">Not sure yet?</h2>
               <p className="mt-2 text-sm leading-relaxed text-ink-muted">
                 Every pick we publish is settled and kept on the record — wins and losses both.

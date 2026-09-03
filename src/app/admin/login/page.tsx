@@ -13,7 +13,7 @@ export default async function AdminLoginPage() {
   if (gate.ok) redirect("/admin");
 
   return (
-    <div className="mx-auto max-w-sm px-4 py-16 sm:px-6">
+    <div className="mx-auto max-w-sm px-4 py-10 sm:py-16 sm:px-6">
       <h1 className="font-display text-2xl font-bold">Admin sign in</h1>
 
       {gate.reason === "not_configured" ? (

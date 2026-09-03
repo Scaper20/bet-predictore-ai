@@ -23,7 +23,7 @@ export default async function TrendsPage() {
     return (
       <>
         <PageHeader eyebrow="Trends" title="Trends" />
-        <div className={`${containerClass()} py-10`}>
+        <div className={`${containerClass()} py-7 sm:py-10`}>
           <EmptyState
             icon="📈"
             title="No slate to analyse yet"
@@ -43,7 +43,7 @@ export default async function TrendsPage() {
         description={`Aggregated across ${snapshot.total} upcoming fixtures over the next three days, of which ${snapshot.publishable} have enough history to model properly.`}
       />
 
-      <div className={`${containerClass()} space-y-8 py-10`}>
+      <div className={`${containerClass()} space-y-8 py-7 sm:py-10`}>
         <section className="grid gap-4 sm:grid-cols-3">
           <TrendCard
             label="Average expected goals"

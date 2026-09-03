@@ -35,7 +35,7 @@ export default async function SignUpPage({
   }
 
   return (
-    <Container width="shell" className="py-12 md:py-20">
+    <Container width="shell" className="py-8 sm:py-12 md:py-20">
       <div className="mx-auto grid max-w-5xl items-center gap-12 lg:grid-cols-12">
         {/* Left Hero Content */}
         <div className="space-y-6 lg:col-span-6">

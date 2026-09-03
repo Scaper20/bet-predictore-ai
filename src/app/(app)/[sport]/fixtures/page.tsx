@@ -40,7 +40,7 @@ export default async function FixturesPage({
         description={`Kickoff times shown in West Africa Time. Looking ${window} day${window === 1 ? "" : "s"} ahead.`}
       />
 
-      <div className={`${containerClass()} space-y-6 py-10`}>
+      <div className={`${containerClass()} space-y-6 py-7 sm:py-10`}>
         <Suspense fallback={<div className="h-10" />}>
           <LeagueFilter />
         </Suspense>
