@@ -6,6 +6,7 @@ import { LegalNote } from "@/components/ui/legal-note";
 import { SectionHeading, ButtonLink } from "@/components/ui/primitives";
 import { PricingTable } from "@/components/pricing/pricing-table";
 import { PlanMatrix } from "@/components/pricing/plan-matrix";
+import { PlanMatrixMobile } from "@/components/pricing/plan-matrix-mobile";
 import { IntervalToggle } from "@/components/pricing/interval-toggle";
 import { sportPath } from "@/lib/routes";
 import { planById, yearlySaving } from "@/lib/pricing";
@@ -89,7 +90,8 @@ export default async function PricingPage({ searchParams }: PageProps<"/pricing"
             description="Every plan covers every competition we track. The difference is depth."
             align="center"
           />
-          <div className="mt-10">
+          <div className="mt-6 sm:mt-10">
+            <PlanMatrixMobile />
             <PlanMatrix />
           </div>
         </Container>
