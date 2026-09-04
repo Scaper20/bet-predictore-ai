@@ -30,8 +30,18 @@ export interface SettledRecord {
 
 export interface SettledBreakdown {
   overall: SettledRecord;
-  /** Keyed on the league DISPLAY NAME — see the note on settledRecords. */
+  /**
+   * Keyed on the league CODE — the catalogue slug, not any provider's display
+   * string. See the note on `SettledRow.league_code` for why that distinction
+   * is the whole reason this field was ever wrong.
+   */
   byLeague: Map<string, SettledRecord>;
+  /**
+   * Settled picks from competitions outside src/lib/leagues.ts. They are real
+   * picks and belong in `overall`; they simply have no slug to file under, so
+   * they are counted here rather than dropped or filed under a name.
+   */
+  uncatalogued: SettledRecord;
   /** Keyed on market family: the part of `market` before the first ":". */
   byMarket: Map<string, SettledRecord>;
   byModel: Map<ModelId, SettledRecord>;
@@ -55,7 +65,16 @@ export const EMPTY_RECORD: SettledRecord = {
 };
 
 export interface SettledRow {
-  league: string;
+  /**
+   * The catalogue slug, or null for a competition we do not catalogue.
+   *
+   * NOT the `league` text column, which holds whichever display name the
+   * answering provider used — "Premier League" from one feed, "English
+   * Premier League" from another, "Primera Division" and "La Liga" for the
+   * same Spanish fixtures. Grouping on that string is what made every
+   * per-league figure on the site read zero; see 0013_league_code.sql.
+   */
+  league_code: string | null;
   market: string;
   model_id: string | null;
   result: "win" | "lose" | "push";
@@ -83,9 +102,11 @@ export function summarise(rows: SettledRow[]): SettledBreakdown {
   const byLeague = new Map<string, SettledRow[]>();
   const byMarket = new Map<string, SettledRow[]>();
   const byModel = new Map<ModelId, SettledRow[]>();
+  const uncatalogued: SettledRow[] = [];
 
   for (const row of rows) {
-    push(byLeague, row.league, row);
+    if (row.league_code) push(byLeague, row.league_code, row);
+    else uncatalogued.push(row);
 
     // Market family, not the full id: "ou:over:2.5" and "ou:under:2.5" are the
     // same product decision and splitting them fragments an already-small
@@ -101,6 +122,7 @@ export function summarise(rows: SettledRow[]): SettledBreakdown {
   return {
     overall: tally(rows),
     byLeague: mapValues(byLeague),
+    uncatalogued: tally(uncatalogued),
     byMarket: mapValues(byMarket),
     byModel: mapValues(byModel),
   };

@@ -52,6 +52,11 @@ async function logUpcomingPicks(admin: ReturnType<typeof supabaseAdmin>): Promis
     .map((p) => ({
       match_id: p.match.id,
       league: p.match.league.name,
+      // The name is kept for display; the code is what every aggregate groups
+      // on. They are not interchangeable — the name is whichever string the
+      // answering provider used, and the three feeds disagree about all of
+      // them. See 0013_league_code.sql.
+      league_code: p.match.league.code ?? null,
       home_name: p.match.home.name,
       away_name: p.match.away.name,
       kickoff: p.match.kickoff,

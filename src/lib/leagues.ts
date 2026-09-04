@@ -175,3 +175,66 @@ export function rankLeague(code?: string): number {
   if (!code) return 999;
   return BY_CODE.get(code)?.rank ?? 999;
 }
+
+/**
+ * Provider display names that mean a catalogued competition.
+ *
+ * Every adapter prefers the feed's own name for a competition over ours, so
+ * one league arrives under three spellings depending on which provider
+ * answered. Fixtures carry `league.code` alongside and are unaffected; this
+ * exists for the stored rows written before that code was recorded, and as the
+ * last resort when a feed returns a competition with no id we recognise.
+ *
+ * Matching is EXACT on the normalised key, never a substring, and that is the
+ * whole point. The log holds "Primera Division" (football-data's name for La
+ * Liga) next to "Argentinian Primera Division" and "Chile Primera Division" --
+ * a substring or fuzzy match folds three different competitions into Spain.
+ */
+const PROVIDER_ALIASES: Record<string, string> = {
+  "premier-league": "Premier League | English Premier League | EPL",
+  championship: "Championship | English Championship | English League Championship",
+  "la-liga": "La Liga | LaLiga | Primera Division | Spanish La Liga | Spain Primera Division",
+  "serie-a": "Serie A | Italian Serie A | Italy Serie A",
+  bundesliga: "Bundesliga | German Bundesliga | 1. Bundesliga",
+  "ligue-1": "Ligue 1 | French Ligue 1 | Ligue 1 Uber Eats",
+  eredivisie: "Eredivisie | Dutch Eredivisie",
+  "primeira-liga": "Primeira Liga | Portuguese Primeira Liga | Liga Portugal | Liga Portugal Betclic",
+  brasileirao:
+    "Campeonato Brasileiro Série A | Brazilian Serie A | Brasileirão Série A | Brasileiro Serie A",
+  "champions-league": "UEFA Champions League | Champions League",
+  "caf-champions-league": "CAF Champions League | CAF Champions League Group Stage",
+  npfl: "Nigeria Professional Football League | Nigerian Premier League | NPFL | Nigerian Professional Football League",
+};
+
+/**
+ * Competition names collapse across feeds by accent, punctuation and case, but
+ * never by dropping words -- "Primera Division" and "Argentinian Primera
+ * Division" must stay distinct keys.
+ */
+function normaliseLeagueName(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]/g, "");
+}
+
+const BY_PROVIDER_NAME = new Map<string, LeagueDef>();
+for (const [code, aliases] of Object.entries(PROVIDER_ALIASES)) {
+  const def = BY_CODE.get(code);
+  if (!def) continue;
+  for (const alias of [def.name, def.shortName, ...aliases.split("|")]) {
+    BY_PROVIDER_NAME.set(normaliseLeagueName(alias.trim()), def);
+  }
+}
+
+/**
+ * Resolve a provider's competition name to a catalogued league.
+ *
+ * Returns undefined for anything outside the catalogue -- which is most of
+ * what the feeds carry, and is a fact about the fixture rather than a failure.
+ */
+export function leagueByProviderName(name: string | null | undefined): LeagueDef | undefined {
+  if (!name) return undefined;
+  return BY_PROVIDER_NAME.get(normaliseLeagueName(name));
+}

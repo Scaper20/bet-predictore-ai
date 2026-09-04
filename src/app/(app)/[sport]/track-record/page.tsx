@@ -13,6 +13,7 @@ import type { TrackRecordMatch } from "@/components/track-record/record-detail-m
 import { settledRecords } from "@/lib/performance-store";
 import { EMPTY_RECORD, isPublishable } from "@/lib/performance";
 import { allModels } from "@/lib/model/registry";
+import { leagueByCode } from "@/lib/leagues";
 import { isSportId, type SportId } from "@/lib/sports";
 
 export const metadata: Metadata = {
@@ -64,16 +65,22 @@ function modelRows(breakdown: Awaited<ReturnType<typeof settledRecords>>): Model
       .map(([family, r]) => ({ family, record: r }))
       .sort((a, b) => b.record.sample - a.record.sample);
 
+    // byLeague is keyed on the catalogue code, so the label comes from the
+    // catalogue too. Before 0013 this rendered best[0] directly, which was
+    // whatever the answering provider called the competition — and in
+    // practice rendered nothing, because the lookup never matched.
     const best = [...breakdown.byLeague.entries()]
       .filter(([, r]) => isPublishable(r))
       .sort((a, b) => (b[1].winRate ?? 0) - (a[1].winRate ?? 0))[0];
+    const bestLeague = best ? leagueByCode(best[0]) : undefined;
 
     return {
       model,
       record,
-      topLeague: best
-        ? { name: best[0], winRate: best[1].winRate ?? 0, sample: best[1].sample }
-        : null,
+      topLeague:
+        best && bestLeague
+          ? { name: bestLeague.name, winRate: best[1].winRate ?? 0, sample: best[1].sample }
+          : null,
       markets,
     };
   });

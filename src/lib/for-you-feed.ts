@@ -142,9 +142,13 @@ export async function getForYouFeed(sport: SportId = DEFAULT_SPORT): Promise<For
     .slice(0, 3);
 
   const leagueRecords: LeagueRecordRow[] = followedLeagues.map((league) => {
-    // settledRecords keys on the league DISPLAY NAME, because that is what
-    // settlement-runner.ts writes. Looking up by code silently returns nothing.
-    const record = records?.byLeague.get(league.name);
+    // Keyed on the catalogue code. This used to look up league.name, which
+    // matched nothing at all: the log stores the provider's spelling
+    // ("Premier League", "Serie A", "Primera Division") while the catalogue
+    // holds ours ("English Premier League", "Italian Serie A", "Spanish La
+    // Liga"). Not one league overlapped, so this strip reported "not enough
+    // settled picks yet" for every user against 81 graded picks.
+    const record = records?.byLeague.get(league.code);
     return {
       league,
       record: record ?? EMPTY_RECORD,
