@@ -45,7 +45,7 @@ export function AddToSlip({ prediction }: { prediction: Prediction }) {
         >
           {options.map((p) => (
             <option key={p.market} value={p.market}>
-              {p.label} — {percent(p.probability)} (fair {odds(p.fairOdds)})
+              {p.label} — {percent(p.probability)} (needs {odds(p.fairOdds)}+)
             </option>
           ))}
         </select>

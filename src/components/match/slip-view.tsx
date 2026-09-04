@@ -11,16 +11,23 @@ import { assessValue, worstLeg, type ValueVerdict } from "@/lib/value";
 /**
  * What one leg's price is worth, once the user has entered one.
  *
- * Renders nothing without a price. The break-even figure is the model's fair
- * odds under a name that says what to do with it — "fair price" reads as a
- * fact about the selection, "needs 1.25" reads as an instruction.
+ * Renders nothing without a price. Break-even is the model's fair odds under a
+ * name that says what to do with it: "fair price" reads as a fact about the
+ * selection, and worse, as a reassurance that the deal is a fair one. A
+ * threshold reads as a threshold.
  */
-function LegVerdict({ verdict, fair }: { verdict: ValueVerdict | null; fair: number }) {
+function LegVerdict({
+  verdict,
+  breakEven,
+}: {
+  verdict: ValueVerdict | null;
+  breakEven: number;
+}) {
   if (!verdict) {
     return (
       <p className="mt-3 border-t border-line pt-3 text-[11px] text-ink-dim">
         Enter your bookmaker&apos;s price to see whether it beats the{" "}
-        <span className="tnum font-semibold text-ink-muted">{odds(fair)}</span> this needs.
+        <span className="tnum font-semibold text-ink-muted">{odds(breakEven)}</span> this needs.
       </p>
     );
   }
@@ -118,7 +125,7 @@ export function SlipView() {
                 <p className="tnum mt-0.5 text-sm font-bold">{percent(l.probability)}</p>
               </div>
               <div>
-                <p className="text-[10px] uppercase tracking-wider text-ink-dim">Fair price</p>
+                <p className="text-[10px] uppercase tracking-wider text-ink-dim">Break-even</p>
                 <p className="tnum mt-0.5 text-sm font-bold">{odds(l.fairOdds)}</p>
               </div>
               <label className="block">
@@ -139,7 +146,10 @@ export function SlipView() {
               </label>
             </div>
 
-            <LegVerdict verdict={assessValue(l.probability, l.bookmakerOdds)} fair={l.fairOdds} />
+            <LegVerdict
+              verdict={assessValue(l.probability, l.bookmakerOdds)}
+              breakEven={l.fairOdds}
+            />
           </div>
         ))}
 
@@ -170,7 +180,7 @@ export function SlipView() {
             <dl className="grid grid-cols-2 gap-4 border-t border-line pt-4">
               <div>
                 <dt className="text-[10px] uppercase tracking-wider text-ink-dim">
-                  {usingRealOdds ? "Your combined price" : "Fair combined price"}
+                  {usingRealOdds ? "Your combined price" : "Combined break-even"}
                 </dt>
                 <dd className="tnum mt-0.5 text-lg font-bold">{odds(acc.decimalOdds)}</dd>
               </div>
@@ -193,7 +203,7 @@ export function SlipView() {
           <div className="mt-5 space-y-3 border-t border-line pt-5">
             {!usingRealOdds ? (
               <p className="text-[11px] leading-relaxed text-ink-dim">
-                Priced at the model&apos;s own fair price, so the expected return sits at zero by
+                Priced at each leg&apos;s own break-even, so the expected return sits at zero by
                 construction — it cannot tell you anything yet. Enter the prices your bookmaker
                 is actually offering above. Any leg priced below its break-even loses money over
                 time however often it lands, and that is the one thing worth knowing before you

@@ -125,25 +125,22 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
               </span>
               <span className="text-base font-bold text-brand">{prediction.topPick.label}</span>
               <span className="tnum text-sm text-ink-muted">
-                {percent(prediction.topPick.probability, 1)} · fair {odds(prediction.topPick.fairOdds)}
+                {percent(prediction.topPick.probability, 1)} · needs{" "}
+                {odds(prediction.topPick.fairOdds)}+
               </span>
               <Badge tone={prediction.topPick.confidence >= 55 ? "brand" : "amber"}>
                 {Math.round(prediction.topPick.confidence)}/100 confidence
               </Badge>
               {/*
-                The one sentence that turns a probability into a decision.
-                Backtested over three seasons, this model's picks return about
-                -2% at market-average closing prices — close to the market but
-                not ahead of it — so the money question is never "will this
-                land" but "is the price in front of me long enough". Below the
-                fair price it is a losing bet at any hit rate.
+                The clause that turns a probability into a decision. Backtested
+                over three seasons this model returns about -2% at
+                market-average closing prices: close to the market, not ahead
+                of it. So the money question is never "will this land" but
+                "is the price long enough", and below break-even the answer is
+                no at any hit rate.
               */}
               <span className="w-full text-center text-[11px] text-ink-dim">
-                Only worth backing above{" "}
-                <span className="tnum font-semibold text-ink-muted">
-                  {odds(prediction.topPick.fairOdds)}
-                </span>{" "}
-                — below that it loses money however often it lands.
+                Below that price it loses money however often it lands.
               </span>
             </div>
           )}
@@ -218,7 +215,8 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
             <div className="card p-5">
               <p className="text-[11px] leading-relaxed text-ink-dim">
                 Probabilities are estimates from a statistical model, not predictions of fact.
-                Prices shown are fair, with no margin added. Bet responsibly — 18+.
+                Prices shown are break-even — no bookmaker margin added — so they are the floor a
+                real price has to clear, not a price on offer. Bet responsibly — 18+.
               </p>
               <ButtonLink
                 href={sportPath("trackRecord")}
