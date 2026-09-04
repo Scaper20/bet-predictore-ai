@@ -9,6 +9,7 @@ import {
   ScalableModelPerformance,
   type ModelPerformanceRow,
 } from "@/components/track-record/scalable-model-performance";
+import { LeaguePerformance } from "@/components/track-record/league-performance";
 import type { TrackRecordMatch } from "@/components/track-record/record-detail-modal";
 import { settledRecords } from "@/lib/performance-store";
 import { EMPTY_RECORD, isPublishable } from "@/lib/performance";
@@ -142,6 +143,17 @@ export default async function TrackRecordPage({ params }: PageProps<"/[sport]/tr
          * live, "overall" stops being a single meaningful number anyway.
          */}
         <ScalableModelPerformance rows={modelRows(breakdown)} />
+
+        {/*
+          Between the model and the log on purpose: the model card answers
+          "how good is this", the log answers "show me", and a reader wants
+          "at what" in between. Keyed on the catalogue code, which is what
+          0013 made possible — see LeaguePerformance.
+        */}
+        <LeaguePerformance
+          rows={[...breakdown.byLeague.entries()].map(([code, record]) => ({ code, record }))}
+          uncatalogued={breakdown.uncatalogued}
+        />
 
         <TrackRecordInteractive rows={rows} />
       </div>
