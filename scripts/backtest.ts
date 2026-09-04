@@ -32,7 +32,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { buildPrediction } from "../src/lib/model/predict";
 import { evaluatePick } from "../src/lib/settlement";
-import { deVig, summarise, type BacktestEntry } from "../src/lib/model/backtest";
+import { deVig, returnAtClose, summarise, type BacktestEntry } from "../src/lib/model/backtest";
 import type { Match, ResultRow } from "../src/lib/types";
 
 /** football-data.co.uk division code -> our catalogue slug. */
@@ -44,10 +44,19 @@ const DIVISIONS: Record<string, { code: string; label: string }> = {
   F1: { code: "ligue-1", label: "French Ligue 1" },
 };
 
-/** Seasons to load, oldest first. The last one is what gets evaluated. */
-const SEASONS = ["2425", "2526"];
+/**
+ * Seasons to load, oldest first. Everything from --evalFrom onward is scored;
+ * the seasons before it are warm-up history only. Overridable so the same
+ * harness can measure the window a parameter was FITTED on and the window it
+ * was held out from, which is the only way to tell a real effect from one
+ * season of luck.
+ */
+const DEFAULT_SEASONS = ["2425", "2526"];
 
 const CACHE = path.join(process.cwd(), ".backtest-cache");
+
+/** Margin assumed when deriving a double-chance price off the 1X2 book. */
+const DC_MARGIN = 0.05;
 
 interface Row {
   div: string;
@@ -199,12 +208,28 @@ function priceFor(
     if (market === "1x2:away") return { price: row.close.away, marketProbability: a };
   }
   if (row.close && market.startsWith("dc:")) {
-    // No dedicated double-chance price in this source, but the de-vigged 1X2
-    // probabilities give the benchmark even without a tradeable price.
+    /*
+     * Double chance carries no dedicated column in this source, so its price
+     * is DERIVED: de-vig the 1X2 book, add the two legs, re-apply a margin.
+     *
+     * This matters enough to spell out, because double chance is the family
+     * the ranker picks most and leaving it unpriced meant the reported return
+     * covered only 43% of picks — and specifically excluded the shortest
+     * prices, which is where a flat stake bleeds. DC_MARGIN is deliberately
+     * kind to the model: real double-chance books usually run wider than 5%,
+     * so a negative return measured here is a floor on how negative it is.
+     */
     const [h, d, a] = deVig([row.close.home, row.close.draw, row.close.away]);
-    if (market === "dc:home-draw") return { marketProbability: h + d };
-    if (market === "dc:away-draw") return { marketProbability: a + d };
-    if (market === "dc:home-away") return { marketProbability: h + a };
+    const priced = (p: number) => ({ price: 1 / p / (1 + DC_MARGIN), marketProbability: p });
+    if (market === "dc:home-draw") return priced(h + d);
+    if (market === "dc:away-draw") return priced(a + d);
+    if (market === "dc:home-away") return priced(h + a);
+  }
+  if (row.closeOu && market.startsWith("ou:") && !market.includes(":2.5")) {
+    // Only the 2.5 line is quoted. Other lines stay unpriced rather than
+    // being extrapolated off it — the shape of a totals book is not linear
+    // in the line, and guessing it would put invented numbers in a return.
+    return {};
   }
   if (row.closeOu && (market === "ou:over:2.5" || market === "ou:under:2.5")) {
     const [over, under] = deVig([row.closeOu.over, row.closeOu.under]);
@@ -221,9 +246,17 @@ const pct = (v: number | null | undefined, digits = 1) =>
 async function main() {
   const divs = (arg("leagues") ?? Object.keys(DIVISIONS).join(",")).split(",");
   const recent = arg("recent") ? Number(arg("recent")) : undefined;
-  const evaluationSeason = SEASONS[SEASONS.length - 1];
+  const seasons = (arg("seasons") ?? DEFAULT_SEASONS.join(",")).split(",");
+  const evaluationSeason = arg("evalFrom") ?? seasons[seasons.length - 1];
 
   const entries: BacktestEntry[] = [];
+  /*
+   * Parallel to `entries`: the model's own confidence for each published pick.
+   * Kept out of BacktestEntry because it answers a question about this
+   * experiment -- is confidence a usable pre-kickoff filter? -- rather than
+   * being part of scoring a backtest.
+   */
+  const confidences: number[] = [];
   let skippedUnpublishable = 0;
   let skippedUngradable = 0;
 
@@ -232,7 +265,7 @@ async function main() {
     if (!league) throw new Error(`unknown division ${div}`);
 
     const history: Row[] = [];
-    for (const season of SEASONS) history.push(...parse(await csv(season, div), div));
+    for (const season of seasons) history.push(...parse(await csv(season, div), div));
     history.sort((a, b) => a.date - b.date);
 
     const seasonStart = parse(await csv(evaluationSeason, div), div)[0]?.date ?? 0;
@@ -270,6 +303,7 @@ async function main() {
         outcome,
         ...priceFor(pick.market, row),
       });
+      confidences.push(pick.confidence);
     }
   }
 
@@ -301,6 +335,72 @@ async function main() {
     const gap = (b.realised ?? 0) - b.claimed;
     console.log(
       `  ${(b.from * 100).toFixed(0).padStart(3)}-${(b.to * 100).toFixed(0)}%  n=${String(b.n).padStart(4)}  claimed=${pct(b.claimed)}  realised=${pct(b.realised)}  gap=${gap >= 0 ? "+" : ""}${(gap * 100).toFixed(1)}pp`,
+    );
+  }
+
+  const roi = (list: BacktestEntry[]) => {
+    const r = returnAtClose(list);
+    if (r.roi === null) return "     —";
+    return `${r.roi >= 0 ? "+" : ""}${(r.roi * 100).toFixed(2)}%`.padStart(8);
+  };
+  const avgPrice = (list: BacktestEntry[]) => {
+    const priced = list.filter((e) => e.price !== undefined && e.price > 1);
+    if (priced.length === 0) return "   —";
+    return (priced.reduce((a, e) => a + (e.price ?? 0), 0) / priced.length).toFixed(3);
+  };
+
+  console.log(`\nRETURN BY MARKET — where the money is made or lost`);
+  console.log(`  market                  n   priced   meanPrice     hit       ROI`);
+  const byMarketEntries = new Map<string, BacktestEntry[]>();
+  for (const e of entries) {
+    const list = byMarketEntries.get(e.market) ?? [];
+    list.push(e);
+    byMarketEntries.set(e.market, list);
+  }
+  for (const [market, list] of [...byMarketEntries].sort((a, b) => b[1].length - a[1].length)) {
+    if (list.length < 10) continue;
+    const priced = list.filter((e) => e.price !== undefined && e.price > 1).length;
+    const wins = list.filter((e) => e.outcome === "win").length;
+    const graded = list.filter((e) => e.outcome !== "push").length;
+    console.log(
+      `  ${market.padEnd(18)} ${String(list.length).padStart(4)}   ${String(priced).padStart(5)}      ${avgPrice(list)}   ${pct(graded ? wins / graded : null)}  ${roi(list)}`,
+    );
+  }
+
+  console.log(`\nRETURN BY MODEL CONFIDENCE — the only filter available pre-kickoff`);
+  console.log(`  confidence              n   meanPrice     hit       ROI`);
+  const confBands: [string, (c: number) => boolean][] = [
+    ["under 40", (c) => c < 40],
+    ["40 - 50", (c) => c >= 40 && c < 50],
+    ["50 - 60", (c) => c >= 50 && c < 60],
+    ["60 and over", (c) => c >= 60],
+  ];
+  for (const [label, test] of confBands) {
+    const list = entries.filter((_, i) => test(confidences[i]));
+    if (list.length === 0) continue;
+    const wins = list.filter((e) => e.outcome === "win").length;
+    const graded = list.filter((e) => e.outcome !== "push").length;
+    console.log(
+      `  ${label.padEnd(20)} ${String(list.length).padStart(4)}      ${avgPrice(list)}   ${pct(graded ? wins / graded : null)}  ${roi(list)}`,
+    );
+  }
+
+  console.log(`\nRETURN BY PRICE BAND`);
+  console.log(`  band                    n   meanPrice     hit       ROI`);
+  const bands: [string, (p: number) => boolean][] = [
+    ["under 1.30 (odds-on)", (p) => p < 1.3],
+    ["1.30 - 1.60", (p) => p >= 1.3 && p < 1.6],
+    ["1.60 - 2.00", (p) => p >= 1.6 && p < 2],
+    ["2.00 - 3.00", (p) => p >= 2 && p < 3],
+    ["3.00 and longer", (p) => p >= 3],
+  ];
+  for (const [label, test] of bands) {
+    const list = entries.filter((e) => e.price !== undefined && e.price > 1 && test(e.price));
+    if (list.length === 0) continue;
+    const wins = list.filter((e) => e.outcome === "win").length;
+    const graded = list.filter((e) => e.outcome !== "push").length;
+    console.log(
+      `  ${label.padEnd(20)} ${String(list.length).padStart(4)}      ${avgPrice(list)}   ${pct(graded ? wins / graded : null)}  ${roi(list)}`,
     );
   }
 

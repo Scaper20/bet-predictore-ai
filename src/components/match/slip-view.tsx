@@ -6,6 +6,45 @@ import { accumulator } from "@/lib/model/odds";
 import { Badge, Button, ButtonLink, EmptyState, ProbabilityBar } from "@/components/ui/primitives";
 import { kickoffTime, odds, percent, relativeDay } from "@/lib/format";
 import { sportPath, matchPath } from "@/lib/routes";
+import { assessValue, worstLeg, type ValueVerdict } from "@/lib/value";
+
+/**
+ * What one leg's price is worth, once the user has entered one.
+ *
+ * Renders nothing without a price. The break-even figure is the model's fair
+ * odds under a name that says what to do with it — "fair price" reads as a
+ * fact about the selection, "needs 1.25" reads as an instruction.
+ */
+function LegVerdict({ verdict, fair }: { verdict: ValueVerdict | null; fair: number }) {
+  if (!verdict) {
+    return (
+      <p className="mt-3 border-t border-line pt-3 text-[11px] text-ink-dim">
+        Enter your bookmaker&apos;s price to see whether it beats the{" "}
+        <span className="tnum font-semibold text-ink-muted">{odds(fair)}</span> this needs.
+      </p>
+    );
+  }
+
+  const tone =
+    verdict.rating === "no-bet"
+      ? { text: "text-rose", badge: "rose" as const, label: "Don't take it" }
+      : verdict.rating === "thin"
+        ? { text: "text-ink-muted", badge: "neutral" as const, label: "Thin" }
+        : { text: "text-brand", badge: "brand" as const, label: "Value" };
+
+  return (
+    <div className="mt-3 border-t border-line pt-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge tone={tone.badge}>{tone.label}</Badge>
+        <span className={`tnum text-xs font-bold ${tone.text}`}>
+          {verdict.edge >= 0 ? "+" : ""}
+          {(verdict.edge * 100).toFixed(1)}% per ₦100
+        </span>
+      </div>
+      <p className="mt-1.5 text-[11px] leading-relaxed text-ink-muted">{verdict.reason}</p>
+    </div>
+  );
+}
 
 export function SlipView() {
   const { legs, remove, clear, setBookmakerOdds } = useSlip();
@@ -27,6 +66,17 @@ export function SlipView() {
   }));
   const acc = accumulator(priced);
   const usingRealOdds = legs.some((l) => (l.bookmakerOdds ?? 0) > 1);
+
+  /*
+   * The combined return averages the legs, and averages are how a bad price
+   * survives: one leg at 1.15 against a 1.25 break-even and one genuinely long
+   * leg net out to something unremarkable, and the user takes both. This
+   * surfaces the worst one by name.
+   */
+  const worst = worstLeg(legs, (l) => ({
+    probability: l.probability,
+    price: l.bookmakerOdds,
+  }));
 
   // Legs from the same competition on the same day are not independent — a
   // weather or refereeing effect hits several at once — and the multiplication
@@ -88,6 +138,8 @@ export function SlipView() {
                 />
               </label>
             </div>
+
+            <LegVerdict verdict={assessValue(l.probability, l.bookmakerOdds)} fair={l.fairOdds} />
           </div>
         ))}
 
@@ -139,12 +191,26 @@ export function SlipView() {
           </div>
 
           <div className="mt-5 space-y-3 border-t border-line pt-5">
-            {!usingRealOdds && (
+            {!usingRealOdds ? (
               <p className="text-[11px] leading-relaxed text-ink-dim">
-                Priced at the model&apos;s fair price, so the expected return sits at zero by
-                construction. Enter the actual prices you&apos;ve been offered above to see
-                whether it&apos;s really worth taking.
+                Priced at the model&apos;s own fair price, so the expected return sits at zero by
+                construction — it cannot tell you anything yet. Enter the prices your bookmaker
+                is actually offering above. Any leg priced below its break-even loses money over
+                time however often it lands, and that is the one thing worth knowing before you
+                stake.
               </p>
+            ) : (
+              worst &&
+              worst.verdict.rating === "no-bet" && (
+                <div className="rounded-lg border border-rose/25 bg-rose/5 p-3">
+                  <Badge tone="rose">Worst leg</Badge>
+                  <p className="mt-2 text-[11px] leading-relaxed text-ink-muted">
+                    <strong className="font-semibold text-ink">{worst.leg.label}</strong> on{" "}
+                    {worst.leg.fixture} is priced below its break-even. The combined figure above
+                    averages that away; the bet does not.
+                  </p>
+                </div>
+              )
             )}
 
             {correlated && (
