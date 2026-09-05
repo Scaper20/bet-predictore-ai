@@ -75,7 +75,7 @@ export function OnboardingForm({
             name="usageIntent"
             value="value"
             label="Finding value"
-            description="Fair odds against the price you're actually offered, margin stripped out."
+            description="Whether the price you're offered beats the one the pick needs."
             defaultChecked={preferences.usageIntent === "value"}
           />
           <ChoiceCard

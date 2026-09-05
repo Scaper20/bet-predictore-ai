@@ -2,6 +2,7 @@ import "server-only";
 
 import { supabasePublic } from "@/lib/supabase/public";
 import { cached } from "@/lib/providers/cache";
+import { leagueByProviderName } from "@/lib/leagues";
 import { DEFAULT_SPORT, type SportId } from "@/lib/sports";
 import { summarise, type SettledBreakdown, type SettledRow } from "@/lib/performance";
 
@@ -16,13 +17,40 @@ import { summarise, type SettledBreakdown, type SettledRow } from "@/lib/perform
  * throws under vitest, and the tallying logic needs tests.
  */
 
+interface RawRow {
+  league: string | null;
+  league_code?: string | null;
+  market: string;
+  model_id: string | null;
+  result: "win" | "lose" | "push";
+}
+
+/**
+ * Resolves the slug every aggregate groups on.
+ *
+ * Two sources, in order of trust: the column written at prediction time from
+ * `match.league.code`, then the alias table, which recovers a slug from the
+ * provider display string for rows written before 0013. That second path is
+ * why the fix works on historical data without waiting for a backfill, and why
+ * a row whose competition is genuinely outside the catalogue still resolves to
+ * null rather than to a wrong league.
+ */
+function toSettledRow(row: RawRow): SettledRow {
+  return {
+    league_code: row.league_code ?? leagueByProviderName(row.league)?.code ?? null,
+    market: row.market,
+    model_id: row.model_id,
+    result: row.result,
+  };
+}
+
 /**
  * Settled picks for a sport, optionally windowed.
  *
- * IMPORTANT for callers: `byLeague` is keyed on the league display name, not
- * its code. settlement-runner.ts writes `league: m.league.name`, so a caller
- * holding a LeagueDef must look up `def.name` — `def.code` silently misses
- * every time and reads as "no record yet".
+ * `byLeague` is keyed on the catalogue CODE. It used to be keyed on the stored
+ * display name, which is whatever the answering provider called the
+ * competition — see 0013_league_code.sql for why not one of those strings ever
+ * matched what callers looked up.
  */
 export async function settledRecords(
   opts: { sport?: SportId; sinceDays?: number } = {},
@@ -58,29 +86,30 @@ export async function settledRecords(
       return query;
     };
 
-    const withModel = await run("league, market, model_id, result");
-    if (!withModel.error && withModel.data) {
-      return summarise(withModel.data as unknown as SettledRow[]);
+    const withCode = await run("league, league_code, market, model_id, result");
+    if (!withCode.error && withCode.data) {
+      return summarise((withCode.data as unknown as RawRow[]).map(toSettledRow));
     }
 
-    // model_id arrives in migration 0012. Until that is applied, selecting it
-    // is a 400 from PostgREST and every figure on the track record silently
-    // reads zero — while the settled log right beside it lists fifty rows.
-    // Falling back keeps the numbers right whichever order code and migration
-    // land in, and summarise() already attributes a missing model_id to the
-    // active model.
-    const withoutModel = await run("league, market, result");
-    if (withoutModel.error || !withoutModel.data) {
+    // league_code arrives in 0013 and model_id in 0012. Selecting a column
+    // that does not exist yet is a 400 from PostgREST, and swallowing that
+    // used to make every figure on the track record read zero while the
+    // settled log right beside it listed fifty rows. Falling back keeps the
+    // numbers right whichever order code and migrations land in — and
+    // toSettledRow still recovers the slug from the display name, so the
+    // per-league grouping works even before 0013 is applied.
+    const legacy = await run("league, market, result");
+    if (legacy.error || !legacy.data) {
       // Performance figures are a trust surface, never an authorization
       // boundary: a genuinely failed read degrades to "no record yet", which
       // every caller already renders, rather than breaking the page.
       return summarise([]);
     }
 
-    const rows = (withoutModel.data as unknown as Omit<SettledRow, "model_id">[]).map((r) => ({
-      ...r,
-      model_id: null,
-    }));
-    return summarise(rows);
+    return summarise(
+      (legacy.data as unknown as Omit<RawRow, "model_id">[]).map((r) =>
+        toSettledRow({ ...r, model_id: null }),
+      ),
+    );
   });
 }

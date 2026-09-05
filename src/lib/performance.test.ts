@@ -9,7 +9,7 @@ import {
 
 function row(over: Partial<SettledRow> = {}): SettledRow {
   return {
-    league: "English Premier League",
+    league_code: "premier-league",
     market: "1x2:home",
     model_id: "goals-v1",
     result: "win",
@@ -90,16 +90,35 @@ describe("summarise", () => {
     expect(out.byMarket.has("ou:over:2.5")).toBe(false);
   });
 
-  it("keys leagues on the display name written by the settlement runner", () => {
+  it("keys leagues on the catalogue code, never a provider display name", () => {
     const out = summarise([
-      row({ league: "English Premier League" }),
-      row({ league: "Nigeria Professional Football League", result: "lose" }),
+      row({ league_code: "premier-league" }),
+      row({ league_code: "npfl", result: "lose" }),
     ]);
 
-    // settlement-runner.ts writes `league: m.league.name`, so a caller holding
-    // a LeagueDef must look up def.name. Keying on the code silently misses.
-    expect(out.byLeague.get("English Premier League")?.wins).toBe(1);
-    expect(out.byLeague.get("premier-league")).toBeUndefined();
+    expect(out.byLeague.get("premier-league")?.wins).toBe(1);
+    expect(out.byLeague.get("npfl")?.losses).toBe(1);
+    // The old contract, and the bug it caused: the log stores whatever the
+    // answering feed calls the competition ("Premier League"), while every
+    // caller looked up LeagueDef.name ("English Premier League"). Neither
+    // string is a key any more.
+    expect(out.byLeague.get("English Premier League")).toBeUndefined();
+    expect(out.byLeague.get("Premier League")).toBeUndefined();
+  });
+
+  it("counts uncatalogued competitions separately but still in the overall", () => {
+    const out = summarise([
+      row({ league_code: "premier-league" }),
+      // Real rows: the log carries American USL and Chilean fixtures, which
+      // are not in src/lib/leagues.ts and never will be.
+      row({ league_code: null, result: "lose" }),
+      row({ league_code: null }),
+    ]);
+
+    expect(out.byLeague.size).toBe(1);
+    expect(out.uncatalogued.sample).toBe(2);
+    // A pick outside the catalogue is still a pick that was published.
+    expect(out.overall.sample).toBe(3);
   });
 
   it("attributes rows with no model_id to the active model", () => {
@@ -118,10 +137,10 @@ describe("summarise", () => {
 
   it("keeps the overall tally consistent with the groups", () => {
     const out = summarise([
-      row({ league: "A", market: "1x2:home", result: "win" }),
-      row({ league: "A", market: "ou:over:2.5", result: "lose" }),
-      row({ league: "B", market: "btts:yes", result: "win" }),
-      row({ league: "B", market: "btts:no", result: "push" }),
+      row({ league_code: "a", market: "1x2:home", result: "win" }),
+      row({ league_code: "a", market: "ou:over:2.5", result: "lose" }),
+      row({ league_code: "b", market: "btts:yes", result: "win" }),
+      row({ league_code: "b", market: "btts:no", result: "push" }),
     ]);
 
     expect(out.overall.wins).toBe(2);
@@ -129,7 +148,7 @@ describe("summarise", () => {
     expect(out.overall.pushes).toBe(1);
 
     const leagueSample = [...out.byLeague.values()].reduce((n, r) => n + r.sample, 0);
-    expect(leagueSample).toBe(out.overall.sample);
+    expect(leagueSample + out.uncatalogued.sample).toBe(out.overall.sample);
   });
 
   it("returns empty structures for no rows", () => {
@@ -138,5 +157,6 @@ describe("summarise", () => {
     expect(out.byLeague.size).toBe(0);
     expect(out.byMarket.size).toBe(0);
     expect(out.byModel.size).toBe(0);
+    expect(out.uncatalogued.sample).toBe(0);
   });
 });

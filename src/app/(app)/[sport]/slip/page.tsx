@@ -7,8 +7,8 @@ import { containerClass } from "@/components/ui/container";
 export const metadata: Metadata = {
   title: "Selection Builder",
   description:
-    "Combine your selections and see their true combined probability, fair price and expected " +
-    "return against the prices you've actually been offered.",
+    "Combine your selections and see their true combined probability, the price each leg has " +
+    "to beat, and the expected return against the prices you've actually been offered.",
 };
 
 export default function SlipPage() {

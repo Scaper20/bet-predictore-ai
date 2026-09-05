@@ -195,7 +195,7 @@ export function FeaturedBoard({ rows }: { rows: FeaturedRow[] }) {
                     <span className="text-ink-dim">Model pick</span>
                     <span className="truncate font-semibold text-brand">{row.pick.label}</span>
                     <span className="tnum ml-auto shrink-0 text-ink-dim">
-                      fair {odds(row.pick.fairOdds)}
+                      needs {odds(row.pick.fairOdds)}+
                     </span>
                   </p>
                 )}

@@ -1,11 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Badge, Button } from "@/components/ui/primitives";
 import { kickoffDay, percent } from "@/lib/format";
+import { leagueByProviderName } from "@/lib/leagues";
 import { RecordDetailModal, type TrackRecordMatch } from "./record-detail-modal";
 
 const INITIAL_LIMIT = 20;
+
+const ALL = "__all__";
+
+/**
+ * One competition, as this list groups them.
+ *
+ * Rows written before 0013 have no league_code, and the display string is the
+ * answering provider's, so the code is recovered through the same alias table
+ * the aggregates use. A competition outside the catalogue keeps its own name
+ * and its own group rather than being folded into a neighbour it merely shares
+ * a word with — "Argentinian Primera Division" is not Spain.
+ */
+function groupOf(row: TrackRecordMatch): { key: string; label: string } {
+  const def = leagueByProviderName(row.league);
+  return def ? { key: def.code, label: def.shortName } : { key: row.league, label: row.league };
+}
 
 /**
  * The settled log.
@@ -17,9 +34,26 @@ const INITIAL_LIMIT = 20;
 export function TrackRecordInteractive({ rows }: { rows: TrackRecordMatch[] }) {
   const [selected, setSelected] = useState<TrackRecordMatch | null>(null);
   const [expanded, setExpanded] = useState(false);
+  const [league, setLeague] = useState<string>(ALL);
 
-  const visible = expanded ? rows : rows.slice(0, INITIAL_LIMIT);
-  const hasMore = rows.length > INITIAL_LIMIT;
+  const competitions = useMemo(() => {
+    const counts = new Map<string, { label: string; n: number }>();
+    for (const row of rows) {
+      const { key, label } = groupOf(row);
+      const cur = counts.get(key);
+      if (cur) cur.n++;
+      else counts.set(key, { label, n: 1 });
+    }
+    return [...counts.entries()].sort((a, b) => b[1].n - a[1].n);
+  }, [rows]);
+
+  const filtered = useMemo(
+    () => (league === ALL ? rows : rows.filter((r) => groupOf(r).key === league)),
+    [rows, league],
+  );
+
+  const visible = expanded ? filtered : filtered.slice(0, INITIAL_LIMIT);
+  const hasMore = filtered.length > INITIAL_LIMIT;
 
   return (
     <section className="space-y-4">
@@ -27,22 +61,49 @@ export function TrackRecordInteractive({ rows }: { rows: TrackRecordMatch[] }) {
         <div>
           <h2 className="font-display text-xl font-bold tracking-tight">Graded results</h2>
           <p className="mt-1 text-xs text-ink-muted">
-            Showing {visible.length} of {rows.length} settled fixtures. Select any row for what was
-            published before kickoff.
+            Showing {visible.length} of {filtered.length} settled{" "}
+            {filtered.length === 1 ? "fixture" : "fixtures"}
+            {league !== ALL && ` in ${competitions.find(([k]) => k === league)?.[1].label ?? ""}`}.
+            Select any row for what was published before kickoff.
           </p>
         </div>
 
         {/* One control, not the two differently-labelled copies of the same
             toggle that used to bracket this list. */}
-        {hasMore && (
-          <Button
-            onClick={() => setExpanded((v) => !v)}
-            variant="secondary"
-            className="self-start px-4 py-1.5 text-xs font-semibold sm:self-auto"
-          >
-            {expanded ? `Show first ${INITIAL_LIMIT}` : `Show all ${rows.length}`}
-          </Button>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {competitions.length > 1 && (
+            <label className="flex items-center gap-2 text-xs text-ink-muted">
+              <span className="sr-only">Filter by competition</span>
+              <select
+                value={league}
+                onChange={(e) => {
+                  setLeague(e.target.value);
+                  // A filter that leaves the list expanded from a previous,
+                  // longer selection strands the reader mid-scroll.
+                  setExpanded(false);
+                }}
+                className="rounded-lg border border-line bg-surface-2 px-3 py-1.5 text-xs font-semibold text-ink outline-none focus-visible:border-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+              >
+                <option value={ALL}>All competitions ({rows.length})</option>
+                {competitions.map(([key, { label, n }]) => (
+                  <option key={key} value={key}>
+                    {label} ({n})
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+
+          {hasMore && (
+            <Button
+              onClick={() => setExpanded((v) => !v)}
+              variant="secondary"
+              className="px-4 py-1.5 text-xs font-semibold"
+            >
+              {expanded ? `Show first ${INITIAL_LIMIT}` : `Show all ${filtered.length}`}
+            </Button>
+          )}
+        </div>
       </div>
 
       <ul className="space-y-3">

@@ -31,6 +31,9 @@ export async function captureMatchResults(
   const rows = matches.map((m) => ({
     match_id: m.id,
     league: m.league.name,
+    // See the note at the predictions_log write site: the display name is the
+    // provider's, the code is ours, and only one of them is a key.
+    league_code: m.league.code ?? null,
     home_name: m.home.name,
     away_name: m.away.name,
     kickoff: m.kickoff,

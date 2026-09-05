@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { Prediction } from "@/lib/model/predict";
-import { assessValue, overround } from "@/lib/model/odds";
+import { assessAgainstMarket, overround } from "@/lib/model/odds";
 import { odds as fmtOdds, percent } from "@/lib/format";
 import { Badge } from "@/components/ui/primitives";
 
@@ -87,7 +87,7 @@ export function ValueCalculator({ prediction }: { prediction: Prediction }) {
 
           <div className="space-y-3">
             {rows.map((r) => {
-              const v = assessValue(r.probability, r.price, market);
+              const v = assessAgainstMarket(r.probability, r.price, market);
               return (
                 <div
                   key={r.key}
@@ -106,7 +106,11 @@ export function ValueCalculator({ prediction }: { prediction: Prediction }) {
 
                   <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4">
                     <Cell label="Model says" value={percent(v.modelProbability, 1)} />
-                    <Cell label="Fair price" value={percent(v.fairProbability, 1)} />
+                    {/* The market's own probability with the margin taken out —
+                        not a price, and not ours. It was labelled "Fair price"
+                        while rendering a percentage, which made the one row
+                        that compares us to the book unreadable. */}
+                    <Cell label="Market says" value={percent(v.fairProbability, 1)} />
                     <Cell
                       label="Expected value"
                       value={`${v.expectedValue >= 0 ? "+" : ""}${(v.expectedValue * 100).toFixed(1)}%`}

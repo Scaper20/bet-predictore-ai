@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { upcomingFeed, predictBatch } from "@/lib/service";
 import { runSettlementPass } from "@/lib/settlement-runner";
-import { ACTIVE_MODEL_ID } from "@/lib/model/registry";
+import { modelIdForMarket } from "@/lib/model/router";
 
 // Runs the football providers and Supabase's service-role client — both
 // Node-only. Proxy (src/proxy.ts) doesn't touch /api/ at all, so no session
@@ -52,6 +52,11 @@ async function logUpcomingPicks(admin: ReturnType<typeof supabaseAdmin>): Promis
     .map((p) => ({
       match_id: p.match.id,
       league: p.match.league.name,
+      // The name is kept for display; the code is what every aggregate groups
+      // on. They are not interchangeable — the name is whichever string the
+      // answering provider used, and the three feeds disagree about all of
+      // them. See 0013_league_code.sql.
+      league_code: p.match.league.code ?? null,
       home_name: p.match.home.name,
       away_name: p.match.away.name,
       kickoff: p.match.kickoff,
@@ -59,10 +64,12 @@ async function logUpcomingPicks(admin: ReturnType<typeof supabaseAdmin>): Promis
       label: p.topPick!.label,
       probability: p.topPick!.probability,
       fair_odds: p.topPick!.fairOdds,
-      // Stamped rather than left to the column default, so the attribution is
-      // correct on the day a second model starts writing here — the default
-      // only exists to backfill rows written before 0012.
-      model_id: ACTIVE_MODEL_ID,
+      // Stamped from the MARKET rather than from whichever model happens to
+      // be active, so the attribution is already correct on the day a second
+      // model starts publishing — its picks separate from BetriX Strike's
+      // without this line changing. The column default only exists to
+      // backfill rows written before 0012.
+      model_id: modelIdForMarket(p.topPick!.market),
     }));
 
   if (rows.length === 0) return 0;

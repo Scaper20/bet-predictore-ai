@@ -29,7 +29,7 @@ export function BestBetOfDay({ prediction }: { prediction: Prediction | null }) 
       <div className="flex shrink-0 items-center gap-4 text-right">
         <div>
           <p className="tnum text-lg font-bold text-brand">{percent(topPick.probability, 1)}</p>
-          <p className="text-[11px] text-ink-dim">fair {odds(topPick.fairOdds)}</p>
+          <p className="text-[11px] text-ink-dim">needs {odds(topPick.fairOdds)}+</p>
         </div>
         <Badge tone={topPick.confidence >= 55 ? "brand" : "amber"}>
           {Math.round(topPick.confidence)}/100
