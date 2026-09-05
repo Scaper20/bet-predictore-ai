@@ -98,7 +98,12 @@ export const LEAGUES: LeagueDef[] = [
     country: "Nigeria",
     flag: "🇳🇬",
     rank: 7,
-    ids: { theSportsDb: "4855", apiFootball: 399 },
+    // 4855 was KOPW, a Chinese competition dormant since 2022, so every NPFL
+    // fetch resolved to nothing and the flagship home-market league could
+    // never publish a pick. 4827 is "Nigerian NPFL". Verified by lookup, not
+    // assumed: TheSportsDB ids are opaque integers and a wrong one fails
+    // silently as an empty result rather than an error.
+    ids: { theSportsDb: "4827", apiFootball: 399 },
   },
   {
     code: "championship",
@@ -138,7 +143,11 @@ export const LEAGUES: LeagueDef[] = [
     country: "Africa",
     flag: "🌍",
     rank: 11,
-    ids: { theSportsDb: "4552", apiFootball: 12 },
+    // No theSportsDb id: 4552 resolves to "AAF", a defunct United States
+    // American-football league, which would have filed its fixtures under CAF
+    // Champions League. Omitting the id is strictly better than a wrong one —
+    // the adapter skips the competition instead of mislabelling another sport.
+    ids: { apiFootball: 12 },
   },
   {
     code: "brasileirao",

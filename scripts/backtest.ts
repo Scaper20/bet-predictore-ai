@@ -246,6 +246,7 @@ const pct = (v: number | null | undefined, digits = 1) =>
 async function main() {
   const divs = (arg("leagues") ?? Object.keys(DIVISIONS).join(",")).split(",");
   const recent = arg("recent") ? Number(arg("recent")) : undefined;
+  const trainCap = arg("trainCap") ? Number(arg("trainCap")) : undefined;
   const seasons = (arg("seasons") ?? DEFAULT_SEASONS.join(",")).split(",");
   const evaluationSeason = arg("evalFrom") ?? seasons[seasons.length - 1];
 
@@ -278,7 +279,11 @@ async function main() {
 
     for (const row of target) {
       // The only guard against lookahead that matters, and it is one line.
-      const prior = history.filter((r) => r.date < row.date);
+      // --trainCap simulates a thin provider: production currently sees only
+      // 15-35 completed matches per competition, against the 700+ this
+      // evaluation normally fits on.
+      const all = history.filter((r) => r.date < row.date);
+      const prior = trainCap ? all.slice(-trainCap) : all;
       const prediction = buildPrediction(toMatch(row, league), prior.map(toResultRow), []);
 
       // The same gate the site applies: no publishable pick, nothing shown,
