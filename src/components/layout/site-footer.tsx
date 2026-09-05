@@ -46,7 +46,7 @@ export function SiteFooter() {
   return (
     <footer className="mt-auto border-t border-line bg-shell">
       <Container className="py-9 sm:py-14">
-        <div className="grid gap-6 md:grid-cols-[1.4fr_repeat(3,1fr)] md:gap-10">
+        <div className="grid gap-6 lg:grid-cols-[1.4fr_repeat(3,1fr)] lg:gap-10">
           <div>
             <div className="flex items-center gap-2.5">
               {/* eslint-disable-next-line @next/next/no-img-element */}
