@@ -120,7 +120,7 @@ function TeamRow({
   winning: boolean;
 }) {
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex min-w-0 items-center gap-3">
       <Crest src={team.crest} name={team.name} size={26} />
       <span className={`min-w-0 flex-1 truncate text-sm ${winning ? "font-semibold text-ink" : "text-ink"}`}>
         {team.name}

@@ -34,14 +34,14 @@ export function PredictionCard({ prediction }: { prediction: Prediction }) {
       </div>
 
       <div className="mt-4 space-y-2.5">
-        <div className="flex items-center gap-3">
+        <div className="flex min-w-0 items-center gap-3">
           <Crest src={match.home.crest} name={match.home.name} size={28} />
           <span className="min-w-0 flex-1 truncate text-sm font-medium">{match.home.name}</span>
           <span className={`tnum text-sm font-bold ${homeLeads ? "text-brand" : "text-ink-muted"}`}>
             {percent(markets.home)}
           </span>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex min-w-0 items-center gap-3">
           <Crest src={match.away.crest} name={match.away.name} size={28} />
           <span className="min-w-0 flex-1 truncate text-sm font-medium">{match.away.name}</span>
           <span className={`tnum text-sm font-bold ${homeLeads ? "text-ink-muted" : "text-brand"}`}>
