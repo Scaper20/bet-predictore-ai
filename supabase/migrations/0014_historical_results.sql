@@ -41,8 +41,20 @@ create table if not exists public.historical_results (
 -- recorded at the original slot), and a timestamp key would silently admit the
 -- same match twice from two sources. Team names are normalised by the caller
 -- before they reach here.
+-- The day is pinned to UTC rather than written as kickoff::date, and that is
+-- required rather than stylistic: casting a timestamptz to date resolves
+-- through the session's TimeZone, which makes the expression STABLE rather
+-- than IMMUTABLE, and Postgres refuses to index a non-immutable expression.
+-- Converting to a plain timestamp at a named zone first is a deterministic
+-- rule, so the cast off it is immutable. It is also the correct semantics: a
+-- fixture's calendar day should not depend on who is connecting.
 create unique index if not exists historical_results_natural_key
-  on public.historical_results (league_code, (kickoff::date), home_name, away_name);
+  on public.historical_results (
+    league_code,
+    ((kickoff at time zone 'UTC')::date),
+    home_name,
+    away_name
+  );
 
 -- The only read pattern: this competition, most recent first, bounded.
 create index if not exists historical_results_league_kickoff_idx
