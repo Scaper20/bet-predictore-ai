@@ -319,7 +319,7 @@ function PickRow({
         <div>
           {/* Not a price anyone is offering — the price at which this bet
               would break even. Named accordingly. */}
-          <p className="text-[11px] uppercase tracking-wider text-ink-muted">Fair price</p>
+          <p className="text-[11px] uppercase tracking-wider text-ink-muted">Break-even</p>
           <p className="tnum text-sm font-semibold">{odds(pick.fairOdds)}</p>
         </div>
         <div>
@@ -423,7 +423,7 @@ function AccaCard({
           </p>
         </div>
         <div className="text-right">
-          <p className="text-[11px] uppercase tracking-wider text-ink-muted">Fair price</p>
+          <p className="text-[11px] uppercase tracking-wider text-ink-muted">Break-even</p>
           <p className="tnum font-mono text-sm font-semibold">{odds(acca.combinedFairOdds)}</p>
         </div>
       </div>
@@ -433,8 +433,8 @@ function AccaCard({
           together — so the real probability is usually a little different. */}
       <p className="text-[11px] leading-relaxed text-ink-muted">
         Legs are multiplied as if independent. Matches in the same competition often aren&apos;t,
-        so treat this as an estimate. The fair price is what a bookmaker would need to offer for
-        this to break even — not a price on offer anywhere.
+        so treat this as an estimate. Break-even is the price a bookmaker would have to beat for
+        this to be worth taking — not a price on offer anywhere.
       </p>
 
       <Button

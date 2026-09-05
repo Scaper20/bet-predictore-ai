@@ -127,7 +127,7 @@ export function RecordDetailModal({
             <Tile label="Model probability" mono>
               {percent(match.probability, 1)}
             </Tile>
-            <Tile label="Fair price" mono>
+            <Tile label="Break-even" mono>
               {odds(match.fair_odds)}
             </Tile>
           </div>

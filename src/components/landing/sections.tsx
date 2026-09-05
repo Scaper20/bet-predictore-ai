@@ -34,8 +34,8 @@ const FEATURES = [
     icon: "🧮",
     title: "Value, margin stripped out",
     body:
-      "Paste in the price you have been offered. We strip the margin, compare against the " +
-      "model's fair price and tell you the edge and a sane allocation.",
+      "Paste in the price you have been offered. We strip the margin, compare it against the " +
+      "price the selection has to beat, and tell you whether it is worth taking at all.",
   },
   {
     icon: "🇳🇬",

@@ -32,8 +32,8 @@ export function OutcomePanel({ prediction }: { prediction: Prediction }) {
         ))}
       </div>
       <Footnote>
-        Prices shown are the model&apos;s own fair value — what it would be worth with no
-        bookmaker margin attached.
+        Prices shown are break-even: what a selection is worth with no bookmaker margin
+        attached, and so the least a price has to beat to be worth taking.
       </Footnote>
     </Panel>
   );

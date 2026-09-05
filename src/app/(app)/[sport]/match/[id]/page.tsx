@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Badge, ButtonLink } from "@/components/ui/primitives";
@@ -10,6 +11,7 @@ import {
 import { ModelPanel } from "@/components/match/model-panel";
 import { ValueCalculator } from "@/components/match/value-calculator";
 import { AddToSlip } from "@/components/match/add-to-slip";
+import { PricesPanel, PricesPanelSkeleton } from "@/components/match/prices-panel";
 import { AsianHandicapClient } from "@/components/match/asian-handicap-client";
 import { AnalysisPanel } from "@/components/match/analysis-panel";
 import { LiveWinProbabilityPanel } from "@/components/match/live-win-probability-panel";
@@ -125,11 +127,23 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
               </span>
               <span className="text-base font-bold text-brand">{prediction.topPick.label}</span>
               <span className="tnum text-sm text-ink-muted">
-                {percent(prediction.topPick.probability, 1)} · fair {odds(prediction.topPick.fairOdds)}
+                {percent(prediction.topPick.probability, 1)} · needs{" "}
+                {odds(prediction.topPick.fairOdds)}+
               </span>
               <Badge tone={prediction.topPick.confidence >= 55 ? "brand" : "amber"}>
                 {Math.round(prediction.topPick.confidence)}/100 confidence
               </Badge>
+              {/*
+                The clause that turns a probability into a decision. Backtested
+                over three seasons this model returns about -2% at
+                market-average closing prices: close to the market, not ahead
+                of it. So the money question is never "will this land" but
+                "is the price long enough", and below break-even the answer is
+                no at any hit rate.
+              */}
+              <span className="w-full text-center text-[11px] text-ink-dim">
+                Below that price it loses money however often it lands.
+              </span>
             </div>
           )}
         </div>
@@ -168,6 +182,23 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
             <OutcomePanel prediction={prediction} />
 
             {/*
+              The only numbers on this page a bookmaker produced. Streamed,
+              because two metered providers sit behind it and the rest of the
+              match must not wait on them.
+
+              DepthGate is soft — the children render server-side either way —
+              so this is a conversion wall, not a spend control. The spend
+              control is that both providers are fetched a whole competition
+              at a time and cached, so a thousand visitors to this page cost
+              exactly what one costs.
+            */}
+            <DepthGate reason="See the price you are actually being offered">
+              <Suspense fallback={<PricesPanelSkeleton />}>
+                <PricesPanel prediction={prediction} />
+              </Suspense>
+            </DepthGate>
+
+            {/*
               Depth needs an account. Every market beyond 1X2 comes off the
               same scoreline distribution, so this is one decision, not five.
             */}
@@ -203,7 +234,8 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
             <div className="card p-5">
               <p className="text-[11px] leading-relaxed text-ink-dim">
                 Probabilities are estimates from a statistical model, not predictions of fact.
-                Prices shown are fair, with no margin added. Bet responsibly — 18+.
+                Prices shown are break-even — no bookmaker margin added — so they are the floor a
+                real price has to clear, not a price on offer. Bet responsibly — 18+.
               </p>
               <ButtonLink
                 href={sportPath("trackRecord")}

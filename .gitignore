@@ -42,3 +42,4 @@ next-env.d.ts
 
 # Keep the documented template tracked (real .env files stay ignored)
 !.env.example
+.backtest-cache/
