@@ -14,7 +14,7 @@ export function PageHeader({
 }) {
   return (
     <div className="border-b border-line bg-shell">
-      <Container className="py-10">
+      <Container className="py-7 sm:py-10">
         <div className="flex flex-wrap items-end justify-between gap-5">
           <div className="max-w-2xl">
             {eyebrow && (

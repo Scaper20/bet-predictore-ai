@@ -110,7 +110,7 @@ export function ChatWidget() {
   }
 
   return (
-    <div className="fixed bottom-6 right-6 z-50">
+    <div className="fixed right-6 z-50 lift-above-bottom-nav">
       {open && (
         <div className="mb-3 flex h-[28rem] w-[22rem] max-w-[calc(100vw-3rem)] flex-col overflow-hidden rounded-2xl border border-line bg-shell shadow-2xl">
           <div className="flex items-center justify-between border-b border-line px-4 py-3">

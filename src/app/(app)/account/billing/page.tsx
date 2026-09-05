@@ -14,7 +14,7 @@ export const metadata: Metadata = { title: "Plans & billing" };
 export default async function BillingPage() {
   if (!supabaseConfigured) {
     return (
-      <div className="mx-auto max-w-lg px-4 py-16 text-center sm:px-6">
+      <div className="mx-auto max-w-lg px-4 py-10 sm:py-16 text-center sm:px-6">
         <h1 className="font-display text-2xl font-bold">Billing isn&apos;t set up yet</h1>
         <p className="mt-2 text-sm text-ink-muted">
           This deployment hasn&apos;t configured Supabase or Paystack. Every free feature still works.
@@ -41,7 +41,7 @@ export default async function BillingPage() {
   const hasActiveSubscription = hasLivePaidSubscription(subscription);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-6xl px-4 py-10 sm:py-16 sm:px-6 lg:px-8">
       {/*
         Billing is its own route because it owns the Paystack callback, which
         means the account page's section rail is not on screen here. This is
@@ -73,7 +73,7 @@ export default async function BillingPage() {
             title="Manage your plan"
             description="Update your card or cancel anytime — you'll be redirected to Paystack's secure page."
           />
-          <div className="card mt-4 p-7">
+          <div className="card mt-4 p-5 sm:p-7">
             <ManageSubscriptionButton />
           </div>
         </section>

@@ -19,7 +19,7 @@ export default function Loading() {
         title="Live scores"
         description="Every match currently in play across the competitions we track. Scores and the clock come straight from the feed and refresh automatically."
       />
-      <div className={`${containerClass()} space-y-6 py-10`}>
+      <div className={`${containerClass()} space-y-6 py-7 sm:py-10`}>
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {Array.from({ length: 4 }).map((_, i) => (
             <MatchCardSkeleton key={i} />

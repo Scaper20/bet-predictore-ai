@@ -19,7 +19,7 @@ export function OutcomePanel({ prediction }: { prediction: Prediction }) {
         {rows.map((r) => (
           <div key={r.key}>
             <div className="mb-1.5 flex items-baseline justify-between gap-3">
-              <span className={`truncate text-sm ${r.value === best ? "font-semibold text-ink" : "text-ink-muted"}`}>
+              <span className={`min-w-0 truncate text-sm ${r.value === best ? "font-semibold text-ink" : "text-ink-muted"}`}>
                 {r.label}
               </span>
               <span className="flex shrink-0 items-baseline gap-3">
@@ -103,7 +103,7 @@ export function DoubleChancePanel({ prediction }: { prediction: Prediction }) {
         {rows.map((r) => (
           <div key={r.tag}>
             <div className="mb-1.5 flex items-baseline justify-between gap-3">
-              <span className="truncate text-sm text-ink-muted">
+              <span className="min-w-0 truncate text-sm text-ink-muted">
                 <span className="mr-2 font-mono text-xs text-ink-dim">{r.tag}</span>
                 {r.label}
               </span>
@@ -189,7 +189,7 @@ function BarCell({ label, value }: { label: string; value: number }) {
   return (
     <div className="min-w-0">
       <div className="mb-1 flex items-baseline justify-between gap-2">
-        <span className="truncate text-[11px] text-ink-dim">{label}</span>
+        <span className="min-w-0 truncate text-[11px] text-ink-dim">{label}</span>
         <span className="tnum text-xs font-semibold">{percent(value)}</span>
       </div>
       <ProbabilityBar value={value} tone={value > 0.5 ? "brand" : "neutral"} />
@@ -220,7 +220,7 @@ export function FormPanel({ prediction }: { prediction: Prediction }) {
         {sides.map(({ team, f }) => (
           <div key={team.id}>
             <div className="mb-3 flex items-center justify-between gap-3">
-              <span className="truncate text-sm font-semibold">{team.name}</span>
+              <span className="min-w-0 truncate text-sm font-semibold">{team.name}</span>
               <span className="tnum shrink-0 text-xs text-ink-muted">
                 {f.points} pts / {f.entries.length * 3}
               </span>
@@ -345,7 +345,7 @@ function Metric({ label, value, accent }: { label: string; value: string; accent
 function BigStat({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
   return (
     <div
-      className={`rounded-lg px-3 py-3 text-center ${highlight ? "bg-brand/10" : "bg-surface-2"}`}
+      className={`min-w-0 rounded-lg px-3 py-3 text-center ${highlight ? "bg-brand/10" : "bg-surface-2"}`}
     >
       <p className={`tnum text-xl font-bold ${highlight ? "text-brand" : ""}`}>{value}</p>
       <p className="mt-0.5 truncate text-[11px] text-ink-dim">{label}</p>
@@ -356,7 +356,7 @@ function BigStat({ label, value, highlight }: { label: string; value: string; hi
 function LabelledBar({ label, value }: { label: string; value: number }) {
   return (
     <div className="grid grid-cols-[1fr_auto] items-center gap-3">
-      <div>
+      <div className="min-w-0">
         <p className="mb-1.5 truncate text-xs text-ink-muted">{label}</p>
         <ProbabilityBar value={value} tone="amber" />
       </div>

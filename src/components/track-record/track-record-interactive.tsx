@@ -82,7 +82,9 @@ export function TrackRecordInteractive({ rows }: { rows: TrackRecordMatch[] }) {
                   // longer selection strands the reader mid-scroll.
                   setExpanded(false);
                 }}
-                className="rounded-lg border border-line bg-surface-2 px-3 py-1.5 text-xs font-semibold text-ink outline-none focus-visible:border-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+                /* min-h-9 because py-1.5 put this at 30px tall — under any
+                   touch guideline, and it is the only control on the page. */
+                className="min-h-9 rounded-lg border border-line bg-surface-2 px-3 py-1.5 text-xs font-semibold text-ink outline-none focus-visible:border-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
               >
                 <option value={ALL}>All competitions ({rows.length})</option>
                 {competitions.map(([key, { label, n }]) => (

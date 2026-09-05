@@ -30,7 +30,7 @@ export default async function BillingCallbackPage({
   }
 
   return (
-    <div className="mx-auto max-w-md px-4 py-20 text-center sm:px-6">
+    <div className="mx-auto max-w-md px-4 py-12 sm:py-20 text-center sm:px-6">
       {status === "success" && (
         <>
           <h1 className="font-display text-2xl font-bold">Payment received</h1>

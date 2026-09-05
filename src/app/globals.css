@@ -246,6 +246,24 @@
   .skeleton { animation: none; background: var(--color-surface-2); }
 }
 
+/* Height of the mobile bottom navigation bar. Declared here rather than in
+   @theme because three separate things have to agree on it — the bar itself,
+   the spacer that keeps the footer clear of it, and the floating controls
+   that sit above it — and a token they all read is the only way that stays
+   true. Not inside a media query: the value is constant, and what varies is
+   which rules reference it. */
+:root { --bottom-nav-h: 3.5rem; }
+
+/* Floating controls clear the bottom bar on mobile and sit at their normal
+   inset above lg, where the bar does not exist. 1.5rem matches bottom-6, so
+   the desktop position is byte-identical to what these had before. */
+.lift-above-bottom-nav {
+  bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom) + 1rem);
+}
+@media (min-width: 1024px) {
+  .lift-above-bottom-nav { bottom: 1.5rem; }
+}
+
 /* Dialog entrance. The backdrop fades and the panel rises a little with it,
    so a modal reads as arriving from the page rather than being cut in.
 
@@ -262,11 +280,19 @@
   from { opacity: 0; transform: translateY(8px) scale(0.98); }
   to   { opacity: 1; transform: none; }
 }
+/* Side panel: slides in from the trailing edge. Slightly longer than the
+   dialog because it travels the full width of the panel rather than 8px, and
+   a fast slide over that distance reads as a jump. */
+@keyframes drawer-in {
+  from { transform: translateX(100%); }
+  to   { transform: none; }
+}
 .animate-overlay-in { animation: overlay-in .18s ease-out both; }
 .animate-dialog-in  { animation: dialog-in .22s var(--ease-out-expo) both; }
+.animate-drawer-in  { animation: drawer-in .26s var(--ease-out-expo) both; }
 
 @media (prefers-reduced-motion: reduce) {
   .animate-marquee, .live-dot, .animate-rise, .bar-fill { animation: none !important; }
-  .animate-overlay-in, .animate-dialog-in { animation: none !important; }
+  .animate-overlay-in, .animate-dialog-in, .animate-drawer-in { animation: none !important; }
   .card-hover:hover { transform: none; }
 }

@@ -253,8 +253,20 @@ export function SlipView() {
   const correlated = new Set(dayLeagueKeys).size < dayLeagueKeys.length;
 
   return (
+    /*
+     * min-w-0 on both tracks, and it is load-bearing rather than defensive.
+     *
+     * A grid item defaults to min-width:auto, so a track never shrinks below
+     * its content's min-content width. The fixture link inside carries
+     * `truncate`, which sets white-space:nowrap — and a nowrap string's
+     * min-content is the WHOLE string. So "Wolverhampton Wanderers v Brighton
+     * and Hove Albion" reported 359px, the single mobile column sized itself
+     * to that, and the slip pushed the document 34px into horizontal scroll on
+     * a phone. Short fixture names hid it, which is why it survived: the bug
+     * only appears when someone adds a leg with long club names.
+     */
     <div className="grid gap-5 lg:grid-cols-[1.5fr_1fr]">
-      <div className="space-y-3">
+      <div className="min-w-0 space-y-3">
         {legs.map((l) => (
           <div key={l.matchId} className="card p-4 sm:p-5">
             <div className="flex flex-wrap items-start gap-3">
@@ -326,7 +338,7 @@ export function SlipView() {
         </Button>
       </div>
 
-      <aside className="lg:sticky lg:top-20 lg:self-start">
+      <aside className="min-w-0 lg:sticky lg:top-20 lg:self-start">
         <div className="card p-5 sm:p-7">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-ink-muted">
             Combined pick

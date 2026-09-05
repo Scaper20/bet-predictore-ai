@@ -83,7 +83,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
 
       {/* ------------------------------------------------------ Match header */}
       <div className="border-b border-line bg-shell">
-        <div className={`${containerClass()} py-10`}>
+        <div className={`${containerClass()} py-7 sm:py-10`}>
           <div className="mb-6 flex flex-wrap items-center gap-3">
             {match.league.logo && <Crest src={match.league.logo} name={match.league.name} size={22} />}
             <span className="text-sm font-medium text-ink-muted">{match.league.name}</span>
@@ -101,7 +101,13 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
             </span>
           </div>
 
-          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 sm:gap-8">
+          {/*
+            gap-3 below sm, not gap-4. The centre column is auto-sized and the
+            two team columns split what is left, so every pixel of gutter here
+            comes straight out of the space a club's name has to render in —
+            and at 375 there was not enough of it. See TeamBlock.
+          */}
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 sm:gap-8">
             <TeamBlock team={match.home} align="right" />
             <div className="text-center">
               {live || match.status === "finished" ? (
@@ -115,7 +121,17 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
                   {kickoffTime(match.kickoff)}
                 </p>
               )}
-              {match.venue && <p className="mt-2 max-w-[12rem] text-xs text-ink-dim">{match.venue}</p>}
+              {/*
+                The venue sets the width of the centre column, and at 12rem it
+                was claiming 192px of a 343px row — leaving the two clubs about
+                60px each, which is less than the crest alone. Narrower on a
+                phone, unchanged from sm up.
+              */}
+              {match.venue && (
+                <p className="mx-auto mt-2 max-w-32 text-xs text-ink-dim sm:max-w-48">
+                  {match.venue}
+                </p>
+              )}
             </div>
             <TeamBlock team={match.away} align="left" />
           </div>
@@ -150,9 +166,12 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
       </div>
 
       {/* ------------------------------------------------------------- Body */}
-      <div className={`${containerClass()} py-10`}>
+      <div className={`${containerClass()} py-7 sm:py-10`}>
+        {/* min-w-0 on both tracks: a grid item defaults to min-width:auto, so
+            any nowrap content inside (every `truncate` is nowrap) sets a floor
+            the track cannot go below, and the page scrolls sideways on a phone. */}
         <div className="grid gap-5 lg:grid-cols-[1.6fr_1fr]">
-          <div className="space-y-5">
+          <div className="min-w-0 space-y-5">
             {live && (
               <Gate
                 requires="vip"
@@ -218,7 +237,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
             <H2HPanel prediction={prediction} />
           </div>
 
-          <aside className="space-y-5 lg:sticky lg:top-20 lg:self-start">
+          <aside className="min-w-0 space-y-5 lg:sticky lg:top-20 lg:self-start">
             {/*
               Sample size, data quality and confidence are the "show your
               working" panel — the reason to trust a number rather than the
@@ -252,15 +271,31 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   );
 }
 
+/**
+ * One side of the scoreline.
+ *
+ * Stacked below sm, side by side from there. The row layout does not survive a
+ * phone: the crest is a fixed 48px and the club name sat next to it with
+ * min-w-0, so once the column narrowed past about 60px the name was squeezed
+ * to nothing and its text spilled out of its own box — "Vitória" clipped off
+ * the left edge of the screen and "Grêmio" running past the right, taking the
+ * whole document into horizontal scroll with them.
+ *
+ * min-w-0 is what allows that squeeze and is still needed for the grid track
+ * to shrink at all, so the fix is to stop competing for the width: give the
+ * name the column's full measure with the crest above it, and let a long name
+ * wrap rather than overflow. break-words is the backstop for the case wrapping
+ * cannot help — a single unbreakable club name longer than its column.
+ */
 function TeamBlock({ team, align }: { team: { name: string; crest?: string }; align: "left" | "right" }) {
   return (
     <div
-      className={`flex min-w-0 items-center gap-3 ${
-        align === "right" ? "flex-row-reverse text-right" : "text-left"
+      className={`flex min-w-0 flex-col items-center gap-2 text-center sm:flex-row sm:gap-3 ${
+        align === "right" ? "sm:flex-row-reverse sm:text-right" : "sm:text-left"
       }`}
     >
       <Crest src={team.crest} name={team.name} size={48} />
-      <h1 className="min-w-0 font-display text-lg font-bold leading-tight sm:text-2xl">
+      <h1 className="min-w-0 wrap-break-word font-display text-base font-bold leading-tight sm:text-2xl">
         {team.name}
       </h1>
     </div>

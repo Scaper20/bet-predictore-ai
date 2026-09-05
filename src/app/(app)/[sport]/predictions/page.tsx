@@ -75,7 +75,7 @@ export default async function PredictionsPage({
         description="Each fixture is modelled against its own competition's completed results. Where the history is too thin, no pick is published — that fixture is listed separately below."
       />
 
-      <div className={`${containerClass()} space-y-6 py-10`}>
+      <div className={`${containerClass()} space-y-6 py-7 sm:py-10`}>
         <Suspense fallback={<div className="h-10" />}>
           <LeagueFilter />
         </Suspense>

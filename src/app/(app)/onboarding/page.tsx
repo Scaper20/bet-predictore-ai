@@ -49,10 +49,10 @@ export default async function OnboardingPage({
   const heading = HEADINGS[step - 1];
 
   return (
-    <Container width="narrow" className="py-16">
+    <Container width="narrow" className="py-10 sm:py-16">
       <StepProgress steps={[...ONBOARDING_STEPS]} current={step} />
 
-      <div className="card mt-8 p-7">
+      <div className="card mt-8 p-5 sm:p-7">
         <h1 className="font-display text-2xl font-bold">{heading.title}</h1>
         <p className="mt-2 text-sm leading-relaxed text-ink-muted">{heading.blurb}</p>
 

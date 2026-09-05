@@ -44,7 +44,7 @@ export function SignUpWall({ reason }: { reason: string }) {
   const next = encodeURIComponent(pathname);
 
   return (
-    <div className="card flex flex-col items-center gap-3 border-dashed p-7 text-center">
+    <div className="card flex flex-col items-center gap-3 border-dashed p-5 sm:p-7 text-center">
       <span
         className="grid size-9 place-items-center rounded-full bg-brand/12 text-lg text-brand"
         aria-hidden

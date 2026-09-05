@@ -19,7 +19,7 @@ export function Hero({ liveCount, board }: { liveCount: number; board: ReactNode
         aria-hidden
       />
 
-      <Container className="relative grid gap-14 py-16 lg:grid-cols-[1.1fr_0.9fr] lg:items-center lg:gap-10 lg:py-24">
+      <Container className="relative grid gap-8 sm:gap-14 py-10 sm:py-16 lg:grid-cols-[1.1fr_0.9fr] lg:items-center lg:gap-10 lg:py-24">
         {/* Live board leads: today's real predictions, not marketing copy, is
             the first thing anyone sees. */}
         <div className="animate-rise">

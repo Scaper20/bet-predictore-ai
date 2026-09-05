@@ -122,7 +122,7 @@ export function FeaturedBoard({ rows }: { rows: FeaturedRow[] }) {
       </div>
 
       {board.length === 0 ? (
-        <div className="px-5 py-12 text-center">
+        <div className="px-5 py-8 sm:py-12 text-center">
           <p className="text-sm text-ink-muted">Nothing to feature right now.</p>
           <p className="mt-1 text-xs text-ink-dim">
             This board only shows real fixtures with enough completed history behind them, so it

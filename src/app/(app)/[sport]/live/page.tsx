@@ -25,7 +25,7 @@ export default async function LivePage() {
         title="Live scores"
         description="Every match currently in play across the competitions we track. Scores and the clock come straight from the feed and refresh automatically."
       />
-      <div className={`${containerClass()} space-y-6 py-10`}>
+      <div className={`${containerClass()} space-y-6 py-7 sm:py-10`}>
         {feed && <CoverageNotice coverage={feed.coverage} />}
         {feed ? (
           <LiveBoard initial={feed.matches} />

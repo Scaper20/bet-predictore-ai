@@ -29,7 +29,13 @@ export function PlanMatrix() {
      * scrolled sideways to 683px on a 375px phone while the table itself
      * scrolled correctly, which is a confusing way to be broken.
      */
-    <div className="no-scrollbar relative -mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+    /*
+     * Desktop only. Below sm the same data is rendered by
+     * PlanMatrixMobile as a two-plan comparison — five columns in 390px
+     * showed about one and a half of them and asked the reader to scrub
+     * sideways through forty rows.
+     */
+    <div className="no-scrollbar relative -mx-4 hidden overflow-x-auto px-4 sm:mx-0 sm:block sm:px-0">
       <table className="w-full min-w-[44rem] border-collapse text-sm">
         <caption className="sr-only">
           Feature comparison across the Free, Weekend Pass, Pro and VIP plans

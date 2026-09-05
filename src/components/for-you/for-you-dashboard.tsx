@@ -82,7 +82,7 @@ export function ForYouDashboard({ feed }: { feed: ForYouFeedPayload }) {
   const trackRecordHref = sportPath("trackRecord", feed.sport);
 
   return (
-    <Container width="shell" className="space-y-14 pb-20 pt-10">
+    <Container width="shell" className="space-y-10 pb-14 pt-7 sm:space-y-14 sm:pb-20 sm:pt-10">
       {!feed.signedIn && <SignedOutBanner />}
 
       <section>

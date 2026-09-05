@@ -55,7 +55,7 @@ const FEATURES = [
 
 export function Features() {
   return (
-    <section className={`${containerClass()} py-20 lg:py-28`}>
+    <section className={`${containerClass()} py-12 sm:py-20 lg:py-28`}>
       <Reveal>
         <SectionHeading
           eyebrow="What you get"
@@ -64,7 +64,7 @@ export function Features() {
         />
         <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {FEATURES.map((f) => (
-            <div key={f.title} className="card card-hover p-7">
+            <div key={f.title} className="card card-hover p-5 sm:p-7">
               <div className="grid size-11 place-items-center rounded-lg bg-surface-2 text-xl">
                 {f.icon}
               </div>
@@ -107,7 +107,7 @@ const STEPS = [
 export function HowItWorks() {
   return (
     <section className="border-y border-line bg-shell">
-      <Container className="py-20 lg:py-28">
+      <Container className="py-12 sm:py-20 lg:py-28">
         <Reveal>
           <SectionHeading
             eyebrow="How it works"
@@ -117,7 +117,7 @@ export function HowItWorks() {
           />
           <div className="mt-14 grid gap-6 md:grid-cols-3">
             {STEPS.map((s) => (
-              <div key={s.n} className="relative card p-7">
+              <div key={s.n} className="relative card p-5 sm:p-7">
                 <span className="font-display text-5xl font-extrabold text-brand/15">{s.n}</span>
                 <h3 className="mt-3 text-lg font-semibold">{s.title}</h3>
                 <p className="mt-2.5 text-sm leading-relaxed text-ink-muted">{s.body}</p>
@@ -139,7 +139,7 @@ export function HowItWorks() {
 
 export function Leagues() {
   return (
-    <section className={`${containerClass()} py-20 lg:py-24`}>
+    <section className={`${containerClass()} py-12 sm:py-20 lg:py-24`}>
       <Reveal>
         <SectionHeading
           eyebrow="Coverage"
@@ -169,7 +169,7 @@ export function Leagues() {
 export function Pricing() {
   return (
     <section className="border-y border-line bg-shell">
-      <Container className="py-20 lg:py-28">
+      <Container className="py-12 sm:py-20 lg:py-28">
         <Reveal>
           <SectionHeading
             eyebrow="Pricing"
@@ -228,7 +228,7 @@ const FAQS = [
 
 export function Faq() {
   return (
-    <section className="mx-auto max-w-4xl px-4 py-20 sm:px-6 lg:px-8 lg:py-28">
+    <section className="mx-auto max-w-4xl px-4 py-12 sm:py-20 sm:px-6 lg:px-8 lg:py-28">
       <Reveal>
         <SectionHeading eyebrow="Questions" title="Straight answers" align="center" />
         <div className="mt-12 space-y-3">

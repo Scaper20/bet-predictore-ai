@@ -73,7 +73,7 @@ function TodaysPicks({ previews }: { previews: Awaited<ReturnType<typeof predict
   const usable = previews.filter((p) => p.sufficiency.publishable).slice(0, 6);
 
   return (
-    <section className={`${containerClass()} py-20 lg:py-24`}>
+    <section className={`${containerClass()} py-12 sm:py-20 lg:py-24`}>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <SectionHeading
           eyebrow="Live from the model"

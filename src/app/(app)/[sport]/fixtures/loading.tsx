@@ -6,7 +6,7 @@ export default function Loading() {
   return (
     <>
       <PageHeader eyebrow="Fixtures" title="Upcoming fixtures" description="Kickoff times shown in West Africa Time." />
-      <div className={`${containerClass()} space-y-6 py-10`}>
+      <div className={`${containerClass()} space-y-6 py-7 sm:py-10`}>
         <div className="h-10" />
         <section>
           <div className="mb-4 flex items-center gap-3">

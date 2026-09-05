@@ -55,7 +55,7 @@ export function ScrollToTop() {
       title="Scroll to top"
       aria-hidden={!visible}
       tabIndex={visible ? 0 : -1}
-      className={`fixed bottom-6 left-6 z-50 grid size-11 place-items-center rounded-full border border-line bg-surface-2/90 text-ink shadow-2xl backdrop-blur-md transition-all duration-300 ease-in-out hover:border-brand hover:bg-brand hover:text-brand-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand active:scale-95 ${
+      className={`fixed left-6 z-50 lift-above-bottom-nav grid size-11 place-items-center rounded-full border border-line bg-surface-2/90 text-ink shadow-2xl backdrop-blur-md transition-all duration-300 ease-in-out hover:border-brand hover:bg-brand hover:text-brand-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand active:scale-95 ${
         visible
           ? "translate-y-0 opacity-100 hover:scale-110"
           : "pointer-events-none translate-y-3 opacity-0"

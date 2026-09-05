@@ -24,7 +24,7 @@ export default function Loading() {
         description="Picks from the competitions you follow, plus the strongest reads across the whole slate — each section labelled so you always know which is which."
       />
 
-      <Container width="shell" className="space-y-14 pb-20 pt-10">
+      <Container width="shell" className="space-y-10 pb-14 pt-7 sm:space-y-14 sm:pb-20 sm:pt-10">
         <section>
           <Skeleton className="h-9 w-72 max-w-full" />
           <Skeleton className="mt-4 h-4 w-full max-w-xl" />

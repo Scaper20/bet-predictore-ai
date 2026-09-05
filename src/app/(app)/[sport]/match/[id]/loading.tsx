@@ -6,7 +6,7 @@ export default function Loading() {
     <>
       {/* ------------------------------------------------------ Match header */}
       <div className="border-b border-line bg-shell">
-        <div className={`${containerClass()} py-10`}>
+        <div className={`${containerClass()} py-7 sm:py-10`}>
           <div className="mb-6 flex flex-wrap items-center gap-3">
             <Skeleton className="size-[22px] shrink-0 rounded-full" />
             <Skeleton className="h-3 w-32" />
@@ -27,7 +27,7 @@ export default function Loading() {
       </div>
 
       {/* ------------------------------------------------------------- Body */}
-      <div className={`${containerClass()} py-10`}>
+      <div className={`${containerClass()} py-7 sm:py-10`}>
         <div className="grid gap-5 lg:grid-cols-[1.6fr_1fr]">
           <div className="space-y-5">
             <PanelSkeleton lines={4} />
