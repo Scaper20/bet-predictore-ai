@@ -90,3 +90,58 @@ describe("findFixture", () => {
     expect(findFixture({ ...target, homeName: "" }, [c()])).toBeNull();
   });
 });
+
+describe("bookmaker names with qualifiers", () => {
+  const KICKOFF = Date.parse("2026-09-07T23:00:00Z");
+
+  /** Read off SportyBet's live Brasileirao board. */
+  const BRAZIL = [
+    { homeName: "EC Vitoria BA", awayName: "Gremio FB Porto Alegrense RS", kickoff: KICKOFF },
+    { homeName: "SC Corinthians SP", awayName: "Chapecoense SC", kickoff: KICKOFF },
+    { homeName: "CR Vasco da Gama RJ", awayName: "Fluminense FC RJ", kickoff: KICKOFF },
+  ];
+
+  it("matches a club through the qualifiers a bookmaker wraps it in", () => {
+    // The bug this exists for: our feed says "Vitória", SportyBet says
+    // "EC Vitoria BA". Those share no prefix once run together, so the whole
+    // fixture rendered as having no price while the model published a pick.
+    const hit = findFixture(
+      { homeName: "Vitória", awayName: "Grêmio", kickoff: KICKOFF },
+      BRAZIL,
+    );
+    expect(hit?.homeName).toBe("EC Vitoria BA");
+  });
+
+  it("still refuses the two Manchester clubs", () => {
+    // The rule this module was written for, re-checked against the looser
+    // matching: token containment must not make these one club.
+    const candidates = [
+      { homeName: "Manchester City", awayName: "Arsenal", kickoff: KICKOFF },
+      { homeName: "Manchester United", awayName: "Arsenal", kickoff: KICKOFF },
+    ];
+    expect(
+      findFixture({ homeName: "Manchester", awayName: "Arsenal", kickoff: KICKOFF }, candidates),
+    ).toBeNull();
+    expect(
+      findFixture({ homeName: "Manchester City", awayName: "Arsenal", kickoff: KICKOFF }, candidates)
+        ?.homeName,
+    ).toBe("Manchester City");
+  });
+
+  it("does not let one club's name inside another's qualifiers match it", () => {
+    // "Porto" is a word in "Gremio FB Porto Alegrense RS". A club's own name
+    // leads; matching on a decoration would quote the wrong match entirely.
+    expect(
+      findFixture(
+        { homeName: "Porto", awayName: "Gremio", kickoff: KICKOFF },
+        [{ homeName: "Gremio FB Porto Alegrense RS", awayName: "Gremio", kickoff: KICKOFF }],
+      ),
+    ).toBeNull();
+  });
+
+  it("keeps the orientation", () => {
+    expect(
+      findFixture({ homeName: "Grêmio", awayName: "Vitória", kickoff: KICKOFF }, BRAZIL),
+    ).toBeNull();
+  });
+});

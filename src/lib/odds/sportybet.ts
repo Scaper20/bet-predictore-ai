@@ -73,13 +73,18 @@ function configured(): string | null {
  * still the right answer to "is this book's price roughly fair" — which is the
  * question being asked, rather than "what can I take this second".
  */
-async function upcomingPage(page: number, pageSize: number): Promise<SportyBetEvent[]> {
+async function upcomingPage(
+  page: number,
+  pageSize: number,
+  tournamentId?: string,
+): Promise<SportyBetEvent[]> {
   const key = configured();
   if (!key) return [];
 
-  return cached(`sportybet:upcoming:${page}:${pageSize}`, 15 * 60_000, async () => {
+  return cached(`sportybet:upcoming:${tournamentId ?? "all"}:${page}:${pageSize}`, 15 * 60_000, async () => {
     const url =
-      `${BASE}/get_upcoming_events?sport=football&page=${page}&page_size=${pageSize}`;
+      `${BASE}/get_upcoming_events?sport=football&page=${page}&page_size=${pageSize}` +
+      (tournamentId ? `&tournament_id=${encodeURIComponent(tournamentId)}` : "");
     const response = await fetch(url, {
       headers: { "X-API-Key": key, "API-Snapshot-Version": SNAPSHOT_VERSION },
     }).catch(() => null);
@@ -108,20 +113,58 @@ async function upcomingPage(page: number, pageSize: number): Promise<SportyBetEv
 }
 
 /**
- * How much of the upcoming board to hold.
+ * The board is ordered by competition, not by kickoff.
  *
- * Three pages of sixty is three calls, nine credits, and covers the top
- * competitions the model publishes into. The board is ordered by kickoff, so
- * this is the near horizon rather than an arbitrary slice.
+ * Measured, not assumed, and it is the fact the whole traversal turns on. Page
+ * one carries the Premier League, LaLiga, the Bundesliga and Serie A; the
+ * Brasileirao and the rest sit further back, and the board runs to 2,093
+ * events in total. So "fetch the first three pages" -- which is what this did
+ * -- silently meant "only the biggest four European leagues have prices", and
+ * a Brazilian fixture rendered as Not listed while the model happily published
+ * a pick on it.
+ *
+ * page_size does not rescue that: 200 is rejected outright with a 502, and 60
+ * returns whole tournaments rather than a fixed count, so a page is between
+ * about 30 and 60 events.
  */
-const PAGES = 3;
-const PAGE_SIZE = 60;
+const PAGE_SIZE = 100;
 
-async function board(): Promise<SportyBetEvent[]> {
-  const pages = await Promise.all(
-    Array.from({ length: PAGES }, (_, i) => upcomingPage(i + 1, PAGE_SIZE)),
-  );
-  return pages.flat();
+/**
+ * How far into the unfiltered board to look for a competition with no id.
+ *
+ * Only reached for competitions outside the catalogue, where a hit is
+ * unlikely anyway, so this is a courtesy rather than a strategy. Two pages of
+ * a hundred covers the dozen or so tournaments SportyBet leads with; past
+ * that, the honest answer is that we have no price.
+ */
+const FALLBACK_PAGES = 2;
+
+/**
+ * The fixture on SportyBet's board, or null.
+ *
+ * Asking for the competition by id is the whole design. The board is ordered
+ * by competition and runs to 2,093 events, so scanning it for a Brazilian
+ * fixture meant eight sequential pages, thirty-seven seconds, and still no
+ * result -- while one call carrying tournament_id returns that competition's
+ * entire fixture list with markets attached.
+ */
+async function findOnBoard(
+  fixture: FixtureLike,
+  tournamentId?: string,
+): Promise<SportyBetEvent | null> {
+  if (tournamentId) {
+    const events = await upcomingPage(1, PAGE_SIZE, tournamentId);
+    return findFixture(fixture, events);
+  }
+
+  for (let page = 1; page <= FALLBACK_PAGES; page++) {
+    const events = await upcomingPage(page, PAGE_SIZE);
+    // An empty page is the end of the board, or a provider that is down.
+    if (events.length === 0) return null;
+    const hit = findFixture(fixture, events);
+    if (hit) return hit;
+  }
+  return null;
 }
 
 /**
@@ -134,14 +177,12 @@ async function board(): Promise<SportyBetEvent[]> {
 export async function sportyBetPrice(
   fixture: FixtureLike,
   market: string,
+  tournamentId?: string,
 ): Promise<number | undefined> {
   const selection = toSportyBet(market);
   if (!selection) return undefined;
 
-  const events = await board().catch(() => []);
-  if (events.length === 0) return undefined;
-
-  const event = findFixture(fixture, events);
+  const event = await findOnBoard(fixture, tournamentId).catch(() => null);
   if (!event) return undefined;
 
   const entry = event.markets.find((m) => matchesSelection(m, selection));

@@ -73,6 +73,67 @@ function couldBeSameClub(a: string, b: string): boolean {
 }
 
 /**
+ * Noise words that appear around a club's actual name.
+ *
+ * The same list normaliseKey strips, kept here because this comparison needs
+ * the words apart rather than run together.
+ */
+const NOISE = new Set([
+  "fc", "afc", "cf", "sc", "ac", "as", "ss", "ssc", "bk", "sk", "if", "club", "de", "the",
+]);
+
+/**
+ * A club's name as the words that identify it.
+ *
+ * Tokens shorter than three characters go, which is a general rule doing a
+ * specific job: bookmakers decorate names with two-letter qualifiers, and in
+ * the Brazilian league they are everywhere -- "EC Vitoria BA", "Gremio FB
+ * Porto Alegrense RS", "CR Vasco da Gama RJ". Dropping short tokens removes
+ * the club-type prefix and the state code together without a list of either.
+ */
+function clubTokens(raw: string): string[] {
+  return raw
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean)
+    .map((t) => (t === "manchester" ? "man" : t === "united" ? "utd" : t))
+    .filter((t) => t.length >= MIN_ABBREVIATION && !NOISE.has(t));
+}
+
+/**
+ * True when one name is the same club as the other with qualifiers attached.
+ *
+ * The prefix rule above cannot see this case: "Vitória" normalises to
+ * "vitoria" and "EC Vitoria BA" to "ecvitoriaba", which share no prefix at
+ * all, so a Brazilian fixture the model had published a pick on rendered as
+ * having no price. Comparing the words instead of the run-together string is
+ * what makes those the same club.
+ *
+ * Two rules keep it from over-matching, and both are load-bearing:
+ *
+ * - Every word of the shorter name must appear in the longer. Manchester
+ *   United is {man, utd} and Manchester City is {man, city}; neither contains
+ *   the other, so the collapse this module was written to prevent still
+ *   cannot happen.
+ * - The longer name's FIRST word must be one of them. Without it, "Porto"
+ *   would match "Gremio FB Porto Alegrense RS", because a qualifier can be
+ *   another club's whole name. A club's own name leads; its decorations
+ *   follow.
+ */
+function tokensCouldMatch(a: string, b: string): boolean {
+  const ta = clubTokens(a);
+  const tb = clubTokens(b);
+  if (ta.length === 0 || tb.length === 0) return false;
+
+  const [short, long] = ta.length <= tb.length ? [ta, tb] : [tb, ta];
+  const inLong = new Set(long);
+  if (!short.every((t) => inLong.has(t))) return false;
+  return short.includes(long[0]);
+}
+
+/**
  * The candidate describing the same fixture, or null.
  *
  * Exact agreement on both clubs wins outright. Failing that, an abbreviated
@@ -101,13 +162,27 @@ export function findFixture<T extends FixtureLike>(
   // other way round is a different match at a different ground.
   const loose = inWindow.filter(
     (c) =>
-      couldBeSameClub(normaliseKey(c.homeName), home) &&
-      couldBeSameClub(normaliseKey(c.awayName), away),
+      sameClub(c.homeName, target.homeName, home) &&
+      sameClub(c.awayName, target.awayName, away),
   );
 
   // Exactly one, or nothing. Two candidates an abbreviation could describe is
   // precisely the case where guessing costs a user money.
   return loose.length === 1 ? loose[0] : null;
+}
+
+/**
+ * The two loose rules, tried in order of how much they assume.
+ *
+ * Both feed the same ambiguity guard in findFixture, which is what actually
+ * makes either safe: a rule is allowed to be suggestive precisely because a
+ * suggestion is only accepted when exactly one fixture in the window fits it.
+ */
+function sameClub(candidateName: string, targetName: string, targetKey: string): boolean {
+  return (
+    couldBeSameClub(normaliseKey(candidateName), targetKey) ||
+    tokensCouldMatch(candidateName, targetName)
+  );
 }
 
 function closest<T extends FixtureLike>(target: FixtureLike, list: T[]): T {

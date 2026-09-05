@@ -26,6 +26,19 @@ export interface LeagueDef {
     theSportsDb?: string;
     /** API-Football numeric league id. */
     apiFootball?: number;
+    /**
+     * SportyBet tournament id, a Betradar `sr:tournament:N`.
+     *
+     * Without it a price lookup falls back to scanning SportyBet’s general
+     * board, which is ordered by competition and 2,093 events long — the
+     * Brasileirao sits far enough back that the scan found nothing. With it,
+     * one call returns that competition’s whole fixture list.
+     *
+     * Read off the live board, never guessed: a wrong id here quietly means
+     * no price rather than a wrong one, but it also means the feature is off
+     * for that competition and nobody would notice.
+     */
+    sportyBet?: string;
   };
   /**
    * Where a COMPLETE season history comes from.
@@ -63,7 +76,7 @@ export const LEAGUES: LeagueDef[] = [
     country: "England",
     flag: "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
     rank: 1,
-    ids: { footballData: "PL", theSportsDb: "4328", apiFootball: 39 },
+    ids: { footballData: "PL", theSportsDb: "4328", apiFootball: 39, sportyBet: "sr:tournament:17" },
     archive: { footballDataUk: "E0" },
   },
   {
@@ -74,7 +87,7 @@ export const LEAGUES: LeagueDef[] = [
     country: "Europe",
     flag: "🇪🇺",
     rank: 2,
-    ids: { footballData: "CL", theSportsDb: "4480", apiFootball: 2 },
+    ids: { footballData: "CL", theSportsDb: "4480", apiFootball: 2, sportyBet: "sr:tournament:7" },
     archive: { sportApi: 7 },
   },
   {
@@ -85,7 +98,7 @@ export const LEAGUES: LeagueDef[] = [
     country: "Spain",
     flag: "🇪🇸",
     rank: 3,
-    ids: { footballData: "PD", theSportsDb: "4335", apiFootball: 140 },
+    ids: { footballData: "PD", theSportsDb: "4335", apiFootball: 140, sportyBet: "sr:tournament:8" },
     archive: { footballDataUk: "SP1" },
   },
   {
@@ -96,7 +109,7 @@ export const LEAGUES: LeagueDef[] = [
     country: "Italy",
     flag: "🇮🇹",
     rank: 4,
-    ids: { footballData: "SA", theSportsDb: "4332", apiFootball: 135 },
+    ids: { footballData: "SA", theSportsDb: "4332", apiFootball: 135, sportyBet: "sr:tournament:23" },
     archive: { footballDataUk: "I1" },
   },
   {
@@ -107,7 +120,7 @@ export const LEAGUES: LeagueDef[] = [
     country: "Germany",
     flag: "🇩🇪",
     rank: 5,
-    ids: { footballData: "BL1", theSportsDb: "4331", apiFootball: 78 },
+    ids: { footballData: "BL1", theSportsDb: "4331", apiFootball: 78, sportyBet: "sr:tournament:35" },
     archive: { footballDataUk: "D1" },
   },
   {
@@ -118,7 +131,7 @@ export const LEAGUES: LeagueDef[] = [
     country: "France",
     flag: "🇫🇷",
     rank: 6,
-    ids: { footballData: "FL1", theSportsDb: "4334", apiFootball: 61 },
+    ids: { footballData: "FL1", theSportsDb: "4334", apiFootball: 61, sportyBet: "sr:tournament:34" },
     archive: { footballDataUk: "F1" },
   },
   {
@@ -134,7 +147,7 @@ export const LEAGUES: LeagueDef[] = [
     // never publish a pick. 4827 is "Nigerian NPFL". Verified by lookup, not
     // assumed: TheSportsDB ids are opaque integers and a wrong one fails
     // silently as an empty result rather than an error.
-    ids: { theSportsDb: "4827", apiFootball: 399 },
+    ids: { theSportsDb: "4827", apiFootball: 399, sportyBet: "sr:tournament:2112" },
     archive: { sportApi: 2060 },
   },
   {
@@ -145,7 +158,7 @@ export const LEAGUES: LeagueDef[] = [
     country: "England",
     flag: "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
     rank: 8,
-    ids: { footballData: "ELC", theSportsDb: "4329", apiFootball: 40 },
+    ids: { footballData: "ELC", theSportsDb: "4329", apiFootball: 40, sportyBet: "sr:tournament:18" },
     archive: { footballDataUk: "E1" },
   },
   {
@@ -156,7 +169,7 @@ export const LEAGUES: LeagueDef[] = [
     country: "Netherlands",
     flag: "🇳🇱",
     rank: 9,
-    ids: { footballData: "DED", theSportsDb: "4337", apiFootball: 88 },
+    ids: { footballData: "DED", theSportsDb: "4337", apiFootball: 88, sportyBet: "sr:tournament:37" },
     archive: { footballDataUk: "N1" },
   },
   {
@@ -182,7 +195,7 @@ export const LEAGUES: LeagueDef[] = [
     // American-football league, which would have filed its fixtures under CAF
     // Champions League. Omitting the id is strictly better than a wrong one —
     // the adapter skips the competition instead of mislabelling another sport.
-    ids: { apiFootball: 12 },
+    ids: { apiFootball: 12, sportyBet: "sr:tournament:1054" },
     archive: { sportApi: 1054 },
   },
   {
@@ -193,7 +206,7 @@ export const LEAGUES: LeagueDef[] = [
     country: "Brazil",
     flag: "🇧🇷",
     rank: 12,
-    ids: { footballData: "BSA", theSportsDb: "4351", apiFootball: 71 },
+    ids: { footballData: "BSA", theSportsDb: "4351", apiFootball: 71, sportyBet: "sr:tournament:325" },
     archive: { footballDataUkCountry: { file: "BRA", league: "Serie A" } },
   },
 ];
