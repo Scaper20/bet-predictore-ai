@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Badge, ButtonLink } from "@/components/ui/primitives";
@@ -10,6 +11,7 @@ import {
 import { ModelPanel } from "@/components/match/model-panel";
 import { ValueCalculator } from "@/components/match/value-calculator";
 import { AddToSlip } from "@/components/match/add-to-slip";
+import { PricesPanel, PricesPanelSkeleton } from "@/components/match/prices-panel";
 import { AsianHandicapClient } from "@/components/match/asian-handicap-client";
 import { AnalysisPanel } from "@/components/match/analysis-panel";
 import { LiveWinProbabilityPanel } from "@/components/match/live-win-probability-panel";
@@ -178,6 +180,23 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
               wall — see the note in src/lib/gating.ts.
             */}
             <OutcomePanel prediction={prediction} />
+
+            {/*
+              The only numbers on this page a bookmaker produced. Streamed,
+              because two metered providers sit behind it and the rest of the
+              match must not wait on them.
+
+              DepthGate is soft — the children render server-side either way —
+              so this is a conversion wall, not a spend control. The spend
+              control is that both providers are fetched a whole competition
+              at a time and cached, so a thousand visitors to this page cost
+              exactly what one costs.
+            */}
+            <DepthGate reason="See the price you are actually being offered">
+              <Suspense fallback={<PricesPanelSkeleton />}>
+                <PricesPanel prediction={prediction} />
+              </Suspense>
+            </DepthGate>
 
             {/*
               Depth needs an account. Every market beyond 1X2 comes off the

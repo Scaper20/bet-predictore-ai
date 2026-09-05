@@ -59,6 +59,11 @@ export function AddToSlip({ prediction }: { prediction: Prediction }) {
             add({
               matchId: match.id,
               fixture: `${match.home.name} v ${match.away.name}`,
+              // Kept apart as well as joined: the slip needs the display
+              // string, and matching this fixture to a bookmaker's needs the
+              // two clubs without having to split it back apart.
+              homeName: match.home.name,
+              awayName: match.away.name,
               league: match.league.name,
               kickoff: match.kickoff,
               market: pick.market,
