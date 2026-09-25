@@ -46,3 +46,63 @@ in Phase 3.
 Swift/SwiftUI vs. Capacitor vs. React Native). Per the directive, the Manager will
 not lock this in without confirming with Researcher findings and bringing the
 recommendation for explicit sign-off. Phase 2 (Design) is blocked on this.
+
+## 2026-09-25 — Research stream 1 complete: codebase, Supabase, technical approach
+
+**Researcher findings (task #2, full detail in agent transcript):**
+
+- Stack confirmed: Next.js 16 (App Router) / React 19 / TypeScript / Tailwind v4,
+  Supabase Auth + Postgres (project `liciklbcvnkttukuydxi`, confirmed live and
+  MCP-accessible), Paystack for billing (not Flutterwave/Stripe), Claude
+  (`claude-opus-5`) used server-side only to rewrite a deterministic Dixon-Coles
+  output into prose — never to invent stats. This backend is reusable as-is behind
+  any client.
+- The shipped mobile-responsive redesign (`bottom-nav.tsx`, `mobile-drawer.tsx`,
+  `env(safe-area-inset-bottom)` handling) lives on `dev`, not yet merged to
+  production, and is real, tested, phone-width UI — not a prototype.
+- No PWA plumbing exists yet (no manifest, no service worker) — irrelevant to
+  Capacitor viability but noted as a gap either way.
+- Supabase's tracked migration history is empty despite 14 local migration files and
+  11 live tables — schema was likely applied outside the CLI migration flow. Flagged
+  so nobody assumes `supabase/migrations/` is an authoritative replay of the live
+  schema without verifying first.
+- Paystack webhook subscription/invoice field handling was implemented from general
+  knowledge and never verified against live Paystack payloads per its own code
+  comment — pre-existing risk, relevant to any iOS entitlement work built on top of
+  it.
+
+**Recommendation (Researcher → Manager, not yet a decision):** Capacitor, wrapping
+the existing `dev` responsive app, as the fastest path to TestFlight — native
+Swift/SwiftUI positioned as a possible later upgrade once iOS product-market fit is
+proven. Rationale: near-full reuse of the real, already-built mobile UI; zero
+backend changes needed either way; and it's the only option where meaningful
+build/lint/test iteration is possible inside this Linux container today. Cost: a
+webview-based IAP bridge (shared with React Native; only native Swift avoids it, at
+the price of a full UI rebuild).
+
+**Escalation — guardrail conflict found in the existing codebase, needs an explicit
+ruling before Phase 2/3:** `src/app/(app)/[sport]/slip/page.tsx` ("Selection
+Builder") lets users combine model picks, compute a combined probability, enter
+"bookmaker odds," pulls a live SportyBet odds feed, and exports a downloadable
+branded slip image. The code shows a prior, more literal booking-code feature was
+already removed for compliance reasons — but this screen still names a specific
+bookmaker and produces a shareable slip-style artifact, which sits close to (or
+across) guardrail #1 above. **Needs a Manager/human-owner ruling**: ship as-is,
+strip the SportyBet branding/rename it, or cut it from the iOS build entirely. This
+does not block continuing Phase 1 research but must be resolved before Design work
+touches this flow.
+
+**Infrastructure gap confirmed:** no macOS/Xcode in this container, for any of the
+three approaches — the team needs a macOS build machine or cloud-Mac CI (GitHub
+Actions macOS runners, Bitrise, Codemagic, or EAS) provisioned before any TestFlight
+build is possible. Recommend provisioning this in parallel with the approach
+decision rather than after.
+
+**App Store IAP gap confirmed as material, not cosmetic:** current billing is
+entirely Paystack (hosted checkout + webhook entitlements). Apple Guideline 3.1.1
+requires digital subscriptions to go through StoreKit in most cases — this means
+either a dual-billing system with entitlement reconciliation, or a bigger billing
+rework, either way needing explicit human-owner sign-off before Development starts.
+
+Still awaiting research stream 2 (App Store guidelines / Nigerian-SA ad law / Claude
+Code tooling) before the Manager brings a single consolidated recommendation.
