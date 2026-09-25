@@ -106,3 +106,79 @@ rework, either way needing explicit human-owner sign-off before Development star
 
 Still awaiting research stream 2 (App Store guidelines / Nigerian-SA ad law / Claude
 Code tooling) before the Manager brings a single consolidated recommendation.
+
+## 2026-09-25 — Research stream 2 complete; Phase 1 closed; Manager recommendation
+
+**Researcher findings (task #3, full detail in agent transcript):**
+
+- **Apple guidelines:** No wagering mechanic means guideline 5.3 (gambling) shouldn't
+  classify BetriX as a gambling app; live precedent apps (BettingPros, Outlier) prove
+  odds/analytics apps pass review with the right vocabulary. Apple moved to a 5-tier
+  age system (4+/9+/13+/16+/18+, mandatory since Jan 31 2026) with Gambling and
+  Contests now separate questionnaire categories — real risk that answering the
+  questionnaire "honestly-minimal" (no real-money wagering) auto-computes a rating
+  *below* 18+, which would recreate guardrail #2's exact failure mode by accident.
+  IAP: guideline 3.1.1 confirmed — the existing Paystack web subscription **cannot**
+  unlock iOS features directly; a native StoreKit purchase path is required.
+- **Nigeria/SA law:** Nigeria has a new unified gambling-ad framework (ARCON+FSGRN
+  MoU, effective April 2026, ~5 months old — enforcement interpretation still
+  forming). South Africa's NGB/ARB are actively tightening gambling-ad rules, and —
+  important live signal — the South African Bookmakers Association has **publicly
+  called for unregulated prediction/tipster apps to be treated as part of the
+  illegal offshore gambling market**. This is an active regulatory pressure point
+  aimed at exactly BetriX's category, not a settled or hypothetical risk. Researcher
+  flagged this section as its lowest-confidence, least-sourced area and recommends a
+  real NG/SA legal review before submission.
+- **PuntrrAI verification — upgraded from competitive brief to primary source:**
+  confirmed live listing (App Store id6752799419, developer Playcope (Pty) Ltd),
+  displayed age rating **13+**; PuntrrAI's own privacy policy/ToS (Section 1.1)
+  requires users be 18+, and Section 1.11 explicitly describes an "automated booking
+  code service" that "acts as an intermediary for third-party gambling platforms."
+  Both the age-rating mismatch and the booking-code claim are now independently
+  confirmed with primary sources, not secondhand. A live App Store review also
+  corroborates the "can't cancel, kept charging after I deleted the app" complaint.
+- **Tooling:** Figma MCP is already connected and usable — Designer can start
+  immediately, no setup needed. An uninstalled Figma plugin bundle includes a
+  `figma-swiftui` skill (SwiftUI code generation from Figma designs) — recommended
+  for enabling regardless of build approach, since it also supports a possible later
+  native upgrade. No iOS/Swift/Xcode/App Store Connect/TestFlight/Fastlane skill or
+  plugin exists in the catalog — confirmed gap, not a search miss. Independently
+  reconfirms stream 1: no Xcode/simulator/codesigning/TestFlight upload is possible
+  from this or any Claude Code cloud session — packaging needs a macOS CI runner or
+  attached Mac.
+
+**Manager's consolidated build-approach recommendation, for the human owner:**
+**Capacitor**, wrapping the existing `dev`-branch responsive Next.js app for v1, with
+native Swift/SwiftUI kept open as a fast-follow once iOS product-market fit and
+budget justify a rebuild (the newly-found `figma-swiftui` tooling would materially
+help that transition later). Both research streams converge here independently:
+stream 1 on reuse/timeline/testability grounds, stream 2 by confirming IAP work is
+required either way and that no native-specific tooling exists yet to offset
+Capacitor's speed advantage. **Not locking this in — awaiting explicit human-owner
+confirmation per the escalation rule**, as required before Phase 2 (Design) starts.
+
+**Phase 1 (Research & Scoping) marked complete on the task board.** Phase 2 remains
+gated on human sign-off below, not just task-graph completion — no Designer work
+will start until that lands.
+
+**Consolidated list of decisions needing explicit human-owner sign-off before Phase 2/3:**
+1. **Build approach** — Capacitor (recommended) vs. native Swift/SwiftUI vs. React Native.
+2. **"Selection Builder" slip screen** (`src/app/(app)/[sport]/slip/page.tsx`) —
+   ship on iOS as-is, strip the SportyBet branding/rename it, or cut it from the iOS
+   build entirely. Directly relevant now that PuntrrAI's own ToS confirms this is
+   exactly the pattern regulators/reviewers scrutinize.
+3. **iOS billing/IAP structure** — dual billing (Paystack on web, StoreKit on iOS)
+   with entitlement reconciliation, vs. a broader billing rework. Affects margins:
+   Apple's commission sits on top of the existing ₦700/₦3,500/₦12,000 tiers.
+4. **macOS build infrastructure** — a paid cloud-Mac CI service (GitHub Actions
+   macOS runners, Bitrise, Codemagic) or a physical Mac; required before any
+   TestFlight build regardless of approach, so provisioning it now in parallel is
+   recommended rather than discovering the gap during Phase 3.
+5. **Commissioning a real NG/SA legal review** of the "informational, not gambling"
+   positioning — recommended given the researcher's low confidence on this section
+   and the live SABA pressure signal; not required to start Phase 2, but should not
+   wait until submission.
+
+Lower-stakes, non-blocking recommendation: enable the Figma plugin bundle
+(`figma-swiftui` + design-to-code/code-connect skills) now so the Designer has it
+available from day one of Phase 2.
