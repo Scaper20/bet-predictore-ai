@@ -469,8 +469,13 @@ export interface WhatsappDigestRow {
   createdAt: string;
 }
 
-/** Most recent digests, newest first — today's (if generated) is rows[0]. */
-export async function getWhatsappDigests(limit = 14): Promise<WhatsappDigestRow[]> {
+/**
+ * Most recent digests, newest first — today's (if generated) is rows[0].
+ * Nothing is ever deleted from whatsapp_digests; this only caps how far back
+ * the admin page reads. A year's worth of one-row-a-day is still a tiny
+ * query, so the cap is generous rather than a real pagination boundary.
+ */
+export async function getWhatsappDigests(limit = 365): Promise<WhatsappDigestRow[]> {
   const admin = supabaseAdmin();
   const { data } = await admin
     .from("whatsapp_digests")
