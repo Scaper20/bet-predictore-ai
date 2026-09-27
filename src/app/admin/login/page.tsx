@@ -40,7 +40,7 @@ export default async function AdminLoginPage() {
       ) : (
         <div className="card mt-6 p-6">
           <Suspense>
-            <LoginForm defaultNext="/admin" showSignUpLink={false} />
+            <LoginForm defaultNext="/admin" showSignUpLink={false} showSocialAuth={false} />
           </Suspense>
         </div>
       )}

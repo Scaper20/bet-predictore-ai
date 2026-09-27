@@ -5,13 +5,15 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { signIn, type AuthActionState } from "@/app/actions/auth";
 import { Button, Spinner } from "@/components/ui/primitives";
+import { SocialAuthButtons } from "@/components/auth/social-auth-buttons";
 
 const initialState: AuthActionState = { error: null };
 
 export function LoginForm({
   defaultNext = "/account",
   showSignUpLink = true,
-}: { defaultNext?: string; showSignUpLink?: boolean } = {}) {
+  showSocialAuth = true,
+}: { defaultNext?: string; showSignUpLink?: boolean; showSocialAuth?: boolean } = {}) {
   const searchParams = useSearchParams();
   const next = searchParams.get("next") ?? defaultNext;
   const [state, formAction, pending] = useActionState(signIn, initialState);
@@ -20,6 +22,8 @@ export function LoginForm({
 
   return (
     <div className="space-y-6">
+      {showSocialAuth && <SocialAuthButtons next={next} />}
+
       <form action={formAction} className="space-y-4">
         <input type="hidden" name="next" value={next} />
 

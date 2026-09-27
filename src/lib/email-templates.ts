@@ -72,6 +72,24 @@ function escapeHtml(value: string): string {
     .replace(/'/g, "&#39;");
 }
 
+export function whatsappDigestReadyEmail(opts: { hasPicks: boolean; messageCount: number }): {
+  subject: string;
+  html: string;
+} {
+  return {
+    subject: opts.hasPicks ? "Today's WhatsApp digest is ready" : "No pick today — WhatsApp digest ready",
+    html: emailLayout(`
+      <p style="margin:0 0 12px;font-size:17px;font-weight:700;">${opts.hasPicks ? "Today's digest is ready" : "No pick today"}</p>
+      <p style="margin:0;">${
+        opts.hasPicks
+          ? `${opts.messageCount} message${opts.messageCount === 1 ? "" : "s"} ready to paste into the WhatsApp community.`
+          : "Nothing cleared the sample-size bar today — a single no-pick message is ready to paste, if you want to send it."
+      }</p>
+      ${button(`${SITE_URL}/admin/whatsapp-digest`, "Open in admin dashboard")}
+    `),
+  };
+}
+
 export function newTicketNotificationEmail(opts: {
   subject: string;
   fromEmail: string;

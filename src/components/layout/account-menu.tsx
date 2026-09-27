@@ -27,7 +27,15 @@ const TIER_LABEL: Record<Tier, string> = {
  * There is no Dialog primitive in this codebase and a menu of five links does
  * not justify introducing one.
  */
-export function AccountMenu({ tier, email }: { tier: Tier; email: string | null }) {
+export function AccountMenu({
+  tier,
+  email,
+  displayName,
+}: {
+  tier: Tier;
+  email: string | null;
+  displayName: string | null;
+}) {
   const ref = useRef<HTMLDetailsElement>(null);
 
   useEffect(() => {
@@ -54,7 +62,8 @@ export function AccountMenu({ tier, email }: { tier: Tier; email: string | null 
     };
   }, []);
 
-  const initial = (email?.trim()[0] ?? "?").toUpperCase();
+  const name = displayName?.trim() || null;
+  const initial = (name?.[0] ?? email?.trim()[0] ?? "?").toUpperCase();
   const paid = tier !== "free";
 
   return (
@@ -68,7 +77,8 @@ export function AccountMenu({ tier, email }: { tier: Tier; email: string | null 
 
       <div className="card absolute right-0 z-50 mt-2 w-64 p-2 shadow-2xl">
         <div className="border-b border-line px-3 pb-3 pt-2">
-          <p className="truncate text-sm font-semibold">{email ?? "Signed in"}</p>
+          <p className="truncate text-sm font-semibold">{name ?? email ?? "Signed in"}</p>
+          {name && email && <p className="truncate text-xs text-ink-dim">{email}</p>}
           <Badge tone={paid ? "brand" : "neutral"} className="mt-2">
             {TIER_LABEL[tier]}
           </Badge>
