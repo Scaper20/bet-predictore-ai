@@ -1,0 +1,141 @@
+import type { Tier } from "@/lib/entitlements";
+
+export type CampaignType = "warm_checkin" | "survey_subscribed" | "survey_free" | "announce_whatsapp";
+export type SurveyType = Extract<CampaignType, "survey_subscribed" | "survey_free">;
+
+/**
+ * Which survey a user's current tier puts them in — a lighter-weight call
+ * than entitlements.ts's grace-period-aware resolution, and deliberately
+ * so: this decides which of two surveys to email, not whether to grant
+ * access, so "just lapsed yesterday" landing in the free-user bucket a day
+ * early is a fine approximation, not a correctness bug.
+ */
+export function classifySegment(sub: { tier: string; status: string } | null): "subscribed" | "free" {
+  if (!sub) return "free";
+  const paidTier = sub.tier === "pass" || sub.tier === "pro" || sub.tier === "vip";
+  const liveStatus = sub.status === "active" || sub.status === "past_due";
+  return paidTier && liveStatus ? "subscribed" : "free";
+}
+
+export interface SurveyQuestion {
+  id: string;
+  prompt: string;
+  type: "scale" | "nps" | "choice" | "text";
+  required: boolean;
+  options?: { value: string; label: string }[];
+  placeholder?: string;
+}
+
+const USE_CASE_OPTIONS = [
+  { value: "team", label: "Following my team" },
+  { value: "value", label: "Finding value bets" },
+  { value: "accas", label: "Building accumulators" },
+  { value: "live", label: "Live scores & live odds" },
+];
+
+/** ~6 questions, mostly single-tap — aimed at under 3 minutes end to end. */
+export const SURVEY_QUESTIONS: Record<SurveyType, SurveyQuestion[]> = {
+  survey_subscribed: [
+    {
+      id: "satisfaction",
+      prompt: "Overall, how satisfied are you with BetriX so far?",
+      type: "scale",
+      required: true,
+      options: [
+        { value: "1", label: "Not satisfied" },
+        { value: "2", label: "Could be better" },
+        { value: "3", label: "It's fine" },
+        { value: "4", label: "Good" },
+        { value: "5", label: "Love it" },
+      ],
+    },
+    {
+      id: "nps",
+      prompt: "How likely are you to recommend BetriX to a friend? (0 = not at all, 10 = definitely)",
+      type: "nps",
+      required: true,
+    },
+    {
+      id: "use_case",
+      prompt: "What do you use BetriX for most?",
+      type: "choice",
+      required: true,
+      options: USE_CASE_OPTIONS,
+    },
+    {
+      id: "other_services",
+      prompt: "Do you also use another prediction site or tipster alongside BetriX? If so, which?",
+      type: "text",
+      required: false,
+      placeholder: "e.g. none, or the name of the other service",
+    },
+    {
+      id: "improvement",
+      prompt: "What's the one thing that would make your subscription more worth it?",
+      type: "text",
+      required: false,
+      placeholder: "More leagues, better accas, clearer stats…",
+    },
+    {
+      id: "anything_else",
+      prompt: "Anything else you'd like Scaper to know?",
+      type: "text",
+      required: false,
+    },
+  ],
+  survey_free: [
+    {
+      id: "blocker",
+      prompt: "What's the main reason you haven't subscribed yet?",
+      type: "choice",
+      required: true,
+      options: [
+        { value: "price", label: "Price" },
+        { value: "unproven", label: "Not sure it's worth it yet" },
+        { value: "free_enough", label: "The free picks are enough for me" },
+        { value: "low_frequency", label: "I don't bet often enough to need more" },
+        { value: "other", label: "Something else" },
+      ],
+    },
+    {
+      id: "convince",
+      prompt: "What would most convince you to subscribe?",
+      type: "choice",
+      required: true,
+      options: [
+        { value: "price", label: "A lower price" },
+        { value: "proof", label: "More proof it actually works" },
+        { value: "trial", label: "A free trial" },
+        { value: "features", label: "More leagues or features" },
+        { value: "nothing", label: "Nothing — I'm happy on the free plan" },
+      ],
+    },
+    {
+      id: "nps",
+      prompt: "How likely are you to recommend BetriX to a friend, even on the free plan? (0 = not at all, 10 = definitely)",
+      type: "nps",
+      required: true,
+    },
+    {
+      id: "use_case",
+      prompt: "What do you use BetriX for most?",
+      type: "choice",
+      required: true,
+      options: USE_CASE_OPTIONS,
+    },
+    {
+      id: "improvement",
+      prompt: "What's one thing BetriX could do better?",
+      type: "text",
+      required: false,
+    },
+    {
+      id: "anything_else",
+      prompt: "Anything else you'd like Scaper to know?",
+      type: "text",
+      required: false,
+    },
+  ],
+};
+
+export const TIER_LABEL: Record<Tier, string> = { free: "Free", pass: "Weekend Pass", pro: "Pro", vip: "VIP" };

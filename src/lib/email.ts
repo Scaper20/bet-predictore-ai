@@ -17,13 +17,13 @@ function client() {
  * succeed/ack even if RESEND_API_KEY is unset or Resend's API is down. This
  * function swallows every failure internally and never rejects.
  */
-export async function sendEmail(opts: { to: string; subject: string; html: string }): Promise<void> {
+export async function sendEmail(opts: { to: string; subject: string; html: string; from?: string }): Promise<void> {
   if (!apiKey) {
     console.error("sendEmail skipped — RESEND_API_KEY not configured:", opts.subject);
     return;
   }
   try {
-    await client().emails.send({ from: FROM, to: opts.to, subject: opts.subject, html: opts.html });
+    await client().emails.send({ from: opts.from ?? FROM, to: opts.to, subject: opts.subject, html: opts.html });
   } catch (err) {
     console.error("sendEmail failed:", err);
   }
