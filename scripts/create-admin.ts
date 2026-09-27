@@ -12,12 +12,17 @@
  * Usage:
  *   npx tsx scripts/create-admin.ts --email=you@example.com --create
  *   npx tsx scripts/create-admin.ts --email=you@example.com
+ *   ADMIN_PASSWORD='...' npx tsx scripts/create-admin.ts --email=you@example.com --create
  *
  * --create makes a brand-new login (a dedicated admin-only credential, not
- * tied to any existing site account) with a random password printed ONCE
- * below — never written to disk or git. Without --create, promotes an
- * existing account, found by matching profiles.email (kept in sync with
- * auth.users.email by 0003_profiles_email_sync.sql).
+ * tied to any existing site account). By default it sets a random password
+ * printed ONCE below — never written to disk or git. To set a specific
+ * password instead (e.g. one you've already chosen and will store in a
+ * password manager), pass it via the ADMIN_PASSWORD environment variable —
+ * deliberately not a --password= flag, since CLI args land in shell history
+ * and process listings, which a password never should. Without --create,
+ * promotes an existing account, found by matching profiles.email (kept in
+ * sync with auth.users.email by 0003_profiles_email_sync.sql).
  *
  * This is a real, hard-to-reverse action against whichever Supabase project
  * your .env points at — confirm that's genuinely the intended project
@@ -62,7 +67,12 @@ async function main() {
 
   let userId: string;
   if (create) {
-    const password = crypto.randomBytes(24).toString("base64url");
+    const chosenPassword = process.env.ADMIN_PASSWORD;
+    if (chosenPassword && chosenPassword.length < 12) {
+      console.error("ADMIN_PASSWORD is too short — use at least 12 characters.");
+      process.exit(1);
+    }
+    const password = chosenPassword ?? crypto.randomBytes(24).toString("base64url");
     const { data, error } = await admin.auth.admin.createUser({ email, password, email_confirm: true });
     if (error || !data.user) {
       console.error("Failed to create user:", error?.message);
@@ -70,7 +80,11 @@ async function main() {
     }
     userId = data.user.id;
     console.log(`Created a new login for ${email}.`);
-    console.log(`TEMPORARY PASSWORD (shown once — not stored anywhere): ${password}`);
+    if (chosenPassword) {
+      console.log(`Password set from ADMIN_PASSWORD — not printed, not stored anywhere by this script.`);
+    } else {
+      console.log(`TEMPORARY PASSWORD (shown once — not stored anywhere): ${password}`);
+    }
     console.log(`Sign in at /admin/login, then change this password from /account immediately.`);
   } else {
     const { data: profile, error } = await admin.from("profiles").select("id").ilike("email", email).maybeSingle();

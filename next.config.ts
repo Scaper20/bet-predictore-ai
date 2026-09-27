@@ -13,6 +13,23 @@ import { DEFAULT_SPORT } from "./src/lib/sports";
 const MOVED = ["live", "fixtures", "predictions", "trends", "track-record", "slip"];
 
 const nextConfig: NextConfig = {
+  async headers() {
+    const securityHeaders = [
+      // Defense in depth: same intent as robots.txt's disallow and the
+      // admin layout's `robots: { index: false }` metadata, but an HTTP
+      // header a search engine or crawler can't miss by skipping robots.txt
+      // or failing to parse the <meta> tag out of the rendered HTML.
+      { key: "X-Content-Type-Options", value: "nosniff" },
+      { key: "X-Frame-Options", value: "DENY" },
+      { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+      { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+      { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
+    ];
+    return [
+      { source: "/(.*)", headers: securityHeaders },
+      { source: "/admin/:path*", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" }] },
+    ];
+  },
   async redirects() {
     return [
       ...MOVED.map((path) => ({

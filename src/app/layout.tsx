@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Public_Sans, Big_Shoulders, JetBrains_Mono } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import { SITE_URL as SITE } from "@/lib/site-url";
 import { JsonLd } from "@/components/seo/json-ld";
 import "./globals.css";
@@ -118,6 +119,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         />
         <JsonLd data={ORG_JSON_LD} />
         {children}
+        <Analytics />
       </body>
     </html>
   );
