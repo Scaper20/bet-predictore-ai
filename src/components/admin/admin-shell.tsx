@@ -9,8 +9,11 @@ import { ButtonLink } from "@/components/ui/primitives";
 const NAV = [
   { href: "/admin", label: "Dashboard" },
   { href: "/admin/tickets", label: "Tickets" },
+  { href: "/admin/feedback", label: "Feedback" },
   { href: "/admin/users", label: "Users" },
+  { href: "/admin/payments", label: "Payments" },
   { href: "/admin/model-performance", label: "Model performance" },
+  { href: "/admin/audit-log", label: "Audit log" },
   { href: "/admin/team", label: "Team" },
 ];
 

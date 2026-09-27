@@ -6,6 +6,9 @@ import { Badge, EmptyState } from "@/components/ui/primitives";
 export const metadata: Metadata = { title: "Users" };
 
 const PAGE_SIZE = 50;
+const PAID_TIERS = ["pass", "pro", "vip"] as const;
+const TIERS = ["free", ...PAID_TIERS] as const;
+type TierFilter = (typeof TIERS)[number];
 
 interface UserRow {
   id: string;
@@ -16,26 +19,59 @@ interface UserRow {
   subscriptions: { tier: string; status: string }[] | { tier: string; status: string } | null;
 }
 
+function isTierFilter(v: string | undefined): v is TierFilter {
+  return !!v && (TIERS as readonly string[]).includes(v);
+}
+
 export default async function AdminUsersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; page?: string }>;
+  searchParams: Promise<{ q?: string; page?: string; tier?: string }>;
 }) {
-  const { q, page: pageParam } = await searchParams;
+  const { q, page: pageParam, tier: tierParam } = await searchParams;
+  const tier = isTierFilter(tierParam) ? tierParam : undefined;
   const page = Math.max(1, Number(pageParam) || 1);
   const from = (page - 1) * PAGE_SIZE;
   const to = from + PAGE_SIZE - 1;
 
-  let query = supabaseAdmin()
+  const admin = supabaseAdmin();
+
+  // Paid tiers filter at the DB level via an inner join, so the range/count
+  // below stay correct regardless of how many users this app has.
+  // "free" means "no subscriptions row, or one that's never left the
+  // default tier" — expressed as "id not in (every paid user)" rather than
+  // a join, since there's no single column to filter on for "absent or free".
+  let excludeIds: string[] | null = null;
+  if (tier === "free") {
+    const { data: paidRows } = await admin.from("subscriptions").select("user_id").in("tier", PAID_TIERS);
+    excludeIds = (paidRows ?? []).map((r) => r.user_id as string);
+  }
+
+  let query = admin
     .from("profiles")
-    .select("id, email, display_name, created_at, last_seen_at, subscriptions(tier, status)")
+    .select(
+      tier && tier !== "free"
+        ? "id, email, display_name, created_at, last_seen_at, subscriptions!inner(tier, status)"
+        : "id, email, display_name, created_at, last_seen_at, subscriptions(tier, status)",
+    )
     .order("created_at", { ascending: false })
     .range(from, to);
 
   if (q) query = query.ilike("email", `%${q}%`);
+  if (tier && tier !== "free") query = query.eq("subscriptions.tier", tier);
+  if (excludeIds && excludeIds.length > 0) query = query.not("id", "in", `(${excludeIds.join(",")})`);
 
   const { data } = await query;
   const users = (data ?? []) as unknown as UserRow[];
+
+  const qs = (overrides: Record<string, string | undefined>) => {
+    const merged = { q, tier, page: undefined as string | undefined, ...overrides };
+    const params = new URLSearchParams();
+    if (merged.q) params.set("q", merged.q);
+    if (merged.tier) params.set("tier", merged.tier);
+    if (merged.page) params.set("page", merged.page);
+    return params.toString();
+  };
 
   return (
     <div className="space-y-6">
@@ -49,7 +85,26 @@ export default async function AdminUsersPage({
             placeholder="Search by email…"
             className="w-64 rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm outline-none focus:border-brand/50"
           />
+          {tier && <input type="hidden" name="tier" value={tier} />}
         </form>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        <a
+          href={`?${qs({ tier: undefined })}`}
+          className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${!tier ? "border-brand/40 bg-brand/10 text-brand" : "border-line text-ink-muted hover:text-ink"}`}
+        >
+          All
+        </a>
+        {TIERS.map((t) => (
+          <a
+            key={t}
+            href={`?${qs({ tier: t })}`}
+            className={`rounded-full border px-3 py-1 text-xs font-medium capitalize transition-colors ${tier === t ? "border-brand/40 bg-brand/10 text-brand" : "border-line text-ink-muted hover:text-ink"}`}
+          >
+            {t}
+          </a>
+        ))}
       </div>
 
       {users.length === 0 ? (
@@ -86,12 +141,12 @@ export default async function AdminUsersPage({
 
       <div className="flex justify-end gap-2 text-xs">
         {page > 1 && (
-          <a href={`?q=${encodeURIComponent(q ?? "")}&page=${page - 1}`} className="text-ink-muted underline underline-offset-2 hover:text-ink">
+          <a href={`?${qs({ page: String(page - 1) })}`} className="text-ink-muted underline underline-offset-2 hover:text-ink">
             Previous
           </a>
         )}
         {users.length === PAGE_SIZE && (
-          <a href={`?q=${encodeURIComponent(q ?? "")}&page=${page + 1}`} className="text-ink-muted underline underline-offset-2 hover:text-ink">
+          <a href={`?${qs({ page: String(page + 1) })}`} className="text-ink-muted underline underline-offset-2 hover:text-ink">
             Next
           </a>
         )}
