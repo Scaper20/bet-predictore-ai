@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { AdminTable, AdminTableHead, AdminTableRow, AdminTableCell } from "@/components/admin/admin-table";
+import { GiftSubscriptionButton } from "@/components/admin/gift-subscription-button";
 import { Badge, EmptyState } from "@/components/ui/primitives";
 
 export const metadata: Metadata = { title: "Users" };
@@ -137,6 +138,11 @@ export default async function AdminUsersPage({
                         : "Never seen"}
                     </span>
                   </div>
+                  {u.email && (
+                    <div className="mt-3 border-t border-line pt-3">
+                      <GiftSubscriptionButton userId={u.id} userEmail={u.email} />
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -144,7 +150,7 @@ export default async function AdminUsersPage({
 
           <div className="hidden sm:block">
             <AdminTable>
-              <AdminTableHead columns={["Email", "Name", "Plan", "Joined", "Last seen"]} />
+              <AdminTableHead columns={["Email", "Name", "Plan", "Joined", "Last seen", ""]} />
               <tbody>
                 {users.map((u) => {
                   const sub = Array.isArray(u.subscriptions) ? u.subscriptions[0] : u.subscriptions;
@@ -165,6 +171,7 @@ export default async function AdminUsersPage({
                           ? new Date(u.last_seen_at).toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" })
                           : "Never"}
                       </AdminTableCell>
+                      <AdminTableCell>{u.email && <GiftSubscriptionButton userId={u.id} userEmail={u.email} />}</AdminTableCell>
                     </AdminTableRow>
                   );
                 })}

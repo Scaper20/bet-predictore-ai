@@ -1,6 +1,8 @@
 import "server-only";
 
 import { supabaseServer, supabaseConfigured } from "@/lib/supabase/server";
+import { activeGiftsFor } from "@/lib/subscription-gifts-feed";
+import { bestGiftTier, effectiveEntitlement } from "@/lib/subscription-gifts";
 
 export type Tier = "free" | "pass" | "pro" | "vip";
 
@@ -61,6 +63,44 @@ const ANON: Entitlement = { tier: "free", status: "none", signedIn: false, email
  * Returns `free` for logged-out visitors, missing config, or any lookup
  * failure — entitlement checks fail closed, never open.
  */
+type TierStatus = Pick<Entitlement, "tier" | "status">;
+const FREE_TIER: TierStatus = { tier: "free", status: "none" };
+
+/** The tier/status a real `subscriptions` row resolves to, with no
+ * knowledge of gifts — exactly the branching getEntitlement() used to do
+ * inline, pulled out so a live gift can be folded in afterward. */
+function resolveSubscriptionTier(
+  data: { tier: string; status: string; current_period_end: string | null; pass_expires_at: string | null } | null,
+): TierStatus {
+  // "none" is the only status meaning "never had a paid relationship" —
+  // active/past_due/cancelled all fall through to the expiry check below,
+  // which is what actually decides access.
+  if (!data || data.status === "none") return FREE_TIER;
+
+  if (data.tier === "pass") {
+    const expired = !data.pass_expires_at || new Date(data.pass_expires_at) < new Date();
+    return expired ? FREE_TIER : { tier: "pass", status: "active" };
+  }
+
+  // Pro/VIP: a cancelled-but-not-yet-lapsed, or past_due-but-in-grace-period,
+  // subscription keeps access through the period already paid for.
+  if (!data.current_period_end) {
+    // No period-end on record yet. Only safe to assume "still within the
+    // paid period" for a freshly active subscription — charge.success sets
+    // status:"active" without current_period_end; the paired
+    // subscription.create webhook (which sets it) can land slightly later.
+    // For past_due/cancelled with no period-end ever recorded, there's no
+    // paid-through date to honour.
+    return data.status === "active"
+      ? { tier: data.tier as Tier, status: data.status as Entitlement["status"] }
+      : FREE_TIER;
+  }
+  const expired = new Date(data.current_period_end) < new Date();
+  if (expired) return FREE_TIER;
+
+  return { tier: data.tier as Tier, status: data.status as Entitlement["status"] };
+}
+
 export async function getEntitlement(): Promise<Entitlement> {
   if (!supabaseConfigured) return ANON;
 
@@ -81,51 +121,19 @@ export async function getEntitlement(): Promise<Entitlement> {
     signedIn = true;
     email = user.email ?? null;
 
-    const [{ data }, { data: profile }] = await Promise.all([
+    const [{ data }, { data: profile }, gifts] = await Promise.all([
       supabase
         .from("subscriptions")
         .select("tier, status, current_period_end, pass_expires_at")
         .eq("user_id", user.id)
         .maybeSingle(),
       supabase.from("profiles").select("display_name").eq("id", user.id).maybeSingle(),
+      activeGiftsFor(user.id),
     ]);
     displayName = profile?.display_name ?? null;
 
-    // "none" is the only status meaning "never had a paid relationship" —
-    // active/past_due/cancelled all fall through to the expiry check below,
-    // which is what actually decides access.
-    if (!data || data.status === "none") return signedInFree(email, displayName);
-
-    if (data.tier === "pass") {
-      const expired = !data.pass_expires_at || new Date(data.pass_expires_at) < new Date();
-      return expired
-        ? signedInFree(email, displayName)
-        : { tier: "pass", status: "active", signedIn: true, email, displayName };
-    }
-
-    // Pro/VIP: a cancelled-but-not-yet-lapsed, or past_due-but-in-grace-period,
-    // subscription keeps access through the period already paid for.
-    if (!data.current_period_end) {
-      // No period-end on record yet. Only safe to assume "still within the
-      // paid period" for a freshly active subscription — charge.success sets
-      // status:"active" without current_period_end; the paired
-      // subscription.create webhook (which sets it) can land slightly later.
-      // For past_due/cancelled with no period-end ever recorded, there's no
-      // paid-through date to honour.
-      return data.status === "active"
-        ? { tier: data.tier as Tier, status: data.status, signedIn: true, email, displayName }
-        : signedInFree(email, displayName);
-    }
-    const expired = new Date(data.current_period_end) < new Date();
-    if (expired) return signedInFree(email, displayName);
-
-    return {
-      tier: data.tier as Tier,
-      status: data.status as Entitlement["status"],
-      signedIn: true,
-      email,
-      displayName,
-    };
+    const resolved = effectiveEntitlement(resolveSubscriptionTier(data), bestGiftTier(gifts));
+    return { ...resolved, signedIn: true, email, displayName };
   } catch {
     return signedIn ? signedInFree(email, displayName) : ANON;
   }
