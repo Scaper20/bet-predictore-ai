@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { signUp, type AuthActionState } from "@/app/actions/auth";
 import { Button, Spinner } from "@/components/ui/primitives";
+import { SocialAuthButtons } from "@/components/auth/social-auth-buttons";
 
 const initialState: AuthActionState = { error: null };
 
@@ -22,6 +23,8 @@ export function SignUpForm({
 
   return (
     <div className="space-y-6">
+      <SocialAuthButtons next={next} />
+
       <form action={formAction} className="space-y-4">
         <input type="hidden" name="next" value={next} />
 
