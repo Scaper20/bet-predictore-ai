@@ -77,13 +77,13 @@ export default async function AdminUsersPage({
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-display text-2xl font-bold">Users</h1>
-        <form className="flex gap-2">
+        <form className="flex w-full gap-2 sm:w-auto">
           <input
             type="search"
             name="q"
             defaultValue={q}
             placeholder="Search by email…"
-            className="w-64 rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm outline-none focus:border-brand/50"
+            className="w-full rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm outline-none focus:border-brand/50 sm:w-64"
           />
           {tier && <input type="hidden" name="tier" value={tier} />}
         </form>
@@ -110,33 +110,68 @@ export default async function AdminUsersPage({
       {users.length === 0 ? (
         <EmptyState icon="👤" title="No users found" description="No accounts match that search." />
       ) : (
-        <AdminTable>
-          <AdminTableHead columns={["Email", "Name", "Plan", "Joined", "Last seen"]} />
-          <tbody>
+        <>
+          {/* Mobile: stacked cards — five columns of a data table don't fit a
+              phone screen without hiding most of them behind a side-scroll. */}
+          <div className="space-y-3 sm:hidden">
             {users.map((u) => {
               const sub = Array.isArray(u.subscriptions) ? u.subscriptions[0] : u.subscriptions;
               return (
-                <AdminTableRow key={u.id}>
-                  <AdminTableCell>{u.email}</AdminTableCell>
-                  <AdminTableCell className="text-ink-muted">{u.display_name || "—"}</AdminTableCell>
-                  <AdminTableCell>
-                    <Badge tone={!sub || sub.tier === "free" ? "neutral" : "brand"}>
+                <div key={u.id} className="card p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-ink">{u.email}</p>
+                      {u.display_name && <p className="truncate text-xs text-ink-dim">{u.display_name}</p>}
+                    </div>
+                    <Badge tone={!sub || sub.tier === "free" ? "neutral" : "brand"} className="shrink-0">
                       {sub?.tier ?? "free"}
                     </Badge>
-                  </AdminTableCell>
-                  <AdminTableCell className="text-ink-muted">
-                    {new Date(u.created_at).toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" })}
-                  </AdminTableCell>
-                  <AdminTableCell className="text-ink-muted">
-                    {u.last_seen_at
-                      ? new Date(u.last_seen_at).toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" })
-                      : "Never"}
-                  </AdminTableCell>
-                </AdminTableRow>
+                  </div>
+                  <div className="mt-2 flex justify-between text-xs text-ink-muted">
+                    <span>
+                      Joined {new Date(u.created_at).toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" })}
+                    </span>
+                    <span>
+                      {u.last_seen_at
+                        ? `Seen ${new Date(u.last_seen_at).toLocaleDateString("en-NG", { day: "numeric", month: "short" })}`
+                        : "Never seen"}
+                    </span>
+                  </div>
+                </div>
               );
             })}
-          </tbody>
-        </AdminTable>
+          </div>
+
+          <div className="hidden sm:block">
+            <AdminTable>
+              <AdminTableHead columns={["Email", "Name", "Plan", "Joined", "Last seen"]} />
+              <tbody>
+                {users.map((u) => {
+                  const sub = Array.isArray(u.subscriptions) ? u.subscriptions[0] : u.subscriptions;
+                  return (
+                    <AdminTableRow key={u.id}>
+                      <AdminTableCell>{u.email}</AdminTableCell>
+                      <AdminTableCell className="text-ink-muted">{u.display_name || "—"}</AdminTableCell>
+                      <AdminTableCell>
+                        <Badge tone={!sub || sub.tier === "free" ? "neutral" : "brand"}>
+                          {sub?.tier ?? "free"}
+                        </Badge>
+                      </AdminTableCell>
+                      <AdminTableCell className="text-ink-muted">
+                        {new Date(u.created_at).toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" })}
+                      </AdminTableCell>
+                      <AdminTableCell className="text-ink-muted">
+                        {u.last_seen_at
+                          ? new Date(u.last_seen_at).toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" })
+                          : "Never"}
+                      </AdminTableCell>
+                    </AdminTableRow>
+                  );
+                })}
+              </tbody>
+            </AdminTable>
+          </div>
+        </>
       )}
 
       <div className="flex justify-end gap-2 text-xs">

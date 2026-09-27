@@ -11,6 +11,7 @@ const NAV = [
   { href: "/admin/tickets", label: "Tickets" },
   { href: "/admin/feedback", label: "Feedback" },
   { href: "/admin/users", label: "Users" },
+  { href: "/admin/traffic", label: "Traffic" },
   { href: "/admin/payments", label: "Payments" },
   { href: "/admin/model-performance", label: "Model performance" },
   { href: "/admin/audit-log", label: "Audit log" },
@@ -69,13 +70,26 @@ export function AdminShell({
 
         <div className="min-w-0 flex-1">
           <header className="border-b border-line bg-shell lg:hidden">
-            <div className="flex items-center justify-between px-4 py-3">
-              <span className="font-display text-base font-bold">
-                Betri<span className="text-brand">X</span> Admin
-              </span>
-              <ButtonLink href="/" variant="ghost" className="px-3 py-1.5 text-xs">
-                Live site
-              </ButtonLink>
+            <div className="flex items-center justify-between gap-2 px-4 py-3">
+              <div className="min-w-0">
+                <span className="font-display text-base font-bold">
+                  Betri<span className="text-brand">X</span> Admin
+                </span>
+                {/* Only place a signed-in mobile admin can see which account
+                    they're on or sign out — the desktop sidebar's identity +
+                    sign-out footer is lg:flex, invisible below that breakpoint. */}
+                <p className="truncate text-[11px] text-ink-dim">{identity.email}</p>
+              </div>
+              <div className="flex shrink-0 items-center gap-3">
+                <ButtonLink href="/" variant="ghost" className="px-3 py-1.5 text-xs">
+                  Live site
+                </ButtonLink>
+                <form action={signOut}>
+                  <button type="submit" className="text-xs text-ink-dim underline underline-offset-2 hover:text-ink">
+                    Sign out
+                  </button>
+                </form>
+              </div>
             </div>
             <nav className="flex gap-1 overflow-x-auto px-4 pb-3">
               {NAV.map((item) => {

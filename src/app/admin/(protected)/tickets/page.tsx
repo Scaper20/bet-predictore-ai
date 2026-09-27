@@ -66,30 +66,56 @@ export default async function AdminTicketsPage({
       {tickets.length === 0 ? (
         <EmptyState icon="💬" title="No tickets" description="Support requests submitted through the site's chat widget will show up here." />
       ) : (
-        <AdminTable>
-          <AdminTableHead columns={["Subject", "From", "Status", "Updated"]} />
-          <tbody>
+        <>
+          <div className="space-y-3 sm:hidden">
             {tickets.map((t) => {
               const profile = Array.isArray(t.profiles) ? t.profiles[0] : t.profiles;
               return (
-                <AdminTableRow key={t.id}>
-                  <AdminTableCell>
-                    <Link href={`/admin/tickets/${t.id}`} className="font-medium text-ink hover:text-brand">
-                      {t.subject}
-                    </Link>
-                  </AdminTableCell>
-                  <AdminTableCell className="text-ink-muted">{profile?.email ?? "—"}</AdminTableCell>
-                  <AdminTableCell>
-                    <Badge tone={STATUS_TONE[t.status] ?? "neutral"}>{t.status}</Badge>
-                  </AdminTableCell>
-                  <AdminTableCell className="text-ink-muted">
-                    {new Date(t.updated_at).toLocaleString("en-NG", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
-                  </AdminTableCell>
-                </AdminTableRow>
+                <Link key={t.id} href={`/admin/tickets/${t.id}`} className="card block p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="min-w-0 truncate text-sm font-medium text-ink">{t.subject}</p>
+                    <Badge tone={STATUS_TONE[t.status] ?? "neutral"} className="shrink-0">
+                      {t.status}
+                    </Badge>
+                  </div>
+                  <div className="mt-2 flex justify-between text-xs text-ink-muted">
+                    <span className="truncate">{profile?.email ?? "—"}</span>
+                    <span className="shrink-0">
+                      {new Date(t.updated_at).toLocaleString("en-NG", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                  </div>
+                </Link>
               );
             })}
-          </tbody>
-        </AdminTable>
+          </div>
+
+          <div className="hidden sm:block">
+            <AdminTable>
+              <AdminTableHead columns={["Subject", "From", "Status", "Updated"]} />
+              <tbody>
+                {tickets.map((t) => {
+                  const profile = Array.isArray(t.profiles) ? t.profiles[0] : t.profiles;
+                  return (
+                    <AdminTableRow key={t.id}>
+                      <AdminTableCell>
+                        <Link href={`/admin/tickets/${t.id}`} className="font-medium text-ink hover:text-brand">
+                          {t.subject}
+                        </Link>
+                      </AdminTableCell>
+                      <AdminTableCell className="text-ink-muted">{profile?.email ?? "—"}</AdminTableCell>
+                      <AdminTableCell>
+                        <Badge tone={STATUS_TONE[t.status] ?? "neutral"}>{t.status}</Badge>
+                      </AdminTableCell>
+                      <AdminTableCell className="text-ink-muted">
+                        {new Date(t.updated_at).toLocaleString("en-NG", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                      </AdminTableCell>
+                    </AdminTableRow>
+                  );
+                })}
+              </tbody>
+            </AdminTable>
+          </div>
+        </>
       )}
     </div>
   );

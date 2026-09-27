@@ -24,25 +24,52 @@ export default async function AdminPaymentsPage({
       {rows.length === 0 ? (
         <EmptyState icon="💳" title="No payments yet" description="Every Paystack transaction this app has been notified about will show up here." />
       ) : (
-        <AdminTable>
-          <AdminTableHead columns={["Customer", "Plan", "Amount", "Status", "Reference", "Date"]} />
-          <tbody>
+        <>
+          <div className="space-y-3 sm:hidden">
             {rows.map((p) => (
-              <AdminTableRow key={p.id}>
-                <AdminTableCell>{p.email ?? "—"}</AdminTableCell>
-                <AdminTableCell className="text-ink-muted">{p.plan}</AdminTableCell>
-                <AdminTableCell className="tnum font-medium">{naira(p.amountKobo / 100)}</AdminTableCell>
-                <AdminTableCell>
-                  <Badge tone={STATUS_TONE[p.status] ?? "neutral"}>{p.status}</Badge>
-                </AdminTableCell>
-                <AdminTableCell className="font-mono text-xs text-ink-dim">{p.reference}</AdminTableCell>
-                <AdminTableCell className="text-ink-muted">
-                  {new Date(p.createdAt).toLocaleString("en-NG", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
-                </AdminTableCell>
-              </AdminTableRow>
+              <div key={p.id} className="card p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <p className="min-w-0 truncate text-sm font-medium text-ink">{p.email ?? "—"}</p>
+                  <span className="tnum shrink-0 text-sm font-semibold text-ink">{naira(p.amountKobo / 100)}</span>
+                </div>
+                <div className="mt-2 flex items-center justify-between gap-2 text-xs text-ink-muted">
+                  <span className="truncate">{p.plan}</span>
+                  <Badge tone={STATUS_TONE[p.status] ?? "neutral"} className="shrink-0">
+                    {p.status}
+                  </Badge>
+                </div>
+                <div className="mt-2 flex justify-between gap-2 text-xs text-ink-dim">
+                  <span className="truncate font-mono">{p.reference}</span>
+                  <span className="shrink-0">
+                    {new Date(p.createdAt).toLocaleDateString("en-NG", { day: "numeric", month: "short" })}
+                  </span>
+                </div>
+              </div>
             ))}
-          </tbody>
-        </AdminTable>
+          </div>
+
+          <div className="hidden sm:block">
+            <AdminTable>
+              <AdminTableHead columns={["Customer", "Plan", "Amount", "Status", "Reference", "Date"]} />
+              <tbody>
+                {rows.map((p) => (
+                  <AdminTableRow key={p.id}>
+                    <AdminTableCell>{p.email ?? "—"}</AdminTableCell>
+                    <AdminTableCell className="text-ink-muted">{p.plan}</AdminTableCell>
+                    <AdminTableCell className="tnum font-medium">{naira(p.amountKobo / 100)}</AdminTableCell>
+                    <AdminTableCell>
+                      <Badge tone={STATUS_TONE[p.status] ?? "neutral"}>{p.status}</Badge>
+                    </AdminTableCell>
+                    <AdminTableCell className="font-mono text-xs text-ink-dim">{p.reference}</AdminTableCell>
+                    <AdminTableCell className="text-ink-muted">
+                      {new Date(p.createdAt).toLocaleString("en-NG", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                    </AdminTableCell>
+                  </AdminTableRow>
+                ))}
+              </tbody>
+            </AdminTable>
+          </div>
+        </>
       )}
 
       <div className="flex justify-end gap-2 text-xs">

@@ -78,15 +78,21 @@ export default async function AdminDashboardPage() {
             {naira(kpis.revenueTrend.reduce((s, d) => s + d.kobo, 0) / 100)} total
           </span>
         </div>
-        <div className="flex h-32 items-end gap-1">
-          {kpis.revenueTrend.map((d) => (
-            <div
-              key={d.day}
-              title={`${d.day}: ${naira(d.kobo / 100)}`}
-              className="flex-1 rounded-t bg-brand/70 transition-colors hover:bg-brand"
-              style={{ height: `${Math.max(2, (d.kobo / maxTrend) * 100)}%` }}
-            />
-          ))}
+        {/* 30 bars at flex-1 get unreadably thin below ~540px — scroll
+            horizontally instead of squeezing them past the point of being
+            able to tap or read one. sm:min-w-0 restores the fill-the-width
+            behavior once there's room for it. */}
+        <div className="overflow-x-auto">
+          <div className="flex h-32 min-w-[540px] items-end gap-1 sm:min-w-0">
+            {kpis.revenueTrend.map((d) => (
+              <div
+                key={d.day}
+                title={`${d.day}: ${naira(d.kobo / 100)}`}
+                className="flex-1 rounded-t bg-brand/70 transition-colors hover:bg-brand"
+                style={{ height: `${Math.max(2, (d.kobo / maxTrend) * 100)}%` }}
+              />
+            ))}
+          </div>
         </div>
       </section>
 

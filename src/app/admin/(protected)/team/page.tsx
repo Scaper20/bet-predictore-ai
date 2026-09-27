@@ -27,7 +27,24 @@ export default async function AdminTeamPage() {
 
       <section>
         <SectionHeading eyebrow="Access" title="Admin accounts" />
-        <div className="mt-4">
+        <div className="mt-4 space-y-3 sm:hidden">
+          {admins.map((a) => {
+            const profile = Array.isArray(a.profiles) ? a.profiles[0] : a.profiles;
+            return (
+              <div key={a.id} className="card flex items-center justify-between gap-3 p-4">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-ink">{profile?.email ?? "—"}</p>
+                  <p className="text-xs text-ink-dim">
+                    Added {new Date(a.created_at).toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" })}
+                  </p>
+                </div>
+                <RemoveAdminButton targetId={a.id} targetEmail={profile?.email ?? ""} />
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="mt-4 hidden sm:block">
           <AdminTable>
             <AdminTableHead columns={["Email", "Added", ""]} />
             <tbody>
