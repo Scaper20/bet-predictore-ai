@@ -601,3 +601,59 @@ export async function getTrafficSources(): Promise<TrafficSources> {
     recentSignups,
   };
 }
+
+/* --------------------------------------------------------- Survey responses */
+
+export interface SurveyResponseRow {
+  id: string;
+  email: string | null;
+  tier: string | null; // snapshot from email_campaign_recipients; null for survey_free
+  answers: Record<string, string>;
+  submittedAt: string;
+}
+
+export interface SurveyResponsesPage {
+  rows: SurveyResponseRow[];
+  hasMore: boolean;
+  total: number;
+}
+
+/** Submitted answers for one survey, newest first — pending (unanswered)
+ * tokens are excluded, this is a results view, not a send-status view (see
+ * /admin/outreach for that). `tier` comes from email_campaign_recipients
+ * rather than the live subscriptions table, matching the same "what they
+ * were shown at send time" snapshot the email itself used. */
+export async function getSurveyResponses(
+  survey: "survey_subscribed" | "survey_free",
+  page: number,
+  pageSize = 30,
+): Promise<SurveyResponsesPage> {
+  const admin = supabaseAdmin();
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize;
+
+  const [{ data, count }, { data: recipients }] = await Promise.all([
+    admin
+      .from("survey_responses")
+      .select("id, user_id, answers, submitted_at, profiles(email)", { count: "exact" })
+      .eq("survey", survey)
+      .not("submitted_at", "is", null)
+      .order("submitted_at", { ascending: false })
+      .range(from, to),
+    admin.from("email_campaign_recipients").select("user_id, tier").eq("campaign", survey),
+  ]);
+
+  const tierByUser = new Map((recipients ?? []).map((r) => [r.user_id as string, r.tier as string | null]));
+  const rawRows = data ?? [];
+  const hasMore = rawRows.length > pageSize;
+
+  const rows = rawRows.slice(0, pageSize).map((r) => ({
+    id: r.id as string,
+    email: firstOf(r.profiles as ProfileJoin | ProfileJoin[] | null)?.email ?? null,
+    tier: tierByUser.get(r.user_id as string) ?? null,
+    answers: (r.answers as Record<string, string> | null) ?? {},
+    submittedAt: r.submitted_at as string,
+  }));
+
+  return { rows, hasMore, total: count ?? rows.length };
+}

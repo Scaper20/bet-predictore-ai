@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getPayments } from "@/lib/admin-analytics";
 import { AdminTable, AdminTableHead, AdminTableRow, AdminTableCell } from "@/components/admin/admin-table";
+import { ExpirePaymentsButton } from "@/components/admin/expire-payments-button";
 import { Badge, EmptyState, type Tone } from "@/components/ui/primitives";
 import { naira } from "@/lib/format";
 
@@ -19,7 +20,15 @@ export default async function AdminPaymentsPage({
 
   return (
     <div className="space-y-6">
-      <h1 className="font-display text-2xl font-bold">Payments</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="font-display text-2xl font-bold">Payments</h1>
+          <p className="mt-1 text-sm text-ink-muted">
+            A checkout that never got a Paystack webhook automatically flips from pending to failed after 24h.
+          </p>
+        </div>
+        <ExpirePaymentsButton />
+      </div>
 
       {rows.length === 0 ? (
         <EmptyState icon="💳" title="No payments yet" description="Every Paystack transaction this app has been notified about will show up here." />

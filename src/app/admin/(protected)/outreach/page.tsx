@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { getOutreachOverview } from "@/app/actions/admin/outreach";
 import { OutreachCampaignPanel } from "@/components/admin/outreach-campaign-panel";
-import { Badge } from "@/components/ui/primitives";
+import { Badge, ButtonLink } from "@/components/ui/primitives";
 import type { CampaignType } from "@/lib/outreach";
 
 export const metadata: Metadata = { title: "Outreach" };
@@ -38,13 +38,18 @@ export default async function AdminOutreachPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-display text-2xl font-bold">Outreach</h1>
-        <p className="mt-1 max-w-2xl text-sm text-ink-muted">
-          One-time emails to the whole user base — a personal check-in, plus segmented surveys. Every send is from
-          Scaper personally, carries an unsubscribe link, and skips anyone who&rsquo;s opted out. Nothing here sends
-          automatically: queue a campaign, then send it in batches whenever you&rsquo;re ready.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="font-display text-2xl font-bold">Outreach</h1>
+          <p className="mt-1 max-w-2xl text-sm text-ink-muted">
+            One-time emails to the whole user base — a personal check-in, plus segmented surveys. Every send is from
+            Scaper personally, carries an unsubscribe link, and skips anyone who&rsquo;s opted out. Nothing here sends
+            automatically: queue a campaign, then send it in batches whenever you&rsquo;re ready.
+          </p>
+        </div>
+        <ButtonLink href="/admin/outreach/responses" variant="secondary" className="shrink-0">
+          View survey responses
+        </ButtonLink>
       </div>
 
       <div className="flex flex-wrap gap-2">
