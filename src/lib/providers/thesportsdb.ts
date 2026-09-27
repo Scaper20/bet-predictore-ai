@@ -10,11 +10,15 @@
  */
 
 import type { Match, MatchStatus, ResultRow, StandingRow, Team } from "@/lib/types";
+import { sportOrDefault } from "@/lib/sports";
 import { LEAGUES, leagueByProviderId, type LeagueDef } from "@/lib/leagues";
 import { getJson } from "./http";
 import { cached } from "./cache";
 
 const KEY = process.env.THESPORTSDB_API_KEY?.trim() || "123";
+/** What TheSportsDB calls this sport in its `s=` filter. */
+const SPORT = sportOrDefault().providers.theSportsDb ?? "Soccer";
+
 const BASE = `https://www.thesportsdb.com/api/v1/json/${KEY}`;
 
 /** True when running on the shared public key, which is heavily truncated. */
@@ -154,7 +158,7 @@ function toMatch(e: SdbEvent): Match | null {
 
 function liveToMatch(e: SdbLive): Match | null {
   if (!e.strHomeTeam || !e.strAwayTeam) return null;
-  if (e.strSport && e.strSport !== "Soccer") return null;
+  if (e.strSport && e.strSport !== SPORT) return null;
   const def = leagueByProviderId("theSportsDb", e.idLeague);
   const ms = e.strTimestamp ? kickoffMs({ strTimestamp: e.strTimestamp }) : Date.now();
 
@@ -180,7 +184,7 @@ function liveToMatch(e: SdbLive): Match | null {
 export async function fetchLive(): Promise<Match[]> {
   return cached("sdb:live", 20_000, async () => {
     const data = await getJson<{ livescore?: SdbLive[] | null }>(
-      `${BASE}/livescore.php?s=Soccer`,
+      `${BASE}/livescore.php?s=${encodeURIComponent(SPORT)}`,
       { provider: "thesportsdb" },
     );
     return (data.livescore ?? []).map(liveToMatch).filter((m): m is Match => m !== null);
@@ -191,7 +195,7 @@ export async function fetchLive(): Promise<Match[]> {
 export async function fetchByDate(date: string): Promise<Match[]> {
   return cached(`sdb:day:${date}`, 5 * 60_000, async () => {
     const data = await getJson<{ events?: SdbEvent[] | null }>(
-      `${BASE}/eventsday.php?d=${encodeURIComponent(date)}&s=Soccer`,
+      `${BASE}/eventsday.php?d=${encodeURIComponent(date)}&s=${encodeURIComponent(SPORT)}`,
       { provider: "thesportsdb" },
     );
     return (data.events ?? []).map(toMatch).filter((m): m is Match => m !== null);

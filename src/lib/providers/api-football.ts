@@ -11,8 +11,14 @@ import type { Match, MatchStatus, ResultRow, StandingRow, Team } from "@/lib/typ
 import { LEAGUES, leagueByProviderId, type LeagueDef } from "@/lib/leagues";
 import { getJson } from "./http";
 import { cached } from "./cache";
+import { sportOrDefault } from "@/lib/sports";
 
-const BASE = "https://v3.football.api-sports.io";
+/**
+ * API-Sports runs a separate host per sport, so this is a sport coordinate
+ * rather than a provider constant -- see src/lib/sports.ts.
+ */
+const BASE =
+  sportOrDefault().providers.apiFootballHost ?? "https://v3.football.api-sports.io";
 
 export const apiKey = (): string | undefined =>
   process.env.API_FOOTBALL_KEY?.trim() || undefined;

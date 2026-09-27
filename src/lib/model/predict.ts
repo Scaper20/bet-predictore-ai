@@ -11,7 +11,7 @@
 import type { Match, ResultRow } from "@/lib/types";
 import { leagueByCode, type LeagueDef } from "@/lib/leagues";
 import {
-  AH_LINES, deriveAsianHandicap, deriveMarkets, outcomeEntropy, scoreMatrix,
+  deriveAsianHandicap, deriveMarkets, GOAL_LINES, outcomeEntropy, scoreMatrix,
   type AsianHandicapLine, type MarketProbabilities,
 } from "./poisson";
 import { expectedRates, fitLeague, normaliseKey, type LeagueFit, type TeamRating } from "./fit";
@@ -198,7 +198,15 @@ export function buildPrediction(
   const dataQuality = scoreDataQuality(fit, homeRating, awayRating);
   const uncertainty = outcomeEntropy(markets.home, markets.draw, markets.away);
 
-  const picks = rankPicks(markets, asianHandicap, dataQuality, uncertainty);
+  // Ranked against what this competition actually does, not a pooled
+  // European constant — see empiricalBaselines.
+  const picks = rankPicks(
+    markets,
+    asianHandicap,
+    dataQuality,
+    uncertainty,
+    empiricalBaselines(results),
+  );
   const sufficiency = assessSufficiency(
     fit.matchesUsed,
     homeRating?.played ?? 0,
@@ -263,6 +271,7 @@ function rankPicks(
   ah: AsianHandicapLine[],
   dataQuality: number,
   uncertainty: number,
+  baselines: Record<string, number>,
 ): Pick[] {
   const mk = (
     market: string,
@@ -312,13 +321,25 @@ function rankPicks(
    * baseline, so a genuinely strong read beats a trivially safe one.
    */
   return picks
-    .map((p) => ({ p, score: pickScore(p) }))
+    .map((p) => ({ p, score: pickScore(p, baselines) }))
     .sort((a, b) => b.score - a.score)
     .map((x) => x.p);
 }
 
-/** Baseline probabilities a punter would expect without any model at all. */
-const BASELINE: Record<string, number> = {
+/**
+ * Baseline probabilities a punter would expect without any model at all,
+ * pooled across European football.
+ *
+ * A PRIOR, not the answer. Competitions differ from it by far more than the
+ * edges being ranked against it: measured over three seasons of the five
+ * biggest leagues, "under 3.5 goals" runs at 75.2% in Serie A and 57.7% in the
+ * Bundesliga against a constant of 70%, and "both teams to score" at 49.7% and
+ * 60.1% against a constant of 52%. Used alone, that hands every Bundesliga
+ * fixture a fabricated ten-point edge on the overs and every Serie A fixture
+ * one on the unders — before the model has said anything at all. See
+ * empiricalBaselines below, which is what pickScore actually ranks against.
+ */
+export const BASELINE: Record<string, number> = {
   "1x2:home": 0.44, "1x2:draw": 0.26, "1x2:away": 0.3,
   "dc:home-draw": 0.7, "dc:away-draw": 0.56, "dc:home-away": 0.74,
   "btts:yes": 0.52, "btts:no": 0.48,
@@ -329,7 +350,99 @@ const BASELINE: Record<string, number> = {
   "ou:over:4.5": 0.15, "ou:under:4.5": 0.85,
 };
 
-function pickScore(p: Pick): number {
+/**
+ * How many completed matches it takes for a competition's own rate to count
+ * for half of its baseline, the rest coming from the pooled prior.
+ *
+ * 40 is roughly a third of a domestic season. Low enough that a competition
+ * with real history speaks mostly for itself, high enough that the thinnest
+ * publishable sample (MIN_PUBLISHABLE_MATCHES, 15) cannot swing a baseline by
+ * more than about a quarter of the way to whatever those fifteen matches
+ * happened to do.
+ */
+const BASELINE_PRIOR_WEIGHT = 40;
+
+/**
+ * What this competition normally does, blended with the pooled prior.
+ *
+ * The edge a pick is ranked on has to be measured against the right null. A
+ * league where the unders land 52% of the time is not offering a four-point
+ * edge on every fixture; it is just a league where the unders land 52% of the
+ * time, and treating that as signal is how a headline pick ends up chosen by
+ * whichever constant is most wrong rather than by whatever the model saw.
+ *
+ * Rates are unweighted over the whole training slice, deliberately: recency
+ * weighting belongs in the ratings, which is where form lives. The base rate
+ * of a competition is a property of the competition.
+ */
+export function empiricalBaselines(results: ResultRow[]): Record<string, number> {
+  const n = results.length;
+  if (n === 0) return { ...BASELINE };
+
+  // n / (n + k): the competition's own rate at n matches, the prior at zero.
+  const weight = n / (n + BASELINE_PRIOR_WEIGHT);
+  const observed: Record<string, number> = {};
+
+  const count = (test: (r: ResultRow) => boolean) =>
+    results.reduce((a, r) => a + (test(r) ? 1 : 0), 0) / n;
+
+  observed["1x2:home"] = count((r) => r.homeGoals > r.awayGoals);
+  observed["1x2:draw"] = count((r) => r.homeGoals === r.awayGoals);
+  observed["1x2:away"] = count((r) => r.awayGoals > r.homeGoals);
+  observed["dc:home-draw"] = observed["1x2:home"] + observed["1x2:draw"];
+  observed["dc:away-draw"] = observed["1x2:away"] + observed["1x2:draw"];
+  observed["dc:home-away"] = observed["1x2:home"] + observed["1x2:away"];
+  observed["btts:yes"] = count((r) => r.homeGoals > 0 && r.awayGoals > 0);
+  observed["btts:no"] = 1 - observed["btts:yes"];
+
+  for (const line of GOAL_LINES) {
+    const over = count((r) => r.homeGoals + r.awayGoals > line);
+    observed[`ou:over:${line}`] = over;
+    observed[`ou:under:${line}`] = 1 - over;
+  }
+
+  const out: Record<string, number> = {};
+  for (const [market, prior] of Object.entries(BASELINE)) {
+    const seen = observed[market];
+    out[market] = seen === undefined ? prior : prior + weight * (seen - prior);
+  }
+  return out;
+}
+
+/**
+ * The fraction of a family's claimed edge that has historically survived
+ * contact with a result.
+ *
+ * Ranking on the largest edge is an argmax over estimate error as much as over
+ * signal, and the families do not contribute equally to that argmax: goals
+ * markets offer ten candidate selections per fixture (five lines, two sides)
+ * against three for the match result, so they win the race far more often than
+ * their accuracy earns. Measured walk-forward over 2023-24 and 2024-25 in the
+ * five biggest European leagues, the realised edge over each competition's own
+ * base rate came to this share of the claimed edge:
+ *
+ *   1x2  1.18      dc  1.07      ou  0.88      btts  0.68
+ *
+ * The sign held in a completely separate 2025-26 evaluation — outcome markets
+ * over-delivering, goals markets under-delivering, on 1,714 further picks —
+ * but the magnitude did not, so only the shrinkage is applied and nothing is
+ * ever scaled above 1. A family that beats its claim is left alone rather than
+ * having one season's luck compounded into it.
+ *
+ * Re-derive with `npx tsx scripts/backtest.ts`; the numbers should be revisited
+ * once predictions_log carries a few thousand settled rows of its own, which is
+ * a better source than any public archive because it grades exactly the
+ * selections this product actually published.
+ */
+export const FAMILY_RELIABILITY: Record<string, number> = {
+  "1x2": 1,
+  dc: 1,
+  ou: 0.88,
+  btts: 0.68,
+  cs: 1,
+};
+
+function pickScore(p: Pick, baselines: Record<string, number>): number {
   // Handicap lines are constructed to sit near 50/50 by design (that's the
   // point of a handicap), so "edge over a baseline" isn't a meaningful
   // concept the way it is for 1X2/O-U — a line just shy of 50/50 isn't a
@@ -338,9 +451,11 @@ function pickScore(p: Pick): number {
   // directly rather than relying on ranking here.
   if (p.group === "Asian Handicap") return -1;
 
-  const baseline = BASELINE[p.market] ?? (p.group === "Correct Score" ? 0.09 : 0.5);
-  // Edge over baseline, weighted by how confidently the model holds it.
-  const edge = p.probability - baseline;
+  const baseline = baselines[p.market] ?? (p.group === "Correct Score" ? 0.09 : 0.5);
+  // Edge over baseline, discounted by how much of that family's edge has
+  // historically survived, then weighted by how confidently the model holds it.
+  const reliability = FAMILY_RELIABILITY[p.market.split(":")[0]] ?? 1;
+  const edge = (p.probability - baseline) * reliability;
   // Very long shots are excluded from the headline pick however big the edge.
   if (p.probability < 0.35) return edge * 0.15;
   return edge * (0.6 + 0.4 * (p.probability - 0.35));

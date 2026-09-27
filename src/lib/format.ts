@@ -68,7 +68,17 @@ export function statusLabel(m: Match): string {
   }
 }
 
-/** Group fixtures under a date heading, preserving the incoming order. */
+/**
+ * Group fixtures under a date heading.
+ *
+ * This used to preserve the incoming order, which comes from compareMatches —
+ * and that ranks league importance above kickoff time, so a Premier League tie
+ * three days out sorted ahead of everything today and the page rendered
+ * "Tomorrow" above "Today". A date heading is a calendar, not a ranking, so
+ * order the groups chronologically and order within each group the same way,
+ * with live games pinned to the top of the day they actually belong to rather
+ * than hoisted out of it.
+ */
 export function groupByDay(matches: Match[]): { day: string; matches: Match[] }[] {
   const groups = new Map<string, Match[]>();
   for (const m of matches) {
@@ -77,7 +87,26 @@ export function groupByDay(matches: Match[]): { day: string; matches: Match[] }[
     if (list) list.push(m);
     else groups.set(key, [m]);
   }
-  return [...groups.entries()].map(([day, list]) => ({ day, matches: list }));
+
+  return [...groups.entries()]
+    .map(([day, list]) => ({
+      day,
+      matches: [...list].sort(
+        (a, b) =>
+          (isLive(a) ? 0 : 1) - (isLive(b) ? 0 : 1) ||
+          Date.parse(a.kickoff) - Date.parse(b.kickoff),
+      ),
+    }))
+    .sort((a, b) => earliestKickoff(a.matches) - earliestKickoff(b.matches));
+}
+
+function earliestKickoff(matches: Match[]): number {
+  let earliest = Number.POSITIVE_INFINITY;
+  for (const m of matches) {
+    const t = Date.parse(m.kickoff);
+    if (Number.isFinite(t) && t < earliest) earliest = t;
+  }
+  return earliest;
 }
 
 export function initials(name: string): string {

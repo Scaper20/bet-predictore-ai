@@ -6,16 +6,20 @@
  */
 
 import "server-only";
-import type { Match } from "@/lib/types";
+import type { Match, ResultRow } from "@/lib/types";
 import {
   getLive, getMatch, getTrainingResults, getH2H, getUpcoming,
   providerHealth, hasFullCoverage,
 } from "@/lib/providers";
 import { cached } from "@/lib/providers/cache";
 import { buildPrediction, type Prediction } from "@/lib/model/predict";
+import { archivedResults } from "@/lib/archive/history-store";
 import { scoreMatrix, deriveLiveWinProbability } from "@/lib/model/poisson";
 import { writeAnalysis, aiEnabled, type Analysis } from "@/lib/ai/analyst";
 import { isLive } from "@/lib/format";
+import { leagueByCode } from "@/lib/leagues";
+import { sportOrDefault } from "@/lib/sports";
+import { selectFeatured, shortlist, type FeaturedMatch } from "@/lib/featured";
 
 export interface FixtureFeed {
   matches: Match[];
@@ -46,11 +50,47 @@ export interface MatchDetail {
   trainedOn: { leagueName: string; curated: boolean; rows: number };
 }
 
+/**
+ * Completed matches to fit this fixture's competition on.
+ *
+ * Prefers the stored archive over the live feeds, which is a correction rather
+ * than an optimisation. Measured through getTrainingResults() alone, every
+ * competition in the catalogue was training on 15-35 matches: TheSportsDB's
+ * public key truncates a season to about fifteen rows, and the two richer
+ * adapters have no key configured. Capping the backtest's training window to
+ * that depth puts the model at 51.6% accuracy while it claims 74.5%, against
+ * 66.3% claiming 67.3% on full history — so the thin sample was costing about
+ * fifteen points of accuracy and twenty-three points of honesty.
+ *
+ * The archive is filled by scripts/backfill-history.ts and holds thousands of
+ * rows per competition. It is preferred outright rather than merged: the live
+ * feeds cannot add anything it lacks except the last day or two, and merging
+ * two sources of the same fixture risks double-weighting it in the fit. The
+ * live path stays as the fallback for competitions not yet backfilled, and for
+ * any deployment with no Supabase configured at all.
+ */
+async function trainingRows(
+  match: Match,
+): Promise<{ rows: ResultRow[]; leagueName: string; curated: boolean }> {
+  const code = match.league.code;
+  if (code) {
+    const archived = await archivedResults(code).catch(() => []);
+    // MIN_PUBLISHABLE_MATCHES is 15. At or below that the archive is no better
+    // than what the live feeds already give, so it is not worth preferring.
+    if (archived.length > 15) {
+      // Archive rows are keyed on the catalogue code, so reaching one means
+      // the competition is curated by definition.
+      return { rows: archived, leagueName: match.league.name, curated: true };
+    }
+  }
+  return getTrainingResults(match);
+}
+
 export async function matchDetail(id: string): Promise<MatchDetail | null> {
   const match = await getMatch(id);
   if (!match) return null;
 
-  const [training, h2h] = await Promise.all([getTrainingResults(match), getH2H(match)]);
+  const [training, h2h] = await Promise.all([trainingRows(match), getH2H(match)]);
   const prediction = buildPrediction(match, training.rows, h2h);
   const analysis = await writeAnalysis(prediction);
 
@@ -91,8 +131,14 @@ export interface LiveProbability {
  * a reasonable approximation given the model has no ET-specific dynamics.
  */
 function elapsedMinutesFor(match: Match): number {
-  if (match.status === "halftime") return 45;
-  return Math.min(90, Math.max(0, match.minute ?? 45));
+  // Period/regulation length come from the sport descriptor rather than
+  // literal 45/90, so a second sport doesn't silently inherit football's clock.
+  const sport = sportOrDefault(leagueByCode(match.league.code ?? "")?.sport);
+  if (match.status === "halftime") return sport.periodMinutes;
+  return Math.min(
+    sport.regulationMinutes,
+    Math.max(0, match.minute ?? sport.periodMinutes),
+  );
 }
 
 /**
@@ -108,7 +154,7 @@ export async function liveWinProbability(matchId: string): Promise<LiveProbabili
   const match = await getMatch(matchId);
   if (!match || !isLive(match)) return null;
 
-  const training = await getTrainingResults(match);
+  const training = await trainingRows(match);
   const prediction = buildPrediction(match, training.rows);
   const { home: lambda, away: mu } = prediction.markets.expectedGoals;
 
@@ -146,7 +192,7 @@ export async function predictBatch(matches: Match[], limit = 12): Promise<Predic
   await Promise.all(
     [...byLeague.values()].map(async (group) => {
       // One training fetch per competition, reused across its fixtures.
-      const training = await getTrainingResults(group[0]);
+      const training = await trainingRows(group[0]);
       for (const m of group) {
         out.push(buildPrediction(m, training.rows));
       }
@@ -224,6 +270,49 @@ export async function bestBetOfDay(): Promise<Prediction | null> {
       (a, b) => (b.topPick?.confidence ?? 0) - (a.topPick?.confidence ?? 0),
     );
     return ranked[0];
+  });
+}
+
+/**
+ * The homepage's featured board.
+ *
+ * Cached for five minutes rather than the thirty bestBetOfDay uses, because
+ * this board carries live fixtures: a half-hour-old "Live now" row with a
+ * stale scoreline is worse than no board at all. Five minutes is still long
+ * enough that the shortlist's per-league training fetches are shared across
+ * effectively every visitor.
+ *
+ * The SELECTION is what gets cached here, deliberately. Scores are patched on
+ * the client from /api/live, so the four fixtures stay put while the numbers
+ * move — re-ranking every thirty seconds would pull a match out from under
+ * someone mid-click.
+ */
+export async function featuredFeed(slots = 4): Promise<FeaturedMatch[]> {
+  return cached(`featured:${slots}`, 5 * 60_000, async () => {
+    const [live, upcoming] = await Promise.all([
+      getLive().catch(() => []),
+      getUpcoming(3).catch(() => []),
+    ]);
+
+    const now = Date.now();
+    const seen = new Set<string>();
+    const pool = [...live, ...upcoming].filter((m) => {
+      if (seen.has(m.id)) return false;
+      seen.add(m.id);
+      return true;
+    });
+
+    // Shortlist BEFORE predicting: predictBatch fetches training once per
+    // distinct competition, so the cost of this board is measured in leagues,
+    // not fixtures.
+    const candidates = shortlist(pool, now);
+    if (candidates.length === 0) return [];
+
+    const predictions = await predictBatch(candidates, candidates.length);
+    return selectFeatured(
+      predictions.map((prediction) => ({ prediction })),
+      { now, slots },
+    );
   });
 }
 

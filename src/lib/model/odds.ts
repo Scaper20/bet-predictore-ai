@@ -8,6 +8,8 @@
  * stripped first and comparisons are made against the fair price.
  */
 
+import { MIN_MEANINGFUL_EDGE } from "@/lib/value";
+
 export interface ValueAssessment {
   /** Model's probability for the selection. */
   modelProbability: number;
@@ -84,17 +86,23 @@ export function expectedValue(probability: number, decimalOdds: number): number 
 }
 
 /**
- * Assess one selection against a price.
+ * Assess one selection against a whole market.
  *
  * `marketOdds` should be every price in the same market (all three of 1X2, or
  * both sides of an over/under) so the margin can be removed. Passing just the
  * one price still works, it simply cannot correct for the vig.
+ *
+ * Named for the market rather than for "value" because src/lib/value.ts
+ * answers a narrower and more common question — is this ONE price worth
+ * taking, given nothing but the model's probability — and two functions called
+ * assessValue with different arguments and different meanings is a trap for
+ * whoever reads this next. This one needs the book; that one needs a number.
  */
-export function assessValue(
+export function assessAgainstMarket(
   modelProbability: number,
   decimalOdds: number,
   marketOdds?: number[],
-  minEdge = 0.03,
+  minEdge = MIN_MEANINGFUL_EDGE,
 ): ValueAssessment {
   const impliedProbability = decimalToImplied(decimalOdds);
 

@@ -95,7 +95,7 @@ export async function GET(request: Request) {
               <div style={{ display: "flex", justifyContent: "space-between", marginTop: 10 }}>
                 <div style={{ display: "flex", fontSize: 22, color: "#00f48e", fontWeight: 600 }}>{leg.label}</div>
                 <div style={{ display: "flex", fontSize: 22, color: "#8d9db2" }}>
-                  {Math.round(leg.probability * 100)}% · fair {leg.fairOdds.toFixed(2)}
+                  {Math.round(leg.probability * 100)}% · needs {leg.fairOdds.toFixed(2)}+
                 </div>
               </div>
             </div>

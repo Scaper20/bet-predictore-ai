@@ -3,6 +3,7 @@ import "server-only";
 import { emailLayout } from "@/lib/email";
 import { naira } from "@/lib/format";
 import { SITE_URL } from "@/lib/site-url";
+import { sportPath } from "@/lib/routes";
 import type { Tier } from "@/lib/entitlements";
 
 const TIER_LABEL: Record<Tier, string> = {
@@ -24,8 +25,9 @@ export function welcomeEmail(): { subject: string; html: string } {
       <p style="margin:0;">Your account is set up. BetriX gives you data-driven football predictions from a
       statistical model fitted on real results — real fixtures, real live scores, no guesswork.</p>
       ${button(SITE_URL, "See today's matches")}
-      <p style="margin:24px 0 0;font-size:13px;color:#8d9db2;">Want to know how the model works? Read
-      <a href="${SITE_URL}/how-it-works" style="color:#00925c;">how it's calculated</a>.</p>
+      <p style="margin:24px 0 0;font-size:13px;color:#8d9db2;">Want to see how it has actually done? Every
+      published pick is settled and kept on the
+      <a href="${SITE_URL}${sportPath("trackRecord")}" style="color:#00925c;">track record</a>.</p>
     `),
   };
 }

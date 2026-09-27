@@ -1,31 +1,42 @@
 import Link from "next/link";
+import { Container } from "@/components/ui/container";
+import { sportPath } from "@/lib/routes";
+import { FooterColumn } from "@/components/layout/footer-column";
 
+/*
+ * The footer renders in the (app) layout, above the [sport] segment, so it
+ * has no route param to read and no pathname (it is a Server Component).
+ * Its sport-scoped links therefore resolve against DEFAULT_SPORT, which is
+ * exactly right while there is one sport and is the first thing to revisit
+ * when there are two.
+ */
 const COLUMNS = [
   {
     title: "Product",
     links: [
-      { href: "/live", label: "Live Scores" },
-      { href: "/fixtures", label: "Fixtures" },
-      { href: "/predictions", label: "Predictions" },
-      { href: "/trends", label: "Trends" },
-      { href: "/track-record", label: "Track Record" },
-      { href: "/slip", label: "Selection Builder" },
+      { href: sportPath("live"), label: "Live Scores" },
+      { href: sportPath("fixtures"), label: "Fixtures" },
+      { href: sportPath("predictions"), label: "Predictions" },
+      { href: sportPath("trends"), label: "Trends" },
+      { href: sportPath("trackRecord"), label: "Track Record" },
+      { href: sportPath("slip"), label: "Selection Builder" },
     ],
   },
   {
     title: "Leagues",
     links: [
-      { href: "/fixtures?league=premier-league", label: "Premier League" },
-      { href: "/fixtures?league=npfl", label: "NPFL" },
-      { href: "/fixtures?league=champions-league", label: "Champions League" },
-      { href: "/fixtures?league=la-liga", label: "La Liga" },
-      { href: "/fixtures?league=caf-champions-league", label: "CAF Champions League" },
+      { href: `${sportPath("fixtures")}?league=premier-league`, label: "Premier League" },
+      { href: `${sportPath("fixtures")}?league=npfl`, label: "NPFL" },
+      { href: `${sportPath("fixtures")}?league=champions-league`, label: "Champions League" },
+      { href: `${sportPath("fixtures")}?league=la-liga`, label: "La Liga" },
+      { href: `${sportPath("fixtures")}?league=caf-champions-league`, label: "CAF Champions League" },
     ],
   },
   {
     title: "About",
     links: [
-      { href: "/how-it-works", label: "How The Model Works" },
+      { href: "/pricing", label: "Pricing" },
+      { href: sportPath("trackRecord"), label: "Our Track Record" },
       { href: "/responsible-gambling", label: "Responsible Gambling" },
     ],
   },
@@ -34,8 +45,8 @@ const COLUMNS = [
 export function SiteFooter() {
   return (
     <footer className="mt-auto border-t border-line bg-shell">
-      <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
-        <div className="grid gap-10 md:grid-cols-[1.4fr_repeat(3,1fr)]">
+      <Container className="py-9 sm:py-14">
+        <div className="grid gap-6 lg:grid-cols-[1.4fr_repeat(3,1fr)] lg:gap-10">
           <div>
             <div className="flex items-center gap-2.5">
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -51,18 +62,7 @@ export function SiteFooter() {
           </div>
 
           {COLUMNS.map((col) => (
-            <div key={col.title}>
-              <h3 className="text-sm font-semibold">{col.title}</h3>
-              <ul className="mt-4 space-y-2.5">
-                {col.links.map((l) => (
-                  <li key={l.href}>
-                    <Link href={l.href} className="text-sm text-ink-muted transition-colors hover:text-brand">
-                      {l.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            <FooterColumn key={col.title} title={col.title} links={col.links} />
           ))}
         </div>
 
@@ -71,7 +71,7 @@ export function SiteFooter() {
           18+ notice on anything betting-adjacent. It is also just the right
           thing to put in front of this audience.
         */}
-        <div className="mt-12 rounded-2xl border border-amber/20 bg-amber/5 p-5">
+        <div className="mt-8 rounded-2xl sm:mt-12 border border-amber/20 bg-amber/5 p-5">
           <div className="flex flex-wrap items-center gap-3">
             <span className="grid size-9 shrink-0 place-items-center rounded-full border border-amber/40 text-xs font-bold text-amber">
               18+
@@ -88,14 +88,18 @@ export function SiteFooter() {
           </div>
         </div>
 
-        <div className="mt-8 flex flex-col gap-3 border-t border-line pt-8 text-xs text-ink-dim sm:flex-row sm:items-center sm:justify-between">
+        {/*
+          The data-provider credit that used to sit here is gone — naming the
+          upstream feeds told visitors nothing they could act on and pinned the
+          product to a particular set of suppliers. "Not affiliated with any
+          bookmaker" stays: that one is a positioning statement, and the thing
+          this audience actually needs to know.
+        */}
+        <div className="mt-6 flex flex-col gap-3 border-t border-line pt-6 sm:mt-8 sm:pt-8 text-xs text-ink-dim sm:flex-row sm:items-center sm:justify-between">
           <p>© {new Date().getFullYear()} BetriX. Built for Nigeria, made for Africa.</p>
-          <p>
-            Match data from football-data.org, API-Football and TheSportsDB. Not affiliated with
-            any bookmaker.
-          </p>
+          <p>Not affiliated with any bookmaker.</p>
         </div>
-      </div>
+      </Container>
     </footer>
   );
 }

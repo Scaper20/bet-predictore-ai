@@ -45,10 +45,13 @@ function Chip({
   label: string;
   flag?: string;
 }) {
+  // py-2.5 over py-2 gives 42px rather than 38. These sit in a horizontally
+  // scrolling row, where a tap landing slightly off is easy and costs a page
+  // navigation to undo.
   return (
     <Link
       href={href}
-      className={`flex shrink-0 items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
+      className={`flex shrink-0 items-center gap-2 rounded-full border px-4 py-2.5 text-sm font-medium transition-colors ${
         active
           ? "border-brand/40 bg-brand/12 text-brand"
           : "border-line bg-surface text-ink-muted hover:border-line-strong hover:text-ink"

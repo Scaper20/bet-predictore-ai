@@ -17,7 +17,7 @@ export function AddToSlip({ prediction }: { prediction: Prediction }) {
 
   if (!sufficiency.publishable) {
     return (
-      <section className="card p-5 sm:p-6">
+      <section className="card p-5 sm:p-7">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-ink-muted">Selections</h2>
         <p className="mt-3 text-xs leading-relaxed text-ink-dim">
           Selections from this fixture are not offered: there is not enough completed history in
@@ -30,7 +30,7 @@ export function AddToSlip({ prediction }: { prediction: Prediction }) {
   const pick = options.find((p) => p.market === selected) ?? options[0];
 
   return (
-    <section className="card p-5 sm:p-6">
+    <section className="card p-5 sm:p-7">
       <div className="mb-4 flex items-baseline justify-between gap-3">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-ink-muted">Selections</h2>
         {existing && <span className="text-xs text-brand">On your slip</span>}
@@ -45,7 +45,7 @@ export function AddToSlip({ prediction }: { prediction: Prediction }) {
         >
           {options.map((p) => (
             <option key={p.market} value={p.market}>
-              {p.label} — {percent(p.probability)} (fair {odds(p.fairOdds)})
+              {p.label} — {percent(p.probability)} (needs {odds(p.fairOdds)}+)
             </option>
           ))}
         </select>
@@ -59,6 +59,11 @@ export function AddToSlip({ prediction }: { prediction: Prediction }) {
             add({
               matchId: match.id,
               fixture: `${match.home.name} v ${match.away.name}`,
+              // Kept apart as well as joined: the slip needs the display
+              // string, and matching this fixture to a bookmaker's needs the
+              // two clubs without having to split it back apart.
+              homeName: match.home.name,
+              awayName: match.away.name,
               league: match.league.name,
               kickoff: match.kickoff,
               market: pick.market,

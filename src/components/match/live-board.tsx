@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { Match } from "@/lib/types";
 import { MatchCard } from "@/components/match/match-card";
 import { Badge, EmptyState, ButtonLink, LiveDot } from "@/components/ui/primitives";
+import { sportPath } from "@/lib/routes";
 
 /**
  * Live score board.
@@ -64,7 +65,7 @@ export function LiveBoard({ initial }: { initial: Match[] }) {
         icon="⏱"
         title="No matches in play right now"
         description="Nothing is kicking about at the moment. This board only ever shows genuinely live fixtures, so it stays empty rather than filling the space."
-        action={<ButtonLink href="/fixtures" variant="secondary">See upcoming fixtures</ButtonLink>}
+        action={<ButtonLink href={sportPath("fixtures")} variant="secondary">See upcoming fixtures</ButtonLink>}
       />
     );
   }
@@ -85,7 +86,7 @@ export function LiveBoard({ initial }: { initial: Match[] }) {
         </span>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {matches.map((m) => (
           <MatchCard key={m.id} match={m} />
         ))}

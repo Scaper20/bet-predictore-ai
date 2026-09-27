@@ -257,7 +257,7 @@ export async function getSeasonResults(
   opts: { minRows?: number; maxSeasons?: number } = {},
 ): Promise<ResultRow[]> {
   const { minRows = MIN_TRAINING_ROWS, maxSeasons = 3 } = opts;
-  const sdbSeasons = sdb.seasonLabels(maxSeasons);
+  const sdbSplit = sdb.seasonLabels(maxSeasons);
   const currentYear = af.seasonYear();
 
   const seen = new Map<string, ResultRow>();
@@ -273,9 +273,26 @@ export async function getSeasonResults(
     const groups = await gather<ResultRow>([
       fd.fetchSeasonResults(league, i === 0 ? undefined : year),
       af.fetchSeasonResults(league, year),
-      sdb.fetchSeasonResults(league, sdbSeasons[i]),
+      sdb.fetchSeasonResults(league, sdbSplit[i]),
     ]);
     groups.forEach(add);
+
+    /*
+     * TheSportsDB keys European seasons "2026-2027" and single-calendar-year
+     * competitions "2026", and which applies is a property of the competition
+     * that no payload states. Asking only for the split form returned zero
+     * rows for every South American league in the catalogue — Brasileirao
+     * trained on nothing at all despite having a correct league id.
+     *
+     * Tried only when the split label came back empty, rather than firing both
+     * every time. The public key rate-limits hard enough that doubling the
+     * request count starves the leagues at the end of the catalogue, which is
+     * a worse failure than the one being fixed.
+     */
+    if (seen.size === 0) {
+      add(await sdb.fetchSeasonResults(league, String(year)));
+    }
+
     if (seen.size >= minRows) break;
   }
 

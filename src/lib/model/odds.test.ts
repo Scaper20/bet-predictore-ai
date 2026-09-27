@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  accumulator, assessValue, decimalToImplied, expectedValue,
+  accumulator, assessAgainstMarket, decimalToImplied, expectedValue,
   fairOdds, impliedToDecimal, kelly, overround, removeVig,
 } from "./odds";
 
@@ -87,7 +87,7 @@ describe("value assessment", () => {
   const market = [2.1, 3.4, 3.6];
 
   it("flags a genuine edge against the fair price", () => {
-    const v = assessValue(0.55, 2.1, market);
+    const v = assessAgainstMarket(0.55, 2.1, market);
     expect(v.fairProbability).toBeLessThan(v.impliedProbability);
     expect(v.edge).toBeGreaterThan(0);
     expect(v.isValue).toBe(true);
@@ -97,13 +97,13 @@ describe("value assessment", () => {
   it("does not flag value that only exists because the vig was ignored", () => {
     // Model agrees with the fair price; raw implied probability looks beatable.
     const fair = removeVig(market)[0];
-    const v = assessValue(fair, market[0], market);
+    const v = assessAgainstMarket(fair, market[0], market);
     expect(v.edge).toBeCloseTo(0, 9);
     expect(v.isValue).toBe(false);
   });
 
   it("marks a clearly bad price as no value", () => {
-    const v = assessValue(0.3, 2.1, market);
+    const v = assessAgainstMarket(0.3, 2.1, market);
     expect(v.edge).toBeLessThan(0);
     expect(v.isValue).toBe(false);
     expect(v.kellyStake).toBe(0);

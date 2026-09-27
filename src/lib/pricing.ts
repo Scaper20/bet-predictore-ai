@@ -9,11 +9,20 @@ export interface PlanDefinition {
   id: Tier;
   name: string;
   description: string;
+  /** Card bullets. Kept as strings — the comparison grid lives in PLAN_MATRIX. */
   features: string[];
   /** Naira. `oneOff` for the Weekend Pass, `monthly`/`yearly` for recurring plans. */
   price: { oneOff?: number; monthly?: number; yearly?: number };
   cadence: string;
-  highlighted?: boolean;
+  /**
+   * Ribbon text, replacing a boolean `highlighted`. A boolean could only ever
+   * say "Most popular"; a string lets a plan be marked "Best value" or
+   * "New" without a second flag and a branch to read it.
+   */
+  badge?: string;
+  /** CTA copy. Previously a loose map in sections.tsx that had to be kept in step. */
+  ctaLabel: string;
+  order: number;
 }
 
 export const PLANS: PlanDefinition[] = [
@@ -30,6 +39,8 @@ export const PLANS: PlanDefinition[] = [
     ],
     price: {},
     cadence: "forever",
+    ctaLabel: "Start free",
+    order: 1,
   },
   {
     id: "pass",
@@ -44,6 +55,8 @@ export const PLANS: PlanDefinition[] = [
     ],
     price: { oneOff: 700 },
     cadence: "Fri–Mon access",
+    ctaLabel: "Get this weekend",
+    order: 2,
   },
   {
     id: "pro",
@@ -56,7 +69,9 @@ export const PLANS: PlanDefinition[] = [
     ],
     price: { monthly: 3500, yearly: 33600 },
     cadence: "per month",
-    highlighted: true,
+    badge: "Most popular",
+    ctaLabel: "Go Pro",
+    order: 3,
   },
   {
     id: "vip",
@@ -70,6 +85,8 @@ export const PLANS: PlanDefinition[] = [
     ],
     price: { monthly: 12000 },
     cadence: "per month",
+    ctaLabel: "Go VIP",
+    order: 4,
   },
 ];
 
@@ -77,4 +94,105 @@ export function planById(id: Tier): PlanDefinition {
   const plan = PLANS.find((p) => p.id === id);
   if (!plan) throw new Error(`Unknown plan: ${id}`);
   return plan;
+}
+
+/**
+ * Feature-by-feature comparison, kept separate from each plan's `features`.
+ *
+ * Two shapes because they answer two questions. The card bullets sell a plan
+ * on its own terms and are written as sentences; the matrix answers "what do
+ * I lose by going down one" and has to be parallel across all four columns.
+ * Folding them together would have meant either bullets that read like a
+ * spreadsheet or a matrix with gaps in it.
+ *
+ * A cell is `true`/`false` for a plain tick or dash, or a string when the
+ * answer is a quantity rather than a yes.
+ */
+export interface MatrixRow {
+  label: string;
+  values: Record<Tier, boolean | string>;
+}
+
+export interface MatrixGroup {
+  group: string;
+  rows: MatrixRow[];
+}
+
+export const PLAN_MATRIX: MatrixGroup[] = [
+  {
+    group: "Coverage",
+    rows: [
+      {
+        label: "Live scores, every tracked competition",
+        values: { free: true, pass: true, pro: true, vip: true },
+      },
+      {
+        label: "Fixtures ahead",
+        values: { free: "14 days", pass: "14 days", pro: "14 days", vip: "14 days" },
+      },
+      {
+        label: "Settled track record",
+        values: { free: true, pass: true, pro: true, vip: true },
+      },
+    ],
+  },
+  {
+    group: "Markets",
+    rows: [
+      { label: "Match result (1X2)", values: { free: true, pass: true, pro: true, vip: true } },
+      {
+        label: "Over/under, both teams to score, double chance",
+        values: { free: true, pass: true, pro: true, vip: true },
+      },
+      { label: "Correct score grid", values: { free: true, pass: true, pro: true, vip: true } },
+      { label: "Asian handicap", values: { free: false, pass: true, pro: true, vip: true } },
+    ],
+  },
+  {
+    group: "Analysis",
+    rows: [
+      {
+        label: "Sample size and data quality",
+        values: { free: true, pass: true, pro: true, vip: true },
+      },
+      {
+        label: "Value against the price you're offered",
+        values: { free: false, pass: true, pro: true, vip: true },
+      },
+      { label: "Staking guidance", values: { free: false, pass: true, pro: true, vip: true } },
+      {
+        label: "Full enhanced match breakdown",
+        values: { free: false, pass: false, pro: true, vip: true },
+      },
+      {
+        label: "Live in-play win probability",
+        values: { free: false, pass: false, pro: false, vip: true },
+      },
+    ],
+  },
+  {
+    group: "Tools",
+    rows: [
+      { label: "Selection builder", values: { free: true, pass: true, pro: true, vip: true } },
+      { label: "Shareable slip image", values: { free: false, pass: true, pro: true, vip: true } },
+    ],
+  },
+];
+
+/**
+ * What paying yearly actually saves, in naira and percent.
+ *
+ * Worth computing rather than hardcoding "save 20%" in copy: the two numbers
+ * would drift apart the first time a price changes, and the one that would
+ * quietly stay wrong is the one customers read.
+ */
+export function yearlySaving(plan: PlanDefinition): { amount: number; percent: number } | null {
+  const { monthly, yearly } = plan.price;
+  if (!monthly || !yearly) return null;
+
+  const fullPrice = monthly * 12;
+  const amount = fullPrice - yearly;
+  if (amount <= 0) return null;
+
+  return { amount, percent: Math.round((amount / fullPrice) * 100) };
 }
