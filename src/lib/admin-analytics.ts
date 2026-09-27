@@ -458,6 +458,36 @@ export async function getModelPerformance(): Promise<ModelPerformance> {
   return { overall, byMarket, byLeague, calibration };
 }
 
+/* ---------------------------------------------------------- WhatsApp digest */
+
+export interface WhatsappDigestRow {
+  id: string;
+  digestDate: string;
+  hasPicks: boolean;
+  picksMessage: string;
+  accaMessages: string[];
+  createdAt: string;
+}
+
+/** Most recent digests, newest first — today's (if generated) is rows[0]. */
+export async function getWhatsappDigests(limit = 14): Promise<WhatsappDigestRow[]> {
+  const admin = supabaseAdmin();
+  const { data } = await admin
+    .from("whatsapp_digests")
+    .select("id, digest_date, has_picks, picks_message, acca_messages, created_at")
+    .order("digest_date", { ascending: false })
+    .limit(limit);
+
+  return (data ?? []).map((r) => ({
+    id: r.id as string,
+    digestDate: r.digest_date as string,
+    hasPicks: r.has_picks as boolean,
+    picksMessage: r.picks_message as string,
+    accaMessages: (r.acca_messages as string[] | null) ?? [],
+    createdAt: r.created_at as string,
+  }));
+}
+
 /* ------------------------------------------------------------- Traffic sources */
 
 export interface ChannelBreakdown {
