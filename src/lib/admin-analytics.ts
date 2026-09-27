@@ -457,3 +457,112 @@ export async function getModelPerformance(): Promise<ModelPerformance> {
 
   return { overall, byMarket, byLeague, calibration };
 }
+
+/* ------------------------------------------------------------- Traffic sources */
+
+export interface ChannelBreakdown {
+  label: string;
+  count: number;
+}
+
+export interface AttributedSignup {
+  id: string;
+  email: string | null;
+  createdAt: string;
+  referrerHost: string | null;
+  utmSource: string | null;
+  utmMedium: string | null;
+  utmCampaign: string | null;
+  landingPage: string | null;
+}
+
+export interface TrafficSources {
+  byReferrer: ChannelBreakdown[];
+  byCampaign: ChannelBreakdown[];
+  untrackedCount: number;
+  trackedCount: number;
+  recentSignups: AttributedSignup[];
+}
+
+interface AttributionRow {
+  id: string;
+  email: string | null;
+  created_at: string;
+  signup_referrer_host: string | null;
+  signup_utm_source: string | null;
+  signup_utm_medium: string | null;
+  signup_utm_campaign: string | null;
+  signup_landing_page: string | null;
+}
+
+function rankByCount(counts: Map<string, number>, limit = 12): ChannelBreakdown[] {
+  return [...counts.entries()]
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, limit)
+    .map(([label, count]) => ({ label, count }));
+}
+
+/**
+ * First-touch attribution (0017_signup_attribution.sql, captured by
+ * src/proxy.ts) grouped two ways: by referrer host — organic/social/
+ * referral traffic that never carried a UTM tag — and by utm_source, for
+ * traffic that arrived through a deliberately tagged link. A visit can
+ * have neither (direct) or both (a tagged link clicked from a known
+ * referring page); the two breakdowns are independent, not mutually
+ * exclusive buckets of the same total.
+ */
+export async function getTrafficSources(): Promise<TrafficSources> {
+  const admin = supabaseAdmin();
+
+  // Bounded rather than paginated: this app's whole user base is a few
+  // thousand rows at most today, and both breakdowns need every row
+  // in-memory to count correctly, not just one page of the most recent
+  // signups.
+  const { data, count } = await admin
+    .from("profiles")
+    .select(
+      "id, email, created_at, signup_referrer_host, signup_utm_source, signup_utm_medium, signup_utm_campaign, signup_landing_page",
+      { count: "exact" },
+    )
+    .order("created_at", { ascending: false })
+    .limit(5000);
+
+  const rows = (data ?? []) as AttributionRow[];
+
+  const referrerCounts = new Map<string, number>();
+  const campaignCounts = new Map<string, number>();
+  let trackedCount = 0;
+
+  for (const r of rows) {
+    const hasReferrer = !!r.signup_referrer_host;
+    const hasCampaign = !!r.signup_utm_source;
+    if (hasReferrer || hasCampaign) trackedCount++;
+
+    const referrerLabel = hasReferrer ? r.signup_referrer_host! : "Direct / no referrer";
+    referrerCounts.set(referrerLabel, (referrerCounts.get(referrerLabel) ?? 0) + 1);
+
+    if (hasCampaign) {
+      const campaignLabel = r.signup_utm_medium ? `${r.signup_utm_source} / ${r.signup_utm_medium}` : r.signup_utm_source!;
+      campaignCounts.set(campaignLabel, (campaignCounts.get(campaignLabel) ?? 0) + 1);
+    }
+  }
+
+  const recentSignups: AttributedSignup[] = rows.slice(0, 25).map((r) => ({
+    id: r.id,
+    email: r.email,
+    createdAt: r.created_at,
+    referrerHost: r.signup_referrer_host,
+    utmSource: r.signup_utm_source,
+    utmMedium: r.signup_utm_medium,
+    utmCampaign: r.signup_utm_campaign,
+    landingPage: r.signup_landing_page,
+  }));
+
+  return {
+    byReferrer: rankByCount(referrerCounts),
+    byCampaign: rankByCount(campaignCounts),
+    untrackedCount: (count ?? rows.length) - trackedCount,
+    trackedCount,
+    recentSignups,
+  };
+}

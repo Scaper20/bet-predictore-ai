@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { type NextFetchEvent, type NextRequest, NextResponse } from "next/server";
+import { FIRST_TOUCH_COOKIE, type FirstTouch, trimFirstTouchValue } from "@/lib/first-touch";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const anonKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -84,6 +85,8 @@ export async function proxy(request: NextRequest, event: NextFetchEvent) {
     });
   }
 
+  captureFirstTouch(request, response);
+
   if (user) {
     const cutoff = new Date(Date.now() - 10 * 60 * 1000).toISOString();
     event.waitUntil(
@@ -98,6 +101,54 @@ export async function proxy(request: NextRequest, event: NextFetchEvent) {
   }
 
   return response;
+}
+
+/**
+ * First-touch attribution: captured once, on this browser's very first
+ * request, and never overwritten after — a later direct/repeat visit must
+ * not erase the campaign that originally brought them here.
+ *
+ * Restricted to top-level navigations (Sec-Fetch-Mode: navigate, sent by
+ * every modern browser) so a background poll or prefetch that happens to be
+ * the first request this proxy ever sees for a given browser doesn't get
+ * mistaken for the landing page — a bare "no header at all" (some older
+ * browsers) still passes, since a false negative here just means slightly
+ * fewer attributed signups, not a wrong one.
+ */
+function captureFirstTouch(request: NextRequest, response: NextResponse) {
+  if (request.cookies.get(FIRST_TOUCH_COOKIE)) return;
+  const mode = request.headers.get("sec-fetch-mode");
+  if (mode && mode !== "navigate") return;
+
+  const params = request.nextUrl.searchParams;
+  let referrerHost: string | null = null;
+  const referer = request.headers.get("referer");
+  if (referer) {
+    try {
+      const refUrl = new URL(referer);
+      if (refUrl.hostname !== request.nextUrl.hostname) referrerHost = refUrl.hostname;
+    } catch {
+      // Malformed Referer header — leave it as "direct" rather than guessing.
+    }
+  }
+
+  const data: FirstTouch = {
+    referrerHost: trimFirstTouchValue(referrerHost, 200),
+    utmSource: trimFirstTouchValue(params.get("utm_source"), 100),
+    utmMedium: trimFirstTouchValue(params.get("utm_medium"), 100),
+    utmCampaign: trimFirstTouchValue(params.get("utm_campaign"), 100),
+    utmTerm: trimFirstTouchValue(params.get("utm_term"), 100),
+    utmContent: trimFirstTouchValue(params.get("utm_content"), 100),
+    landingPage: trimFirstTouchValue(request.nextUrl.pathname, 200),
+  };
+
+  response.cookies.set(FIRST_TOUCH_COOKIE, encodeURIComponent(JSON.stringify(data)), {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 90,
+  });
 }
 
 export const config = {
