@@ -60,6 +60,36 @@ export function receiptEmail(opts: {
   };
 }
 
+/** HTML-escapes a value pulled from user input before it's interpolated
+ * into an email body — ticket subjects and messages aren't otherwise
+ * sanitized, so this is the one place they meet raw HTML. */
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+export function newTicketNotificationEmail(opts: {
+  subject: string;
+  fromEmail: string;
+  preview: string;
+  ticketId: string;
+}): { subject: string; html: string } {
+  return {
+    subject: `New ticket: ${opts.subject}`,
+    html: emailLayout(`
+      <p style="margin:0 0 12px;font-size:17px;font-weight:700;">New support ticket</p>
+      <p style="margin:0 0 4px;"><strong>From:</strong> ${escapeHtml(opts.fromEmail)}</p>
+      <p style="margin:0 0 20px;"><strong>Subject:</strong> ${escapeHtml(opts.subject)}</p>
+      <p style="margin:0 0 20px;padding:12px 16px;background:#f6f8fb;border-radius:8px;font-size:14px;color:#1c2430;">${escapeHtml(opts.preview)}</p>
+      ${button(`${SITE_URL}/admin/tickets/${opts.ticketId}`, "Reply in the admin dashboard")}
+    `),
+  };
+}
+
 export function ticketReplyNotificationEmail(opts: { subject: string }): { subject: string; html: string } {
   return {
     subject: "An admin replied to your support request",

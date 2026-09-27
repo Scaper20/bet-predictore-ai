@@ -1,8 +1,20 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase/server";
+import { sendEmail } from "@/lib/email";
+import { newTicketNotificationEmail } from "@/lib/email-templates";
 
 export const dynamic = "force-dynamic";
 const NO_STORE = { "Cache-Control": "no-store" };
+const SUPPORT_INBOX = process.env.SUPPORT_INBOX_EMAIL ?? "support@betrix.com.ng";
+
+// A signed-in user could otherwise script a loop of POSTs — there's no CDN/
+// WAF-level throttling in front of this route, and each message both writes
+// a row and (on a new/reopened ticket) fires an outbound email. Cheap DB
+// check rather than a KV-backed limiter: correct enough for one user's own
+// message rate, no new infra required, and the 4000-char body cap
+// (0006_support_tickets.sql) already bounds the size of each one.
+const MAX_MESSAGES_PER_WINDOW = 8;
+const WINDOW_MS = 5 * 60_000;
 
 /**
  * Acts only on the caller's own data via the ordinary RLS-scoped client —
@@ -47,6 +59,18 @@ export async function POST(request: Request) {
   const message = (body ?? "").trim();
   if (!message) return NextResponse.json({ error: "Write a message first." }, { status: 400, headers: NO_STORE });
 
+  const { count: recentCount } = await supabase
+    .from("support_messages")
+    .select("*", { count: "exact", head: true })
+    .eq("sender_id", user.id)
+    .gte("created_at", new Date(Date.now() - WINDOW_MS).toISOString());
+  if ((recentCount ?? 0) >= MAX_MESSAGES_PER_WINDOW) {
+    return NextResponse.json(
+      { error: "You're sending messages too fast. Wait a few minutes and try again." },
+      { status: 429, headers: NO_STORE },
+    );
+  }
+
   // Reuse the caller's most recent open/pending ticket, or start a new one.
   let { data: ticket } = await supabase
     .from("support_tickets")
@@ -57,6 +81,7 @@ export async function POST(request: Request) {
     .limit(1)
     .maybeSingle();
 
+  const isNewTicket = !ticket;
   if (!ticket) {
     const { data: created, error: createError } = await supabase
       .from("support_tickets")
@@ -79,6 +104,20 @@ export async function POST(request: Request) {
 
   // A user message reopens a closed/pending ticket — the ball moves to the admin's court.
   await supabase.from("support_tickets").update({ status: "open", updated_at: new Date().toISOString() }).eq("id", ticket.id);
+
+  // Only on the very first message of a conversation — a busy admin doesn't
+  // need an email for every follow-up on a ticket they already know is open.
+  if (isNewTicket) {
+    void sendEmail({
+      to: SUPPORT_INBOX,
+      ...newTicketNotificationEmail({
+        subject: "Support request",
+        fromEmail: user.email ?? "unknown",
+        preview: message.slice(0, 500),
+        ticketId: ticket.id,
+      }),
+    });
+  }
 
   return NextResponse.json({ ok: true }, { headers: NO_STORE });
 }
