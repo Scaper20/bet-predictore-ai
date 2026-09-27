@@ -139,3 +139,27 @@ export const SURVEY_QUESTIONS: Record<SurveyType, SurveyQuestion[]> = {
 };
 
 export const TIER_LABEL: Record<Tier, string> = { free: "Free", pass: "Weekend Pass", pro: "Pro", vip: "VIP" };
+
+/** Raw stored answers are option *values* ("price", "4"), not the label
+ * shown on the button — this turns one back into the other for display.
+ * Falls back to the raw value for text/nps questions (nothing to look up)
+ * and for a value that no longer matches any current option (the question
+ * set changed since this was answered — show what was actually stored
+ * rather than hiding it). */
+export function answerLabel(question: SurveyQuestion, rawValue: string): string {
+  return question.options?.find((o) => o.value === rawValue)?.label ?? rawValue;
+}
+
+/** Average of a numeric-scale/NPS question across a set of answer maps,
+ * ignoring rows that skipped it (never happens for a required question,
+ * but this stays correct if that ever changes). Null with no answers at
+ * all, rather than a misleading 0. */
+export function averageAnswer(rows: { answers: Record<string, string> }[], questionId: string): number | null {
+  const values = rows
+    .map((r) => r.answers[questionId])
+    .filter((v): v is string => v !== undefined)
+    .map(Number)
+    .filter((n) => !Number.isNaN(n));
+  if (values.length === 0) return null;
+  return values.reduce((sum, n) => sum + n, 0) / values.length;
+}
