@@ -5,6 +5,7 @@ import { WHATSAPP_COMMUNITY_URL } from "@/lib/whatsapp-community";
 import { WhatsAppIcon } from "@/components/icons/whatsapp-icon";
 import { ExternalButtonLink } from "@/components/ui/primitives";
 import { useOverlay } from "@/components/ui/use-overlay";
+import { usePriorityPopupActive } from "@/components/ui/popup-priority";
 
 const SNOOZE_KEY = "bx_whatsapp_popup_snoozed_until";
 const SNOOZE_DAYS = 1; // once per calendar visit-day, not once ever
@@ -47,16 +48,24 @@ const getServerSnapshot = () => false;
  */
 export function WhatsAppPopup() {
   const alreadySnoozed = useSyncExternalStore(subscribe, isSnoozed, getServerSnapshot);
+  // A gift-congratulations popup (GiftPopup) always wins the shared overlay
+  // slot — rarer, more time-sensitive, and its "seen" state is server-side
+  // so it can't just be shown again tomorrow the way this one can.
+  const priorityActive = usePriorityPopupActive();
   const [visible, setVisible] = useState(false);
   const [barWidth, setBarWidth] = useState("100%");
   const close = () => setVisible(false);
   const { containerRef, initialFocusRef } = useOverlay<HTMLDivElement, HTMLButtonElement>(visible, close);
 
   useEffect(() => {
-    if (alreadySnoozed || !WHATSAPP_COMMUNITY_URL) return;
+    // A gift popup showing up after this timer already started is a rare
+    // enough race (it typically resolves in well under SHOW_DELAY_MS) that
+    // it's not worth chasing here — this only needs to stop the timer from
+    // ever starting while one is already active.
+    if (alreadySnoozed || !WHATSAPP_COMMUNITY_URL || priorityActive) return;
     const showTimer = setTimeout(() => setVisible(true), SHOW_DELAY_MS);
     return () => clearTimeout(showTimer);
-  }, [alreadySnoozed]);
+  }, [alreadySnoozed, priorityActive]);
 
   useEffect(() => {
     if (!visible) return;

@@ -90,6 +90,34 @@ export function whatsappDigestReadyEmail(opts: { hasPicks: boolean; messageCount
   };
 }
 
+export function giftSubscriptionEmail(opts: {
+  tier: Extract<Tier, "pro" | "vip">;
+  months: number;
+  expiresAt: string;
+  note: string | null;
+}): { subject: string; html: string } {
+  const label = TIER_LABEL[opts.tier];
+  const until = new Date(opts.expiresAt).toLocaleDateString("en-NG", { year: "numeric", month: "long", day: "numeric" });
+  const duration = opts.months === 1 ? "one month" : `${opts.months} months`;
+
+  return {
+    subject: `You've been gifted ${duration} of BetriX ${label}`,
+    html: emailLayout(`
+      <p style="margin:0 0 12px;font-size:17px;font-weight:700;">🎁 You just got ${label}, on the house</p>
+      <p style="margin:0;">BetriX gifted you ${duration} of ${label} — free, no card required. It's active now
+      and runs through ${until}.</p>
+      ${
+        opts.note
+          ? `<p style="margin:20px 0 0;padding:12px 16px;background:#f6f8fb;border-radius:8px;font-size:14px;color:#1c2430;font-style:italic;">"${escapeHtml(opts.note)}"</p>`
+          : ""
+      }
+      ${button(SITE_URL, "See what's unlocked")}
+      <p style="margin:24px 0 0;font-size:13px;color:#8d9db2;">Nothing to cancel — this isn't a subscription, it
+      just quietly ends on ${until} unless you decide to subscribe for real.</p>
+    `),
+  };
+}
+
 export function newTicketNotificationEmail(opts: {
   subject: string;
   fromEmail: string;
