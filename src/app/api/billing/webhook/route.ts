@@ -186,6 +186,18 @@ export async function POST(request: Request) {
       break;
     }
 
+    case "charge.failed": {
+      // Same shape/confidence as charge.success above (Paystack's charge
+      // events share a data envelope) — a real, immediate failure signal,
+      // distinct from api/cron/expire-pending-payments's 24h backstop for
+      // checkouts that never got a webhook at all.
+      const reference = asString(data.reference);
+      if (reference) {
+        await admin.from("payments").update({ status: "failed", raw_event: event }).eq("paystack_reference", reference);
+      }
+      break;
+    }
+
     case "subscription.create": {
       const customer = asRecord(data.customer);
       const customerCode = asString(customer?.customer_code);
