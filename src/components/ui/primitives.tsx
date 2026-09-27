@@ -98,6 +98,33 @@ export function ButtonLink({
   );
 }
 
+/** ButtonLink for a destination outside this app (a WhatsApp invite, an
+ * external doc) — a plain `<a>` rather than next/link, since Link is for
+ * client-side navigation within the app. Always opens in a new tab: this
+ * site's own page is still there when the visitor comes back to it. */
+export function ExternalButtonLink({
+  href,
+  variant = "primary",
+  className = "",
+  children,
+}: {
+  href: string;
+  variant?: ButtonVariant;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={`inline-flex items-center justify-center gap-2 rounded-lg px-5 py-3 text-sm transition-colors ${BUTTONS[variant]} ${className}`}
+    >
+      {children}
+    </a>
+  );
+}
+
 /** Inline loading indicator — a growing, fading ring in `currentColor`, so it
  * inherits whatever text color it's dropped into (a button label, a muted
  * status line, etc.) and reads as the same visual language as the live-match

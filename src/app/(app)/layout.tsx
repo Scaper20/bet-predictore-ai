@@ -3,6 +3,7 @@ import { SiteFooter } from "@/components/layout/site-footer";
 import { EntitlementProvider } from "@/components/entitlements/entitlement-provider";
 import { ChatWidget } from "@/components/support/chat-widget";
 import { FeedbackWidget } from "@/components/feedback/feedback-widget";
+import { WhatsAppPopup } from "@/components/landing/whatsapp-popup";
 import { ScrollToTop } from "@/components/ui/scroll-to-top";
 import { MobileNav } from "@/components/layout/mobile-nav";
 
@@ -56,6 +57,7 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
 
       <ChatWidget />
       <FeedbackWidget />
+      <WhatsAppPopup />
       <ScrollToTop />
       <MobileNav />
     </EntitlementProvider>

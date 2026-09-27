@@ -7,6 +7,7 @@ import { SectionHeading, ButtonLink, EmptyState } from "@/components/ui/primitiv
 import { Container, containerClass } from "@/components/ui/container";
 import { liveFeed, upcomingFeed, predictBatch, bestBetOfDay, featuredFeed } from "@/lib/service";
 import { FeaturedBoard } from "@/components/landing/featured-board";
+import { WhatsAppPromo } from "@/components/landing/whatsapp-promo";
 import { toFeaturedRow } from "@/lib/featured";
 import { matchPath, sportPath } from "@/lib/routes";
 
@@ -59,6 +60,7 @@ export default async function HomePage() {
         </Container>
       )}
       <TodaysPicks previews={previews} />
+      <WhatsAppPromo />
       <Features />
       <HowItWorks />
       <Leagues />
