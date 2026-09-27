@@ -4,17 +4,19 @@ import { emailLayout } from "@/lib/email";
 import { naira } from "@/lib/format";
 import { SITE_URL } from "@/lib/site-url";
 import { sportPath } from "@/lib/routes";
+import { TIER_LABEL } from "@/lib/outreach";
 import type { Tier } from "@/lib/entitlements";
-
-const TIER_LABEL: Record<Tier, string> = {
-  free: "Free",
-  pass: "Weekend Pass",
-  pro: "Pro",
-  vip: "VIP",
-};
 
 function button(href: string, label: string): string {
   return `<p style="margin:24px 0 0;"><a href="${href}" style="display:inline-block;background:#00c97a;color:#05080d;font-weight:700;text-decoration:none;padding:10px 20px;border-radius:8px;font-size:14px;">${label}</a></p>`;
+}
+
+/** Only on the one-off outreach campaigns below — transactional email
+ * (receipts, replies, cancellations) isn't marketing and doesn't carry
+ * this. See supabase/migrations/0020_email_campaigns.sql. */
+function unsubscribeFooter(url: string): string {
+  return `<p style="margin:28px 0 0;font-size:12px;color:#8d9db2;">Sent to you personally by the BetriX team, not an automated blast.
+  If you'd rather not get these, <a href="${url}" style="color:#8d9db2;">unsubscribe here</a> — this never affects your account or billing emails.</p>`;
 }
 
 export function welcomeEmail(): { subject: string; html: string } {
@@ -165,6 +167,84 @@ export function subscriptionCanceledEmail(opts: {
         until ? `You'll keep access until ${until}.` : "You'll keep access until the end of your current billing period."
       }</p>
       ${button(`${SITE_URL}/account/billing`, "Resubscribe")}
+    `),
+  };
+}
+
+/* --------------------------------------------------------- Outreach campaign */
+
+export function warmCheckInEmail(opts: { unsubscribeUrl: string }): { subject: string; html: string } {
+  return {
+    subject: "A quick note from Scaper",
+    html: emailLayout(`
+      <p style="margin:0 0 16px;">Hey — Scaper here, I built BetriX.</p>
+      <p style="margin:0 0 16px;">No ask in this one, I just wanted to check in. I look at every ticket and every
+      piece of feedback that comes through myself, but I don't always get to hear from people who are quietly
+      using the site without ever needing to reach out — which is most of you.</p>
+      <p style="margin:0 0 16px;">So: how's it been? If something's confusing, missing, or just annoying, hit
+      reply — this inbox reaches me directly, not a queue.</p>
+      <p style="margin:0;">Thanks for being here.<br />— Scaper, Founder &amp; CEO, BetriX</p>
+      ${unsubscribeFooter(opts.unsubscribeUrl)}
+    `),
+  };
+}
+
+export function subscriberSurveyEmail(opts: {
+  tier: Extract<Tier, "pass" | "pro" | "vip">;
+  surveyUrl: string;
+  unsubscribeUrl: string;
+}): { subject: string; html: string } {
+  const label = TIER_LABEL[opts.tier];
+  return {
+    subject: "2 minutes? I'd love your take on BetriX",
+    html: emailLayout(`
+      <p style="margin:0 0 16px;">Hey — Scaper here, founder of BetriX.</p>
+      <p style="margin:0 0 16px;">We're excited to see you subscribed to the <strong>${label}</strong> plan — genuinely,
+      thank you. Paying for something means you expect it to be worth it, and I want to make sure it actually is.</p>
+      <p style="margin:0 0 16px;">I put together a short survey — 6 questions, under 3 minutes, no account needed.
+      Your answers go straight to me and shape what gets built next, not a marketing team.</p>
+      ${button(opts.surveyUrl, "Take the 3-minute survey")}
+      <p style="margin:24px 0 0;">Thanks for trusting us with your subscription.<br />— Scaper, Founder &amp; CEO, BetriX</p>
+      ${unsubscribeFooter(opts.unsubscribeUrl)}
+    `),
+  };
+}
+
+export function freeSurveyEmail(opts: { surveyUrl: string; unsubscribeUrl: string }): {
+  subject: string;
+  html: string;
+} {
+  return {
+    subject: "2 minutes? I'd love your take on BetriX",
+    html: emailLayout(`
+      <p style="margin:0 0 16px;">Hey — Scaper here, founder of BetriX.</p>
+      <p style="margin:0 0 16px;">You've been using BetriX on the free plan, and I'd genuinely like to know how
+      it's going — what's working, what isn't, and what (if anything) would make the paid side worth it to you.</p>
+      <p style="margin:0 0 16px;">I put together a short survey — 6 questions, under 3 minutes, no account needed.
+      Your answers go straight to me, not a marketing team, and directly shape what we build next.</p>
+      ${button(opts.surveyUrl, "Take the 3-minute survey")}
+      <p style="margin:24px 0 0;">Thanks for giving BetriX a shot.<br />— Scaper, Founder &amp; CEO, BetriX</p>
+      ${unsubscribeFooter(opts.unsubscribeUrl)}
+    `),
+  };
+}
+
+export function whatsappCommunityAnnouncementEmail(opts: { communityUrl: string; unsubscribeUrl: string }): {
+  subject: string;
+  html: string;
+} {
+  return {
+    subject: "New: BetriX picks on WhatsApp",
+    html: emailLayout(`
+      <p style="margin:0 0 16px;">Hey — Scaper here.</p>
+      <p style="margin:0 0 16px;">Quick one: we just launched a BetriX WhatsApp community. Once a day, before
+      kickoff, everyone in it gets that day's value picks — individual picks plus safe/balanced/risky
+      accumulator combos — in one message. Only picks that clear our sample-size bar, same standard as the
+      site.</p>
+      <p style="margin:0 0 16px;">Free, no spam, leave anytime.</p>
+      ${button(opts.communityUrl, "Join the WhatsApp community")}
+      <p style="margin:24px 0 0;">— Scaper, Founder &amp; CEO, BetriX</p>
+      ${unsubscribeFooter(opts.unsubscribeUrl)}
     `),
   };
 }

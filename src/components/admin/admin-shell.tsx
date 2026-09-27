@@ -11,6 +11,7 @@ const NAV = [
   { href: "/admin/tickets", label: "Tickets" },
   { href: "/admin/feedback", label: "Feedback" },
   { href: "/admin/whatsapp-digest", label: "WhatsApp digest" },
+  { href: "/admin/outreach", label: "Outreach" },
   { href: "/admin/users", label: "Users" },
   { href: "/admin/traffic", label: "Traffic" },
   { href: "/admin/payments", label: "Payments" },
