@@ -110,7 +110,7 @@ export function SiteHeader() {
                   Upgrade
                 </ButtonLink>
               )}
-              <AccountMenu tier={entitlement.tier} email={entitlement.email} />
+              <AccountMenu tier={entitlement.tier} email={entitlement.email} displayName={entitlement.displayName} />
             </>
           ) : (
             <>

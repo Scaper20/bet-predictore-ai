@@ -10,7 +10,7 @@ const EntitlementContext = createContext<{
   loading: boolean;
   refresh: () => Promise<void>;
 }>({
-  entitlement: { tier: "free", status: "none", signedIn: false, email: null },
+  entitlement: { tier: "free", status: "none", signedIn: false, email: null, displayName: null },
   loading: true,
   refresh: async () => {},
 });
@@ -28,7 +28,7 @@ export function EntitlementProvider({
   initial?: Entitlement;
 }) {
   const [entitlement, setEntitlement] = useState<Entitlement>(
-    initial ?? { tier: "free", status: "none", signedIn: false, email: null }
+    initial ?? { tier: "free", status: "none", signedIn: false, email: null, displayName: null }
   );
   const [loading, setLoading] = useState(!initial);
 

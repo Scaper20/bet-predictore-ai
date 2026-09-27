@@ -27,20 +27,27 @@ export interface Entitlement {
   /**
    * The signed-in user's own email, so the header can show who is signed in
    * without a second round trip. Null when logged out. This endpoint is
-   * already per-user and no-store, so it is the natural place for it — but it
-   * is the ONLY identity field that belongs here; anything more and this stops
-   * being an entitlement check.
+   * already per-user and no-store, so it is the natural place for it.
    */
   email: string | null;
+  /**
+   * profiles.display_name, alongside email for the same reason — the account
+   * menu prefers this over email whenever it's set (src/components/layout/
+   * account-menu.tsx). Bundled in with email rather than kept a strictly
+   * "entitlement-only" field: both are the same "who's signed in" round trip,
+   * and splitting them would mean the header either shows a second, unrelated
+   * network request or goes back to showing email only.
+   */
+  displayName: string | null;
 }
 
 /** Signed in, but with no paid relationship — a different thing from ANON. */
-function signedInFree(email: string | null): Entitlement {
-  return { tier: "free", status: "none", signedIn: true, email };
+function signedInFree(email: string | null, displayName: string | null): Entitlement {
+  return { tier: "free", status: "none", signedIn: true, email, displayName };
 }
 
 /** Nobody is signed in. */
-const ANON: Entitlement = { tier: "free", status: "none", signedIn: false, email: null };
+const ANON: Entitlement = { tier: "free", status: "none", signedIn: false, email: null, displayName: null };
 
 /**
  * Resolves the signed-in user's tier from `subscriptions`.
@@ -63,6 +70,7 @@ export async function getEntitlement(): Promise<Entitlement> {
   // account is not — it would put "Create free account" in their header.
   let signedIn = false;
   let email: string | null = null;
+  let displayName: string | null = null;
 
   try {
     const supabase = await supabaseServer();
@@ -73,22 +81,26 @@ export async function getEntitlement(): Promise<Entitlement> {
     signedIn = true;
     email = user.email ?? null;
 
-    const { data } = await supabase
-      .from("subscriptions")
-      .select("tier, status, current_period_end, pass_expires_at")
-      .eq("user_id", user.id)
-      .maybeSingle();
+    const [{ data }, { data: profile }] = await Promise.all([
+      supabase
+        .from("subscriptions")
+        .select("tier, status, current_period_end, pass_expires_at")
+        .eq("user_id", user.id)
+        .maybeSingle(),
+      supabase.from("profiles").select("display_name").eq("id", user.id).maybeSingle(),
+    ]);
+    displayName = profile?.display_name ?? null;
 
     // "none" is the only status meaning "never had a paid relationship" —
     // active/past_due/cancelled all fall through to the expiry check below,
     // which is what actually decides access.
-    if (!data || data.status === "none") return signedInFree(email);
+    if (!data || data.status === "none") return signedInFree(email, displayName);
 
     if (data.tier === "pass") {
       const expired = !data.pass_expires_at || new Date(data.pass_expires_at) < new Date();
       return expired
-        ? signedInFree(email)
-        : { tier: "pass", status: "active", signedIn: true, email };
+        ? signedInFree(email, displayName)
+        : { tier: "pass", status: "active", signedIn: true, email, displayName };
     }
 
     // Pro/VIP: a cancelled-but-not-yet-lapsed, or past_due-but-in-grace-period,
@@ -101,19 +113,20 @@ export async function getEntitlement(): Promise<Entitlement> {
       // For past_due/cancelled with no period-end ever recorded, there's no
       // paid-through date to honour.
       return data.status === "active"
-        ? { tier: data.tier as Tier, status: data.status, signedIn: true, email }
-        : signedInFree(email);
+        ? { tier: data.tier as Tier, status: data.status, signedIn: true, email, displayName }
+        : signedInFree(email, displayName);
     }
     const expired = new Date(data.current_period_end) < new Date();
-    if (expired) return signedInFree(email);
+    if (expired) return signedInFree(email, displayName);
 
     return {
       tier: data.tier as Tier,
       status: data.status as Entitlement["status"],
       signedIn: true,
       email,
+      displayName,
     };
   } catch {
-    return signedIn ? signedInFree(email) : ANON;
+    return signedIn ? signedInFree(email, displayName) : ANON;
   }
 }
