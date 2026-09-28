@@ -223,8 +223,14 @@ async function openSlipAndReadCode(page: Page): Promise<string | null> {
 }
 
 async function runBooking(legs: BookingLeg[]): Promise<BookingResult> {
-  const browser = await launchBrowser();
+  // Declared outside the try, but launched INSIDE it — a launch failure (a
+  // bad deploy, a missing binary, a cold-start extraction glitch) is exactly
+  // the kind of thing this function promises to fail closed on, and it can
+  // only keep that promise if the call that can fail is where the catch can
+  // see it.
+  let browser: Browser | undefined;
   try {
+    browser = await launchBrowser();
     const page = await (await browser.newContext()).newPage();
 
     for (const leg of legs) {
@@ -245,10 +251,16 @@ async function runBooking(legs: BookingLeg[]): Promise<BookingResult> {
     const code = await openSlipAndReadCode(page);
     return code ? { code } : { code: null, reason: "not_found" };
   } catch (err) {
+    // The fail-closed contract means the caller only ever sees "unavailable"
+    // — but that's worthless for actually fixing a break unless the real
+    // cause lands somewhere. This is that somewhere: Vercel (and any other
+    // Node host) captures console.error into the function's own logs, no
+    // separate log-querying tool required.
+    console.error("[sportybet-booking] booking run failed:", err);
     if (err instanceof Error && /timeout/i.test(err.message)) return { code: null, reason: "timeout" };
     return { code: null, reason: "error" };
   } finally {
-    await browser.close().catch(() => {});
+    await browser?.close().catch(() => {});
   }
 }
 

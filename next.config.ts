@@ -21,21 +21,34 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["playwright-core", "@sparticuz/chromium"],
 
   /**
-   * @sparticuz/chromium finds its own binaries (bin/chromium.br and friends,
-   * ~67MB) by reading its own package directory at runtime rather than a
-   * static `require`/`import`, which is exactly the pattern Next's file
-   * tracer cannot follow — confirmed by building and checking the emitted
-   * .nft.json for this route, which listed the package's few KB of JS and
-   * silently dropped every .br binary. Without this, the deployed function
-   * would launch fine locally (playwright-core falls back to a locally
-   * installed browser off Vercel) and then fail closed with `{ code: null,
-   * reason: "error" }` in production the moment it tried to actually spawn
-   * Chromium — a gap that would only show up as a support ticket, not a
-   * build failure. Scoped to the one route that needs it rather than every
-   * function, since it doubles that function's deployed size.
+   * Both packages here load part of themselves at runtime by reading their
+   * own package directory rather than a static `require`/`import`, which is
+   * exactly the pattern Next's file tracer cannot follow — confirmed twice
+   * over by actually deploying and reading the runtime error, not just
+   * assuming the config was enough:
+   *
+   *   - @sparticuz/chromium's binaries (bin/chromium.br and friends, ~67MB)
+   *     were silently dropped from the trace, which would have failed
+   *     closed with `{ code: null, reason: "error" }` the moment it tried to
+   *     spawn Chromium.
+   *   - playwright-core's own browsers.json — needed just to load the
+   *     module, before any of this file's code runs — was ALSO dropped.
+   *     That one doesn't fail closed: it throws at import time, outside any
+   *     try/catch this file has, and surfaced in production as a raw 500
+   *     ("Cannot find module '.../playwright-core/browsers.json'") rather
+   *     than the graceful "booking unavailable" response. Given tracing
+   *     already missed one file in this package, the whole package is
+   *     included here rather than guessing which other files it reads the
+   *     same way.
+   *
+   * Scoped to the one route that needs any of this rather than every
+   * function, since it adds real size to whatever function carries it.
    */
   outputFileTracingIncludes: {
-    "/api/slip/booking-code": ["./node_modules/@sparticuz/chromium/bin/**"],
+    "/api/slip/booking-code": [
+      "./node_modules/@sparticuz/chromium/bin/**",
+      "./node_modules/playwright-core/**",
+    ],
   },
 
   async headers() {
