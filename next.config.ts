@@ -13,6 +13,12 @@ import { DEFAULT_SPORT } from "./src/lib/sports";
 const MOVED = ["live", "fixtures", "predictions", "trends", "track-record", "slip"];
 
 const nextConfig: NextConfig = {
+  // playwright ships native binaries it locates via its own relative-path
+  // logic; letting the bundler pull it into the server bundle breaks that
+  // resolution, so it's left external and required at runtime through Node's
+  // normal module resolution instead. See src/lib/booking/sportybet-booking.ts.
+  serverExternalPackages: ["playwright"],
+
   async headers() {
     const securityHeaders = [
       // Defense in depth: same intent as robots.txt's disallow and the
@@ -30,6 +36,7 @@ const nextConfig: NextConfig = {
       { source: "/admin/:path*", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" }] },
     ];
   },
+
   async redirects() {
     return [
       ...MOVED.map((path) => ({
