@@ -1,6 +1,7 @@
 import "server-only";
 
-import { chromium, type Page } from "playwright";
+import { chromium, type Browser, type Page } from "playwright-core";
+import sparticuzChromium from "@sparticuz/chromium";
 import type { SportyBetSelectionAddress } from "@/lib/odds/sportybet";
 
 /**
@@ -45,7 +46,37 @@ import type { SportyBetSelectionAddress } from "@/lib/odds/sportybet";
  * before this is relied on. Until then, every call will most likely resolve
  * to `{ code: null, reason: "not_found" }` — which is the fail-closed default
  * working exactly as intended, not a crash.
+ *
+ * RUNTIME NOTE: launched through playwright-core rather than the full
+ * playwright package, which bundles its own multi-hundred-megabyte browser
+ * download — far past what fits in a Vercel serverless function alongside
+ * the rest of this app. On Vercel (and anywhere else that looks like AWS
+ * Lambda, which Vercel's Node functions run on), the browser instead comes
+ * from @sparticuz/chromium, a build compressed and packaged specifically to
+ * survive that environment. That is a genuinely different Chromium build
+ * than Playwright's own — officially, Playwright only supports the browser
+ * it downloads itself — so this counts on the CDP-level automation this file
+ * does (navigate, click, read text) being basic enough not to need
+ * Playwright's own patches. Locally, or on a plain Node server, it falls
+ * back to whatever `npx playwright install chromium` already put on disk.
  */
+
+function isServerlessRuntime(): boolean {
+  // Vercel's own Node functions run on AWS Lambda, and set both. A local dev
+  // machine or a self-hosted Node server sets neither.
+  return Boolean(process.env.VERCEL) || Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME);
+}
+
+async function launchBrowser(): Promise<Browser> {
+  if (isServerlessRuntime()) {
+    return chromium.launch({
+      args: sparticuzChromium.args,
+      executablePath: await sparticuzChromium.executablePath(),
+      headless: true,
+    });
+  }
+  return chromium.launch({ headless: true });
+}
 
 /** One selection to add to the slip, addressed the way SportyBet addresses it. */
 export interface BookingLeg extends SportyBetSelectionAddress {
@@ -192,7 +223,7 @@ async function openSlipAndReadCode(page: Page): Promise<string | null> {
 }
 
 async function runBooking(legs: BookingLeg[]): Promise<BookingResult> {
-  const browser = await chromium.launch({ headless: true });
+  const browser = await launchBrowser();
   try {
     const page = await (await browser.newContext()).newPage();
 

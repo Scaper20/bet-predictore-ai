@@ -13,11 +13,30 @@ import { DEFAULT_SPORT } from "./src/lib/sports";
 const MOVED = ["live", "fixtures", "predictions", "trends", "track-record", "slip"];
 
 const nextConfig: NextConfig = {
-  // playwright ships native binaries it locates via its own relative-path
-  // logic; letting the bundler pull it into the server bundle breaks that
-  // resolution, so it's left external and required at runtime through Node's
-  // normal module resolution instead. See src/lib/booking/sportybet-booking.ts.
-  serverExternalPackages: ["playwright"],
+  // playwright-core and @sparticuz/chromium both locate native binaries via
+  // their own relative-path logic at runtime; letting the bundler pull them
+  // into the server bundle breaks that resolution, so they're left external
+  // and required through Node's normal module resolution instead. See
+  // src/lib/booking/sportybet-booking.ts.
+  serverExternalPackages: ["playwright-core", "@sparticuz/chromium"],
+
+  /**
+   * @sparticuz/chromium finds its own binaries (bin/chromium.br and friends,
+   * ~67MB) by reading its own package directory at runtime rather than a
+   * static `require`/`import`, which is exactly the pattern Next's file
+   * tracer cannot follow — confirmed by building and checking the emitted
+   * .nft.json for this route, which listed the package's few KB of JS and
+   * silently dropped every .br binary. Without this, the deployed function
+   * would launch fine locally (playwright-core falls back to a locally
+   * installed browser off Vercel) and then fail closed with `{ code: null,
+   * reason: "error" }` in production the moment it tried to actually spawn
+   * Chromium — a gap that would only show up as a support ticket, not a
+   * build failure. Scoped to the one route that needs it rather than every
+   * function, since it doubles that function's deployed size.
+   */
+  outputFileTracingIncludes: {
+    "/api/slip/booking-code": ["./node_modules/@sparticuz/chromium/bin/**"],
+  },
 
   async headers() {
     const securityHeaders = [
