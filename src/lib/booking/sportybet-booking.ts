@@ -37,15 +37,28 @@ import type { SportyBetSelectionAddress } from "@/lib/odds/sportybet";
  *      staking — is worse than no code, the same principle match-fixture.ts
  *      applies to prices.
  *
- * SITE INTEGRATION NOTE: the URL pattern and selectors below were written
- * without a live browser session against sportybet.com — this environment has
- * no way to render and inspect its JS-driven UI. They are the best guess from
- * how a Betradar-fed sportsbook frontend is typically built (ids surfaced as
- * data attributes, since that is how the frontend's own click handlers find
- * what was clicked), but MUST be verified and corrected against the real site
- * before this is relied on. Until then, every call will most likely resolve
- * to `{ code: null, reason: "not_found" }` — which is the fail-closed default
- * working exactly as intended, not a crash.
+ * SITE INTEGRATION NOTE: partially verified, not fully. This environment
+ * cannot render sportybet.com itself (its outbound TLS is intercepted by a
+ * policy proxy that headless Chromium doesn't trust, and working around that
+ * would mean digging into the system certificate store, which this session
+ * deliberately didn't do), so verification here came from screenshots a
+ * person walked through by hand rather than this file browsing it directly.
+ * That confirmed the RESULT screen: `codeLabelPattern` reads the code the way
+ * a person does, off the literal "Booking Code" label, which is why it's
+ * tried before the still-guessed `codeSelectors`. Two things remain unverified
+ * and are the most likely reason a call still resolves to `not_found`:
+ *
+ *   1. `outcomeSelectors` and `shareButtonSelectors` — nobody has confirmed
+ *      what selecting an outcome or triggering the share/book action actually
+ *      looks like in the DOM, only what the code-reveal screen looks like
+ *      afterward.
+ *   2. Whether reaching that screen requires a signed-in SportyBet session at
+ *      all — this automation is deliberately anonymous (no SportyBet
+ *      credentials exist to give it), and if the flow requires login, no
+ *      selector fix will make it work.
+ *
+ * Until both are confirmed, `{ code: null, reason: "not_found" }` is the
+ * expected, fail-closed result — not a crash.
  *
  * RUNTIME NOTE: launched through playwright-core rather than the full
  * playwright package, which bundles its own multi-hundred-megabyte browser
@@ -172,6 +185,16 @@ const SITE = {
   ],
   slipDrawerSelector: '[data-testid="bet-slip"], .betslip, #betslip',
   shareButtonSelectors: ['[data-testid="share-bet"]', 'button:has-text("Share")', 'button:has-text("Book")'],
+  /**
+   * Confirmed from a real screenshot of the result screen (a person walked
+   * through the flow and shared it): the code renders as its own line right
+   * under the literal label "Booking Code" — e.g. "Booking Code" then
+   * "H9BKLD" — not under any particular CSS class this file could see.
+   * codeLabelPattern matches that shape directly against the page's own
+   * rendered text, which is why openSlipAndReadCode tries it before falling
+   * back to the still-unverified CSS guesses in codeSelectors below.
+   */
+  codeLabelPattern: /Booking Code\s*\n?\s*([A-Za-z0-9]{4,10})\b/,
   codeSelectors: ['[data-testid="booking-code"]', ".booking-code", ".share-code"],
   /** Text that means "automated access was noticed and refused" — stop, don't push through it. */
   blockedMarkers: [/verify you are human/i, /access denied/i, /captcha/i, /checking your browser/i, /cloudflare/i],
@@ -209,6 +232,10 @@ async function openSlipAndReadCode(page: Page): Promise<string | null> {
       break;
     }
   }
+
+  const bodyText = await page.textContent("body").catch(() => null);
+  const labelled = bodyText?.match(SITE.codeLabelPattern)?.[1];
+  if (labelled) return labelled;
 
   for (const selector of SITE.codeSelectors) {
     const text = await page
