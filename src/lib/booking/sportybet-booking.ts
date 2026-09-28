@@ -159,7 +159,11 @@ function signature(legs: BookingLeg[]): string {
 }
 
 const SITE = {
-  base: "https://www.sportybet.com/ng",
+  // The mobile site rather than the desktop React app — simpler markup,
+  // more likely to be server-rendered, and where this was pointed to test
+  // against. Still unverified past this base URL: see the SITE INTEGRATION
+  // NOTE above.
+  base: "https://www.sportybet.com/ng/m",
   matchPath: (eventId: string) => `/sport/football/sr:match:${eventId.replace(/^sr:match:/, "")}`,
   /** Tried in order; the first that matches anything on the page wins. */
   outcomeSelectors: (leg: BookingLeg) => [
