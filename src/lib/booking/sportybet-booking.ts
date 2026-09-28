@@ -41,24 +41,23 @@ import type { SportyBetSelectionAddress } from "@/lib/odds/sportybet";
  * cannot render sportybet.com itself (its outbound TLS is intercepted by a
  * policy proxy that headless Chromium doesn't trust, and working around that
  * would mean digging into the system certificate store, which this session
- * deliberately didn't do), so verification here came from screenshots a
+ * deliberately didn't do), so everything below came from screenshots a
  * person walked through by hand rather than this file browsing it directly.
- * That confirmed the RESULT screen: `codeLabelPattern` reads the code the way
- * a person does, off the literal "Booking Code" label, which is why it's
- * tried before the still-guessed `codeSelectors`. Two things remain unverified
- * and are the most likely reason a call still resolves to `not_found`:
+ * Confirmed so far: booking needs no SportyBet login at all; the trigger is a
+ * button labelled exactly "Book Bet" (`shareButtonSelectors`); the result
+ * screen shows the code under a literal "Booking Code" label
+ * (`codeLabelPattern`); and for the 1X2 market specifically, the market list
+ * carries a row labelled exactly "1X2" with Home/Draw/Away cells that
+ * `click1x2ByLabel` targets by that same wording.
  *
- *   1. `outcomeSelectors` and `shareButtonSelectors` — nobody has confirmed
- *      what selecting an outcome or triggering the share/book action actually
- *      looks like in the DOM, only what the code-reveal screen looks like
- *      afterward.
- *   2. Whether reaching that screen requires a signed-in SportyBet session at
- *      all — this automation is deliberately anonymous (no SportyBet
- *      credentials exist to give it), and if the flow requires login, no
- *      selector fix will make it work.
- *
- * Until both are confirmed, `{ code: null, reason: "not_found" }` is the
- * expected, fail-closed result — not a crash.
+ * Still unverified: every OTHER market family (double chance, btts, totals)
+ * has no visual confirmation at all and falls through to the plain
+ * data-attribute guess in `outcomeSelectors`, and even the confirmed 1X2 path
+ * assumes a document structure (the row label appearing before its own price
+ * cells, nothing else with that exact wording between them) that was inferred
+ * rather than seen directly. `{ code: null, reason: "not_found" }` on a
+ * booking that isn't plain 1X2 is the expected, fail-closed result of that
+ * gap — not a crash.
  *
  * RUNTIME NOTE: launched through playwright-core rather than the full
  * playwright package, which bundles its own multi-hundred-megabyte browser
@@ -184,7 +183,14 @@ const SITE = {
     `[data-market="${leg.marketId}"][data-outcome="${leg.outcomeId}"]`,
   ],
   slipDrawerSelector: '[data-testid="bet-slip"], .betslip, #betslip',
-  shareButtonSelectors: ['[data-testid="share-bet"]', 'button:has-text("Share")', 'button:has-text("Book")'],
+  /**
+   * Confirmed from a real screenshot of the bet slip: the button is labelled
+   * "Book Bet" (green, sits beside a separate "Place Bet" button — the two
+   * are not interchangeable, so this matches the specific label rather than
+   * a bare "Book" that could equally hit the wrong one on a differently
+   * laid-out page).
+   */
+  shareButtonSelectors: ['button:has-text("Book Bet")', '[data-testid="share-bet"]', 'button:has-text("Share")'],
   /**
    * Confirmed from a real screenshot of the result screen (a person walked
    * through the flow and shared it): the code renders as its own line right
@@ -205,7 +211,46 @@ function looksBlocked(bodyText: string | null): boolean {
   return SITE.blockedMarkers.some((pattern) => pattern.test(bodyText));
 }
 
+/** Betradar's 1X2 outcome ids, same mapping as markets.ts's ONE_X_TWO, reversed to the word the page shows. */
+const ONE_X_TWO_LABEL: Record<string, string> = { "1": "Home", "2": "Draw", "3": "Away" };
+
+/**
+ * 1X2 specifically, matched by the words on the page rather than a guessed
+ * class or data attribute.
+ *
+ * Confirmed from real screenshots: the market list carries a row whose
+ * label is exactly "1X2" — distinct from the "1X2 - 1UP" / "1X2 - 2UP"
+ * boosted variants sitting next to it, which are different products at
+ * different prices, the same trap markets.ts's own comment warns about for
+ * the odds side of this — and clicking under it produces a slip that names
+ * the outcome by exactly the word this looks for ("Home"). Still not fully
+ * verified: the document structure between that row and its price cells
+ * wasn't visible in what was shared, so this walks forward in document
+ * order from the row label rather than assuming a specific parent/child
+ * shape, and can still miss if the real layout doesn't put them in that
+ * order. Every other market family (double chance, btts, totals) has no
+ * visual confirmation at all yet and relies entirely on the plain
+ * data-attribute guess in outcomeSelectors below.
+ */
+async function click1x2ByLabel(page: Page, leg: BookingLeg): Promise<boolean> {
+  if (leg.marketId !== "1") return false;
+  const label = ONE_X_TWO_LABEL[leg.outcomeId];
+  if (!label) return false;
+
+  // Anchored so this can't accidentally match "1X2 - 1UP" or "1X2 - 2UP".
+  const row = page.getByText(/^1X2$/).first();
+  if (!(await row.count().catch(() => 0))) return false;
+
+  const cell = row.locator(`xpath=following::*[normalize-space(text())="${label}"][1]`).first();
+  if (!(await cell.count().catch(() => 0))) return false;
+
+  await cell.click({ timeout: 5_000 }).catch(() => {});
+  return true;
+}
+
 async function clickOutcome(page: Page, leg: BookingLeg): Promise<boolean> {
+  if (await click1x2ByLabel(page, leg).catch(() => false)) return true;
+
   for (const selector of SITE.outcomeSelectors(leg)) {
     const locator = page.locator(selector).first();
     const found = await locator.count().catch(() => 0);
