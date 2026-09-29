@@ -7,13 +7,24 @@ import { SITE_URL } from "@/lib/site-url";
  * Send-only Gmail integration for one admin's own dashboard, not a general
  * team feature.
  *
- * Deliberately the narrowest scope that does the job: gmail.send alone,
- * never gmail.readonly or gmail.modify. This can send mail as the connected
- * account; it can never read a single message already in that inbox. That
- * also keeps it off Google's list of scopes that force a full app-
- * verification review — with the OAuth consent screen left in Testing mode
- * and ADMIN_MAIL_ALLOWED_EMAIL added as a test user, this works for exactly
- * the one admin it's meant for and nobody else, with no review process.
+ * Deliberately the narrowest Gmail scope that does the job: gmail.send
+ * alone, never gmail.readonly or gmail.modify. This can send mail as the
+ * connected account; it can never read a single message already in that
+ * inbox. Testing-mode OAuth apps don't require Google's verification review
+ * regardless of scope sensitivity as long as access stays under the test-user
+ * cap (100), so the narrow scope here is about least privilege, not about
+ * dodging that review — with the consent screen left in Testing mode and
+ * ADMIN_MAIL_ALLOWED_EMAIL added as a test user, this works for exactly the
+ * one admin it's meant for and nobody else either way.
+ *
+ * The plain `email` scope rides alongside it for exactly one reason: knowing
+ * which address got connected, to show in the UI and use as the "self" Send
+ * As option. That's the basic, non-sensitive OAuth scope every Google sign-in
+ * button already requests — turns out gmail.send alone isn't enough to call
+ * Gmail's own users.getProfile (confirmed against a real "insufficient
+ * authentication scopes" error, not assumed), and widening to a broader
+ * Gmail scope just to read an email address would have undone the whole
+ * point of staying send-only.
  *
  * ADMIN_MAIL_ALLOWED_EMAIL is a second, independent gate on top of the
  * ordinary admin check: every other admin feature in this app treats all
@@ -23,9 +34,10 @@ import { SITE_URL } from "@/lib/site-url";
  * other admins exist.
  */
 
-const SCOPE = "https://www.googleapis.com/auth/gmail.send";
+const SCOPE = "https://www.googleapis.com/auth/gmail.send email";
 const AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
+const USERINFO_URL = "https://www.googleapis.com/oauth2/v2/userinfo";
 const GMAIL_API = "https://gmail.googleapis.com/gmail/v1/users/me";
 
 function clientId(): string | null {
@@ -117,20 +129,27 @@ export async function exchangeCodeForConnection(
     return null;
   }
 
-  const email = await fetchProfileEmail(body.access_token);
+  const email = await fetchAccountEmail(body.access_token);
   if (!email) return null;
 
   return { email, refreshToken: body.refresh_token };
 }
 
-async function fetchProfileEmail(accessToken: string): Promise<string | null> {
-  const res = await fetch(`${GMAIL_API}/profile`, {
+/**
+ * The connected account's own address, off Google's plain userinfo endpoint
+ * rather than Gmail's users.getProfile — the latter needs a broader Gmail
+ * scope than gmail.send alone provides (confirmed by a real 403 "insufficient
+ * authentication scopes" the first time this ran), and widening the Gmail
+ * scope just to read an address would defeat the point of staying send-only.
+ */
+async function fetchAccountEmail(accessToken: string): Promise<string | null> {
+  const res = await fetch(USERINFO_URL, {
     headers: { Authorization: `Bearer ${accessToken}` },
     cache: "no-store",
   }).catch(() => null);
-  const body = (await res?.json().catch(() => null)) as { emailAddress?: string; error?: { message?: string } } | null;
-  if (!res?.ok) console.error("[admin-mail] profile fetch failed:", res?.status, body?.error?.message);
-  return res?.ok ? (body?.emailAddress ?? null) : null;
+  const body = (await res?.json().catch(() => null)) as { email?: string; error?: { message?: string } } | null;
+  if (!res?.ok) console.error("[admin-mail] userinfo fetch failed:", res?.status, body?.error?.message);
+  return res?.ok ? (body?.email ?? null) : null;
 }
 
 /** A fresh access token for a stored refresh token — minted on every send rather than cached, since this fires rarely. */
