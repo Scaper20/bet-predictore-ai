@@ -13,44 +13,6 @@ import { DEFAULT_SPORT } from "./src/lib/sports";
 const MOVED = ["live", "fixtures", "predictions", "trends", "track-record", "slip"];
 
 const nextConfig: NextConfig = {
-  // playwright-core and @sparticuz/chromium both locate native binaries via
-  // their own relative-path logic at runtime; letting the bundler pull them
-  // into the server bundle breaks that resolution, so they're left external
-  // and required through Node's normal module resolution instead. See
-  // src/lib/booking/sportybet-booking.ts.
-  serverExternalPackages: ["playwright-core", "@sparticuz/chromium"],
-
-  /**
-   * Both packages here load part of themselves at runtime by reading their
-   * own package directory rather than a static `require`/`import`, which is
-   * exactly the pattern Next's file tracer cannot follow — confirmed twice
-   * over by actually deploying and reading the runtime error, not just
-   * assuming the config was enough:
-   *
-   *   - @sparticuz/chromium's binaries (bin/chromium.br and friends, ~67MB)
-   *     were silently dropped from the trace, which would have failed
-   *     closed with `{ code: null, reason: "error" }` the moment it tried to
-   *     spawn Chromium.
-   *   - playwright-core's own browsers.json — needed just to load the
-   *     module, before any of this file's code runs — was ALSO dropped.
-   *     That one doesn't fail closed: it throws at import time, outside any
-   *     try/catch this file has, and surfaced in production as a raw 500
-   *     ("Cannot find module '.../playwright-core/browsers.json'") rather
-   *     than the graceful "booking unavailable" response. Given tracing
-   *     already missed one file in this package, the whole package is
-   *     included here rather than guessing which other files it reads the
-   *     same way.
-   *
-   * Scoped to the one route that needs any of this rather than every
-   * function, since it adds real size to whatever function carries it.
-   */
-  outputFileTracingIncludes: {
-    "/api/slip/booking-code": [
-      "./node_modules/@sparticuz/chromium/bin/**",
-      "./node_modules/playwright-core/**",
-    ],
-  },
-
   async headers() {
     const securityHeaders = [
       // Defense in depth: same intent as robots.txt's disallow and the

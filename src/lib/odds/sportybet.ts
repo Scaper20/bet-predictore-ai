@@ -1,7 +1,7 @@
 import "server-only";
 
 import { cached } from "@/lib/providers/cache";
-import { matchesSelection, readOdds, toSportyBet, type SportyBetSelection } from "./markets";
+import { matchesSelection, readOdds, toSportyBet } from "./markets";
 import { findFixture, type FixtureLike } from "./match-fixture";
 
 /**
@@ -168,36 +168,6 @@ async function findOnBoard(
 }
 
 /**
- * The board entry a selection resolves to, or undefined for any kind of miss.
- *
- * Shared by sportyBetPrice (wants the price) and sportyBetSelectionAddress
- * (wants the identifiers) so the two never drift apart on what counts as "this
- * selection exists on the board".
- */
-async function resolveEntry(
-  fixture: FixtureLike,
-  market: string,
-  tournamentId?: string,
-): Promise<
-  | { event: SportyBetEvent; selection: SportyBetSelection; outcome: { id?: string | number; odds?: unknown } }
-  | undefined
-> {
-  const selection = toSportyBet(market);
-  if (!selection) return undefined;
-
-  const event = await findOnBoard(fixture, tournamentId).catch(() => null);
-  if (!event) return undefined;
-
-  const entry = event.markets.find((m) => matchesSelection(m, selection));
-  if (!entry) return undefined;
-
-  const outcome = entry.outcomes?.find((o) => String(o.id) === selection.outcomeId);
-  if (!outcome) return undefined;
-
-  return { event, selection, outcome };
-}
-
-/**
  * SportyBet's price for one selection on one fixture, if it can be found.
  *
  * Returns undefined for every kind of miss — unconfigured, unmatched fixture,
@@ -209,41 +179,15 @@ export async function sportyBetPrice(
   market: string,
   tournamentId?: string,
 ): Promise<number | undefined> {
-  const resolved = await resolveEntry(fixture, market, tournamentId);
-  return readOdds(resolved?.outcome.odds);
-}
+  const selection = toSportyBet(market);
+  if (!selection) return undefined;
 
-/** Where a selection lives on SportyBet's board, addressed the way SportyBet addresses it. */
-export interface SportyBetSelectionAddress {
-  eventId: string;
-  marketId: string;
-  outcomeId: string;
-  specifier?: string;
-}
+  const event = await findOnBoard(fixture, tournamentId).catch(() => null);
+  if (!event) return undefined;
 
-/**
- * The identifiers the booking automation needs to find and click this exact
- * selection on sportybet.com — as opposed to sportyBetPrice's price-only
- * answer.
- *
- * Same refusal bias as everything else here: a fixture SportyBet doesn't
- * list, a market it doesn't offer, or a suspended outcome all resolve to
- * undefined. The booking flow must never attempt to build a slip from a
- * selection it cannot independently confirm is currently live — a booking
- * code for a suspended outcome is worse than no code at all.
- */
-export async function sportyBetSelectionAddress(
-  fixture: FixtureLike,
-  market: string,
-  tournamentId?: string,
-): Promise<SportyBetSelectionAddress | undefined> {
-  const resolved = await resolveEntry(fixture, market, tournamentId);
-  if (!resolved || readOdds(resolved.outcome.odds) === undefined) return undefined;
+  const entry = event.markets.find((m) => matchesSelection(m, selection));
+  if (!entry) return undefined;
 
-  return {
-    eventId: resolved.event.eventId,
-    marketId: resolved.selection.marketId,
-    outcomeId: resolved.selection.outcomeId,
-    specifier: resolved.selection.specifier,
-  };
+  const outcome = entry.outcomes?.find((o) => String(o.id) === selection.outcomeId);
+  return readOdds(outcome?.odds);
 }
