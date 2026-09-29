@@ -6,7 +6,7 @@ import type { AdminIdentity } from "@/lib/admin";
 import { signOut } from "@/app/actions/auth";
 import { ButtonLink } from "@/components/ui/primitives";
 
-const NAV = [
+const BASE_NAV = [
   { href: "/admin", label: "Dashboard" },
   { href: "/admin/tickets", label: "Tickets" },
   { href: "/admin/feedback", label: "Feedback" },
@@ -20,14 +20,20 @@ const NAV = [
   { href: "/admin/team", label: "Team" },
 ];
 
+const MAIL_NAV_ITEM = { href: "/admin/mail", label: "Mail" };
+
 export function AdminShell({
   identity,
+  showMailNav = false,
   children,
 }: {
   identity: AdminIdentity;
+  /** Kept off the nav entirely for every admin except the one it's for — see (protected)/layout.tsx. */
+  showMailNav?: boolean;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const NAV = showMailNav ? [...BASE_NAV, MAIL_NAV_ITEM] : BASE_NAV;
 
   return (
     <div className="min-h-screen bg-canvas text-ink">

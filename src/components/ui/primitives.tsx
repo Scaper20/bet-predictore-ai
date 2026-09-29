@@ -204,6 +204,15 @@ export function Input({ className = "", ...props }: ComponentProps<"input">) {
   );
 }
 
+export function Textarea({ className = "", ...props }: ComponentProps<"textarea">) {
+  return (
+    <textarea
+      {...props}
+      className={`w-full rounded-lg border border-line bg-surface-2 px-3 py-2.5 text-sm text-ink outline-none transition-colors placeholder:text-ink-dim focus:border-brand/50 disabled:opacity-50 ${className}`}
+    />
+  );
+}
+
 export function Select({ className = "", ...props }: ComponentProps<"select">) {
   return (
     <select
