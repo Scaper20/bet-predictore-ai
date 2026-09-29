@@ -106,7 +106,16 @@ export async function exchangeCodeForConnection(
   }).catch(() => null);
 
   const body = (await res?.json().catch(() => null)) as TokenResponse | null;
-  if (!res?.ok || !body?.access_token || !body.refresh_token) return null;
+  if (!res?.ok || !body?.access_token || !body.refresh_token) {
+    // The whole point of this connection flow failing is invisible otherwise:
+    // the callback route always 307s regardless of outcome, so without this
+    // there is no record anywhere of WHY — an unauthenticated `invalid_client`
+    // (wrong client secret) looks identical in the UI to `invalid_grant` (a
+    // reused/expired code) or a network failure, and guessing between them
+    // from the outside wastes a round trip every time this breaks.
+    console.error("[admin-mail] token exchange failed:", res?.status, body?.error, body?.error_description);
+    return null;
+  }
 
   const email = await fetchProfileEmail(body.access_token);
   if (!email) return null;
@@ -119,7 +128,8 @@ async function fetchProfileEmail(accessToken: string): Promise<string | null> {
     headers: { Authorization: `Bearer ${accessToken}` },
     cache: "no-store",
   }).catch(() => null);
-  const body = (await res?.json().catch(() => null)) as { emailAddress?: string } | null;
+  const body = (await res?.json().catch(() => null)) as { emailAddress?: string; error?: { message?: string } } | null;
+  if (!res?.ok) console.error("[admin-mail] profile fetch failed:", res?.status, body?.error?.message);
   return res?.ok ? (body?.emailAddress ?? null) : null;
 }
 
@@ -142,6 +152,7 @@ async function refreshAccessToken(refreshToken: string): Promise<string | null> 
   }).catch(() => null);
 
   const body = (await res?.json().catch(() => null)) as TokenResponse | null;
+  if (!res?.ok) console.error("[admin-mail] token refresh failed:", res?.status, body?.error, body?.error_description);
   return res?.ok ? (body?.access_token ?? null) : null;
 }
 
