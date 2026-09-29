@@ -1,4 +1,5 @@
 import { requireAdmin } from "@/lib/admin";
+import { isMailAdmin } from "@/lib/admin-mail";
 import { AdminShell } from "@/components/admin/admin-shell";
 
 /**
@@ -20,5 +21,13 @@ export const dynamic = "force-dynamic";
 
 export default async function ProtectedAdminLayout({ children }: LayoutProps<"/admin">) {
   const identity = await requireAdmin(); // redirects to /admin/login[?denied=1] on failure
-  return <AdminShell identity={identity}>{children}</AdminShell>;
+  // Computed here, not in the client-side AdminShell: ADMIN_MAIL_ALLOWED_EMAIL
+  // is server-only, and unlike every other admin feature this one is
+  // deliberately invisible to admins it isn't meant for, not just gated —
+  // see admin-mail.ts's own doc comment on why.
+  return (
+    <AdminShell identity={identity} showMailNav={isMailAdmin(identity.email)}>
+      {children}
+    </AdminShell>
+  );
 }
