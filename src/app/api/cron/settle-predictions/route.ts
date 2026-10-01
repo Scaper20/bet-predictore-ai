@@ -3,12 +3,13 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { upcomingFeed, predictBatch } from "@/lib/service";
 import { runSettlementPass } from "@/lib/settlement-runner";
 import { modelIdForMarket } from "@/lib/model/router";
+import { refreshArchive } from "@/lib/archive/refresh";
 
 // Runs the football providers and Supabase's service-role client — both
 // Node-only. Proxy (src/proxy.ts) doesn't touch /api/ at all, so no session
 // cookie handling is relevant here either.
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 /**
  * Track Record maintenance: log today/tomorrow's headline picks, then settle
@@ -38,8 +39,11 @@ export async function GET(request: Request) {
   const admin = supabaseAdmin();
   const logged = await logUpcomingPicks(admin);
   const settled = await runSettlementPass(admin);
+  // Keeps the training archive current; see archive/refresh.ts. Last, and
+  // never fatal: a failed download only means tomorrow's run catches up.
+  const archive = await refreshArchive().catch((err) => ({ error: String(err) }));
 
-  return NextResponse.json({ logged, settled });
+  return NextResponse.json({ logged, settled, archive });
 }
 
 async function logUpcomingPicks(admin: ReturnType<typeof supabaseAdmin>): Promise<number> {
