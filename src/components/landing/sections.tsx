@@ -209,7 +209,7 @@ export function Pricing() {
 
 /* --------------------------------------------------------------------- FAQ */
 
-const FAQS = [
+export const FAQS = [
   {
     q: "Are these real matches?",
     a: "Yes. Every fixture, scoreline and result comes from live football data providers. Nothing on this site is generated or placeholder data — if the feeds return nothing, the page says so rather than filling the gap.",
@@ -229,6 +229,10 @@ const FAQS = [
   {
     q: "Do you cover the NPFL?",
     a: "Yes, alongside the CAF Champions League and the European competitions Nigerians follow most. Depth of NPFL data depends on which feeds are configured, and each prediction tells you what it was fitted on.",
+  },
+  {
+    q: "Do you predict Super Eagles and other international matches?",
+    a: "Yes. AFCON, World Cup and qualifiers, the Euros, Nations League, Copa America, Gold Cup and international friendlies are all covered. National teams play too rarely for one tournament to rate them, so each side is rated on every international in its confederation, and tournament finals are modelled at a neutral venue.",
   },
   {
     q: "Is this legal in Nigeria?",

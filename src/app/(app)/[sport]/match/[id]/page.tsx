@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Badge, ButtonLink } from "@/components/ui/primitives";
 import { Crest } from "@/components/ui/crest";
-import { sportPath } from "@/lib/routes";
+import { matchPath, sportPath } from "@/lib/routes";
 import {
   BttsPanel, CorrectScorePanel, DoubleChancePanel, FormPanel, GoalsPanel,
   H2HPanel, OutcomePanel,
@@ -22,6 +22,7 @@ import { matchDetail } from "@/lib/service";
 import { SITE_URL as SITE } from "@/lib/site-url";
 import { kickoffTime, odds, percent, relativeDay, statusLabel, isLive } from "@/lib/format";
 import type { Match } from "@/lib/types";
+import type { Prediction } from "@/lib/model/predict";
 import { containerClass } from "@/components/ui/container";
 
 /**
@@ -32,17 +33,57 @@ import { containerClass } from "@/components/ui/container";
  * result support for this type isn't something either party can confirm
  * from here.
  */
-function matchJsonLd(match: Match) {
+function matchJsonLd(match: Match, prediction: Prediction) {
+  const url = `${SITE}${matchPath(match.id)}`;
+  const m = prediction.markets;
+  const predictionsUrl = `${SITE}${sportPath("predictions")}`;
   return {
     "@context": "https://schema.org",
-    "@type": "SportsEvent",
-    name: `${match.home.name} vs ${match.away.name}`,
-    startDate: match.kickoff,
-    sport: "Football",
-    homeTeam: { "@type": "SportsTeam", name: match.home.name },
-    awayTeam: { "@type": "SportsTeam", name: match.away.name },
-    ...(match.venue ? { location: { "@type": "Place", name: match.venue } } : {}),
-    url: `${SITE}/match/${encodeURIComponent(match.id)}`,
+    "@graph": [
+      {
+        "@type": "SportsEvent",
+        name: `${match.home.name} vs ${match.away.name}`,
+        // The canonical sport-scoped URL — /match/:id is a 308 to it, and
+        // structured data should never point at a redirect.
+        url,
+        startDate: match.kickoff,
+        eventStatus: "https://schema.org/EventScheduled",
+        sport: "Football",
+        description:
+          `${match.league.name}: ${match.home.name} vs ${match.away.name}. Model probabilities ` +
+          `${percent(m.home)} home win, ${percent(m.draw)} draw, ${percent(m.away)} away win; ` +
+          `${m.expectedGoals.total.toFixed(2)} expected goals.`,
+        homeTeam: { "@type": "SportsTeam", name: match.home.name },
+        awayTeam: { "@type": "SportsTeam", name: match.away.name },
+        competitor: [
+          { "@type": "SportsTeam", name: match.home.name },
+          { "@type": "SportsTeam", name: match.away.name },
+        ],
+        superEvent: { "@type": "SportsEvent", name: match.league.name },
+        ...(match.venue ? { location: { "@type": "Place", name: match.venue } } : {}),
+      },
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "Home", item: SITE },
+          { "@type": "ListItem", position: 2, name: "Predictions", item: predictionsUrl },
+          ...(match.league.code
+            ? [{
+                "@type": "ListItem",
+                position: 3,
+                name: match.league.name,
+                item: `${predictionsUrl}?league=${match.league.code}`,
+              }]
+            : []),
+          {
+            "@type": "ListItem",
+            position: match.league.code ? 4 : 3,
+            name: `${match.home.name} vs ${match.away.name}`,
+            item: url,
+          },
+        ],
+      },
+    ],
   };
 }
 
@@ -65,13 +106,16 @@ export async function generateMetadata({
   if (!detail) return { title: "Match not found" };
 
   const { match, prediction } = detail;
-  const title = `${match.home.name} vs ${match.away.name} prediction`;
+  // "<home> vs <away> prediction" is the exact phrase people search; the
+  // competition after it disambiguates league and cup meetings of the same pair.
+  const title = `${match.home.name} vs ${match.away.name} Prediction — ${match.league.name}`;
   return {
     title,
     description:
       `Model probabilities for ${match.home.name} vs ${match.away.name} in the ${match.league.name}: ` +
       `${percent(prediction.markets.home)} home, ${percent(prediction.markets.draw)} draw, ` +
       `${percent(prediction.markets.away)} away, with ${prediction.markets.expectedGoals.total.toFixed(2)} expected goals.`,
+    alternates: { canonical: matchPath(match.id) },
     openGraph: { title, type: "article" },
   };
 }
@@ -86,7 +130,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
 
   return (
     <>
-      <JsonLd data={matchJsonLd(match)} />
+      <JsonLd data={matchJsonLd(match, prediction)} />
 
       {/* ------------------------------------------------------ Match header */}
       <div className="border-b border-line bg-shell">

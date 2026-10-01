@@ -13,6 +13,7 @@ import { planById, yearlySaving } from "@/lib/pricing";
 import { naira } from "@/lib/format";
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/pricing" },
   title: "Pricing",
   description:
     "Plans from a single matchday to a full season, priced in Naira. Start free — no card, no subscription required.",

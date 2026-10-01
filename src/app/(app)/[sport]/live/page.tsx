@@ -6,6 +6,7 @@ import { liveFeed } from "@/lib/service";
 import { containerClass } from "@/components/ui/container";
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/football/live" },
   title: "Live Football Scores",
   description:
     "Live football scores across the Premier League, NPFL, CAF competitions and more, " +

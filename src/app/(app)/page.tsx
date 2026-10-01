@@ -1,6 +1,8 @@
 import { Hero } from "@/components/landing/hero";
 import { Marquee } from "@/components/landing/marquee";
-import { Faq, Features, FinalCta, HowItWorks, Leagues, Pricing } from "@/components/landing/sections";
+import type { Metadata } from "next";
+import { Faq, FAQS, Features, FinalCta, HowItWorks, Leagues, Pricing } from "@/components/landing/sections";
+import { JsonLd } from "@/components/seo/json-ld";
 import { BestBetOfDay } from "@/components/landing/best-bet-of-day";
 import { MatchCard } from "@/components/match/match-card";
 import { SectionHeading, ButtonLink, EmptyState } from "@/components/ui/primitives";
@@ -17,6 +19,24 @@ import { matchPath, sportPath } from "@/lib/routes";
  * every visit — the provider cache plus this window keeps both true.
  */
 export const revalidate = 60;
+
+export const metadata: Metadata = { alternates: { canonical: "/" } };
+
+/*
+ * The FAQ as structured data. Google no longer shows FAQ rich results for
+ * most sites, but answer engines (ChatGPT search, Perplexity, AI Overviews)
+ * lift question/answer pairs like these almost verbatim — this is the
+ * cheapest GEO win on the site, and it only restates what is visible below.
+ */
+const FAQ_JSON_LD = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: FAQS.map((f) => ({
+    "@type": "Question",
+    name: f.q,
+    acceptedAnswer: { "@type": "Answer", text: f.a },
+  })),
+};
 
 export default async function HomePage() {
   // Never let a provider outage take down the marketing page.
@@ -39,6 +59,7 @@ export default async function HomePage() {
 
   return (
     <>
+      <JsonLd data={FAQ_JSON_LD} />
       <Hero liveCount={liveMatches.length} board={<FeaturedBoard rows={rows} />} />
 
       <Marquee

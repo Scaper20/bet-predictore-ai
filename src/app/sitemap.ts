@@ -1,15 +1,23 @@
 import type { MetadataRoute } from "next";
 import { LEAGUES } from "@/lib/leagues";
 import { SITE_URL as SITE } from "@/lib/site-url";
-import { sportPath } from "@/lib/routes";
+import { matchPath, sportPath } from "@/lib/routes";
+import { upcomingFeed } from "@/lib/service";
 
 /**
- * Static routes plus a landing page per league.
+ * Static routes, a landing page per league, and the next few days of match
+ * pages.
  *
- * Individual match pages are deliberately excluded: they churn daily and a
- * sitemap full of URLs that 404 within the week is worse than none.
+ * Match pages are where search traffic actually lands ("<home> vs <away>
+ * prediction"), so they belong here — but only upcoming ones, regenerated
+ * hourly, so the sitemap never advertises a fixture long gone. A feed outage
+ * just drops them for that hour; the static part always renders.
  */
-export default function sitemap(): MetadataRoute.Sitemap {
+export const revalidate = 3600;
+
+const MATCH_WINDOW_DAYS = 3;
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
 
   // Sport-scoped URLs only. The flat paths these replaced still 308 (see
@@ -42,5 +50,16 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
   ]);
 
-  return [...core, ...leagues];
+  const feed = await upcomingFeed(MATCH_WINDOW_DAYS).catch(() => null);
+  // Catalogued competitions only: the day-scan feeds also carry youth and
+  // lower-division games nobody searches for, and a sitemap of thin pages
+  // spends crawl budget the big fixtures need.
+  const matches: MetadataRoute.Sitemap = (feed?.matches ?? []).filter((m) => m.league.code).map((m) => ({
+    url: `${SITE}${matchPath(m.id)}`,
+    lastModified: now,
+    changeFrequency: "hourly" as const,
+    priority: 0.7,
+  }));
+
+  return [...core, ...leagues, ...matches];
 }

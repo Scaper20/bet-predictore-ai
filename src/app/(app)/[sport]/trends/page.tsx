@@ -8,6 +8,7 @@ import { containerClass } from "@/components/ui/container";
 import { sportPath } from "@/lib/routes";
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/football/trends" },
   title: "Trends",
   description:
     "What the model reads across the whole upcoming slate: goal expectation, over/under lean, " +

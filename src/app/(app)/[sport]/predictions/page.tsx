@@ -13,12 +13,37 @@ import { leagueByCode } from "@/lib/leagues";
 import { containerClass } from "@/components/ui/container";
 import { sportPath } from "@/lib/routes";
 
-export const metadata: Metadata = {
-  title: "Today's Football Predictions",
-  description:
-    "Football predictions fitted on real completed matches: 1X2, over/under, BTTS and " +
-    "correct score probabilities with the sample size behind every number.",
-};
+/**
+ * One title per league view. Without this every ?league= variant shared the
+ * same title and description, so to a search engine they were duplicates of
+ * the unfiltered page instead of "AFCON predictions", "NPFL predictions"...
+ * An unknown league param canonicalises back to the unfiltered page.
+ */
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ league?: string }>;
+}): Promise<Metadata> {
+  const { league } = await searchParams;
+  const def = league ? leagueByCode(league) : undefined;
+  const base = sportPath("predictions");
+  if (!def) {
+    return {
+      title: "Today's Football Predictions",
+      description:
+        "Football predictions fitted on real completed matches: 1X2, over/under, BTTS and " +
+        "correct score probabilities with the sample size behind every number.",
+      alternates: { canonical: base },
+    };
+  }
+  return {
+    title: `${def.name} Predictions Today`,
+    description:
+      `${def.name} predictions from a statistical model fitted on real results: win, draw, ` +
+      `over/under 2.5, BTTS and correct score probabilities, with the sample size behind each.`,
+    alternates: { canonical: `${base}?league=${def.code}` },
+  };
+}
 
 export const revalidate = 300;
 
