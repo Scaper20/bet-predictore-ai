@@ -8,10 +8,15 @@ import { BillingPlans } from "@/components/billing/billing-plans";
 import { ManageSubscriptionButton } from "@/components/billing/manage-subscription-button";
 import { BillingHistory, type PaymentRow } from "@/components/billing/billing-history";
 import { SectionHeading } from "@/components/ui/primitives";
+import { availableCycles } from "@/lib/paystack/plan-codes";
+import type { BillingCycle } from "@/lib/pricing";
 
 export const metadata: Metadata = { title: "Plans & billing" };
 
-export default async function BillingPage() {
+export default async function BillingPage({ searchParams }: PageProps<"/account/billing">) {
+  const params = await searchParams;
+  const rawCycle = Array.isArray(params.cycle) ? params.cycle[0] : params.cycle;
+  const initialCycle: BillingCycle = rawCycle === "quarterly" || rawCycle === "yearly" ? rawCycle : "monthly";
   if (!supabaseConfigured) {
     return (
       <div className="mx-auto max-w-lg px-4 py-10 sm:py-16 text-center sm:px-6">
@@ -63,7 +68,12 @@ export default async function BillingPage() {
         </p>
       </div>
       <div className="mt-10">
-        <BillingPlans currentTier={entitlement.tier} hasActiveSubscription={hasActiveSubscription} />
+        <BillingPlans
+          currentTier={entitlement.tier}
+          hasActiveSubscription={hasActiveSubscription}
+          available={availableCycles()}
+          initialCycle={initialCycle}
+        />
       </div>
 
       {(entitlement.tier === "pro" || entitlement.tier === "vip") && subscription?.paystack_subscription_code && (
@@ -83,8 +93,14 @@ export default async function BillingPage() {
         <section className="mt-14">
           <SectionHeading
             eyebrow="Subscription"
-            title="Weekend Pass"
-            description="This is a one-time purchase, not a subscription — there's nothing to cancel, and it won't renew or charge you again."
+            title="Your pass"
+            description={`Runs until ${
+              subscription?.pass_expires_at
+                ? new Date(subscription.pass_expires_at).toLocaleString("en-NG", {
+                    timeZone: "Africa/Lagos", weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
+                  }) + " WAT"
+                : "the end of your window"
+            }. It's a one-time purchase, not a subscription — nothing to cancel, and it won't renew or charge you again. Buying another while it runs never shortens it.`}
           />
         </section>
       )}

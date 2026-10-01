@@ -25,8 +25,9 @@ export async function GET(
     // tier. Redact based on the caller's actual entitlement instead of
     // relying on the client-side <Gate> to just not render it.
     const entitlement = await getEntitlement();
+    // Since the pass became "all of Pro for a window", the full analysis is a
+    // pass-level feature too; Pro's difference is that it never runs out.
     const hasPass = meets(entitlement.tier, "pass");
-    const hasPro = meets(entitlement.tier, "pro");
 
     const body = {
       ...detail,
@@ -42,8 +43,8 @@ export async function GET(
       },
       analysis: {
         ...detail.analysis,
-        body: hasPro ? detail.analysis.body : detail.analysis.body.slice(0, 1),
-        factors: hasPro ? detail.analysis.factors : [],
+        body: hasPass ? detail.analysis.body : detail.analysis.body.slice(0, 1),
+        factors: hasPass ? detail.analysis.factors : [],
       },
       entitlement: { tier: entitlement.tier },
     };

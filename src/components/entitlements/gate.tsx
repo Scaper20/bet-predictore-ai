@@ -8,7 +8,7 @@ import { GatedPanelSkeleton } from "@/components/match/gated-panel-states";
 
 const TIER_LABEL: Record<Tier, string> = {
   free: "Free",
-  pass: "Weekend Pass",
+  pass: "Pass",
   pro: "Pro",
   vip: "VIP",
 };

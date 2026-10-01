@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import crypto from "node:crypto";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { computeWeekendPassExpiry } from "@/lib/paystack/pass-window";
+import { computePassExpiry } from "@/lib/paystack/pass-window";
+import { tierFromPlanCode } from "@/lib/paystack/plan-codes";
+import { passOption } from "@/lib/pricing";
 import { sendEmail } from "@/lib/email";
 import { receiptEmail, subscriptionCanceledEmail } from "@/lib/email-templates";
 import type { Tier } from "@/lib/entitlements";
@@ -68,18 +70,6 @@ function readNextPaymentDate(data: Record<string, unknown>): string | undefined 
   );
 }
 
-function tierFromPlanCode(planCode: string | undefined): Tier | undefined {
-  if (!planCode) return undefined;
-  if (planCode === process.env.PAYSTACK_VIP_MONTHLY_PLAN_CODE) return "vip";
-  if (
-    planCode === process.env.PAYSTACK_PRO_MONTHLY_PLAN_CODE ||
-    planCode === process.env.PAYSTACK_PRO_YEARLY_PLAN_CODE
-  ) {
-    return "pro";
-  }
-  return undefined;
-}
-
 export async function POST(request: Request) {
   const secret = process.env.PAYSTACK_SECRET_KEY;
   if (!secret) return NextResponse.json({ error: "not configured" }, { status: 500 });
@@ -118,12 +108,21 @@ export async function POST(request: Request) {
       const metaTier = metadata?.tier as Tier | undefined;
 
       if (metaUserId && metaTier === "pass") {
+        // Old checkouts carry no pass length; they were all Weekend passes.
+        const length = passOption(asString(metadata?.pass) ?? "weekend").id;
+        const { data: current } = await admin
+          .from("subscriptions")
+          .select("tier, pass_expires_at")
+          .eq("user_id", metaUserId)
+          .maybeSingle();
+        const running =
+          current?.tier === "pass" && current.pass_expires_at ? new Date(current.pass_expires_at) : null;
         await admin.from("subscriptions").upsert(
           {
             user_id: metaUserId,
             tier: "pass",
             status: "active",
-            pass_expires_at: computeWeekendPassExpiry(new Date()).toISOString(),
+            pass_expires_at: computePassExpiry(length, new Date(), running).toISOString(),
             updated_at: now,
           },
           { onConflict: "user_id" }

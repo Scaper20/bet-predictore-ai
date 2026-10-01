@@ -1,6 +1,8 @@
 import Link from "next/link";
 import type { Tier } from "@/lib/entitlements";
-import { PLANS, yearlySaving, type PlanDefinition } from "@/lib/pricing";
+import {
+  CYCLE_LABEL, PASS_OPTIONS, PLANS, cycleSaving, type BillingCycle, type PlanDefinition,
+} from "@/lib/pricing";
 import { naira } from "@/lib/format";
 import { Badge } from "@/components/ui/primitives";
 
@@ -25,7 +27,7 @@ export function PricingTable({
   renderCta,
   plans = PLANS,
 }: {
-  interval?: "monthly" | "yearly";
+  interval?: BillingCycle;
   /** Marks "your plan" and suppresses its CTA. Omitted on marketing surfaces. */
   currentTier?: Tier;
   /** Link destination per plan. Ignored when `renderCta` is supplied. */
@@ -40,12 +42,13 @@ export function PricingTable({
     <div className="grid gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
       {ordered.map((plan) => {
         const current = currentTier === plan.id;
-        const saving = yearlySaving(plan);
-        const showYearly = interval === "yearly" && plan.price.yearly !== undefined;
+        // A plan not sold on the chosen cycle (VIP quarterly) shows monthly.
+        const cycle: BillingCycle = plan.price[interval] !== undefined ? interval : "monthly";
+        const recurring = plan.price.monthly !== undefined;
+        const saving = recurring ? cycleSaving(plan, cycle) : null;
+        const isPass = plan.id === "pass";
 
-        const amount = showYearly
-          ? plan.price.yearly
-          : (plan.price.oneOff ?? plan.price.monthly);
+        const amount = recurring ? plan.price[cycle] : plan.price.oneOff;
 
         return (
           <div
@@ -53,7 +56,7 @@ export function PricingTable({
             /*
              * order-first is a mobile-only hierarchy fix, not decoration.
              *
-             * Cards render in plan.order: Free, Weekend Pass, Pro, VIP. In a
+             * Cards render in plan.order: Free, Pass, Pro, VIP. In a
              * four-column grid all four are equally visible and the "Most
              * popular" badge does the work. Stacked on a phone, ORDER IS
              * HIERARCHY — and Pro, the plan this page exists to sell, sat
@@ -75,19 +78,35 @@ export function PricingTable({
             <p className="mt-1 text-sm text-ink-muted">{plan.description}</p>
 
             <div className="mt-4 flex items-baseline gap-2 sm:mt-5">
+              {isPass && <span className="text-sm text-ink-dim">from</span>}
               <span className="font-display text-3xl font-extrabold sm:text-4xl">
                 {amount === undefined ? "Free" : naira(amount)}
               </span>
               <span className="text-sm text-ink-dim">
-                {showYearly ? "per year" : plan.cadence}
+                {recurring ? CYCLE_LABEL[cycle].per : plan.cadence}
               </span>
             </div>
 
-            {/* Only shown on the yearly view, where it is the reason to switch. */}
-            {showYearly && saving && (
+            {/* Only on a longer cycle, where it is the reason to switch. */}
+            {saving && (
               <p className="mt-1.5 text-xs font-medium text-brand">
-                Saves {naira(saving.amount)} a year ({saving.percent}%)
+                Saves {naira(saving.amount)} ({saving.percent}%) against paying monthly
               </p>
+            )}
+
+            {recurring && cycle !== interval && (
+              <p className="mt-1.5 text-xs text-ink-dim">Billed monthly or yearly</p>
+            )}
+
+            {isPass && (
+              <ul className="mt-3 grid grid-cols-3 gap-2 text-center">
+                {PASS_OPTIONS.map((o) => (
+                  <li key={o.id} className="rounded-lg border border-line bg-surface-2 px-2 py-2">
+                    <span className="block text-[11px] text-ink-dim">{o.label}</span>
+                    <span className="block text-sm font-semibold tnum">{naira(o.price)}</span>
+                  </li>
+                ))}
+              </ul>
             )}
 
             <ul className="mt-4 flex-1 space-y-2 sm:mt-6 sm:space-y-3">

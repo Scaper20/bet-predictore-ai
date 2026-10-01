@@ -138,7 +138,7 @@ export const SURVEY_QUESTIONS: Record<SurveyType, SurveyQuestion[]> = {
   ],
 };
 
-export const TIER_LABEL: Record<Tier, string> = { free: "Free", pass: "Weekend Pass", pro: "Pro", vip: "VIP" };
+export const TIER_LABEL: Record<Tier, string> = { free: "Free", pass: "Pass", pro: "Pro", vip: "VIP" };
 
 /** Raw stored answers are option *values* ("price", "4"), not the label
  * shown on the button — this turns one back into the other for display.

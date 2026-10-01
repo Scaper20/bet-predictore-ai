@@ -15,7 +15,7 @@ interface PendingGift {
   note: string | null;
 }
 
-const TIER_LABEL: Record<Tier, string> = { free: "Free", pass: "Weekend Pass", pro: "Pro", vip: "VIP" };
+const TIER_LABEL: Record<Tier, string> = { free: "Free", pass: "Pass", pro: "Pro", vip: "VIP" };
 
 /**
  * A one-time celebratory overlay for an admin-granted subscription gift

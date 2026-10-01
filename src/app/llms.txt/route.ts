@@ -1,5 +1,5 @@
 import { CLUB_LEAGUES, INTERNATIONAL_LEAGUES } from "@/lib/leagues";
-import { PLANS } from "@/lib/pricing";
+import { PASS_OPTIONS, PLANS } from "@/lib/pricing";
 import { SITE_URL as SITE } from "@/lib/site-url";
 import { sportPath } from "@/lib/routes";
 
@@ -19,11 +19,14 @@ const naira = (n: number) => `₦${n.toLocaleString("en-NG")}`;
 
 export function GET() {
   const plans = PLANS.map((p) => {
-    const prices = [
-      p.price.oneOff && `${naira(p.price.oneOff)} one-off`,
-      p.price.monthly && `${naira(p.price.monthly)}/month`,
-      p.price.yearly && `${naira(p.price.yearly)}/year`,
-    ].filter(Boolean);
+    const prices =
+      p.id === "pass"
+        ? PASS_OPTIONS.map((o) => `${o.label} ${naira(o.price)}`)
+        : [
+            p.price.monthly && `${naira(p.price.monthly)}/month`,
+            p.price.quarterly && `${naira(p.price.quarterly)}/quarter`,
+            p.price.yearly && `${naira(p.price.yearly)}/year`,
+          ].filter(Boolean);
     return `- ${p.name} (${prices.length ? prices.join(", ") : "free"}): ${p.description}`;
   });
 

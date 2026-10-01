@@ -71,7 +71,7 @@ export async function getDashboardKpis(): Promise<DashboardKpis> {
     admin.from("payments").select("amount_kobo, created_at").eq("status", "success").gte("created_at", cutoff30d),
     admin.from("subscriptions").select("tier").in("status", ["active", "past_due"]),
     // Checkout writes plan as `${tier}:${cycle}` (src/app/api/billing/checkout/route.ts)
-    // — Pass is always "pass:monthly" even though it's a one-off, not a plain "pass".
+    // — passes are "pass:day|weekend|week" (older rows "pass:monthly").
     admin.from("payments").select("*", { count: "exact", head: true }).eq("status", "success").like("plan", "pass:%"),
     // Never transitions out of "pending" — Paystack's webhook only handles
     // charge.success today, not charge.failed (see the confidence note atop

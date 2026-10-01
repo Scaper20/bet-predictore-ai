@@ -6,7 +6,7 @@ import { AnalysisRestClient } from "./analysis-rest-client";
 
 /**
  * When the analysis is enhanced (source: "claude"), everything past the
- * lead paragraph is a Pro perk. matchDetail() computes one shared, cached
+ * lead paragraph is a Pass/Pro perk. matchDetail() computes one shared, cached
  * analysis per match (not per user — reading the session there would break
  * the page's ISR caching, see (app)/layout.tsx's comment), so this can't
  * decide who sees what by branching on the viewer here. Instead: only
@@ -38,15 +38,15 @@ export function AnalysisPanel({ analysis, matchId }: { analysis: Analysis; match
 
         {isAiWritten ? (
           <Gate
-            requires="pro"
+            requires="pass"
             fallback={
               analysis.body.length > 1 || analysis.factors.length > 0 ? (
                 <p className="text-xs text-ink-dim">
-                  The rest of this enhanced breakdown is a{" "}
-                  <Link href="/account/billing?plan=pro" className="text-brand underline underline-offset-2">
-                    Pro
+                  The rest of this enhanced breakdown comes with any{" "}
+                  <Link href="/account/billing?plan=pass" className="text-brand underline underline-offset-2">
+                    pass from ₦250
                   </Link>{" "}
-                  feature.
+                  or Pro.
                 </p>
               ) : null
             }

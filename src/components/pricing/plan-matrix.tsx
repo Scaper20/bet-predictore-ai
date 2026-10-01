@@ -38,7 +38,7 @@ export function PlanMatrix() {
     <div className="no-scrollbar relative -mx-4 hidden overflow-x-auto px-4 sm:mx-0 sm:block sm:px-0">
       <table className="w-full min-w-[44rem] border-collapse text-sm">
         <caption className="sr-only">
-          Feature comparison across the Free, Weekend Pass, Pro and VIP plans
+          Feature comparison across the Free, Pass, Pro and VIP plans
         </caption>
 
         <thead>

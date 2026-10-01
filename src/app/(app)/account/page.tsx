@@ -20,7 +20,7 @@ import { AccountSectionNav } from "@/components/account/account-section-nav";
 
 export const metadata: Metadata = { title: "Account" };
 
-const TIER_LABEL = { free: "Free", pass: "Weekend Pass", pro: "Pro", vip: "VIP" } as const;
+const TIER_LABEL = { free: "Free", pass: "Pass", pro: "Pro", vip: "VIP" } as const;
 
 const INTENT_LABEL = {
   team: "Following your team",
