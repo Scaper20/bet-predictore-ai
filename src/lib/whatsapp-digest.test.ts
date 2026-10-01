@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { buildAccaTiers } from "@/lib/whatsapp-digest";
+import {
+  buildAccaTiers, digestEligible, digestPick, DIGEST_MIN_ODDS, formatPicksMessage, isYouthOrReserve,
+} from "@/lib/whatsapp-digest";
+import type { Prediction } from "@/lib/model/predict";
 import type { PersonalizedPick } from "@/lib/for-you";
 
 function pick(over: Partial<PersonalizedPick> = {}): PersonalizedPick {
@@ -96,5 +99,48 @@ describe("buildAccaTiers", () => {
     // Combined: 1/(0.25*0.3) = 13.3x - clears every tier with the same 2 legs,
     // so only one tier (the first, "safe") should be reported.
     expect(tiers).toHaveLength(1);
+  });
+});
+
+describe("digest selection", () => {
+  const mk = (market: string, probability: number) => ({
+    market, label: market, group: "Match Result" as const, probability, fairOdds: 1 / probability, confidence: 60,
+  });
+  const prediction = (over: { picks?: ReturnType<typeof mk>[]; league?: string; code?: string; matchesUsed?: number; publishable?: boolean } = {}) =>
+    ({
+      match: { league: { id: "x", name: over.league ?? "English Premier League", code: "code" in over ? over.code : "premier-league" } },
+      picks: over.picks ?? [mk("dc:home-draw", 0.78), mk("1x2:home", 0.64), mk("btts:yes", 0.6)],
+      sufficiency: { publishable: over.publishable ?? true },
+      model: { matchesUsed: over.matchesUsed ?? 400 },
+    }) as unknown as Prediction;
+
+  it("skips selections shorter than the odds floor and takes the next one the rule allows", () => {
+    const pick = digestPick(prediction());
+    expect(pick?.market).toBe("1x2:home");
+    expect(pick!.fairOdds).toBeGreaterThanOrEqual(DIGEST_MIN_ODDS);
+  });
+
+  it("never reaches for a market the headline rule excludes", () => {
+    expect(digestPick(prediction({ picks: [mk("dc:home-draw", 0.8), mk("btts:yes", 0.6)] }))).toBeNull();
+  });
+
+  it("keeps youth and reserve football out of the community", () => {
+    for (const name of ["UEFA European Under-21 Championship", "Premier League 2 U23", "Serie A Primavera", "Barcelona B Reserves"]) {
+      expect(isYouthOrReserve(name)).toBe(true);
+    }
+    for (const name of ["English Premier League", "UEFA Nations League", "NPFL"]) expect(isYouthOrReserve(name)).toBe(false);
+    expect(digestEligible(prediction({ league: "UEFA European Under-21 Championship", code: undefined }))).toBe(false);
+  });
+
+  it("asks uncatalogued competitions for real depth", () => {
+    expect(digestEligible(prediction({ league: "American USL Championship", code: undefined, matchesUsed: 45 }))).toBe(false);
+    expect(digestEligible(prediction({ league: "American USL Championship", code: undefined, matchesUsed: 240 }))).toBe(true);
+  });
+
+  it("quotes SportyBet's price when it has one, and never calls a pick value", () => {
+    const msg = formatPicksMessage([pick({ bookPrice: 1.72 }), pick({ id: "m2", fairOdds: 1.55, bookPrice: null })]);
+    expect(msg).toContain("@1.72 on SportyBet");
+    expect(msg).toContain("@1.55 (fair odds)");
+    expect(msg.toLowerCase()).not.toContain("value");
   });
 });

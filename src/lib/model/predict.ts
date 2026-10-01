@@ -494,7 +494,7 @@ export const HEADLINE_MAX_PROBABILITY = 0.8;
  * 60% on 2025-26, and the extreme lines are either near-certain or long shots.
  * They are all still computed, listed and rankable below the headline.
  */
-function headlineEligible(p: Pick): boolean {
+export function headlineEligible(p: Pick): boolean {
   if (p.probability > HEADLINE_MAX_PROBABILITY) return false;
   const [family, , line] = p.market.split(":");
   if (family === "1x2" || family === "dc") return true;
