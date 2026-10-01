@@ -48,6 +48,13 @@ function matchJsonLd(match: Match) {
 
 export const revalidate = 60;
 
+// Nothing prerendered at build — fixtures change daily — but declaring the
+// list makes each match page cacheable for `revalidate` once first requested,
+// instead of re-rendering (and re-calling the feeds) on every visit.
+export function generateStaticParams() {
+  return [];
+}
+
 export async function generateMetadata({
   params,
 }: {

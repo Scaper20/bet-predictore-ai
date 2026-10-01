@@ -46,14 +46,10 @@ export default async function PredictionsPage({
    * strand a user whose leagues have nothing on today.
    *
    * getPreferences() reads cookies, which pins this route to dynamic
-   * rendering. Checked against a build before relying on it: this page was
-   * ALREADY dynamic, because the provider layer fetches with
-   * `cache: "no-store"` — the `revalidate` above has never actually produced
-   * a static page here, and what keeps the rate-limited feeds safe is the
-   * in-memory provider cache, not this route's cache mode.
-   *
-   * So the session read costs nothing here. It would cost everything in a
-   * shared layout, which is what the comment in (app)/layout.tsx is about.
+   * rendering, so the `revalidate` above has no effect here and what keeps
+   * the rate-limited feeds safe is the in-memory provider cache. That's an
+   * accepted cost on this page only — in a shared layout it would make every
+   * page dynamic, which is what the comment in (app)/layout.tsx is about.
    */
   const preferences = await getPreferences();
   const followed = new Set(preferences.leagues);

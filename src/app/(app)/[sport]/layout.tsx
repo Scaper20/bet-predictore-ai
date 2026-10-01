@@ -14,15 +14,12 @@ export function generateStaticParams() {
   return SPORTS.map((sport) => ({ sport: sport.id }));
 }
 
-/** An unknown sport is a 404, not an empty football page. */
-export const dynamicParams = false;
-
 export default async function SportLayout({ children, params }: LayoutProps<"/[sport]">) {
   const { sport } = await params;
 
-  // dynamicParams already turns away anything outside generateStaticParams,
-  // but this is the check that makes the guarantee local and readable rather
-  // than an inference from two config exports.
+  // An unknown sport is a 404, not an empty football page. Deliberately not
+  // `dynamicParams = false`: that cascades to child segments and 404s every
+  // /match/[id] page not prerendered at build — i.e. all of them.
   if (!isSportId(sport)) notFound();
 
   return <>{children}</>;

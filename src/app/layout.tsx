@@ -31,15 +31,23 @@ const ORG_JSON_LD = {
   ],
 };
 
+// "optional", not "swap", for both display fonts: Next has no fallback
+// metrics for Big Shoulders (adjustFontFallback can't size-match it), and on
+// Android the fallback is Roboto — far wider than a condensed face — so a
+// late swap reflowed every heading and was the bulk of the field CLS (0.2).
+// With "optional" a font that misses the ~100ms window is used from the next
+// navigation onward instead of swapped in mid-read.
 const heading = Big_Shoulders({
   variable: "--font-heading",
   subsets: ["latin"],
   weight: ["600", "700", "800"],
-  display: "swap",
+  display: "optional",
   adjustFontFallback: false,
 });
 const body = Public_Sans({ variable: "--font-body", subsets: ["latin"], display: "swap" });
-const mono = JetBrains_Mono({ variable: "--font-mono-jb", subsets: ["latin"], display: "swap" });
+// Small tabular labels only — not worth a preload competing with the fonts
+// the first screen is actually set in.
+const mono = JetBrains_Mono({ variable: "--font-mono-jb", subsets: ["latin"], display: "optional", preload: false });
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE),
