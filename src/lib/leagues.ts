@@ -27,6 +27,11 @@ export interface LeagueDef {
    * friendlies) — see internationalPool().
    */
   confederation?: "CAF" | "UEFA" | "CONMEBOL" | "CONCACAF" | "global";
+  /**
+   * Finals tournaments played at neutral venues: no home advantage is applied.
+   * Qualifiers are home-and-away and must NOT carry this.
+   */
+  neutralVenue?: boolean;
   ids: {
     /** football-data.org competition code. */
     footballData?: string;
@@ -239,6 +244,7 @@ export const LEAGUES: LeagueDef[] = [
     flag: "🌍",
     rank: 3,
     confederation: "CAF",
+    neutralVenue: true,
     ids: { theSportsDb: "4496" },
   },
   {
@@ -261,6 +267,7 @@ export const LEAGUES: LeagueDef[] = [
     flag: "🏆",
     rank: 5,
     confederation: "global",
+    neutralVenue: true,
     ids: { footballData: "WC", theSportsDb: "4429" },
   },
   {
@@ -283,6 +290,7 @@ export const LEAGUES: LeagueDef[] = [
     flag: "🇪🇺",
     rank: 17,
     confederation: "UEFA",
+    neutralVenue: true,
     ids: { footballData: "EC", theSportsDb: "4502" },
   },
   {
@@ -316,6 +324,7 @@ export const LEAGUES: LeagueDef[] = [
     flag: "🌎",
     rank: 20,
     confederation: "CONMEBOL",
+    neutralVenue: true,
     ids: { theSportsDb: "4499" },
   },
   {
@@ -360,6 +369,7 @@ export const LEAGUES: LeagueDef[] = [
     flag: "🌎",
     rank: 24,
     confederation: "CONCACAF",
+    neutralVenue: true,
     ids: { theSportsDb: "4873" },
   },
   {

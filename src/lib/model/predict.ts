@@ -16,6 +16,7 @@ import {
 } from "./poisson";
 import { expectedRates, fitLeague, normaliseKey, type LeagueFit, type TeamRating } from "./fit";
 import { fairOdds } from "./odds";
+import { buildInsights, type Insight } from "./insights";
 
 export interface FormEntry {
   opponent: string;
@@ -79,13 +80,17 @@ export interface Prediction {
   picks: Pick[];
   /** The single strongest selection, or null when the data cannot support one. */
   topPick: Pick | null;
+  /** What in the data the model is reacting to; see insights.ts. */
+  insights: Insight[];
   /** Whether there is enough real history to stand behind this prediction. */
   sufficiency: Sufficiency;
   form: { home: TeamForm; away: TeamForm };
   h2h: H2HSummary;
   ratings: { home: TeamRating | null; away: TeamRating | null };
   model: {
+    /** Applied home advantage: zero at a neutral tournament venue. */
     homeAdvantage: number;
+    neutralVenue: boolean;
     rho: number;
     /** Fitted average-matchup rate; see LeagueFit.baseRate. */
     baseRate: number;
@@ -180,7 +185,16 @@ export function buildPrediction(
   h2hRows: ResultRow[] = [],
 ): Prediction {
   const league = match.league.code ? leagueByCode(match.league.code) ?? null : null;
-  const fit = fitLeague(results);
+  const fitted = fitLeague(results);
+  /*
+   * Tournament finals are played at neutral venues, so the fitted home
+   * advantage (learned mostly from qualifiers, where it is very real) must not
+   * be handed to whichever side the feed happens to list first. A host nation
+   * does play at home, but the feeds do not say which fixtures those are, and
+   * giving it to nobody is the smaller error.
+   */
+  const neutralVenue = Boolean(league?.neutralVenue);
+  const fit = neutralVenue ? { ...fitted, homeAdvantage: 0 } : fitted;
   const { lambda, mu, homeRating, awayRating } = expectedRates(
     fit, match.home.name, match.away.name,
   );
@@ -200,13 +214,8 @@ export function buildPrediction(
 
   // Ranked against what this competition actually does, not a pooled
   // European constant — see empiricalBaselines.
-  const picks = rankPicks(
-    markets,
-    asianHandicap,
-    dataQuality,
-    uncertainty,
-    empiricalBaselines(results),
-  );
+  const baselines = empiricalBaselines(results);
+  const picks = rankPicks(markets, asianHandicap, dataQuality, uncertainty, baselines);
   const sufficiency = assessSufficiency(
     fit.matchesUsed,
     homeRating?.played ?? 0,
@@ -214,20 +223,25 @@ export function buildPrediction(
     { home: match.home.name, away: match.away.name },
   );
 
+  // A pick is only surfaced when the history behind it justifies one.
+  const topPick = sufficiency.publishable ? picks[0] ?? null : null;
+  const insights = buildInsights({ match, results, fit, markets, topPick, baselines, neutralVenue });
+
   return {
     match,
     league,
     markets,
     asianHandicap,
     picks,
-    // A pick is only surfaced when the history behind it justifies one.
-    topPick: sufficiency.publishable ? picks[0] ?? null : null,
+    topPick,
+    insights,
     sufficiency,
     form,
     h2h,
     ratings: { home: homeRating ?? null, away: awayRating ?? null },
     model: {
       homeAdvantage: fit.homeAdvantage,
+      neutralVenue,
       rho: fit.rho,
       baseRate: fit.baseRate,
       observedGoalRate: fit.observedGoalRate,
