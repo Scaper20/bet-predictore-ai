@@ -20,6 +20,7 @@ const COLUMNS = [
       { href: sportPath("trends"), label: "Trends" },
       { href: sportPath("trackRecord"), label: "Track Record" },
       { href: sportPath("slip"), label: "Selection Builder" },
+      { href: sportPath("valueAlerts"), label: "Value Alerts" },
     ],
   },
   {
@@ -30,6 +31,7 @@ const COLUMNS = [
       { href: `${sportPath("fixtures")}?league=champions-league`, label: "Champions League" },
       { href: `${sportPath("fixtures")}?league=la-liga`, label: "La Liga" },
       { href: `${sportPath("fixtures")}?league=caf-champions-league`, label: "CAF Champions League" },
+      { href: `${sportPath("fixtures")}?league=afcon`, label: "AFCON" },
     ],
   },
   {

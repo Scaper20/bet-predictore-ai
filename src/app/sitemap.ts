@@ -31,6 +31,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE}${sportPath("trends")}`, lastModified: now, changeFrequency: "daily", priority: 0.7 },
     { url: `${SITE}${sportPath("trackRecord")}`, lastModified: now, changeFrequency: "daily", priority: 0.6 },
     { url: `${SITE}${sportPath("slip")}`, lastModified: now, changeFrequency: "monthly", priority: 0.4 },
+    { url: `${SITE}${sportPath("valueAlerts")}`, lastModified: now, changeFrequency: "weekly", priority: 0.5 },
     { url: `${SITE}/pricing`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
     { url: `${SITE}/responsible-gambling`, lastModified: now, changeFrequency: "monthly", priority: 0.5 },
   ];

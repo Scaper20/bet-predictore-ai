@@ -166,8 +166,8 @@ export default async function PricingPage({ searchParams }: PageProps<"/pricing"
                 access in place for the period already paid for.
               </p>
               <p>
-                Services marked “coming soon” are not part of what you are buying today and may
-                change or not ship.
+                Value-shift alerts depend on bookmaker prices that move constantly; an alert
+                reflects the price when we last checked it, and on most days there are few or none.
               </p>
               <p>
                 18+ only. If gambling stops being fun,{" "}

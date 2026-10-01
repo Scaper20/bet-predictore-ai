@@ -80,8 +80,8 @@ export const PLANS: PlanDefinition[] = [
     features: [
       "Everything in Pro",
       "Live in-play win-probability, updating as the match unfolds",
-      "Value-shift alerts (coming soon)",
-      "Priority support (coming soon)",
+      "Value-shift alerts: SportyBet prices that move above fair value, live and by email",
+      "Priority support: your messages go to the front of the queue",
     ],
     price: { monthly: 12000 },
     cadence: "per month",

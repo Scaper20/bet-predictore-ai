@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { supabaseServer, supabaseConfigured } from "@/lib/supabase/server";
-import { getEntitlement } from "@/lib/entitlements";
+import { getEntitlement, meets } from "@/lib/entitlements";
 import { getSubscriptionRow, hasLivePaidSubscription } from "@/lib/subscriptions";
 import { getPreferencesFor, hasOnboarded } from "@/lib/preferences";
 import { LEAGUES, leagueByCode } from "@/lib/leagues";
@@ -75,6 +75,18 @@ export default async function AccountPage() {
     supabase.from("profiles").select("display_name, created_at").eq("id", user.id).maybeSingle(),
     getPreferencesFor(supabase, user.id),
   ]);
+
+  // Read on its own rather than through getPreferencesFor, so the shared
+  // preferences query never depends on a column only VIP features use.
+  const isVip = meets(entitlement.tier, "vip");
+  const valueAlertsEmail = isVip
+    ? await supabase
+        .from("user_preferences")
+        .select("value_alerts_email")
+        .eq("user_id", user.id)
+        .maybeSingle()
+        .then(({ data }) => data?.value_alerts_email !== false)
+    : null;
 
   const displayName = profileResult.data?.display_name ?? "";
   const createdAt = profileResult.data?.created_at as string | undefined;
@@ -165,7 +177,7 @@ export default async function AccountPage() {
         />
         <div className="mt-6 grid gap-6 lg:grid-cols-[1.4fr_1fr] lg:items-start">
           <div className="card p-5 sm:p-7">
-            <PreferencesForm leagues={LEAGUES} preferences={preferences} />
+            <PreferencesForm leagues={LEAGUES} preferences={preferences} valueAlertsEmail={valueAlertsEmail} />
           </div>
           <div className="card p-5 sm:p-7">
             <h3 className="mb-4 text-sm font-semibold">Your details</h3>
