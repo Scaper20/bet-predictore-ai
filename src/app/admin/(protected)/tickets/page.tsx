@@ -43,8 +43,8 @@ export default async function AdminTicketsPage({
 
   // Falls back to the pre-0023 shape so the inbox never goes blank on a
   // deployment whose database has not had the priority migration yet.
-  let { data, error } = await load(true);
-  if (error) ({ data } = await load(false));
+  const first = await load(true);
+  const { data } = first.error ? await load(false) : first;
   const tickets = (data ?? []) as unknown as TicketRow[];
 
   return (
