@@ -192,6 +192,11 @@ export async function updatePreferences(
       digest: DIGEST_CHOICES.includes(digest as (typeof DIGEST_CHOICES)[number])
         ? digest
         : "none",
+      // Only rendered (and so only sent) for VIP members — see PreferencesForm.
+      // An unchecked checkbox sends nothing, hence the separate marker field.
+      ...(formData.has("valueAlertsField")
+        ? { value_alerts_email: formData.get("valueAlertsEmail") === "on" }
+        : {}),
       updated_at: new Date().toISOString(),
     },
     { onConflict: "user_id" },

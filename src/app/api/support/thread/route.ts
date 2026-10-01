@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/email";
 import { newTicketNotificationEmail } from "@/lib/email-templates";
+import { getEntitlement, meets } from "@/lib/entitlements";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 const NO_STORE = { "Cache-Control": "no-store" };
@@ -105,12 +107,27 @@ export async function POST(request: Request) {
   // A user message reopens a closed/pending ticket — the ball moves to the admin's court.
   await supabase.from("support_tickets").update({ status: "open", updated_at: new Date().toISOString() }).eq("id", ticket.id);
 
+  // VIP priority support. Decided here, server-side, from the real
+  // entitlement, and written with the service-role client: the column is
+  // pinned against browser sessions by a trigger (migration 0023), so a user
+  // cannot promote their own ticket. Checked on every message, so someone who
+  // upgrades mid-conversation is promoted on their next message.
+  const priority = meets((await getEntitlement()).tier, "vip");
+  if (priority) {
+    const { error: priorityError } = await supabaseAdmin()
+      .from("support_tickets")
+      .update({ priority: true })
+      .eq("id", ticket.id);
+    if (priorityError) console.error("support priority flag failed:", priorityError.message);
+  }
+
   // Only on the very first message of a conversation — a busy admin doesn't
   // need an email for every follow-up on a ticket they already know is open.
   if (isNewTicket) {
     void sendEmail({
       to: SUPPORT_INBOX,
       ...newTicketNotificationEmail({
+        priority,
         subject: "Support request",
         fromEmail: user.email ?? "unknown",
         preview: message.slice(0, 500),

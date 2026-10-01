@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { PageHeader } from "@/components/ui/page-header";
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/responsible-gambling" },
   title: "Responsible Gambling",
   description:
     "Betting should stay entertainment. Warning signs, practical limits, and where to get help " +

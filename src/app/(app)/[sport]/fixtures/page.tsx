@@ -11,12 +11,30 @@ import { leagueByCode } from "@/lib/leagues";
 import { containerClass } from "@/components/ui/container";
 import { sportPath } from "@/lib/routes";
 
-export const metadata: Metadata = {
-  title: "Football Fixtures",
-  description:
-    "Upcoming football fixtures across the Premier League, NPFL, Champions League and more, " +
-    "with kickoff times in West Africa Time.",
-};
+/** Per-league titles and canonicals; see predictions/page.tsx for why. */
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ league?: string }>;
+}): Promise<Metadata> {
+  const { league } = await searchParams;
+  const def = league ? leagueByCode(league) : undefined;
+  const base = sportPath("fixtures");
+  if (!def) {
+    return {
+      title: "Football Fixtures",
+      description:
+        "Upcoming football fixtures across the Premier League, NPFL, AFCON, Champions League " +
+        "and more, with kickoff times in West Africa Time.",
+      alternates: { canonical: base },
+    };
+  }
+  return {
+    title: `${def.name} Fixtures`,
+    description: `Upcoming ${def.name} fixtures with kickoff times in West Africa Time and a model prediction for every match.`,
+    alternates: { canonical: `${base}?league=${def.code}` },
+  };
+}
 
 export const revalidate = 180;
 

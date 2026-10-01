@@ -1,4 +1,4 @@
-/** Shared fetch helper: timeouts, typed errors, and no Next.js data caching. */
+/** Shared fetch helper: timeouts and typed errors. */
 
 export class ProviderError extends Error {
   constructor(
@@ -23,8 +23,10 @@ export async function getJson<T>(
     const res = await fetch(url, {
       headers: { Accept: "application/json", ...headers },
       signal: controller.signal,
-      // We run our own TTL cache; Next's fetch cache would double-cache.
-      cache: "no-store",
+      // No `cache` option on purpose. The default doesn't persist responses
+      // (our own TTL cache does that), but `cache: "no-store"` here used to
+      // force every page that loads football data into per-request rendering,
+      // silently cancelling the `revalidate` each of those pages declares.
     });
 
     if (!res.ok) {

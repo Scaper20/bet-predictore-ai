@@ -5,6 +5,7 @@ import { DownloadSlipImage } from "@/components/slip/download-slip-image";
 import { containerClass } from "@/components/ui/container";
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/football/slip" },
   title: "Selection Builder",
   description:
     "Combine your selections and see their true combined probability, the price each leg has " +

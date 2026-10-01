@@ -31,7 +31,7 @@ export interface InitializeTransactionParams {
   amountKobo: number;
   reference: string;
   callbackUrl: string;
-  /** Omitted for the one-off Weekend Pass — only Pro/VIP are recurring Paystack Plans. */
+  /** Omitted for one-off passes — only Pro/VIP are recurring Paystack Plans. */
   planCode?: string;
   metadata: Record<string, string>;
 }

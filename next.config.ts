@@ -28,6 +28,16 @@ const nextConfig: NextConfig = {
     return [
       { source: "/(.*)", headers: securityHeaders },
       { source: "/admin/:path*", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" }] },
+      /*
+       * The dev deployment (betrix-dev.vercel.app) and every preview URL serve
+       * the same pages as www.betrix.com.ng. Left indexable they compete with
+       * production as duplicate content, so any *.vercel.app host is noindex.
+       */
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: "(?<sub>.+)\\.vercel\\.app" }],
+        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
+      },
     ];
   },
 

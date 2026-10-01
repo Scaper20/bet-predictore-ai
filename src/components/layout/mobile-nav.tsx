@@ -45,6 +45,7 @@ export function MobileNav() {
         { href: sportPath("fixtures", sport), label: "Fixtures" },
         { href: sportPath("trends", sport), label: "Trends" },
         { href: sportPath("trackRecord", sport), label: "Track Record" },
+        { href: sportPath("valueAlerts", sport), label: "Value Alerts (VIP)" },
       ],
     },
     {

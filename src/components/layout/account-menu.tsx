@@ -9,7 +9,7 @@ import { signOut } from "@/app/actions/auth";
 
 const TIER_LABEL: Record<Tier, string> = {
   free: "Free",
-  pass: "Weekend Pass",
+  pass: "Pass",
   pro: "Pro",
   vip: "VIP",
 };

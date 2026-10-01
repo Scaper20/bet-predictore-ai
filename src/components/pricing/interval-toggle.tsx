@@ -2,9 +2,10 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTransition } from "react";
+import { CYCLE_LABEL, type BillingCycle } from "@/lib/pricing";
 
 /**
- * Monthly / yearly switch, promoted from the ad-hoc button pair in
+ * Monthly / quarterly / yearly switch, promoted from the ad-hoc button pair in
  * billing-plans.tsx and rebuilt on real radio inputs.
  *
  * Radios rather than buttons because this is a choice between two mutually
@@ -17,13 +18,13 @@ import { useTransition } from "react";
  * also keeps the cards themselves a Server Component: only this control ships
  * JavaScript.
  */
-export function IntervalToggle({ value }: { value: "monthly" | "yearly" }) {
+export function IntervalToggle({ value }: { value: BillingCycle }) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
   const [pending, startTransition] = useTransition();
 
-  function select(next: "monthly" | "yearly") {
+  function select(next: BillingCycle) {
     const query = new URLSearchParams(params.toString());
     if (next === "monthly") query.delete("interval");
     else query.set("interval", next);
@@ -39,7 +40,7 @@ export function IntervalToggle({ value }: { value: "monthly" | "yearly" }) {
     >
       <legend className="sr-only">Billing interval</legend>
 
-      {(["monthly", "yearly"] as const).map((option) => (
+      {(["monthly", "quarterly", "yearly"] as const).map((option) => (
         <label
           key={option}
           className={`cursor-pointer rounded-md px-4 py-2.5 font-medium transition-colors has-focus-visible:outline has-focus-visible:outline-2 has-focus-visible:outline-brand has-focus-visible:outline-offset-2 ${
@@ -54,7 +55,7 @@ export function IntervalToggle({ value }: { value: "monthly" | "yearly" }) {
             onChange={() => select(option)}
             className="absolute size-px overflow-hidden [clip-path:inset(50%)]"
           />
-          {option === "monthly" ? "Monthly" : "Yearly"}
+          {CYCLE_LABEL[option].name}
         </label>
       ))}
     </fieldset>

@@ -9,10 +9,11 @@ import { PlanMatrix } from "@/components/pricing/plan-matrix";
 import { PlanMatrixMobile } from "@/components/pricing/plan-matrix-mobile";
 import { IntervalToggle } from "@/components/pricing/interval-toggle";
 import { sportPath } from "@/lib/routes";
-import { planById, yearlySaving } from "@/lib/pricing";
+import { cycleSaving, planById, type BillingCycle } from "@/lib/pricing";
 import { naira } from "@/lib/format";
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/pricing" },
   title: "Pricing",
   description:
     "Plans from a single matchday to a full season, priced in Naira. Start free — no card, no subscription required.",
@@ -28,8 +29,8 @@ const FAQS = [
     a: "No. Live scores, fixtures, match results and the headline prediction for every fixture are free, and a free account unlocks the full set of markets on every match. Paid plans add value detection against the price you're offered, staking guidance and the enhanced breakdowns.",
   },
   {
-    q: "What exactly is the Weekend Pass?",
-    a: "One-off access for a single matchday slate, with no subscription attached. It runs to the end of the following Monday, 23:59 West Africa Time, so a Friday purchase covers the whole weekend's fixtures.",
+    q: "What is a pass?",
+    a: "One-off access to everything in Pro, with no subscription attached. A Day pass (₦250) lasts 24 hours from purchase, a Week pass (₦1,200) lasts 7 days, and a Weekend pass (₦700) runs to 23:59 West Africa Time on the following Monday, so a Friday purchase covers the whole weekend. Buying another while one is running never shortens it.",
   },
   {
     q: "Can I cancel?",
@@ -48,9 +49,9 @@ const FAQS = [
 export default async function PricingPage({ searchParams }: PageProps<"/pricing">) {
   const params = await searchParams;
   const raw = Array.isArray(params.interval) ? params.interval[0] : params.interval;
-  const interval = raw === "yearly" ? "yearly" : "monthly";
+  const interval: BillingCycle = raw === "yearly" || raw === "quarterly" ? raw : "monthly";
 
-  const proSaving = yearlySaving(planById("pro"));
+  const proSaving = cycleSaving(planById("pro"), interval);
 
   return (
     <>
@@ -65,7 +66,7 @@ export default async function PricingPage({ searchParams }: PageProps<"/pricing"
           <IntervalToggle value={interval} />
           {proSaving && (
             <p className="text-xs text-ink-muted">
-              Paying yearly saves {naira(proSaving.amount)} on Pro — {proSaving.percent}% off.
+              Paying {interval} saves {naira(proSaving.amount)} on Pro — {proSaving.percent}% off.
             </p>
           )}
         </div>
@@ -76,7 +77,7 @@ export default async function PricingPage({ searchParams }: PageProps<"/pricing"
             hrefFor={(plan) =>
               plan.id === "free"
                 ? "/account/sign-up"
-                : `/account/billing?plan=${plan.id}${interval === "yearly" ? "&cycle=yearly" : ""}`
+                : `/account/billing?plan=${plan.id}${interval !== "monthly" ? `&cycle=${interval}` : ""}`
             }
           />
         </div>
@@ -159,14 +160,15 @@ export default async function PricingPage({ searchParams }: PageProps<"/pricing"
                 otherwise. Payments are processed by Paystack.
               </p>
               <p>
-                The Weekend Pass is one-off access expiring at 23:59 West Africa Time on the
-                Monday at the end of the covered slate; it does not renew. Subscriptions renew
+                Passes are one-off access and do not renew: a Day pass lasts 24 hours, a Week
+                pass 7 days, and a Weekend pass ends at 23:59 West Africa Time on the Monday at
+                the end of the covered slate. Subscriptions renew
                 automatically until cancelled, and cancelling ends future charges while leaving
                 access in place for the period already paid for.
               </p>
               <p>
-                Services marked “coming soon” are not part of what you are buying today and may
-                change or not ship.
+                Value-shift alerts depend on bookmaker prices that move constantly; an alert
+                reflects the price when we last checked it, and on most days there are few or none.
               </p>
               <p>
                 18+ only. If gambling stops being fun,{" "}

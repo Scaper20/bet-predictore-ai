@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Badge, ButtonLink, LiveDot } from "@/components/ui/primitives";
 import { Container } from "@/components/ui/container";
 import { sportPath } from "@/lib/routes";
+import { LEAGUES } from "@/lib/leagues";
 
 /**
  * The board is passed in rather than built here, so this stays a Server
@@ -21,15 +22,18 @@ export function Hero({ liveCount, board }: { liveCount: number; board: ReactNode
 
       <Container className="relative grid gap-8 sm:gap-14 py-10 sm:py-16 lg:grid-cols-[1.1fr_0.9fr] lg:items-center lg:gap-10 lg:py-24">
         {/* Live board leads: today's real predictions, not marketing copy, is
-            the first thing anyone sees. */}
-        <div className="animate-rise">
+            the first thing anyone sees. No entrance animation on either
+            column: they started at opacity 0, which kept the hero out of the
+            browser's largest-paint measurement and made the page score as if
+            its main content painted seconds late. */}
+        <div>
           {board}
           <p className="mt-3 text-center text-xs text-ink-dim">
             Real fixtures, straight from the live feeds.
           </p>
         </div>
 
-        <div className="animate-rise" style={{ animationDelay: "120ms" }}>
+        <div>
           <Badge tone="brand" className="mb-6">
             🇳🇬 Built in Nigeria, for Nigerian football fans
           </Badge>
@@ -60,7 +64,7 @@ export function Hero({ liveCount, board }: { liveCount: number; board: ReactNode
           </div>
 
           <dl className="mt-12 grid max-w-lg grid-cols-3 gap-6">
-            <Stat value="12+" label="Leagues covered" />
+            <Stat value={`${LEAGUES.length}`} label="Competitions covered" />
             <Stat value="Free" label="No card required" />
             <Stat value="18+" label="Bet responsibly" />
           </dl>

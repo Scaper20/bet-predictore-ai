@@ -19,6 +19,19 @@ export interface LeagueDef {
   flag: string;
   /** Sort weight for Nigerian audiences — lower shows first. */
   rank: number;
+  /**
+   * Set only on national-team competitions. National sides play a handful of
+   * games a year spread across qualifiers, tournaments and friendlies, so one
+   * competition's history is far too thin to rate them; training pools every
+   * competition in the same confederation plus the global ones (World Cup,
+   * friendlies) — see internationalPool().
+   */
+  confederation?: "CAF" | "UEFA" | "CONMEBOL" | "CONCACAF" | "global";
+  /**
+   * Finals tournaments played at neutral venues: no home advantage is applied.
+   * Qualifiers are home-and-away and must NOT carry this.
+   */
+  neutralVenue?: boolean;
   ids: {
     /** football-data.org competition code. */
     footballData?: string;
@@ -97,7 +110,7 @@ export const LEAGUES: LeagueDef[] = [
     shortName: "La Liga",
     country: "Spain",
     flag: "🇪🇸",
-    rank: 3,
+    rank: 6,
     ids: { footballData: "PD", theSportsDb: "4335", apiFootball: 140, sportyBet: "sr:tournament:8" },
     archive: { footballDataUk: "SP1" },
   },
@@ -108,7 +121,7 @@ export const LEAGUES: LeagueDef[] = [
     shortName: "Serie A",
     country: "Italy",
     flag: "🇮🇹",
-    rank: 4,
+    rank: 7,
     ids: { footballData: "SA", theSportsDb: "4332", apiFootball: 135, sportyBet: "sr:tournament:23" },
     archive: { footballDataUk: "I1" },
   },
@@ -119,7 +132,7 @@ export const LEAGUES: LeagueDef[] = [
     shortName: "Bundesliga",
     country: "Germany",
     flag: "🇩🇪",
-    rank: 5,
+    rank: 8,
     ids: { footballData: "BL1", theSportsDb: "4331", apiFootball: 78, sportyBet: "sr:tournament:35" },
     archive: { footballDataUk: "D1" },
   },
@@ -130,7 +143,7 @@ export const LEAGUES: LeagueDef[] = [
     shortName: "Ligue 1",
     country: "France",
     flag: "🇫🇷",
-    rank: 6,
+    rank: 9,
     ids: { footballData: "FL1", theSportsDb: "4334", apiFootball: 61, sportyBet: "sr:tournament:34" },
     archive: { footballDataUk: "F1" },
   },
@@ -141,7 +154,7 @@ export const LEAGUES: LeagueDef[] = [
     shortName: "NPFL",
     country: "Nigeria",
     flag: "🇳🇬",
-    rank: 7,
+    rank: 10,
     // 4855 was KOPW, a Chinese competition dormant since 2022, so every NPFL
     // fetch resolved to nothing and the flagship home-market league could
     // never publish a pick. 4827 is "Nigerian NPFL". Verified by lookup, not
@@ -157,7 +170,7 @@ export const LEAGUES: LeagueDef[] = [
     shortName: "Championship",
     country: "England",
     flag: "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
-    rank: 8,
+    rank: 12,
     ids: { footballData: "ELC", theSportsDb: "4329", apiFootball: 40, sportyBet: "sr:tournament:18" },
     archive: { footballDataUk: "E1" },
   },
@@ -168,7 +181,7 @@ export const LEAGUES: LeagueDef[] = [
     shortName: "Eredivisie",
     country: "Netherlands",
     flag: "🇳🇱",
-    rank: 9,
+    rank: 13,
     ids: { footballData: "DED", theSportsDb: "4337", apiFootball: 88, sportyBet: "sr:tournament:37" },
     archive: { footballDataUk: "N1" },
   },
@@ -179,7 +192,7 @@ export const LEAGUES: LeagueDef[] = [
     shortName: "Primeira Liga",
     country: "Portugal",
     flag: "🇵🇹",
-    rank: 10,
+    rank: 14,
     ids: { footballData: "PPL", theSportsDb: "4344", apiFootball: 94 },
     archive: { footballDataUk: "P1" },
   },
@@ -190,7 +203,7 @@ export const LEAGUES: LeagueDef[] = [
     shortName: "CAF CL",
     country: "Africa",
     flag: "🌍",
-    rank: 11,
+    rank: 15,
     // No theSportsDb id: 4552 resolves to "AAF", a defunct United States
     // American-football league, which would have filed its fixtures under CAF
     // Champions League. Omitting the id is strictly better than a wrong one —
@@ -205,11 +218,191 @@ export const LEAGUES: LeagueDef[] = [
     shortName: "Brasileirão",
     country: "Brazil",
     flag: "🇧🇷",
-    rank: 12,
+    rank: 16,
     ids: { footballData: "BSA", theSportsDb: "4351", apiFootball: 71, sportyBet: "sr:tournament:325" },
     archive: { footballDataUkCountry: { file: "BRA", league: "Serie A" } },
   },
+
+  /*
+   * National-team competitions.
+   *
+   * TheSportsDB ids were read off each national side's own team record
+   * (searchteams.php — Nigeria, England, Brazil, USA and others list the
+   * competitions they play in), not recalled. football-data codes are only
+   * set for WC and EC, the two on its free tier; the qualifiers and AFCON
+   * exist there but are paid-tier, and asking a free key for them is a
+   * guaranteed 403 that still burns the 10/min rate limit. API-Football ids
+   * are deliberately absent until confirmed against a live key, same rule
+   * as the CAF Champions League entry above.
+   */
+  {
+    code: "afcon",
+    sport: "football",
+    name: "Africa Cup of Nations",
+    shortName: "AFCON",
+    country: "Africa",
+    flag: "🌍",
+    rank: 3,
+    confederation: "CAF",
+    neutralVenue: true,
+    ids: { theSportsDb: "4496" },
+  },
+  {
+    code: "wcq-caf",
+    sport: "football",
+    name: "World Cup Qualifying CAF",
+    shortName: "WCQ Africa",
+    country: "Africa",
+    flag: "🌍",
+    rank: 4,
+    confederation: "CAF",
+    ids: { theSportsDb: "5514" },
+  },
+  {
+    code: "world-cup",
+    sport: "football",
+    name: "FIFA World Cup",
+    shortName: "World Cup",
+    country: "World",
+    flag: "🏆",
+    rank: 5,
+    confederation: "global",
+    neutralVenue: true,
+    ids: { footballData: "WC", theSportsDb: "4429" },
+  },
+  {
+    code: "afcon-qualifiers",
+    sport: "football",
+    name: "Africa Cup of Nations Qualifying",
+    shortName: "AFCON Qualifiers",
+    country: "Africa",
+    flag: "🌍",
+    rank: 11,
+    confederation: "CAF",
+    ids: { theSportsDb: "5520" },
+  },
+  {
+    code: "euro",
+    sport: "football",
+    name: "UEFA European Championship",
+    shortName: "Euro",
+    country: "Europe",
+    flag: "🇪🇺",
+    rank: 17,
+    confederation: "UEFA",
+    neutralVenue: true,
+    ids: { footballData: "EC", theSportsDb: "4502" },
+  },
+  {
+    code: "nations-league",
+    sport: "football",
+    name: "UEFA Nations League",
+    shortName: "Nations League",
+    country: "Europe",
+    flag: "🇪🇺",
+    rank: 18,
+    confederation: "UEFA",
+    ids: { theSportsDb: "4490" },
+  },
+  {
+    code: "wcq-uefa",
+    sport: "football",
+    name: "World Cup Qualifying UEFA",
+    shortName: "WCQ Europe",
+    country: "Europe",
+    flag: "🇪🇺",
+    rank: 19,
+    confederation: "UEFA",
+    ids: { theSportsDb: "5518" },
+  },
+  {
+    code: "copa-america",
+    sport: "football",
+    name: "Copa America",
+    shortName: "Copa América",
+    country: "South America",
+    flag: "🌎",
+    rank: 20,
+    confederation: "CONMEBOL",
+    neutralVenue: true,
+    ids: { theSportsDb: "4499" },
+  },
+  {
+    code: "wcq-conmebol",
+    sport: "football",
+    name: "World Cup Qualifying CONMEBOL",
+    shortName: "WCQ S. America",
+    country: "South America",
+    flag: "🌎",
+    rank: 21,
+    confederation: "CONMEBOL",
+    ids: { theSportsDb: "5515" },
+  },
+  {
+    code: "euro-qualifiers",
+    sport: "football",
+    name: "UEFA European Championship Qualifying",
+    shortName: "Euro Qualifiers",
+    country: "Europe",
+    flag: "🇪🇺",
+    rank: 22,
+    confederation: "UEFA",
+    ids: { theSportsDb: "5519" },
+  },
+  {
+    code: "international-friendlies",
+    sport: "football",
+    name: "International Friendlies",
+    shortName: "Friendlies",
+    country: "World",
+    flag: "🤝",
+    rank: 23,
+    confederation: "global",
+    ids: { theSportsDb: "4562" },
+  },
+  {
+    code: "gold-cup",
+    sport: "football",
+    name: "CONCACAF Gold Cup",
+    shortName: "Gold Cup",
+    country: "North America",
+    flag: "🌎",
+    rank: 24,
+    confederation: "CONCACAF",
+    neutralVenue: true,
+    ids: { theSportsDb: "4873" },
+  },
+  {
+    code: "wcq-concacaf",
+    sport: "football",
+    name: "World Cup Qualifying CONCACAF",
+    shortName: "WCQ CONCACAF",
+    country: "North America",
+    flag: "🌎",
+    rank: 25,
+    confederation: "CONCACAF",
+    ids: { theSportsDb: "5516" },
+  },
 ];
+
+/** Club competitions, catalogue order. */
+export const CLUB_LEAGUES = LEAGUES.filter((l) => !l.confederation);
+/** National-team competitions, catalogue order. */
+export const INTERNATIONAL_LEAGUES = LEAGUES.filter((l) => Boolean(l.confederation));
+
+/**
+ * Every competition whose results should train a national-team fixture in
+ * `league`: the same confederation plus the global ones. A CAF qualifier
+ * pools AFCON, AFCON qualifiers, other CAF qualifiers, the World Cup and
+ * friendlies — enough games per side to actually rate them. Empty for club
+ * competitions, which train on their own history.
+ */
+export function internationalPool(league: LeagueDef): LeagueDef[] {
+  if (!league.confederation) return [];
+  return INTERNATIONAL_LEAGUES.filter(
+    (l) => l.confederation === league.confederation || l.confederation === "global" || league.confederation === "global",
+  );
+}
 
 const BY_CODE = new Map(LEAGUES.map((l) => [l.code, l]));
 
@@ -263,6 +456,21 @@ const PROVIDER_ALIASES: Record<string, string> = {
   "champions-league": "UEFA Champions League | Champions League",
   "caf-champions-league": "CAF Champions League | CAF Champions League Group Stage",
   npfl: "Nigeria Professional Football League | Nigerian Premier League | NPFL | Nigerian Professional Football League",
+  // Spellings as each feed returns them: TheSportsDB names (from the team
+  // records the ids were read off) and football-data's competition list.
+  afcon: "African Cup of Nations | Africa Cup Of Nations | AFCON",
+  "afcon-qualifiers": "African Cup of Nations Qualifying | Africa Cup Of Nations - Qualification",
+  "wcq-caf": "WC Qualification CAF | World Cup Qualification Africa",
+  "world-cup": "World Cup",
+  euro: "UEFA European Championships | European Championship | Euro",
+  "euro-qualifiers": "UEFA European Championships Qualifying | European Championship Qualifiers",
+  "nations-league": "UEFA Nations League",
+  "wcq-uefa": "WC Qualification UEFA | World Cup Qualification Europe",
+  "copa-america": "Copa América | CONMEBOL Copa America",
+  "wcq-conmebol": "WC Qualification CONMEBOL | World Cup Qualification South America",
+  "international-friendlies": "International Friendlies | Friendlies",
+  "gold-cup": "CONCACAF Gold Cup | Gold Cup",
+  "wcq-concacaf": "WC Qualification CONCACAF | World Cup Qualification CONCACAF",
 };
 
 /**

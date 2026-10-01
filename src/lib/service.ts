@@ -13,7 +13,9 @@ import {
 } from "@/lib/providers";
 import { cached } from "@/lib/providers/cache";
 import { buildPrediction, type Prediction } from "@/lib/model/predict";
-import { archivedResults } from "@/lib/archive/history-store";
+import { after } from "next/server";
+import { archivedResults, storeResults } from "@/lib/archive/history-store";
+import { normaliseKey } from "@/lib/model/fit";
 import { scoreMatrix, deriveLiveWinProbability } from "@/lib/model/poisson";
 import { writeAnalysis, aiEnabled, type Analysis } from "@/lib/ai/analyst";
 import { isLive } from "@/lib/format";
@@ -73,17 +75,62 @@ async function trainingRows(
   match: Match,
 ): Promise<{ rows: ResultRow[]; leagueName: string; curated: boolean }> {
   const code = match.league.code;
-  if (code) {
-    const archived = await archivedResults(code).catch(() => []);
-    // MIN_PUBLISHABLE_MATCHES is 15. At or below that the archive is no better
-    // than what the live feeds already give, so it is not worth preferring.
-    if (archived.length > 15) {
-      // Archive rows are keyed on the catalogue code, so reaching one means
-      // the competition is curated by definition.
-      return { rows: archived, leagueName: match.league.name, curated: true };
-    }
+  if (!code) return getTrainingResults(match);
+
+  const archived = await archivedResults(code).catch(() => []);
+  // Deep enough to stand on its own; refreshed nightly (archive/refresh.ts).
+  if (archived.length >= RICH_ARCHIVE) {
+    return { rows: archived, leagueName: match.league.name, curated: true };
   }
-  return getTrainingResults(match);
+
+  /*
+   * A thin archive: NPFL, the CAF and UEFA cups, anything football-data.co.uk
+   * does not carry. The live feeds only ever show the last 15-35 results, and
+   * winrate is driven by depth far more than by anything in the model —
+   * walk-forward, about 52% of picks land on 35 matches of history against 74%
+   * on 400. So every result the feeds show is kept, and the history these
+   * competitions train on grows every week instead of staying a window.
+   */
+  const live = await getTrainingResults(match);
+  const pooled = Boolean(leagueByCode(code)?.confederation);
+  if (live.curated && !pooled && live.rows.length > 0) {
+    keepResults(code, live.rows);
+  }
+  const merged = mergeResults(archived, live.rows);
+  return merged.length > live.rows.length
+    ? { rows: merged, leagueName: live.leagueName, curated: true }
+    : live;
+}
+
+/** Archive depth past which the live feeds add nothing worth a request. */
+const RICH_ARCHIVE = 300;
+
+function keepResults(code: string, rows: ResultRow[]): void {
+  const archiveRows = rows.map((r) => ({
+    leagueCode: code,
+    kickoff: r.date,
+    homeName: r.homeName,
+    awayName: r.awayName,
+    homeGoals: r.homeGoals,
+    awayGoals: r.awayGoals,
+  }));
+  const write = () => storeResults(archiveRows, "live-feed").catch(() => 0);
+  try {
+    // After the response, so a page never waits on an archive write.
+    after(write);
+  } catch {
+    // Outside a request (scripts, tests): just fire it.
+    void write();
+  }
+}
+
+/** Archive plus live rows, one row per fixture. */
+function mergeResults(a: ResultRow[], b: ResultRow[]): ResultRow[] {
+  const key = (r: ResultRow) =>
+    `${new Date(r.date).toISOString().slice(0, 10)}|${normaliseKey(r.homeName)}|${normaliseKey(r.awayName)}`;
+  const out = new Map<string, ResultRow>();
+  for (const r of [...a, ...b]) if (!out.has(key(r))) out.set(key(r), r);
+  return [...out.values()].sort((x, y) => x.date - y.date);
 }
 
 export async function matchDetail(id: string): Promise<MatchDetail | null> {

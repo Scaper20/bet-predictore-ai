@@ -29,7 +29,7 @@ export async function getSubscriptionRow(
  * True when the user has a live (not cancelled/lapsed) Pro/VIP Paystack
  * subscription — the case that must block starting a second one via
  * checkout, and must be resolved (via Manage Subscription) before deleting
- * the account. Weekend Pass never counts here — it's a one-off charge with
+ * the account. A pass never counts here — it's a one-off charge with
  * no recurring subscription behind it, not a "live subscription" to cancel.
  */
 export function hasLivePaidSubscription(row: SubscriptionRow | null): boolean {

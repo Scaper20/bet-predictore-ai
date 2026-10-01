@@ -14,6 +14,7 @@ interface TicketRow {
   id: string;
   subject: string;
   status: string;
+  priority: boolean | null;
   updated_at: string;
   profiles: { email: string | null } | { email: string | null }[] | null;
 }
@@ -30,15 +31,20 @@ export default async function AdminTicketsPage({
   const { status: statusParam } = await searchParams;
   const status = isStatusFilter(statusParam) ? statusParam : undefined;
 
-  let query = supabaseAdmin()
-    .from("support_tickets")
-    .select("id, subject, status, updated_at, profiles(email)")
-    .order("status", { ascending: true })
-    .order("updated_at", { ascending: false })
-    .limit(100);
-  if (status) query = query.eq("status", status);
+  const load = (withPriority: boolean) => {
+    let q = supabaseAdmin()
+      .from("support_tickets")
+      .select(`id, subject, status, ${withPriority ? "priority, " : ""}updated_at, profiles(email)`);
+    // VIP priority tickets first — that is the whole of the VIP promise.
+    if (withPriority) q = q.order("priority", { ascending: false });
+    q = q.order("status", { ascending: true }).order("updated_at", { ascending: false }).limit(100);
+    return status ? q.eq("status", status) : q;
+  };
 
-  const { data } = await query;
+  // Falls back to the pre-0023 shape so the inbox never goes blank on a
+  // deployment whose database has not had the priority migration yet.
+  const first = await load(true);
+  const { data } = first.error ? await load(false) : first;
   const tickets = (data ?? []) as unknown as TicketRow[];
 
   return (
@@ -73,7 +79,9 @@ export default async function AdminTicketsPage({
               return (
                 <Link key={t.id} href={`/admin/tickets/${t.id}`} className="card block p-4">
                   <div className="flex items-start justify-between gap-3">
-                    <p className="min-w-0 truncate text-sm font-medium text-ink">{t.subject}</p>
+                    <p className="min-w-0 truncate text-sm font-medium text-ink">
+                      {t.priority && <PriorityBadge />} {t.subject}
+                    </p>
                     <Badge tone={STATUS_TONE[t.status] ?? "neutral"} className="shrink-0">
                       {t.status}
                     </Badge>
@@ -98,6 +106,7 @@ export default async function AdminTicketsPage({
                   return (
                     <AdminTableRow key={t.id}>
                       <AdminTableCell>
+                        {t.priority && <PriorityBadge />}{" "}
                         <Link href={`/admin/tickets/${t.id}`} className="font-medium text-ink hover:text-brand">
                           {t.subject}
                         </Link>
@@ -119,4 +128,8 @@ export default async function AdminTicketsPage({
       )}
     </div>
   );
+}
+
+function PriorityBadge() {
+  return <Badge tone="violet" className="mr-1.5 align-middle">VIP priority</Badge>;
 }

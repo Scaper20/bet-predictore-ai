@@ -11,8 +11,8 @@ export interface PlanDefinition {
   description: string;
   /** Card bullets. Kept as strings — the comparison grid lives in PLAN_MATRIX. */
   features: string[];
-  /** Naira. `oneOff` for the Weekend Pass, `monthly`/`yearly` for recurring plans. */
-  price: { oneOff?: number; monthly?: number; yearly?: number };
+  /** Naira. `oneOff` is the cheapest pass length; recurring plans carry one price per cycle. */
+  price: { oneOff?: number; monthly?: number; quarterly?: number; yearly?: number };
   cadence: string;
   /**
    * Ribbon text, replacing a boolean `highlighted`. A boolean could only ever
@@ -23,6 +23,47 @@ export interface PlanDefinition {
   /** CTA copy. Previously a loose map in sections.tsx that had to be kept in step. */
   ctaLabel: string;
   order: number;
+}
+
+export type BillingCycle = "monthly" | "quarterly" | "yearly";
+
+export type PassLength = "day" | "weekend" | "week";
+
+export interface PassOption {
+  id: PassLength;
+  label: string;
+  price: number;
+  /** How long it lasts, in the words shown under the price. */
+  window: string;
+}
+
+/**
+ * The three lengths of the one-off pass, cheapest first.
+ *
+ * A day is the way in: ₦250 is about the cost of a data top-up, and it is the
+ * first payment that matters most. The week is priced so that four of them
+ * (₦4,800) cost more than a month of Pro (₦3,500) — a regular pass buyer has a
+ * reason to subscribe. Expiry rules live in paystack/pass-window.ts.
+ */
+export const PASS_OPTIONS: PassOption[] = [
+  { id: "day", label: "Day", price: 250, window: "24 hours" },
+  { id: "weekend", label: "Weekend", price: 700, window: "Fri–Mon" },
+  { id: "week", label: "Week", price: 1200, window: "7 days" },
+];
+
+export function passOption(id: string | undefined): PassOption {
+  return PASS_OPTIONS.find((o) => o.id === id) ?? PASS_OPTIONS[1];
+}
+
+export const CYCLE_LABEL: Record<BillingCycle, { name: string; per: string }> = {
+  monthly: { name: "Monthly", per: "per month" },
+  quarterly: { name: "Quarterly", per: "per quarter" },
+  yearly: { name: "Yearly", per: "per year" },
+};
+
+/** The price of a recurring plan on a cycle, or undefined when it is not sold that way. */
+export function cyclePrice(plan: PlanDefinition, cycle: BillingCycle): number | undefined {
+  return plan.price[cycle];
 }
 
 export const PLANS: PlanDefinition[] = [
@@ -44,18 +85,19 @@ export const PLANS: PlanDefinition[] = [
   },
   {
     id: "pass",
-    name: "Weekend Pass",
-    description: "One matchday slate, full analysis. No subscription.",
+    name: "Pass",
+    description: "All of Pro for a day, a weekend or a week. No subscription.",
     features: [
       "Everything in Free",
+      "Full enhanced match breakdown and key factors",
       "Value detection against the price you're offered",
       "Kelly allocation guidance, capped and sane",
       "Asian handicap breakdowns",
       "Downloadable, shareable slip image",
     ],
-    price: { oneOff: 700 },
-    cadence: "Fri–Mon access",
-    ctaLabel: "Get this weekend",
+    price: { oneOff: PASS_OPTIONS[0].price },
+    cadence: "a day",
+    ctaLabel: "Get a pass",
     order: 2,
   },
   {
@@ -63,11 +105,10 @@ export const PLANS: PlanDefinition[] = [
     name: "Pro",
     description: "For analysts who track edge across a full slate.",
     features: [
-      "Everything in Weekend Pass, every matchday — no repurchasing week to week",
-      "Full enhanced match breakdown, not just the opening paragraph",
-      "The model's key factors spelled out for every fixture",
+      "Everything in Pass, every day — no repurchasing week to week",
+      "Pay monthly, quarterly (save about 10%) or yearly (save 20%)",
     ],
-    price: { monthly: 3500, yearly: 33600 },
+    price: { monthly: 3500, quarterly: 9500, yearly: 33600 },
     cadence: "per month",
     badge: "Most popular",
     ctaLabel: "Go Pro",
@@ -80,10 +121,10 @@ export const PLANS: PlanDefinition[] = [
     features: [
       "Everything in Pro",
       "Live in-play win-probability, updating as the match unfolds",
-      "Value-shift alerts (coming soon)",
-      "Priority support (coming soon)",
+      "Value-shift alerts: SportyBet prices that move above fair value, live and by email",
+      "Priority support: your messages go to the front of the queue",
     ],
-    price: { monthly: 12000 },
+    price: { monthly: 8000, yearly: 76800 },
     cadence: "per month",
     ctaLabel: "Go VIP",
     order: 4,
@@ -162,7 +203,7 @@ export const PLAN_MATRIX: MatrixGroup[] = [
       { label: "Staking guidance", values: { free: false, pass: true, pro: true, vip: true } },
       {
         label: "Full enhanced match breakdown",
-        values: { free: false, pass: false, pro: true, vip: true },
+        values: { free: false, pass: true, pro: true, vip: true },
       },
       {
         label: "Live in-play win probability",
@@ -175,6 +216,11 @@ export const PLAN_MATRIX: MatrixGroup[] = [
     rows: [
       { label: "Selection builder", values: { free: true, pass: true, pro: true, vip: true } },
       { label: "Shareable slip image", values: { free: false, pass: true, pro: true, vip: true } },
+      {
+        label: "Value-shift alerts, live and by email",
+        values: { free: false, pass: false, pro: false, vip: true },
+      },
+      { label: "Priority support", values: { free: false, pass: false, pro: false, vip: true } },
     ],
   },
 ];
@@ -187,11 +233,20 @@ export const PLAN_MATRIX: MatrixGroup[] = [
  * quietly stay wrong is the one customers read.
  */
 export function yearlySaving(plan: PlanDefinition): { amount: number; percent: number } | null {
-  const { monthly, yearly } = plan.price;
-  if (!monthly || !yearly) return null;
+  return cycleSaving(plan, "yearly");
+}
 
-  const fullPrice = monthly * 12;
-  const amount = fullPrice - yearly;
+/** What a longer cycle saves against paying monthly for the same period. */
+export function cycleSaving(
+  plan: PlanDefinition,
+  cycle: BillingCycle,
+): { amount: number; percent: number } | null {
+  const { monthly } = plan.price;
+  const price = plan.price[cycle];
+  if (!monthly || !price || cycle === "monthly") return null;
+
+  const fullPrice = monthly * (cycle === "yearly" ? 12 : 3);
+  const amount = fullPrice - price;
   if (amount <= 0) return null;
 
   return { amount, percent: Math.round((amount / fullPrice) * 100) };

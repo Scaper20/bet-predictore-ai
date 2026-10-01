@@ -22,6 +22,7 @@ export const SPORT_ROUTES = {
   trends: "trends",
   trackRecord: "track-record",
   slip: "slip",
+  valueAlerts: "value-alerts",
 } as const;
 
 export type SportRoute = keyof typeof SPORT_ROUTES;

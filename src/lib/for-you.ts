@@ -51,8 +51,10 @@ export interface PersonalizedPick {
   group: string;
   label: string;
   probability: number;
-  /** The model's own break-even price. There is no bookmaker price to show. */
+  /** The model's own break-even price. */
   fairOdds: number;
+  /** SportyBet's live price for this selection, where one was looked up. */
+  bookPrice?: number | null;
   confidence: number;
   /** Real evidence behind the pick, straight off the fitted model. */
   matchesUsed: number;
@@ -127,8 +129,11 @@ export function inFollowedLeagues<T extends { league: { code: string | null } }>
 }
 
 /** Prediction → the projection that crosses to the client. */
-export function toPersonalizedPick(prediction: Prediction, sport: SportId): PersonalizedPick | null {
-  const pick = prediction.topPick;
+export function toPersonalizedPick(
+  prediction: Prediction,
+  sport: SportId,
+  pick: Prediction["topPick"] = prediction.topPick,
+): PersonalizedPick | null {
   if (!pick) return null;
 
   const { match, model } = prediction;

@@ -3,7 +3,7 @@ import { ButtonLink, SectionHeading } from "@/components/ui/primitives";
 import { PricingTable } from "@/components/pricing/pricing-table";
 import { Container, containerClass } from "@/components/ui/container";
 import { Reveal } from "@/components/ui/reveal";
-import { LEAGUES } from "@/lib/leagues";
+import { CLUB_LEAGUES, INTERNATIONAL_LEAGUES } from "@/lib/leagues";
 import { sportPath } from "@/lib/routes";
 
 /* ---------------------------------------------------------------- Features */
@@ -143,22 +143,32 @@ export function Leagues() {
       <Reveal>
         <SectionHeading
           eyebrow="Coverage"
-          title="The leagues that matter most in Nigeria"
-          description="Ordered by how much they actually matter here — not by European convention."
+          title="The football that matters most in Nigeria"
+          description="Club leagues and Super Eagles football, ordered by how much they actually matter here — not by European convention."
         />
-        <div className="mt-10 flex flex-wrap gap-2.5">
-          {LEAGUES.map((l) => (
-            <Link
-              key={l.code}
-              href={`${sportPath("fixtures")}?league=${l.code}`}
-              className="card card-hover flex items-center gap-2.5 px-4 py-3"
-            >
-              <span className="text-lg" aria-hidden>{l.flag}</span>
-              <span className="text-sm font-medium">{l.shortName}</span>
-              <span className="text-xs text-ink-dim">{l.country}</span>
-            </Link>
-          ))}
-        </div>
+        {(
+          [
+            ["Clubs", CLUB_LEAGUES],
+            ["National teams", INTERNATIONAL_LEAGUES],
+          ] as const
+        ).map(([label, group]) => (
+          <div key={label} className="mt-8 first-of-type:mt-10">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-ink-dim">{label}</h3>
+            <div className="mt-3 flex flex-wrap gap-2.5">
+              {group.map((l) => (
+                <Link
+                  key={l.code}
+                  href={`${sportPath("fixtures")}?league=${l.code}`}
+                  className="card card-hover flex items-center gap-2.5 px-4 py-3"
+                >
+                  <span className="text-lg" aria-hidden>{l.flag}</span>
+                  <span className="text-sm font-medium">{l.shortName}</span>
+                  <span className="text-xs text-ink-dim">{l.country}</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        ))}
       </Reveal>
     </section>
   );
@@ -199,7 +209,7 @@ export function Pricing() {
 
 /* --------------------------------------------------------------------- FAQ */
 
-const FAQS = [
+export const FAQS = [
   {
     q: "Are these real matches?",
     a: "Yes. Every fixture, scoreline and result comes from live football data providers. Nothing on this site is generated or placeholder data — if the feeds return nothing, the page says so rather than filling the gap.",
@@ -219,6 +229,10 @@ const FAQS = [
   {
     q: "Do you cover the NPFL?",
     a: "Yes, alongside the CAF Champions League and the European competitions Nigerians follow most. Depth of NPFL data depends on which feeds are configured, and each prediction tells you what it was fitted on.",
+  },
+  {
+    q: "Do you predict Super Eagles and other international matches?",
+    a: "Yes. AFCON, World Cup and qualifiers, the Euros, Nations League, Copa America, Gold Cup and international friendlies are all covered. National teams play too rarely for one tournament to rate them, so each side is rated on every international in its confederation, and tournament finals are modelled at a neutral venue.",
   },
   {
     q: "Is this legal in Nigeria?",

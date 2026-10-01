@@ -54,7 +54,7 @@ export default async function AdminDashboardPage() {
 
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Free" value={kpis.tierBreakdown.free.toLocaleString()} />
-        <StatCard label="Weekend Pass" value={kpis.tierBreakdown.pass.toLocaleString()} sublabel={`${kpis.passSalesCount} sold all-time`} />
+        <StatCard label="Pass" value={kpis.tierBreakdown.pass.toLocaleString()} sublabel={`${kpis.passSalesCount} sold all-time`} />
         <StatCard label="Pro" value={kpis.tierBreakdown.pro.toLocaleString()} />
         <StatCard label="VIP" value={kpis.tierBreakdown.vip.toLocaleString()} />
       </section>

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { LEAGUES } from "@/lib/leagues";
+import { CLUB_LEAGUES, INTERNATIONAL_LEAGUES } from "@/lib/leagues";
 
 /** Horizontal league chips; the active one is derived from the URL. */
 export function LeagueFilter() {
@@ -21,7 +21,19 @@ export function LeagueFilter() {
   return (
     <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
       <Chip href={href()} active={!active} label="All leagues" />
-      {LEAGUES.map((l) => (
+      {CLUB_LEAGUES.map((l) => (
+        <Chip
+          key={l.code}
+          href={href(l.code)}
+          active={active === l.code}
+          label={l.shortName}
+          flag={l.flag}
+        />
+      ))}
+      <span className="flex shrink-0 items-center px-1 text-[11px] font-semibold uppercase tracking-wider text-ink-dim" aria-hidden>
+        National teams
+      </span>
+      {INTERNATIONAL_LEAGUES.map((l) => (
         <Chip
           key={l.code}
           href={href(l.code)}

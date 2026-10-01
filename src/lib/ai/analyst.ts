@@ -70,6 +70,12 @@ export function writeDeterministicAnalysis(p: Prediction): Analysis {
       `completed matches in this competition, weighted so recent results count for more.`,
   );
 
+  const strength = p.insights.find((i) => i.kind === "strength");
+  const matchup = p.insights.find((i) => i.kind === "matchup");
+  if (strength || matchup) {
+    body.push([strength?.text, matchup?.text].filter(Boolean).join(" "));
+  }
+
   const overLine = m.over["2.5"];
   body.push(
     `On goals, ${one(goals)} expected in total puts over 2.5 at ${pct(overLine)} and ` +
@@ -112,15 +118,15 @@ export function writeDeterministicAnalysis(p: Prediction): Analysis {
   factors.push(
     `Clean sheet chance: ${home} ${pct(m.cleanSheet.home)}, ${away} ${pct(m.cleanSheet.away)}`,
   );
-  if (p.ratings.home && p.ratings.away) {
-    const diff = p.ratings.home.attack - p.ratings.away.attack;
-    factors.push(
-      diff > 0.15
-        ? `${home} rate materially stronger in attack`
-        : diff < -0.15
-          ? `${away} rate materially stronger in attack`
-          : "The two attacks rate close to level",
-    );
+  // The observations the model is actually reacting to — strength table,
+  // the key attack/defence mismatch, venue splits, form against rating. A
+  // caveat sorts last so it reads as a qualifier, not a headline.
+  const insights = [...p.insights].sort(
+    (a, b) => Number(a.lean === "caution") - Number(b.lean === "caution"),
+  );
+  // Strength and the key mismatch already have their own paragraph above.
+  for (const i of insights.filter((i) => i.kind !== "strength" && i.kind !== "matchup").slice(0, 5)) {
+    factors.push(i.text);
   }
   factors.push(
     model.uncertainty > 0.95
@@ -214,7 +220,14 @@ function buildBrief(p: Prediction, base: Analysis): string {
       .join(", ")}`,
     `- Fitted on ${model.matchesUsed} completed matches; data quality ${Math.round(model.dataQuality)}/100`,
     `- Sample assessment: ${p.sufficiency.reason}`,
+    ...(model.neutralVenue ? ["- Neutral venue: no home advantage applied"] : []),
   ];
+
+  if (p.insights.length > 0) {
+    lines.push("", "Observations computed from the same results (use these, do not add others):");
+    for (const i of p.insights) lines.push(`- [${i.lean}] ${i.text}`);
+    lines.push("");
+  }
 
   if (form.home.entries.length) {
     lines.push(

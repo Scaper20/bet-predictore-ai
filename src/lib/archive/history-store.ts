@@ -1,6 +1,8 @@
 import "server-only";
 
 import { supabasePublic } from "@/lib/supabase/public";
+import { supabaseAdmin } from "@/lib/supabase/admin";
+import type { ArchiveRow } from "@/lib/archive/football-data-uk";
 import { cached } from "@/lib/providers/cache";
 import type { ResultRow } from "@/lib/types";
 
@@ -31,8 +33,8 @@ import type { ResultRow } from "@/lib/types";
 const MAX_ROWS = 1200;
 
 export async function archivedResults(leagueCode: string): Promise<ResultRow[]> {
-  // Changes only when the backfill runs, which is manual and rare. An hour is
-  // conservative; the cost of a stale read is one missing matchday.
+  // Grows nightly (refreshArchive) and as live feeds report results. An hour
+  // is conservative; the cost of a stale read is one missing matchday.
   return cached(`archive:${leagueCode}`, 60 * 60_000, async () => {
     const supabase = supabasePublic();
     if (!supabase) return [];
@@ -64,4 +66,75 @@ export async function archivedResults(leagueCode: string): Promise<ResultRow[]> 
       leagueId: leagueCode,
     }));
   });
+}
+
+/**
+ * Adds completed matches to the archive, skipping any it already holds.
+ *
+ * The natural key is an expression index (league, kickoff date, home, away),
+ * which PostgREST cannot name as an upsert target, so duplicates are filtered
+ * here against what is already stored in the same date range before inserting.
+ * Returns how many rows were new. Never throws: a failed write only means the
+ * archive grows a day later.
+ */
+export async function storeResults(rows: ArchiveRow[], source: string): Promise<number> {
+  const admin = supabaseAdminOrNull();
+  if (!admin || rows.length === 0) return 0;
+
+  const key = (league: string, kickoff: number, home: string, away: string) =>
+    `${league}|${new Date(kickoff).toISOString().slice(0, 10)}|${home}|${away}`;
+
+  let added = 0;
+  const byLeague = new Map<string, ArchiveRow[]>();
+  for (const r of rows) {
+    const list = byLeague.get(r.leagueCode) ?? [];
+    list.push(r);
+    byLeague.set(r.leagueCode, list);
+  }
+
+  for (const [league, list] of byLeague) {
+    const from = Math.min(...list.map((r) => r.kickoff)) - 86_400_000;
+    const to = Math.max(...list.map((r) => r.kickoff)) + 86_400_000;
+    const { data: existing, error } = await admin
+      .from("historical_results")
+      .select("kickoff, home_name, away_name")
+      .eq("league_code", league)
+      .gte("kickoff", new Date(from).toISOString())
+      .lte("kickoff", new Date(to).toISOString())
+      .limit(5000);
+    if (error) continue;
+
+    const seen = new Set(
+      (existing ?? []).map((e) => key(league, Date.parse(e.kickoff as string), e.home_name as string, e.away_name as string)),
+    );
+    const fresh: Record<string, unknown>[] = [];
+    for (const r of list) {
+      const k = key(league, r.kickoff, r.homeName, r.awayName);
+      if (seen.has(k)) continue;
+      seen.add(k);
+      fresh.push({
+        league_code: league,
+        kickoff: new Date(r.kickoff).toISOString(),
+        home_name: r.homeName,
+        away_name: r.awayName,
+        home_goals: r.homeGoals,
+        away_goals: r.awayGoals,
+        source,
+      });
+    }
+    for (let i = 0; i < fresh.length; i += 500) {
+      const { error: insertError } = await admin.from("historical_results").insert(fresh.slice(i, i + 500));
+      if (insertError) console.error(`archive insert ${league} failed:`, insertError.message);
+      else added += Math.min(500, fresh.length - i);
+    }
+  }
+  return added;
+}
+
+function supabaseAdminOrNull() {
+  try {
+    return supabaseAdmin();
+  } catch {
+    return null;
+  }
 }

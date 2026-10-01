@@ -18,6 +18,7 @@ import { leagueByCode } from "@/lib/leagues";
 import { isSportId, type SportId } from "@/lib/sports";
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/football/track-record" },
   title: "Track Record",
   description:
     "Every headline pick BetriX has published, graded against the final score once the match " +

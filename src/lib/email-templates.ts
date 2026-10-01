@@ -3,7 +3,7 @@ import "server-only";
 import { emailLayout } from "@/lib/email";
 import { naira } from "@/lib/format";
 import { SITE_URL } from "@/lib/site-url";
-import { sportPath } from "@/lib/routes";
+import { matchPath, sportPath } from "@/lib/routes";
 import { TIER_LABEL } from "@/lib/outreach";
 import type { Tier } from "@/lib/entitlements";
 
@@ -120,16 +120,56 @@ export function giftSubscriptionEmail(opts: {
   };
 }
 
+export function valueAlertsEmail(opts: {
+  alerts: { label: string; homeName: string; awayName: string; leagueName: string; kickoff: string; localPrice: number; edge: number; benchmark: "market" | "model"; matchId: string }[];
+  settingsUrl: string;
+}): { subject: string; html: string } {
+  const n = opts.alerts.length;
+  const rows = opts.alerts
+    .slice(0, 10)
+    .map((a) => {
+      const when = new Date(a.kickoff).toLocaleString("en-NG", {
+        timeZone: "Africa/Lagos", weekday: "short", hour: "2-digit", minute: "2-digit",
+      });
+      return `<tr>
+        <td style="padding:10px 0;border-top:1px solid #e6ebf2;">
+          <a href="${SITE_URL}${matchPath(a.matchId)}" style="color:#1c2430;font-weight:700;text-decoration:none;">${escapeHtml(a.homeName)} vs ${escapeHtml(a.awayName)}</a>
+          <div style="font-size:12px;color:#8d9db2;">${escapeHtml(a.leagueName)} · ${when} WAT</div>
+          <div style="font-size:14px;margin-top:4px;">${escapeHtml(a.label)} @ <strong>${a.localPrice.toFixed(2)}</strong> on SportyBet</div>
+        </td>
+        <td style="padding:10px 0;border-top:1px solid #e6ebf2;text-align:right;white-space:nowrap;vertical-align:top;">
+          <strong style="color:#00925c;">+${(a.edge * 100).toFixed(1)}%</strong>
+          <div style="font-size:11px;color:#8d9db2;">${a.benchmark === "market" ? "vs market" : "vs model"}</div>
+        </td>
+      </tr>`;
+    })
+    .join("");
+  return {
+    subject: `${n} value ${n === 1 ? "price" : "prices"} on SportyBet right now`,
+    html: emailLayout(`
+      <p style="margin:0 0 12px;font-size:17px;font-weight:700;">Value-shift alert</p>
+      <p style="margin:0 0 16px;">${n === 1 ? "One price has" : `${n} prices have`} moved above fair value since our last scan.
+      "vs market" means SportyBet is longer than the bookmaker consensus with the margin taken out; "vs model"
+      appears only where no consensus exists. Prices move — check before you stake.</p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;">${rows}</table>
+      ${button(`${SITE_URL}${sportPath("valueAlerts")}`, "See every live alert")}
+      <p style="margin:24px 0 0;font-size:12px;color:#8d9db2;">You get this because you're a BetriX VIP member.
+      <a href="${opts.settingsUrl}" style="color:#8d9db2;">Turn these emails off</a> — the alerts page keeps working either way. 18+, bet responsibly.</p>
+    `),
+  };
+}
+
 export function newTicketNotificationEmail(opts: {
+  priority?: boolean;
   subject: string;
   fromEmail: string;
   preview: string;
   ticketId: string;
 }): { subject: string; html: string } {
   return {
-    subject: `New ticket: ${opts.subject}`,
+    subject: `${opts.priority ? "[VIP priority] " : ""}New ticket: ${opts.subject}`,
     html: emailLayout(`
-      <p style="margin:0 0 12px;font-size:17px;font-weight:700;">New support ticket</p>
+      <p style="margin:0 0 12px;font-size:17px;font-weight:700;">${opts.priority ? "New VIP priority ticket" : "New support ticket"}</p>
       <p style="margin:0 0 4px;"><strong>From:</strong> ${escapeHtml(opts.fromEmail)}</p>
       <p style="margin:0 0 20px;"><strong>Subject:</strong> ${escapeHtml(opts.subject)}</p>
       <p style="margin:0 0 20px;padding:12px 16px;background:#f6f8fb;border-radius:8px;font-size:14px;color:#1c2430;">${escapeHtml(opts.preview)}</p>

@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { Button, Spinner } from "@/components/ui/primitives";
+import { Badge, Button, Spinner } from "@/components/ui/primitives";
+import { useEntitlement, meetsTier } from "@/components/entitlements/entitlement-provider";
 
 interface Message {
   id: string;
@@ -30,6 +31,8 @@ type ThreadState =
  */
 export function ChatWidget() {
   const pathname = usePathname();
+  const { entitlement } = useEntitlement();
+  const vip = meetsTier(entitlement.tier, "vip");
   const [open, setOpen] = useState(false);
   const [thread, setThread] = useState<ThreadState>({ status: "idle" });
   const [draft, setDraft] = useState("");
@@ -114,7 +117,10 @@ export function ChatWidget() {
       {open && (
         <div className="mb-3 flex h-[28rem] w-[22rem] max-w-[calc(100vw-3rem)] flex-col overflow-hidden rounded-2xl border border-line bg-shell shadow-2xl">
           <div className="flex items-center justify-between border-b border-line px-4 py-3">
-            <span className="text-sm font-semibold">Support</span>
+            <span className="flex items-center gap-2 text-sm font-semibold">
+              Support
+              {vip && <Badge tone="violet">VIP priority</Badge>}
+            </span>
             <button
               type="button"
               onClick={() => setOpen(false)}
@@ -144,6 +150,7 @@ export function ChatWidget() {
               (thread.messages.length === 0 ? (
                 <p className="text-sm text-ink-dim">
                   Got a question or an issue? Send us a message below.
+                  {vip && " As a VIP member your message goes to the front of the queue."}
                 </p>
               ) : (
                 thread.messages.map((m) => (
