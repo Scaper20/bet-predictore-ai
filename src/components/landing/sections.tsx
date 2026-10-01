@@ -3,7 +3,7 @@ import { ButtonLink, SectionHeading } from "@/components/ui/primitives";
 import { PricingTable } from "@/components/pricing/pricing-table";
 import { Container, containerClass } from "@/components/ui/container";
 import { Reveal } from "@/components/ui/reveal";
-import { LEAGUES } from "@/lib/leagues";
+import { CLUB_LEAGUES, INTERNATIONAL_LEAGUES } from "@/lib/leagues";
 import { sportPath } from "@/lib/routes";
 
 /* ---------------------------------------------------------------- Features */
@@ -143,22 +143,32 @@ export function Leagues() {
       <Reveal>
         <SectionHeading
           eyebrow="Coverage"
-          title="The leagues that matter most in Nigeria"
-          description="Ordered by how much they actually matter here — not by European convention."
+          title="The football that matters most in Nigeria"
+          description="Club leagues and Super Eagles football, ordered by how much they actually matter here — not by European convention."
         />
-        <div className="mt-10 flex flex-wrap gap-2.5">
-          {LEAGUES.map((l) => (
-            <Link
-              key={l.code}
-              href={`${sportPath("fixtures")}?league=${l.code}`}
-              className="card card-hover flex items-center gap-2.5 px-4 py-3"
-            >
-              <span className="text-lg" aria-hidden>{l.flag}</span>
-              <span className="text-sm font-medium">{l.shortName}</span>
-              <span className="text-xs text-ink-dim">{l.country}</span>
-            </Link>
-          ))}
-        </div>
+        {(
+          [
+            ["Clubs", CLUB_LEAGUES],
+            ["National teams", INTERNATIONAL_LEAGUES],
+          ] as const
+        ).map(([label, group]) => (
+          <div key={label} className="mt-8 first-of-type:mt-10">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-ink-dim">{label}</h3>
+            <div className="mt-3 flex flex-wrap gap-2.5">
+              {group.map((l) => (
+                <Link
+                  key={l.code}
+                  href={`${sportPath("fixtures")}?league=${l.code}`}
+                  className="card card-hover flex items-center gap-2.5 px-4 py-3"
+                >
+                  <span className="text-lg" aria-hidden>{l.flag}</span>
+                  <span className="text-sm font-medium">{l.shortName}</span>
+                  <span className="text-xs text-ink-dim">{l.country}</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        ))}
       </Reveal>
     </section>
   );

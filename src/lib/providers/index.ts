@@ -13,7 +13,7 @@
  */
 
 import type { Match, ProviderHealth, ProviderId, ResultRow, StandingRow } from "@/lib/types";
-import { leagueByCode as leagueByCodeSync, rankLeague, type LeagueDef } from "@/lib/leagues";
+import { internationalPool, leagueByCode as leagueByCodeSync, rankLeague, type LeagueDef } from "@/lib/leagues";
 import * as fd from "./football-data";
 import * as af from "./api-football";
 import * as sdb from "./thesportsdb";
@@ -315,6 +315,13 @@ export async function getTrainingResults(
 ): Promise<{ rows: ResultRow[]; leagueName: string; curated: boolean }> {
   const curated = match.league.code ? leagueByCodeSync(match.league.code) : undefined;
 
+  if (curated?.confederation) {
+    const rows = await getInternationalResults(curated);
+    if (rows.length > 0) {
+      return { rows, leagueName: `${curated.name} (rated on all ${poolLabel(curated)} internationals)`, curated: true };
+    }
+  }
+
   if (curated) {
     const rows = await getSeasonResults(curated);
     if (rows.length > 0) {
@@ -340,6 +347,38 @@ export async function getTrainingResults(
     leagueName: match.league.name,
     curated: false,
   };
+}
+
+function poolLabel(league: LeagueDef): string {
+  return league.confederation === "global" ? "national-team" : `${league.confederation} and global`;
+}
+
+/** Pooled competitions fetched this many at a time — the public TheSportsDB key rate-limits bursts. */
+const POOL_CONCURRENCY = 3;
+
+/**
+ * Results from every competition in a national-team fixture's pool, merged.
+ *
+ * Two seasons per competition rather than three: the pool already supplies
+ * the depth one competition can't, and the extra season would roughly double
+ * the requests a cold cache makes for a single prediction.
+ */
+async function getInternationalResults(league: LeagueDef): Promise<ResultRow[]> {
+  const pool = internationalPool(league);
+  const seen = new Map<string, ResultRow>();
+  for (let i = 0; i < pool.length; i += POOL_CONCURRENCY) {
+    const batch = pool.slice(i, i + POOL_CONCURRENCY);
+    const groups = await gather<ResultRow>(
+      batch.map((l) => getSeasonResults(l, { minRows: Number.POSITIVE_INFINITY, maxSeasons: 2 })),
+    );
+    for (const rows of groups) {
+      for (const r of rows) {
+        const key = `${new Date(r.date).toISOString().slice(0, 10)}|${normaliseClub(r.homeName)}|${normaliseClub(r.awayName)}`;
+        if (!seen.has(key)) seen.set(key, r);
+      }
+    }
+  }
+  return [...seen.values()].sort((a, b) => a.date - b.date);
 }
 
 export async function getStandings(league: LeagueDef): Promise<StandingRow[]> {

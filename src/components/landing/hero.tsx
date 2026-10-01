@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Badge, ButtonLink, LiveDot } from "@/components/ui/primitives";
 import { Container } from "@/components/ui/container";
 import { sportPath } from "@/lib/routes";
+import { LEAGUES } from "@/lib/leagues";
 
 /**
  * The board is passed in rather than built here, so this stays a Server
@@ -63,7 +64,7 @@ export function Hero({ liveCount, board }: { liveCount: number; board: ReactNode
           </div>
 
           <dl className="mt-12 grid max-w-lg grid-cols-3 gap-6">
-            <Stat value="12+" label="Leagues covered" />
+            <Stat value={`${LEAGUES.length}`} label="Competitions covered" />
             <Stat value="Free" label="No card required" />
             <Stat value="18+" label="Bet responsibly" />
           </dl>

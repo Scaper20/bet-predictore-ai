@@ -11,6 +11,7 @@ import {
   tension,
   type FeaturedCandidate,
 } from "./featured";
+import { LEAGUES } from "@/lib/leagues";
 import type { Match, MatchStatus } from "@/lib/types";
 import type { Prediction } from "@/lib/model/predict";
 
@@ -64,7 +65,8 @@ function candidate(
 describe("stature", () => {
   it("maps the top-ranked competition to 1 and an unknown one to 0", () => {
     expect(stature("premier-league")).toBe(1);
-    expect(stature("brasileirao")).toBeCloseTo(1 / 12, 5);
+    const last = [...LEAGUES].sort((a, b) => b.rank - a.rank)[0];
+    expect(stature(last.code)).toBeCloseTo(1 / LEAGUES.length, 5);
     expect(stature("not-a-league")).toBe(0);
     expect(stature(undefined)).toBe(0);
   });
