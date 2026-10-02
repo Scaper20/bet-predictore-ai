@@ -29,6 +29,19 @@ const nextConfig: NextConfig = {
       { source: "/(.*)", headers: securityHeaders },
       { source: "/admin/:path*", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" }] },
       /*
+       * The service worker must never be cached by the browser or a CDN, or a
+       * fix to it could take days to reach installed phones. The CSP keeps it
+       * from loading anything but this origin's own scripts.
+       */
+      {
+        source: "/sw.js",
+        headers: [
+          { key: "Content-Type", value: "application/javascript; charset=utf-8" },
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+          { key: "Content-Security-Policy", value: "default-src 'self'; script-src 'self'" },
+        ],
+      },
+      /*
        * The dev deployment (betrix-dev.vercel.app) and every preview URL serve
        * the same pages as www.betrix.com.ng. Left indexable they compete with
        * production as duplicate content, so any *.vercel.app host is noindex.

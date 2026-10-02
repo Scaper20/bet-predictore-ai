@@ -17,6 +17,7 @@ import { ChangeEmailForm } from "@/components/account/change-email-form";
 import { ChangePasswordForm } from "@/components/account/change-password-form";
 import { DeleteAccountForm } from "@/components/account/delete-account-form";
 import { AccountSectionNav } from "@/components/account/account-section-nav";
+import { NotificationControls } from "@/components/pwa/notification-controls";
 
 export const metadata: Metadata = { title: "Account" };
 
@@ -31,6 +32,7 @@ const INTENT_LABEL = {
 const SECTIONS = [
   { id: "overview", label: "Overview" },
   { id: "preferences", label: "Preferences" },
+  { id: "notifications", label: "Notifications" },
   { id: "billing", label: "Plan & billing" },
   { id: "security", label: "Security" },
   { id: "danger", label: "Danger zone" },
@@ -183,6 +185,17 @@ export default async function AccountPage() {
             <h3 className="mb-4 text-sm font-semibold">Your details</h3>
             <ProfileForm initialDisplayName={displayName} />
           </div>
+        </div>
+      </section>
+
+      <section id="notifications" className="scroll-mt-32 pt-14">
+        <SectionHeading
+          eyebrow="Notifications"
+          title="On this device"
+          description="Set separately on each phone or computer you use BetriX on."
+        />
+        <div className="card mt-6 max-w-2xl p-5 sm:p-7">
+          <NotificationControls showValueAlerts={isVip} />
         </div>
       </section>
 

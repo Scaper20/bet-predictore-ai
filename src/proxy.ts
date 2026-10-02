@@ -158,6 +158,6 @@ export const config = {
      * the Paystack webhook — that call carries no Supabase cookie and must
      * never be redirected or rewritten.
      */
-    "/((?!_next/static|_next/image|icon.png|apple-icon.png|brand/|favicon.ico|api/billing/webhook).*)",
+    "/((?!_next/static|_next/image|icon.png|apple-icon.png|brand/|icons/|sw.js|manifest.webmanifest|favicon.ico|api/billing/webhook).*)",
   ],
 };

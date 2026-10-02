@@ -5,6 +5,8 @@ import { useEffect } from "react";
 import { ButtonLink } from "@/components/ui/primitives";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { useOverlay } from "@/components/ui/use-overlay";
+import { InstallAppMenuItem } from "@/components/pwa/install-app-menu-item";
+import { NotificationsMenuItem } from "@/components/pwa/notifications-menu-item";
 import type { Tier } from "@/lib/entitlements";
 
 export interface DrawerSection {
@@ -80,7 +82,11 @@ export function MobileDrawer({
         className="animate-drawer-in absolute inset-y-0 right-0 flex w-[min(20rem,85vw)] flex-col border-l border-line-strong bg-shell shadow-2xl"
         // Keeps a rubber-band scroll inside the panel from chaining to the
         // page behind it on iOS, which the body overflow lock alone misses.
-        style={{ overscrollBehavior: "contain" }}
+        style={{
+          overscrollBehavior: "contain",
+          paddingTop: "env(safe-area-inset-top)",
+          paddingBottom: "env(safe-area-inset-bottom)",
+        }}
       >
         <div className="flex items-center justify-between border-b border-line px-4 py-3">
           <span className="font-display text-lg font-bold tracking-tight">
@@ -117,6 +123,11 @@ export function MobileDrawer({
               ))}
             </section>
           ))}
+
+          <div className="mb-3 border-t border-line pt-3">
+            <InstallAppMenuItem onSelect={onClose} />
+            <NotificationsMenuItem onSelect={onClose} />
+          </div>
 
           <div className="flex items-center justify-between border-t border-line px-3 pt-4">
             <span className="text-xs text-ink-muted">Theme</span>
