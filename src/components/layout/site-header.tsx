@@ -66,7 +66,13 @@ export function SiteHeader() {
   const resolving = signedIn === null;
 
   return (
-    <header className="sticky top-0 z-50 border-b border-line bg-canvas/85 backdrop-blur-xl">
+    <header
+      className="sticky top-0 z-50 border-b border-line bg-canvas/85 backdrop-blur-xl"
+      // Installed on iOS the status bar is translucent and the page runs up
+      // under it (layout.tsx); this keeps the header clear of the notch. Zero
+      // everywhere else.
+      style={{ paddingTop: "env(safe-area-inset-top)" }}
+    >
       <Container className="flex h-16 items-center gap-4">
         {/* -mx-1.5 px-1.5 py-2 rather than a bare inline row: the logo is the
             "go home" control on every page and measured 32px tall, which is a

@@ -296,3 +296,10 @@
   .animate-overlay-in, .animate-dialog-in, .animate-drawer-in { animation: none !important; }
   .card-hover:hover { transform: none; }
 }
+
+/* Landscape on a notched phone with viewport-fit=cover: keep content out from
+   under the camera housing. Zero on every other device. */
+body {
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}

@@ -3,6 +3,8 @@ import { Public_Sans, Big_Shoulders, JetBrains_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { SITE_URL as SITE } from "@/lib/site-url";
 import { JsonLd } from "@/components/seo/json-ld";
+import { ServiceWorkerRegister } from "@/components/pwa/service-worker-register";
+import { INSTALL_CAPTURE_SCRIPT } from "@/lib/pwa";
 import "./globals.css";
 
 /**
@@ -78,6 +80,13 @@ export const metadata: Metadata = {
     description: "Data-driven football insight for Nigerian football fans.",
   },
   robots: { index: true, follow: true },
+  // Installed to the home screen (see app/manifest.ts). iOS ignores most of
+  // the manifest and reads these instead: launch without Safari's chrome, and
+  // let the dark canvas run up under the status bar. The header pads itself
+  // by the safe-area inset so nothing sits under the notch.
+  applicationName: "BetriX",
+  appleWebApp: { capable: true, title: "BetriX", statusBarStyle: "black-translucent" },
+  formatDetection: { telephone: false },
 };
 
 export const viewport: Viewport = {
@@ -87,6 +96,9 @@ export const viewport: Viewport = {
   ],
   width: "device-width",
   initialScale: 1,
+  // Edge to edge, so the installed app fills the screen around the notch and
+  // home indicator; safe-area insets keep content clear of both.
+  viewportFit: "cover",
 };
 
 /**
@@ -125,8 +137,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }}
           suppressHydrationWarning
         />
+        <script
+          id="install-capture"
+          dangerouslySetInnerHTML={{ __html: INSTALL_CAPTURE_SCRIPT }}
+          suppressHydrationWarning
+        />
         <JsonLd data={ORG_JSON_LD} />
         {children}
+        <ServiceWorkerRegister />
         <Analytics />
       </body>
     </html>
