@@ -18,7 +18,7 @@ export interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 }
 
-export { INSTALLABLE_EVENT, OPEN_INSTALL_EVENT } from "@/lib/pwa";
+export { INSTALLABLE_EVENT, OPEN_INSTALL_EVENT, OPEN_NOTIFY_EVENT } from "@/lib/pwa";
 
 declare global {
   interface Window {

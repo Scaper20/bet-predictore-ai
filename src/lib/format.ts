@@ -23,6 +23,16 @@ export function kickoffDay(iso: string): string {
   });
 }
 
+/**
+ * Start and end (UTC instants) of the Lagos calendar day `offsetDays` from
+ * `now`'s. The +01:00 is fixed because WAT has no daylight saving.
+ */
+export function appDayBounds(now: Date, offsetDays = 0): { start: Date; end: Date } {
+  const today = now.toLocaleDateString("en-CA", { timeZone: APP_TIMEZONE });
+  const start = new Date(Date.parse(`${today}T00:00:00+01:00`) + offsetDays * 86_400_000);
+  return { start, end: new Date(start.getTime() + 86_400_000) };
+}
+
 /** "Today" / "Tomorrow" / "Sat 23 Aug", in Lagos time. */
 export function relativeDay(iso: string, now = new Date()): string {
   const dayKey = (d: Date) =>

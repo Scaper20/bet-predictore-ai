@@ -11,6 +11,9 @@
  * personal (account, admin, auth), and non-GET requests. Those behave exactly
  * as if this file did not exist.
  *
+ * Also shows push notifications (sent by the crons via src/lib/push) and
+ * opens the right page when one is tapped.
+ *
  * Bump VERSION to drop every cache on the next visit.
  */
 
@@ -119,3 +122,91 @@ async function staleWhileRevalidate(request) {
     .catch(() => cached);
   return cached || network;
 }
+
+/* ------------------------------------------------------------ Notifications */
+
+/** A path on this site, whatever the payload says: a tap never leaves BetriX. */
+function sameOriginUrl(value) {
+  try {
+    const url = new URL(value || "/", self.location.origin);
+    return url.origin === self.location.origin ? url.href : self.location.origin + "/";
+  } catch {
+    return self.location.origin + "/";
+  }
+}
+
+self.addEventListener("push", (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = { body: event.data ? event.data.text() : "" };
+  }
+  const tag = typeof data.tag === "string" ? data.tag : undefined;
+  event.waitUntil(
+    self.registration.showNotification(data.title || "BetriX", {
+      body: data.body || "",
+      icon: "/icons/icon-192.png",
+      // Android's status bar shows this as a white silhouette.
+      badge: "/icons/badge-96.png",
+      tag,
+      // A newer notification with the same tag replaces the old one, and
+      // still buzzes rather than swapping in silently.
+      renotify: Boolean(tag),
+      data: { url: sameOriginUrl(data.url) },
+    }),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = sameOriginUrl(event.notification.data && event.notification.data.url);
+  event.waitUntil(
+    (async () => {
+      // Reuse an open BetriX window rather than stacking new ones.
+      const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      for (const client of windows) {
+        if (new URL(client.url).origin !== self.location.origin) continue;
+        try {
+          const focused = await client.focus();
+          await (focused || client).navigate(url);
+          return;
+        } catch {
+          // An uncontrolled window cannot be navigated from here; open one.
+          break;
+        }
+      }
+      await self.clients.openWindow(url);
+    })(),
+  );
+});
+
+/**
+ * The push service rotated this device's subscription. Re-subscribe with the
+ * same key and tell the server, so the device does not silently drop off the
+ * list. Topics fall back to the defaults on the new row; if the browser never
+ * fires this, the app's once-a-session sync catches the change instead.
+ */
+self.addEventListener("pushsubscriptionchange", (event) => {
+  event.waitUntil(
+    (async () => {
+      const old = event.oldSubscription;
+      const fresh =
+        event.newSubscription ||
+        (old && old.options ? await self.registration.pushManager.subscribe(old.options) : null);
+      if (!fresh) return;
+      await fetch("/api/push/subscription", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subscription: fresh.toJSON() }),
+      });
+      if (old && old.endpoint !== fresh.endpoint) {
+        await fetch("/api/push/subscription", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ endpoint: old.endpoint }),
+        });
+      }
+    })().catch(() => {}),
+  );
+});

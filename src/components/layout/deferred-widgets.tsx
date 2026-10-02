@@ -17,6 +17,10 @@ const GiftPopup = dynamic(() => import("@/components/account/gift-popup").then((
 const InstallPrompt = dynamic(() => import("@/components/pwa/install-prompt").then((m) => m.InstallPrompt), {
   ssr: false,
 });
+const NotificationPrompt = dynamic(
+  () => import("@/components/pwa/notification-prompt").then((m) => m.NotificationPrompt),
+  { ssr: false },
+);
 const ScrollToTop = dynamic(() => import("@/components/ui/scroll-to-top").then((m) => m.ScrollToTop), { ssr: false });
 
 export function DeferredWidgets() {
@@ -27,6 +31,7 @@ export function DeferredWidgets() {
       <WhatsAppPopup />
       <GiftPopup />
       <InstallPrompt />
+      <NotificationPrompt />
       <ScrollToTop />
     </>
   );

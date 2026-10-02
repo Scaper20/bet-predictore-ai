@@ -182,11 +182,8 @@ export async function latestScan(): Promise<ScanInfo | null> {
   return data ? { startedAt: data.started_at, finishedAt: data.finished_at, fixtures: data.fixtures } : null;
 }
 
-/**
- * Everyone with VIP right now — paid or gifted — who has not switched the
- * alert email off.
- */
-export async function vipAlertRecipients(): Promise<{ userId: string; email: string }[]> {
+/** Everyone with VIP right now, paid or gifted. */
+export async function vipUserIds(): Promise<string[]> {
   const admin = supabaseAdmin();
   const nowIso = new Date().toISOString();
 
@@ -208,11 +205,16 @@ export async function vipAlertRecipients(): Promise<{ userId: string; email: str
     if (paidThrough) ids.add(s.user_id);
   }
   for (const g of gifts ?? []) ids.add(g.user_id);
-  if (ids.size === 0) return [];
+  return [...ids];
+}
 
+/** VIPs who have not switched the alert email off. */
+export async function vipAlertRecipients(ids: string[]): Promise<{ userId: string; email: string }[]> {
+  if (ids.length === 0) return [];
+  const admin = supabaseAdmin();
   const [{ data: profiles }, { data: prefs }] = await Promise.all([
-    admin.from("profiles").select("id, email").in("id", [...ids]),
-    admin.from("user_preferences").select("user_id, value_alerts_email").in("user_id", [...ids]),
+    admin.from("profiles").select("id, email").in("id", ids),
+    admin.from("user_preferences").select("user_id, value_alerts_email").in("user_id", ids),
   ]);
   const optedOut = new Set((prefs ?? []).filter((p) => p.value_alerts_email === false).map((p) => p.user_id));
 

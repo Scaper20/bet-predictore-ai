@@ -9,6 +9,8 @@
 export const OPEN_INSTALL_EVENT = "bx:install";
 /** Fired when Chrome's deferred install prompt becomes available. */
 export const INSTALLABLE_EVENT = "bx:installable";
+/** Fired on window when the menu's "Notifications" row is tapped. */
+export const OPEN_NOTIFY_EVENT = "bx:notify";
 
 /**
  * Inlined at the top of <body>: Chrome fires `beforeinstallprompt` once, often

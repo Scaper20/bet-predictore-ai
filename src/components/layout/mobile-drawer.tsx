@@ -6,6 +6,7 @@ import { ButtonLink } from "@/components/ui/primitives";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { useOverlay } from "@/components/ui/use-overlay";
 import { InstallAppMenuItem } from "@/components/pwa/install-app-menu-item";
+import { NotificationsMenuItem } from "@/components/pwa/notifications-menu-item";
 import type { Tier } from "@/lib/entitlements";
 
 export interface DrawerSection {
@@ -125,6 +126,7 @@ export function MobileDrawer({
 
           <div className="mb-3 border-t border-line pt-3">
             <InstallAppMenuItem onSelect={onClose} />
+            <NotificationsMenuItem onSelect={onClose} />
           </div>
 
           <div className="flex items-center justify-between border-t border-line px-3 pt-4">
