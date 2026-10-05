@@ -79,6 +79,40 @@ def job_sync(ctx: Context) -> None:
             if r.skipped:
                 continue
             seed_teams(ctx.db, ctx.resolver, lg, tsdb.teams(lg), r)
+    link_history(ctx)
+
+
+def link_history(ctx: Context, years: int = 6) -> None:
+    """Link every club spelling in the training history to its club.
+
+    football-data.co.uk writes "Leeds" and "Nott'm Forest"; the fixtures say
+    "Leeds United". The site reads the history through team_aliases
+    (src/lib/teams/canonical.ts), so each spelling needs an alias, or a club
+    with years of results trains on none of them. Runs after the club lists,
+    resolving each name with the normal rules but never creating a club; a
+    spelling no rule can place is logged in unresolved_entities, where Data
+    health shows it.
+    """
+    since = (today() - timedelta(days=365 * years)).isoformat()
+    for lg in ctx.ordered():
+        if lg.multinational:
+            continue  # cup history is written under canonical names already
+        with run(ctx.db, ctx.switch, "link-history", "history", lg.code) as r:
+            if r.skipped:
+                continue
+            rows = ctx.db.select(
+                "historical_results",
+                {"select": "home_name,away_name", "league_code": f"eq.{lg.code}", "kickoff": f"gte.{since}"},
+            )
+            names = sorted({n for x in rows for n in (x["home_name"], x["away_name"]) if n})
+            linked = 0
+            for name in names:
+                if ctx.resolver.resolve(name, lg.scope, "history", lg.code, create=False, log_unresolved=True):
+                    linked += 1
+            r.rows_in = len(names)
+            r.rows_written = linked
+            if linked < len(names):
+                r.warn(f"{len(names) - linked} of {len(names)} spellings not linked to a club")
 
 
 # ---------------------------------------------------------------------------

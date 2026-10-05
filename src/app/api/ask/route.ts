@@ -19,7 +19,12 @@ export const dynamic = "force-dynamic";
 /** A question can take a few tool rounds; leave room beyond the default. */
 export const maxDuration = 60;
 
-const MODEL = "claude-opus-5-5";
+/**
+ * Claude Sonnet 5.5: half the per-token price of Opus 5.5 ($2 / $10 per
+ * million), which roughly halves what each question costs (docs/pricing.md).
+ * The work here is chat over numbers the tools compute, which Sonnet handles.
+ */
+const MODEL = "claude-sonnet-5-5";
 /** Tool rounds per question before the assistant must answer with what it has. */
 const MAX_ROUNDS = 6;
 
@@ -163,8 +168,9 @@ export async function POST(request: Request) {
             {
               model: MODEL,
               max_tokens: 8000,
-              // Chat over numbers the tools already computed; medium keeps the
-              // tool choices careful without slow, long turns.
+              // Chat over numbers the tools already computed; medium (Sonnet
+              // 5.5's recommended start for multistep tool use) keeps the tool
+              // choices careful without slow, long turns.
               output_config: { effort: "medium" },
               // Tools + system are identical on every request, so they're cached;
               // the top-level breakpoint also caches the growing conversation

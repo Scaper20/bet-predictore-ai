@@ -195,24 +195,40 @@ export function dbStandings(league: LeagueDef): Promise<StandingRow[]> {
   });
 }
 
-/** Past meetings of two clubs, either way round, from the training results. */
+/**
+ * Past meetings of two clubs, either way round, from the training results.
+ *
+ * The history spells clubs the way each source does, so the query asks for
+ * every stored spelling of both clubs and the rows come back under the
+ * canonical names the model compares against.
+ */
 export function dbH2H(match: Match, limit = 10): Promise<ResultRow[]> {
   const pair = [match.home.name, match.away.name];
   return cached(`db:h2h:${pair.join("|")}`, 60 * 60_000, async () => {
+    const { canonicaliseRows, nameBook, nameScope, looseKey } = await import("@/lib/teams/canonical");
+    const def = match.league.code ? leagueByCode(match.league.code) : undefined;
+    const scope = def ? nameScope(def) : null;
+    const book = scope ? await nameBook(scope) : null;
+    // A feed may name the fixture's clubs its own way too; find the canonical name first.
+    const canon = pair.map((n) => book?.canonical.get(looseKey(n)) ?? n);
+    const names = [...new Set(canon.flatMap((n) => book?.spellings.get(n) ?? [n]))];
     const c = await client();
     const { data, error } = await c.from("historical_results")
       .select("league_code, kickoff, home_name, away_name, home_goals, away_goals")
-      .in("home_name", pair).in("away_name", pair)
+      .in("home_name", names).in("away_name", names)
       .order("kickoff", { ascending: false })
-      .limit(limit);
+      .limit(limit * 3);
     if (error) throw error;
-    return (data ?? [])
-      .filter((r) => r.home_name !== r.away_name)
-      .map((r) => ({
-        homeId: r.home_name as string, awayId: r.away_name as string,
-        homeName: r.home_name as string, awayName: r.away_name as string,
-        homeGoals: r.home_goals as number, awayGoals: r.away_goals as number,
-        date: Date.parse(r.kickoff as string), leagueId: r.league_code as string,
-      }));
+    const rows: ResultRow[] = (data ?? []).map((r) => ({
+      homeId: r.home_name as string, awayId: r.away_name as string,
+      homeName: r.home_name as string, awayName: r.away_name as string,
+      homeGoals: r.home_goals as number, awayGoals: r.away_goals as number,
+      date: Date.parse(r.kickoff as string), leagueId: r.league_code as string,
+    }));
+    const canonical = book ? canonicaliseRows(rows, book) : rows;
+    const keys = new Set(canon.map(looseKey));
+    return canonical
+      .filter((r) => r.homeName !== r.awayName && keys.has(looseKey(r.homeName)) && keys.has(looseKey(r.awayName)))
+      .slice(0, limit);
   });
 }

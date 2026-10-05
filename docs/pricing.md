@@ -28,7 +28,7 @@ functions, The Odds API free tier) is inside free limits; see
 
 | What | Model / service | Cost each |
 |---|---|---|
-| One Ask BetriX question (2-3 tool rounds, cached system prompt) | Claude Opus 5.5, $4 / $20 per million tokens | ~$0.03-0.07, **~₦50-100** |
+| One Ask BetriX question (2-3 tool rounds, cached system prompt) | Claude Sonnet 5.5, $2 / $10 per million tokens (was Opus 5.5, $4 / $20) | ~$0.015-0.035, **~₦25-50** (was ~₦50-100) |
 | One written match analysis | Claude Opus 5, $5 / $25 per million tokens | ~$0.03, **~₦45** |
 | SportyBet price lookups | parse.bot, metered | check the parse.bot dashboard |
 
@@ -38,7 +38,10 @@ It is now stored once per match and model read (`match_analyses`, migration
 
 ## Margin per plan
 
-Typical use is taken as ₦60 a question. "Heavy" is a user at the daily cap.
+Worked at ₦60 a question, the Opus 5.5 cost these prices were set against.
+Ask BetriX now runs on Sonnet 5.5 at about half that (~₦30), so every AI
+figure below roughly halves and the margins widen by the same amount (Pro:
+about ₦3,900 typical instead of ₦3,025). "Heavy" is a user at the daily cap.
 
 | Plan | Price | Paystack | AI, typical | Margin, typical | AI at the cap |
 |---|---|---|---|---|---|
@@ -76,9 +79,9 @@ At the old prices a Day pass (₦250) lost money on an ordinary user and Pro
 2. **Measure the real AI cost.** The per-question figure is an estimate. Two
    weeks of the Anthropic console's daily spend divided by questions asked
    replaces it.
-3. **Model choice for Ask BetriX.** Claude Sonnet 5.5 ($2 / $10) would roughly
-   halve the cost of a question and Claude Haiku 4.5 ($1 / $5) quarter it, with
-   some loss of answer quality. Not changed: a product decision.
+3. **Model choice for Ask BetriX.** Switched to Claude Sonnet 5.5 (October
+   2026), about half the cost per question of Opus 5.5. Claude Haiku 4.5
+   ($1 / $5) would halve it again, with some loss of answer quality.
 4. **VAT.** Once registered, 7.5% VAT applies to digital services; decide
    whether these prices include it.
 5. **Vercel Pro** before taking payments in volume (Hobby terms).

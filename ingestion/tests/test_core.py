@@ -189,3 +189,15 @@ def test_cup_club_from_openfootball_lands_on_its_domestic_row():
     bodo = r.resolve("Bodø/Glimt", "norway", "thesportsdb")
     assert r.resolve_multinational("AS Monaco FC", "europe", "openfootball", "MCO").id == monaco.id
     assert r.resolve_multinational("FK Bodø/Glimt", "europe", "openfootball", "NOR").id == bodo.id
+
+
+def test_history_spellings_link_without_creating_clubs():
+    db, r = make()
+    r.resolve("Nottingham Forest", "england", "thesportsdb")
+    r.resolve("Leeds United", "england", "thesportsdb")
+    assert r.resolve("Nott'm Forest", "england", "history", create=False, log_unresolved=True).name == "Nottingham Forest"
+    assert r.resolve("Leeds", "england", "history", create=False, log_unresolved=True).name == "Leeds United"
+    assert r.resolve("Wrexham", "england", "history", create=False, log_unresolved=True) is None
+    keys = {a["alias_key"] for a in db.tables["team_aliases"]}
+    assert "nottmforest" in keys and "leeds" in keys
+    assert len(db.tables["teams"]) == 2

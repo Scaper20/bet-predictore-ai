@@ -22,6 +22,7 @@ import { isLive } from "@/lib/format";
 import { internationalPool, leagueByCode } from "@/lib/leagues";
 import { sportOrDefault } from "@/lib/sports";
 import { selectFeatured, shortlist, type FeaturedMatch } from "@/lib/featured";
+import { canonicaliseRows, nameBook, nameScope } from "@/lib/teams/canonical";
 
 export interface FixtureFeed {
   matches: Match[];
@@ -78,7 +79,12 @@ async function trainingRows(
   if (!code) return getTrainingResults(match);
 
   const def = leagueByCode(code);
-  const archived = def?.confederation ? await pooledArchive(def) : await archivedResults(code).catch(() => []);
+  const raw = def?.confederation ? await pooledArchive(def) : await archivedResults(code).catch(() => []);
+  // The archive spells clubs the way each source does ("Leeds", "Nott'm
+  // Forest"); the fixture uses the canonical name. Linked here, or a club
+  // with years of history fits on none of it.
+  const scope = def ? nameScope(def) : null;
+  const archived = scope ? canonicaliseRows(raw, await nameBook(scope)) : raw;
   // Deep enough to stand on its own; refreshed nightly (archive/refresh.ts).
   if (archived.length >= RICH_ARCHIVE) {
     const leagueName = def?.confederation
