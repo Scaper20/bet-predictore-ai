@@ -153,6 +153,23 @@ export async function matchDetail(id: string): Promise<MatchDetail | null> {
   };
 }
 
+/**
+ * The fitted prediction for one fixture, without the written analysis.
+ *
+ * For Ask BetriX (lib/ask/tools.ts), which reads the numbers and writes its
+ * own answer: going through matchDetail() would pay for a second model call
+ * (writeAnalysis) on every question about a fixture. Cached briefly, since a
+ * conversation tends to ask about the same match several times in a row.
+ */
+export async function matchPrediction(id: string): Promise<Prediction | null> {
+  return cached(`prediction:${id}`, 10 * 60_000, async () => {
+    const match = await getMatch(id);
+    if (!match) return null;
+    const [training, h2h] = await Promise.all([trainingRows(match), getH2H(match)]);
+    return buildPrediction(match, training.rows, h2h);
+  });
+}
+
 export interface LiveProbability {
   home: number;
   draw: number;

@@ -11,6 +11,7 @@ import {
 import { ModelPanel } from "@/components/match/model-panel";
 import { ValueCalculator } from "@/components/match/value-calculator";
 import { AddToSlip } from "@/components/match/add-to-slip";
+import { AskAboutMatch, AskPageContext } from "@/components/ask/ask-page-context";
 import { PricesPanel, PricesPanelSkeleton } from "@/components/match/prices-panel";
 import { AsianHandicapClient } from "@/components/match/asian-handicap-client";
 import { AnalysisPanel } from "@/components/match/analysis-panel";
@@ -298,6 +299,8 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
               <ModelPanel prediction={prediction} trainedOn={trainedOn} />
             </DepthGate>
             <AddToSlip prediction={prediction} />
+            <AskPageContext matchId={match.id} label={`${match.home.name} v ${match.away.name}`} />
+            <AskAboutMatch label={`${match.home.name} v ${match.away.name}`} />
             <Gate requires="pass">
               <ValueCalculator prediction={prediction} />
             </Gate>

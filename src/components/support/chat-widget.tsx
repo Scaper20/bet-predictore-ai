@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { Badge, Button, Spinner } from "@/components/ui/primitives";
 import { useEntitlement, meetsTier } from "@/components/entitlements/entitlement-provider";
+import { useAskState } from "@/lib/ask-store";
 
 interface Message {
   id: string;
@@ -33,6 +34,8 @@ export function ChatWidget() {
   const pathname = usePathname();
   const { entitlement } = useEntitlement();
   const vip = meetsTier(entitlement.tier, "vip");
+  // Ask BetriX's panel covers this corner (and its send button) while open.
+  const askOpen = useAskState().open;
   const [open, setOpen] = useState(false);
   const [thread, setThread] = useState<ThreadState>({ status: "idle" });
   const [draft, setDraft] = useState("");
@@ -113,7 +116,7 @@ export function ChatWidget() {
   }
 
   return (
-    <div className="fixed right-6 z-50 lift-above-bottom-nav">
+    <div className={`fixed right-6 z-50 lift-above-bottom-nav ${askOpen ? "hidden" : ""}`}>
       {open && (
         <div className="mb-3 flex h-[28rem] w-[22rem] max-w-[calc(100vw-3rem)] flex-col overflow-hidden rounded-2xl border border-line bg-shell shadow-2xl">
           <div className="flex items-center justify-between border-b border-line px-4 py-3">

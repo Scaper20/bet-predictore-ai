@@ -18,6 +18,7 @@ const BASE_NAV = [
   { href: "/admin/model-performance", label: "Model performance" },
   { href: "/admin/audit-log", label: "Audit log" },
   { href: "/admin/team", label: "Team" },
+  { href: "/admin/maintenance", label: "Maintenance" },
 ];
 
 const MAIL_NAV_ITEM = { href: "/admin/mail", label: "Mail" };
@@ -25,11 +26,14 @@ const MAIL_NAV_ITEM = { href: "/admin/mail", label: "Mail" };
 export function AdminShell({
   identity,
   showMailNav = false,
+  maintenanceOn = false,
   children,
 }: {
   identity: AdminIdentity;
   /** Kept off the nav entirely for every admin except the one it's for — see (protected)/layout.tsx. */
   showMailNav?: boolean;
+  /** The public site is blocked (site_settings.maintenance_enabled) — shown as a strip on every admin page. */
+  maintenanceOn?: boolean;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -116,6 +120,14 @@ export function AdminShell({
               })}
             </nav>
           </header>
+          {maintenanceOn && (
+            <div className="border-b border-amber/25 bg-amber/12 px-4 py-2.5 text-xs font-medium text-amber sm:px-6 lg:px-8">
+              Maintenance mode is on — visitors see the &ldquo;back soon&rdquo; page.{" "}
+              <Link href="/admin/maintenance" className="underline underline-offset-2">
+                Manage
+              </Link>
+            </div>
+          )}
           <main className="px-4 py-8 sm:px-6 lg:px-8">{children}</main>
         </div>
       </div>

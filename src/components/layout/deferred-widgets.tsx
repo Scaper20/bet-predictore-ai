@@ -21,6 +21,7 @@ const NotificationPrompt = dynamic(
   () => import("@/components/pwa/notification-prompt").then((m) => m.NotificationPrompt),
   { ssr: false },
 );
+const AskPanel = dynamic(() => import("@/components/ask/ask-panel").then((m) => m.AskPanel), { ssr: false });
 const ScrollToTop = dynamic(() => import("@/components/ui/scroll-to-top").then((m) => m.ScrollToTop), { ssr: false });
 
 export function DeferredWidgets() {
@@ -33,6 +34,7 @@ export function DeferredWidgets() {
       <InstallPrompt />
       <NotificationPrompt />
       <ScrollToTop />
+      <AskPanel />
     </>
   );
 }
