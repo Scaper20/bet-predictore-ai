@@ -25,6 +25,7 @@ SportyBet, Odds API ─▶ /api/cron/odds-snapshot (pg_cron, hourly) ──▶ o
 | ESPN | `soccerdata` 1.9.1 | Fixture cross-check, NPFL and the internationals registered as custom leagues. No scores: soccerdata's ESPN match-sheet reader is broken for every league. |
 | football-data.co.uk | free CSVs | European results plus Pinnacle and market-average opening/closing odds (10 seasons). |
 | openfootball | CC0 files (git clone) | History: NPFL 2009–2026, CAF Champions League, UEFA Champions League, World Cup, Euros. |
+| International results ([martj42](https://github.com/martj42/international_results)) | CC0 CSV | Every men's international since 1990 for BetriX's international competitions (≈23,000 games, ≈10,800 friendlies): World Cup qualifiers split by confederation, AFCON + qualifiers, Euro + qualifiers, Nations League, Copa América, Gold Cup, World Cup. Scores include extra time. |
 | ClubElo | `soccerdata` | Daily Elo for European and South American clubs. No African clubs, so BetriX computes its own Elo for every league (`elo` job). |
 
 Checked and not used: **Sofascore** (403 from GitHub's runners on every
@@ -47,7 +48,8 @@ its terms require their logo).
   and the latest payload per call is never deleted.
 - **One club, one row**: `resolve.py` maps every spelling onto `teams` (alias →
   normalised name → unique containment → curated renames in `aliases.json` →
-  create or log). Cross-check sources (ESPN, football-data.org) never invent a
+  create or log). National teams never match by containment (Niger is inside
+  Nigeria, Congo inside DR Congo): exact names and `aliases.json` only. Cross-check sources (ESPN, football-data.org) never invent a
   club; an unknown name is logged in `unresolved_entities` and its game skipped.
 - **Scores only from trusted sources**: `ingest_matches()` lets TheSportsDB (and
   openfootball / football-data.co.uk for finished history) set status and score.
@@ -115,7 +117,9 @@ python -m betrix_ingest <job> [--league CODE ...] [--dry-run] [-v]
 | `clubelo` | today's ClubElo ratings | 04:10 |
 | `elo [--full]` | BetriX Elo for every league from the training results | 04:35 |
 | `backfill-openfootball` | NPFL, CAF CL, UCL, World Cup, Euro history + coverage flags | manual, once |
-| `backfill-football-data-uk [--seasons 10]` | European results and opening/closing odds | manual, once |
+| `backfill-football-data-uk [--seasons 25]` | European results (25 seasons) and opening/closing odds (last 10) | manual, once |
+| `backfill-thesportsdb [--seasons 10]` | past seasons of every competition from TheSportsDB (paid key) | manual, once |
+| `backfill-international-results [--since 1990-01-01]` | internationals for every international competition, friendlies included | manual once; weekly (last two years) Tuesdays 05:20 |
 | `backfill-clubelo [--since 2016-07-01]` | ClubElo history for tracked clubs | manual, once |
 | `prune` | expire old raw payloads (also runs daily in pg_cron) | — |
 
@@ -131,8 +135,9 @@ The site keeps calling the live APIs until you flip the switch.
 
 1. Migrations, function, secrets (above).
 2. Actions → Ingest sports data → Run workflow, in this order:
-   `sync`, then `backfill-openfootball`, `backfill-football-data-uk`,
-   `backfill-clubelo`, then `fixtures`, `results --full-season`, `tables`, `elo --full`.
+   `sync`, then `backfill-thesportsdb`, `backfill-international-results`,
+   `backfill-openfootball`, `backfill-football-data-uk`, `backfill-clubelo`,
+   then `fixtures`, `results --full-season`, `tables`, `elo --full`.
    `sync` must come first: it registers clubs under TheSportsDB's names, so the
    backfills resolve onto them instead of creating near-duplicates.
 3. Check **Admin → Data health**: every competition has matches, nothing is
@@ -148,7 +153,7 @@ The site keeps calling the live APIs until you flip the switch.
 |---|---|---|---|
 | GitHub Actions | unlimited minutes on a public repo (2,000/month private) | ~37 min/day ≈ **1,100 min/month**: fixtures 3×2, ESPN 12, results 11×1, tables 2×2, ClubElo 1, Elo 2, weekly jobs ~1 | ✅ |
 | Supabase Edge Functions | 500,000 invocations/month | 1/min only while games are on: ~12h on weekend days, ~6h on weekdays ≈ **14,000/month**; worst case (a game every minute of the month) 43,200 | ✅ |
-| Supabase database | 500 MB | 16 MB today → **~200 MB**: odds_snapshots ~80 MB (10 seasons, 2 books), matches + training ~25 MB, raw payloads 30–60 MB, Elo ~20 MB | ✅ |
+| Supabase database | 500 MB | 16 MB today → **~250 MB**: odds_snapshots ~80 MB (10 seasons, 2 books), matches + training ~70 MB (25 seasons of Europe, 23k internationals, TheSportsDB history), raw payloads 30–60 MB, Elo ~20 MB | ✅ |
 | Supabase egress | 5 GB/month | jobs write small batches; pages read cached lists | ✅ |
 | pg_cron | no limit | 43,200 cheap checks/month + 720 odds triggers | ✅ |
 | Vercel Hobby | daily crons only; 1M invocations | crons unchanged (5 daily); odds route 720 calls/month | ✅ |

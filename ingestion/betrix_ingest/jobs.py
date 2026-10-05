@@ -324,7 +324,13 @@ def job_backfill_openfootball(ctx: Context) -> None:
             r.meta["seasons"] = len(coverage)
 
 
-def job_backfill_football_data_uk(ctx: Context, seasons: int = 10) -> None:
+def job_backfill_football_data_uk(ctx: Context, seasons: int = 25, odds_seasons: int = 10) -> None:
+    """European results as far back as ``seasons`` (the archive starts in the 1990s).
+
+    Odds are kept for the last ``odds_seasons`` only: older files carry fewer
+    books, and ten seasons of two books' opening and closing prices is already
+    the largest table in the database.
+    """
     from .http import get_text
     from .sources import football_data_uk as fdu
 
@@ -362,14 +368,91 @@ def job_backfill_football_data_uk(ctx: Context, seasons: int = 10) -> None:
                 "home_goals": m.home_goals, "away_goals": m.away_goals, "source": "football-data-uk",
             } for m in matches]
             r.rows_written += ctx.db.rpc("upsert_historical_results", {"p_rows": results}) or 0
+            odds_from = datetime(current - odds_seasons + 1, 7, 1, tzinfo=timezone.utc)
             odds = [{
                 "league_code": lg.code, "kickoff": m.kickoff.isoformat(), "home_name": m.home, "away_name": m.away,
                 "source": "football-data-uk", **o,
-            } for m in matches for o in m.odds]
+            } for m in matches if m.kickoff >= odds_from for o in m.odds]
             for i in range(0, len(odds), 1000):
                 ctx.db.rpc("upsert_historic_odds", {"p_rows": odds[i : i + 1000]})
             r.meta["odds_rows"] = len(odds)
             write_coverage(ctx.db, lg, "football-data-uk", coverage)
+
+
+def job_backfill_international_results(ctx: Context, since: date = date(1990, 1, 1)) -> None:
+    """Every men's international since ``since`` for BetriX's international competitions.
+
+    Safe to re-run: games merge on league + teams + day, so a weekly run with a
+    recent ``since`` just adds what was played since.
+    """
+    import csv
+    import io
+    from collections import defaultdict
+
+    from .http import get_text
+    from .runlog import store_raw
+    from .sources import international_results as ir
+
+    by_code = {lg.code: lg for lg in ctx.leagues}
+    fixtures: list = []
+    with run(ctx.db, ctx.switch, "backfill-international-results", ir.NAME) as r:
+        if r.skipped:
+            return
+        text = get_text(ir.NAME, ir.URL)
+        fixtures = ir.parse(text, since)
+        # The file is ~3 MB; keep the window's rows, and only two weeks of copies.
+        window = [row for row in csv.DictReader(io.StringIO(text)) if row["date"] >= since.isoformat()]
+        store_raw(ctx.db, ir.NAME, "results.csv", {"since": since.isoformat()}, window, retain_days=14)
+        r.rows_in = len(fixtures)
+        r.meta["since"] = since.isoformat()
+    grouped: dict[str, list] = defaultdict(list)
+    for f in fixtures:
+        grouped[f.league_code].append(f)
+    for code, items in grouped.items():
+        lg = by_code.get(code)
+        if not lg:
+            continue
+        with run(ctx.db, ctx.switch, "backfill-international-results", ir.NAME, code) as lr:
+            if lr.skipped:
+                continue
+            write_fixtures(ctx.db, ctx.resolver, ir.NAME, lg, items, lr)
+            per_year: dict[str, tuple[int | None, int]] = {}
+            for f in items:
+                y = f.season or "?"
+                per_year[y] = (None, per_year.get(y, (None, 0))[1] + 1)
+            write_coverage(ctx.db, lg, ir.NAME, per_year)
+
+
+def job_backfill_thesportsdb(ctx: Context, seasons: int = 10) -> None:
+    """Past seasons from TheSportsDB (paid key: up to 3,000 games a season), every competition.
+
+    Fills what the free archives don't reach: recent NPFL and CAF seasons,
+    older Champions League, every international competition. Each season label
+    is tried in both forms TheSportsDB uses ("2024-2025" and "2024").
+    """
+    from .sources.thesportsdb import season_labels
+
+    tsdb = _source_or_skip(ctx, "backfill-thesportsdb", "thesportsdb", ctx.tsdb)
+    if not tsdb:
+        return
+    current = season_start_year()
+    for lg in ctx.ordered():
+        if not lg.ids.get("theSportsDb"):
+            continue
+        with run(ctx.db, ctx.switch, "backfill-thesportsdb", "thesportsdb", lg.code) as r:
+            if r.skipped:
+                continue
+            coverage: dict[str, tuple[int | None, int]] = {}
+            for y in range(current, current - seasons, -1):
+                for label in season_labels(lg, y):
+                    fixtures = [f for f in tsdb.fetch_results(lg, label) if f.status == "finished"]
+                    if fixtures:
+                        before = r.rows_written
+                        write_fixtures(ctx.db, ctx.resolver, "thesportsdb", lg, fixtures, r)
+                        coverage[label] = (None, r.rows_written - before)
+                        break
+            write_coverage(ctx.db, lg, "thesportsdb", coverage)
+            r.meta["seasons_found"] = len(coverage)
 
 
 def job_backfill_clubelo(ctx: Context, since: date = date(2016, 7, 1)) -> None:
@@ -417,5 +500,7 @@ JOBS = {
     "backfill-openfootball": job_backfill_openfootball,
     "backfill-football-data-uk": job_backfill_football_data_uk,
     "backfill-clubelo": job_backfill_clubelo,
+    "backfill-international-results": job_backfill_international_results,
+    "backfill-thesportsdb": job_backfill_thesportsdb,
     "prune": job_prune,
 }

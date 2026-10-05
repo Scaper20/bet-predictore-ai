@@ -13,6 +13,7 @@ on:
     - cron: "10 4 * * *"         # ClubElo snapshot (05:10 in Lagos)
     - cron: "35 4 * * *"         # BetriX Elo, after the early results run
     - cron: "0 2 * * 1"          # sync competitions and club lists, weekly
+    - cron: "20 5 * * 2"         # international results (CC0 dataset), weekly: last two years
   workflow_dispatch:
     inputs:
       job:
@@ -29,6 +30,8 @@ on:
           - backfill-openfootball
           - backfill-football-data-uk
           - backfill-clubelo
+          - backfill-international-results
+          - backfill-thesportsdb
       args:
         description: "Extra arguments, e.g. --league npfl --days 30 --full"
         required: false
@@ -86,6 +89,7 @@ jobs:
             "10 4 * * *")       echo "cmd=clubelo" >> "$GITHUB_OUTPUT" ;;
             "35 4 * * *")       echo "cmd=elo" >> "$GITHUB_OUTPUT" ;;
             "0 2 * * 1")        echo "cmd=sync" >> "$GITHUB_OUTPUT" ;;
+            "20 5 * * 2")       echo "cmd=backfill-international-results --since $(date -u -d '2 years ago' +%F)" >> "$GITHUB_OUTPUT" ;;
             "")                 echo "cmd=$INPUT_JOB $INPUT_ARGS" >> "$GITHUB_OUTPUT" ;;
             *) echo "unknown schedule: $SCHEDULE"; exit 1 ;;
           esac

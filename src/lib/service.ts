@@ -19,7 +19,7 @@ import { normaliseKey } from "@/lib/model/fit";
 import { scoreMatrix, deriveLiveWinProbability } from "@/lib/model/poisson";
 import { writeAnalysis, aiEnabled, type Analysis } from "@/lib/ai/analyst";
 import { isLive } from "@/lib/format";
-import { leagueByCode } from "@/lib/leagues";
+import { internationalPool, leagueByCode } from "@/lib/leagues";
 import { sportOrDefault } from "@/lib/sports";
 import { selectFeatured, shortlist, type FeaturedMatch } from "@/lib/featured";
 
@@ -77,10 +77,14 @@ async function trainingRows(
   const code = match.league.code;
   if (!code) return getTrainingResults(match);
 
-  const archived = await archivedResults(code).catch(() => []);
+  const def = leagueByCode(code);
+  const archived = def?.confederation ? await pooledArchive(def) : await archivedResults(code).catch(() => []);
   // Deep enough to stand on its own; refreshed nightly (archive/refresh.ts).
   if (archived.length >= RICH_ARCHIVE) {
-    return { rows: archived, leagueName: match.league.name, curated: true };
+    const leagueName = def?.confederation
+      ? `${match.league.name} (rated on all ${def.confederation === "global" ? "national-team" : `${def.confederation} and global`} internationals)`
+      : match.league.name;
+    return { rows: archived, leagueName, curated: true };
   }
 
   /*
@@ -100,6 +104,20 @@ async function trainingRows(
   return merged.length > live.rows.length
     ? { rows: merged, leagueName: live.leagueName, curated: true }
     : live;
+}
+
+/**
+ * The archive for a national-team competition, pooled the way the live path
+ * pools it (getTrainingResults -> internationalPool): every competition in the
+ * confederation plus the global ones. National sides play too few games in
+ * any one competition to be rated on it alone; without this, an AFCON
+ * qualifier with a deep archive of its own would train on qualifiers only and
+ * ignore the same teams' friendlies, finals and World Cup qualifiers.
+ */
+async function pooledArchive(def: NonNullable<ReturnType<typeof leagueByCode>>): Promise<ResultRow[]> {
+  const pool = internationalPool(def);
+  const parts = await Promise.all(pool.map((l) => archivedResults(l.code).catch(() => [] as ResultRow[])));
+  return parts.reduce((acc, rows) => mergeResults(acc, rows), [] as ResultRow[]);
 }
 
 /** Archive depth past which the live feeds add nothing worth a request. */

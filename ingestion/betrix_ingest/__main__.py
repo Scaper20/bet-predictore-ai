@@ -25,8 +25,9 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--with-espn", action="store_true", help="fixtures: also cross-check against ESPN")
     p.add_argument("--full-season", action="store_true", help="results: whole current season per league")
     p.add_argument("--full", action="store_true", help="elo: write the whole history, not just recent days")
-    p.add_argument("--seasons", type=int, default=10, help="backfill-football-data-uk: how many seasons")
-    p.add_argument("--since", type=date.fromisoformat, help="backfill-clubelo: first date (YYYY-MM-DD)")
+    p.add_argument("--seasons", type=int, help="backfill-football-data-uk (default 25) / backfill-thesportsdb (default 10)")
+    p.add_argument("--since", type=date.fromisoformat,
+                   help="backfill-clubelo / backfill-international-results: first date (YYYY-MM-DD)")
     p.add_argument("--dry-run", action="store_true", help="fetch and transform, write to memory only")
     p.add_argument("-v", "--verbose", action="store_true")
     a = p.parse_args(argv)
@@ -45,9 +46,9 @@ def main(argv: list[str] | None = None) -> int:
         kwargs = {"days": a.days or 3, "full_season": a.full_season}
     elif a.job == "elo":
         kwargs = {"full": a.full}
-    elif a.job == "backfill-football-data-uk":
+    elif a.job in {"backfill-football-data-uk", "backfill-thesportsdb"} and a.seasons:
         kwargs = {"seasons": a.seasons}
-    elif a.job == "backfill-clubelo" and a.since:
+    elif a.job in {"backfill-clubelo", "backfill-international-results"} and a.since:
         kwargs = {"since": a.since}
 
     JOBS[a.job](ctx, **kwargs)

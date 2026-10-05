@@ -53,12 +53,15 @@ def can_create(source: str, scope: str) -> bool:
 
     ESPN and football-data.org are cross-checks and never invent clubs.
     openfootball may, outside CANONICAL_SCOPES: relegated NPFL sides and
-    foreign Champions League opponents exist nowhere else.
+    foreign Champions League opponents exist nowhere else. The international
+    results dataset may create national teams, which no club list carries.
     """
     if source == CANONICAL_SOURCE:
         return True
     if source == "openfootball":
         return scope not in CANONICAL_SCOPES
+    if source == "international-results":
+        return scope == "international"
     return False
 
 _STRIP = re.compile(r"\b(fc|afc|cf|sc|ac|as|ss|ssc|bk|sk|if|club|de|the)\b")
@@ -161,7 +164,10 @@ class Resolver:
         if len(exact) == 1:
             return exact[0], "normalised"
 
-        if len(key) >= 4:
+        # Containment is for clubs ("Bendel" / "Bendel Insurance"). Among
+        # countries it is wrong in exactly the cases that matter: Niger is
+        # inside Nigeria, Congo inside DR Congo, Guinea inside Guinea-Bissau.
+        if len(key) >= 4 and scope != "international":
             near = [
                 t for t in teams
                 if len(loose_key(t.name)) >= 4 and (key in loose_key(t.name) or loose_key(t.name) in key)
