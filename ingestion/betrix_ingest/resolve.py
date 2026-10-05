@@ -120,6 +120,24 @@ COUNTRY_CODES = {
     "POR": "portugal", "BEL": "belgium", "SCO": "scotland", "AUT": "austria", "SUI": "switzerland",
     "TUR": "turkey", "GRE": "greece", "UKR": "ukraine", "CZE": "czech republic", "CRO": "croatia",
     "SRB": "serbia", "DEN": "denmark", "BRA": "brazil",
+    # The rest of UEFA, as TheSportsDB names the countries (its club lists
+    # file cup clubs by country, so both sources must land in one scope).
+    "MCO": "france", "MON": "france",  # Monaco plays in Ligue 1
+    "NOR": "norway", "SWE": "sweden", "FIN": "finland", "ISL": "iceland", "IRL": "ireland",
+    "NIR": "northern ireland", "WAL": "wales", "POL": "poland", "RUS": "russia", "BLR": "belarus",
+    "MDA": "moldova", "ROU": "romania", "BUL": "bulgaria", "HUN": "hungary", "SVK": "slovakia",
+    "SVN": "slovenia", "BIH": "bosnia and herzegovina", "MNE": "montenegro", "MKD": "macedonia",
+    "ALB": "albania", "KOS": "kosovo", "KVX": "kosovo", "CYP": "cyprus", "ISR": "israel", "AZE": "azerbaijan",
+    "ARM": "armenia", "GEO": "georgia", "KAZ": "kazakhstan", "LVA": "latvia", "LTU": "lithuania",
+    "EST": "estonia", "LUX": "luxembourg", "MLT": "malta", "GIB": "gibraltar", "AND": "andorra",
+    "SMR": "san marino", "FRO": "faroe islands", "LIE": "liechtenstein",
+    # The rest of CAF.
+    "BEN": "benin", "BFA": "burkina faso", "BDI": "burundi", "CHA": "chad", "TCD": "chad", "COM": "comoros",
+    "DJI": "djibouti", "EQG": "equatorial guinea", "GNQ": "equatorial guinea", "GAB": "gabon", "GAM": "gambia",
+    "GNB": "guinea-bissau", "LES": "lesotho", "MAD": "madagascar", "MWI": "malawi", "MTN": "mauritania",
+    "MRI": "mauritius", "MOZ": "mozambique", "NAM": "namibia", "NIG": "niger", "RWA": "rwanda",
+    "SEY": "seychelles", "SLE": "sierra leone", "SOM": "somalia", "SWZ": "swaziland", "TOG": "togo",
+    "CGO": "congo", "LBR": "liberia", "CPV": "cape verde", "SSD": "south sudan", "ERI": "eritrea",
 }
 
 

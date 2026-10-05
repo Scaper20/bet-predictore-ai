@@ -181,3 +181,11 @@ def test_cup_club_found_in_continental_scope_not_twinned():
     ahly = r.resolve_multinational("Al Ahly", "africa", "thesportsdb", None)
     assert ahly.scope == "africa"
     assert r.resolve_multinational("Al Ahly SC", "africa", "openfootball", "EGY").id == ahly.id
+
+
+def test_cup_club_from_openfootball_lands_on_its_domestic_row():
+    db, r = make()
+    monaco = r.resolve("Monaco", "france", "thesportsdb")
+    bodo = r.resolve("Bodø/Glimt", "norway", "thesportsdb")
+    assert r.resolve_multinational("AS Monaco FC", "europe", "openfootball", "MCO").id == monaco.id
+    assert r.resolve_multinational("FK Bodø/Glimt", "europe", "openfootball", "NOR").id == bodo.id
