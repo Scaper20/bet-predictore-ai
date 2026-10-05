@@ -6,6 +6,7 @@ import { ButtonLink } from "@/components/ui/primitives";
 import { Container } from "@/components/ui/container";
 import { AccountMenu } from "@/components/layout/account-menu";
 import { SlipButton } from "@/components/layout/slip-button";
+import { AskButton } from "@/components/ask/ask-button";
 import { useEntitlement } from "@/components/entitlements/entitlement-provider";
 import { useAuthHint } from "@/components/entitlements/use-auth-hint";
 import { sportPath, sportFromPathname, type SportRoute } from "@/lib/routes";
@@ -106,6 +107,7 @@ export function SiteHeader() {
         </nav>
 
         <div className="ml-auto hidden items-center gap-2 lg:flex">
+          <AskButton />
           <SlipButton sport={sport} />
           {resolving ? (
             <AuthPlaceholder />
@@ -140,7 +142,8 @@ export function SiteHeader() {
           What is left is the one thing the bar cannot carry: the reason an
           anonymous visitor is here.
         */}
-        <div className="ml-auto flex items-center lg:hidden">
+        <div className="ml-auto flex items-center gap-1.5 lg:hidden">
+          <AskButton compact />
           {!resolving && !signedIn && (
             <ButtonLink href="/account/sign-up" variant="primary" className="px-3.5 py-2 text-xs">
               Sign up
