@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { type NextFetchEvent, type NextRequest, NextResponse } from "next/server";
 import { FIRST_TOUCH_COOKIE, type FirstTouch, trimFirstTouchValue } from "@/lib/first-touch";
-import { isMaintenanceExempt, maintenanceHtml } from "@/lib/maintenance";
+import { MAINTENANCE_BYPASS_COOKIE, isMaintenanceExempt, maintenanceHtml } from "@/lib/maintenance";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const anonKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -102,7 +102,27 @@ export async function proxy(request: NextRequest, event: NextFetchEvent) {
       // Keep any refreshed session cookies — the visitor is still signed in
       // once the site comes back.
       for (const cookie of response.cookies.getAll()) blocked.cookies.set(cookie);
+      if (request.cookies.has(MAINTENANCE_BYPASS_COOKIE)) blocked.cookies.delete(MAINTENANCE_BYPASS_COOKIE);
       return blocked;
+    }
+
+    // Tells the open-tab watcher (components/layout/maintenance-watcher.tsx)
+    // that this browser is an admin's and was let through, so it doesn't
+    // reload the page forever. A hint, like bx_auth: forging it only stops
+    // your own tab reloading — the check above still blocks the next request.
+    const bypassing = maintenance.enabled;
+    if (bypassing !== (request.cookies.get(MAINTENANCE_BYPASS_COOKIE)?.value === "1")) {
+      if (bypassing) {
+        response.cookies.set(MAINTENANCE_BYPASS_COOKIE, "1", {
+          httpOnly: false,
+          sameSite: "lax",
+          secure: process.env.NODE_ENV === "production",
+          path: "/",
+          maxAge: 60 * 60 * 24,
+        });
+      } else {
+        response.cookies.delete(MAINTENANCE_BYPASS_COOKIE);
+      }
     }
   }
 

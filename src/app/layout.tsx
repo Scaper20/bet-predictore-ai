@@ -4,6 +4,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { SITE_URL as SITE } from "@/lib/site-url";
 import { JsonLd } from "@/components/seo/json-ld";
 import { ServiceWorkerRegister } from "@/components/pwa/service-worker-register";
+import { MaintenanceWatcher } from "@/components/layout/maintenance-watcher";
 import { INSTALL_CAPTURE_SCRIPT } from "@/lib/pwa";
 import "./globals.css";
 
@@ -145,6 +146,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <JsonLd data={ORG_JSON_LD} />
         {children}
         <ServiceWorkerRegister />
+        <MaintenanceWatcher />
         <Analytics />
       </body>
     </html>

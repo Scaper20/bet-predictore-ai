@@ -11,6 +11,9 @@ export const DEFAULT_MAINTENANCE_MESSAGE =
 
 export const MAINTENANCE_MESSAGE_MAX = 500;
 
+/** Set by the proxy on an admin's browser while it lets them through maintenance. */
+export const MAINTENANCE_BYPASS_COOKIE = "bx_maint_bypass";
+
 /**
  * Paths that keep working while the site is blocked:
  * - /admin, so the switch can be flipped back (and /admin/login reached);
@@ -88,8 +91,18 @@ export function maintenanceHtml(message: string | null | undefined): string {
   <div class="tag">Under maintenance</div>
   <h1>Betri<span>X</span> will be back soon</h1>
   <p>${body}</p>
-  <p class="small">Thanks for your patience. <a href="">Refresh</a> to check if we're back.</p>
+  <p class="small">Thanks for your patience. This page reloads by itself the moment we're back.</p>
 </main>
+<script>
+  // Checks every 30s whether maintenance is over, and brings the visitor
+  // straight back to the page they were on.
+  setInterval(function () {
+    fetch("/api/site-status", { cache: "no-store" })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (s) { if (s && s.maintenance === false) location.reload(); })
+      .catch(function () {});
+  }, 30000);
+</script>
 </body>
 </html>`;
 }
