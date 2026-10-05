@@ -537,4 +537,6 @@ JOBS = {
     "backfill-international-results": job_backfill_international_results,
     "backfill-thesportsdb": job_backfill_thesportsdb,
     "prune": job_prune,
+    # The last step of sync, on its own: rerun after editing aliases.json.
+    "link-history": link_history,
 }

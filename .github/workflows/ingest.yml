@@ -32,6 +32,7 @@ on:
           - backfill-clubelo
           - backfill-international-results
           - backfill-thesportsdb
+          - link-history
       args:
         description: "Extra arguments, e.g. --league npfl --days 30 --full"
         required: false
