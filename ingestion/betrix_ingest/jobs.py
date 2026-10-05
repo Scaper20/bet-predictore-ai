@@ -78,7 +78,7 @@ def job_sync(ctx: Context) -> None:
         with run(ctx.db, ctx.switch, "sync", "thesportsdb", lg.code) as r:
             if r.skipped:
                 continue
-            seed_teams(ctx.resolver, lg, tsdb.teams(lg), r)
+            seed_teams(ctx.db, ctx.resolver, lg, tsdb.teams(lg), r)
 
 
 # ---------------------------------------------------------------------------

@@ -1,5 +1,0 @@
-{
-  "NGA-NPFL": {"ESPN": "nga.1", "Sofascore": "EuroMatch Nigeria Premier Football League", "season_start": "Sep", "season_end": "Jun"},
-  "AFR-CAF Champions League": {"ESPN": "caf.champions", "Sofascore": "CAF Champions League", "season_start": "Aug", "season_end": "May"},
-  "NED-Eredivisie": {"ESPN": "ned.1", "MatchHistory": "N1", "ClubElo": "NED_1", "Sofascore": "Eredivisie", "season_start": "Aug", "season_end": "May"}
-}

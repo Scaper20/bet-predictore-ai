@@ -1,0 +1,97 @@
+name: Ingest sports data
+
+# Scheduled jobs for the BetriX data layer (see ingestion/README.md).
+# Times are UTC; Lagos is UTC+1. Live scores are not here: a Supabase cron
+# polls them every minute while games are on (supabase/functions/live-scores).
+on:
+  schedule:
+    - cron: "15 3,11,17 * * *"   # fixtures, next 14 days (TheSportsDB + football-data.org)
+    - cron: "45 2 * * *"         # fixtures with the ESPN cross-check, once a day
+    - cron: "40 5,14-23 * * *"   # results: after each hour of the match window, and once early morning
+    - cron: "30 4 * * 1"         # results: whole current season, weekly
+    - cron: "50 6,23 * * *"      # tables
+    - cron: "10 4 * * *"         # ClubElo snapshot (05:10 in Lagos)
+    - cron: "35 4 * * *"         # BetriX Elo, after the early results run
+    - cron: "0 2 * * 1"          # sync competitions and club lists, weekly
+  workflow_dispatch:
+    inputs:
+      job:
+        description: "Job to run"
+        required: true
+        type: choice
+        options:
+          - sync
+          - fixtures
+          - results
+          - tables
+          - clubelo
+          - elo
+          - backfill-openfootball
+          - backfill-football-data-uk
+          - backfill-clubelo
+      args:
+        description: "Extra arguments, e.g. --league npfl --days 30 --full"
+        required: false
+        default: ""
+
+concurrency:
+  group: ingest-${{ github.event.schedule || inputs.job }}
+  cancel-in-progress: false
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: ingestion
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      THESPORTSDB_API_KEY: ${{ secrets.THESPORTSDB_API_KEY }}
+      FOOTBALL_DATA_API_KEY: ${{ secrets.FOOTBALL_DATA_API_KEY }}
+      SOCCERDATA_DIR: ${{ github.workspace }}/.soccerdata
+      OPENFOOTBALL_DIR: ${{ github.workspace }}/.openfootball
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: ingestion/requirements.txt
+
+      - run: pip install -r requirements.txt
+
+      # soccerdata's local cache, so repeat runs don't re-download what hasn't changed.
+      - uses: actions/cache@v4
+        with:
+          path: .soccerdata/data
+          key: soccerdata-${{ github.run_id }}
+          restore-keys: soccerdata-
+
+      - name: Pick the job
+        id: pick
+        env:
+          SCHEDULE: ${{ github.event.schedule }}
+          INPUT_JOB: ${{ inputs.job }}
+          INPUT_ARGS: ${{ inputs.args }}
+        run: |
+          case "$SCHEDULE" in
+            "15 3,11,17 * * *") echo "cmd=fixtures --days 14" >> "$GITHUB_OUTPUT" ;;
+            "45 2 * * *")       echo "cmd=fixtures --days 14 --with-espn" >> "$GITHUB_OUTPUT" ;;
+            "40 5,14-23 * * *") echo "cmd=results --days 2" >> "$GITHUB_OUTPUT" ;;
+            "30 4 * * 1")       echo "cmd=results --full-season" >> "$GITHUB_OUTPUT" ;;
+            "50 6,23 * * *")    echo "cmd=tables" >> "$GITHUB_OUTPUT" ;;
+            "10 4 * * *")       echo "cmd=clubelo" >> "$GITHUB_OUTPUT" ;;
+            "35 4 * * *")       echo "cmd=elo" >> "$GITHUB_OUTPUT" ;;
+            "0 2 * * 1")        echo "cmd=sync" >> "$GITHUB_OUTPUT" ;;
+            "")                 echo "cmd=$INPUT_JOB $INPUT_ARGS" >> "$GITHUB_OUTPUT" ;;
+            *) echo "unknown schedule: $SCHEDULE"; exit 1 ;;
+          esac
+
+      - name: Run
+        env:
+          CMD: ${{ steps.pick.outputs.cmd }}
+        # Word-split on purpose: CMD is "job --flag value".
+        run: python -m betrix_ingest $CMD

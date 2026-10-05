@@ -18,6 +18,7 @@ const BASE_NAV = [
   { href: "/admin/model-performance", label: "Model performance" },
   { href: "/admin/audit-log", label: "Audit log" },
   { href: "/admin/team", label: "Team" },
+  { href: "/admin/data-health", label: "Data health" },
   { href: "/admin/maintenance", label: "Maintenance" },
 ];
 

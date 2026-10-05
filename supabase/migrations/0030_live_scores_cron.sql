@@ -5,10 +5,15 @@
 -- live-scores Edge Function (supabase/functions/live-scores). Most minutes
 -- of most days cost one cheap query and no invocation.
 --
--- Before this does anything, store two Vault secrets (SQL editor):
+-- It also calls the site's odds snapshot route once an hour
+-- (/api/cron/odds-snapshot), which costs no GitHub Actions minutes this way.
+--
+-- Before either does anything, store four Vault secrets (SQL editor):
 --   select vault.create_secret('https://<project-ref>.supabase.co/functions/v1', 'betrix_functions_url');
 --   select vault.create_secret('<same value as the INGEST_SECRET function secret>', 'betrix_ingest_secret');
--- Until both exist the function returns without calling anything.
+--   select vault.create_secret('https://betrix.com.ng', 'betrix_site_url');
+--   select vault.create_secret('<same value as CRON_SECRET on Vercel>', 'betrix_cron_secret');
+-- Until they exist the functions return without calling anything.
 
 do $$
 begin
@@ -53,14 +58,41 @@ $$;
 
 revoke all on function public.invoke_live_scores() from public, anon, authenticated;
 
+create or replace function public.invoke_odds_snapshot()
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_url text;
+  v_secret text;
+begin
+  select decrypted_secret into v_url from vault.decrypted_secrets where name = 'betrix_site_url';
+  select decrypted_secret into v_secret from vault.decrypted_secrets where name = 'betrix_cron_secret';
+  if v_url is null or v_secret is null then
+    return;
+  end if;
+  perform net.http_get(
+    url := v_url || '/api/cron/odds-snapshot',
+    headers := jsonb_build_object('Authorization', 'Bearer ' || v_secret),
+    timeout_milliseconds := 120000
+  );
+end;
+$$;
+
+revoke all on function public.invoke_odds_snapshot() from public, anon, authenticated;
+
 -- Scheduled only where pg_cron exists (it does on Supabase; local test
 -- databases may not have it).
 do $$
 begin
   if exists (select 1 from pg_available_extensions where name = 'pg_cron') then
     create extension if not exists pg_cron;
-    perform cron.unschedule(jobid) from cron.job where jobname in ('betrix-live-scores', 'betrix-prune-raw');
+    perform cron.unschedule(jobid) from cron.job
+     where jobname in ('betrix-live-scores', 'betrix-prune-raw', 'betrix-odds-snapshot');
     perform cron.schedule('betrix-live-scores', '* * * * *', 'select public.invoke_live_scores()');
+    perform cron.schedule('betrix-odds-snapshot', '7 * * * *', 'select public.invoke_odds_snapshot()');
     perform cron.schedule('betrix-prune-raw', '17 3 * * *', 'select public.prune_raw_payloads()');
   end if;
 end;

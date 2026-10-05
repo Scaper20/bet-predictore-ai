@@ -14,7 +14,7 @@ export const maxDuration = 120;
  * without calling a bookmaker feed while they render (site_settings.data_layer
  * "db" or "db_fallback").
  *
- * Called hourly by .github/workflows/ingest-odds.yml with
+ * Called hourly by pg_cron (public.invoke_odds_snapshot, migration 0030) with
  * `Authorization: Bearer $CRON_SECRET`, the same gate as the Vercel crons.
  *
  * - The Odds API (free, 500 credits a month): paced by oddsApiBoardDue so the

@@ -57,6 +57,7 @@ class TeamListing:
     source_team_id: str | None
     alternates: list[str]
     country: str | None
+    crest: str | None = None
 
 
 class NotSupported(Exception):

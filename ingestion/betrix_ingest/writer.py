@@ -86,12 +86,14 @@ def write_table(db: Database, resolver: Resolver, source: str, league: League, t
     return len(rows)
 
 
-def seed_teams(resolver: Resolver, league: League, listings: list[TeamListing], run: Run) -> int:
-    """Register a league's clubs under TheSportsDB's names, with their alternates."""
+def seed_teams(db: Database, resolver: Resolver, league: League, listings: list[TeamListing], run: Run) -> int:
+    """Register a league's clubs under TheSportsDB's names, with their alternates and badges."""
     for t in listings:
         team = resolver.resolve(t.name, league.scope, "thesportsdb", league.code, t.source_team_id)
         if team:
             resolver.add_alternates(team, t.alternates, "thesportsdb")
+            if t.crest:
+                db.update("teams", {"id": team.id}, {"crest": t.crest})
     run.rows_in += len(listings)
     run.rows_written += len(listings)
     return len(listings)

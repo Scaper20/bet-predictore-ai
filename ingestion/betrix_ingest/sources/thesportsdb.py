@@ -175,5 +175,6 @@ class TheSportsDB:
             alts = [a.strip() for a in (t.get("strTeamAlternate") or "").split(",") if a.strip()]
             if t.get("strTeamShort"):
                 alts.append(t["strTeamShort"].strip())
-            out.append(TeamListing(t["strTeam"].strip(), str(t["idTeam"]), alts, t.get("strCountry")))
+            out.append(TeamListing(t["strTeam"].strip(), str(t["idTeam"]), alts, t.get("strCountry"),
+                                   t.get("strBadge") or None))
         return out
