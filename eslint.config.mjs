@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Deno (Supabase Edge Functions) and Python: not part of the Next app.
+    "supabase/functions/**",
+    "ingestion/**",
   ]),
 
   /*
