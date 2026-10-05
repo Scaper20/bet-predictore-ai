@@ -9,7 +9,9 @@
 // club names stays with the Python jobs, so there is one place that decides
 // what a club is called.
 //
-// Secrets (supabase secrets set ...): THESPORTSDB_API_KEY, INGEST_SECRET.
+// Secrets: THESPORTSDB_API_KEY and INGEST_SECRET, either as function secrets
+// (supabase secrets set ...) or in Vault as thesportsdb_api_key and
+// betrix_ingest_secret (read through service-role-only RPCs, migration 0030).
 // SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided by the platform.
 
 import { createClient } from "npm:@supabase/supabase-js@2";
@@ -40,14 +42,17 @@ function statusOf(raw: string | null | undefined): string | null {
 const num = (v: string | null | undefined) => (v == null || v === "" ? null : Number.isFinite(Number(v)) ? Number(v) : null);
 
 Deno.serve(async (req) => {
-  const secret = Deno.env.get("INGEST_SECRET");
-  if (!secret || req.headers.get("x-ingest-secret") !== secret) {
-    return new Response("forbidden", { status: 403 });
-  }
-  const key = Deno.env.get("THESPORTSDB_API_KEY");
   const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
     auth: { persistSession: false },
   });
+  const presented = req.headers.get("x-ingest-secret");
+  const envSecret = Deno.env.get("INGEST_SECRET");
+  const allowed = envSecret
+    ? presented === envSecret
+    : Boolean(presented) && (await db.rpc("ingest_secret_ok", { p_secret: presented })).data === true;
+  if (!allowed) return new Response("forbidden", { status: 403 });
+
+  const key = Deno.env.get("THESPORTSDB_API_KEY") || ((await db.rpc("thesportsdb_key")).data as string | null) || undefined;
   const started = new Date().toISOString();
 
   const record = async (status: string, rowsIn: number, rowsWritten: number, error: string | null, meta: object) => {

@@ -13,6 +13,7 @@
 --   select vault.create_secret('<same value as the INGEST_SECRET function secret>', 'betrix_ingest_secret');
 --   select vault.create_secret('https://betrix.com.ng', 'betrix_site_url');
 --   select vault.create_secret('<same value as CRON_SECRET on Vercel>', 'betrix_cron_secret');
+--   select vault.create_secret('<TheSportsDB paid key>', 'thesportsdb_api_key');
 -- Until they exist the functions return without calling anything.
 
 do $$
@@ -58,6 +59,41 @@ $$;
 
 revoke all on function public.invoke_live_scores() from public, anon, authenticated;
 
+-- The live-scores function's own secrets, read from Vault so they can be
+-- managed in SQL alongside the ones above. (Function secrets set with
+-- `supabase secrets set` still win when present.) Service role only.
+create or replace function public.ingest_secret_ok(p_secret text)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  return p_secret is not null and exists (
+    select 1 from vault.decrypted_secrets where name = 'betrix_ingest_secret' and decrypted_secret = p_secret
+  );
+end;
+$$;
+
+create or replace function public.thesportsdb_key()
+returns text
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v text;
+begin
+  select decrypted_secret into v from vault.decrypted_secrets where name = 'thesportsdb_api_key';
+  return v;
+end;
+$$;
+
+revoke all on function public.ingest_secret_ok(text) from public, anon, authenticated;
+revoke all on function public.thesportsdb_key() from public, anon, authenticated;
+grant execute on function public.ingest_secret_ok(text) to service_role;
+grant execute on function public.thesportsdb_key() to service_role;
+
 create or replace function public.invoke_odds_snapshot()
 returns void
 language plpgsql
@@ -89,8 +125,7 @@ do $$
 begin
   if exists (select 1 from pg_available_extensions where name = 'pg_cron') then
     create extension if not exists pg_cron;
-    perform cron.unschedule(jobid) from cron.job
-     where jobname in ('betrix-live-scores', 'betrix-prune-raw', 'betrix-odds-snapshot');
+    -- Scheduling by name updates an existing job of that name.
     perform cron.schedule('betrix-live-scores', '* * * * *', 'select public.invoke_live_scores()');
     perform cron.schedule('betrix-odds-snapshot', '7 * * * *', 'select public.invoke_odds_snapshot()');
     perform cron.schedule('betrix-prune-raw', '17 3 * * *', 'select public.prune_raw_payloads()');

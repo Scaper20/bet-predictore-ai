@@ -330,13 +330,13 @@ begin
 end;
 $$;
 
-drop trigger if exists matches_mirror_finished on public.matches;
-create trigger matches_mirror_finished
+create or replace trigger matches_mirror_finished
   after insert or update of status, home_goals, away_goals on public.matches
   for each row execute function public.mirror_finished_match();
 
--- Trigger-only; see 0015 for why PUBLIC (not anon/authenticated) is the grant to drop.
-revoke execute on function public.mirror_finished_match() from public;
+-- Trigger-only. PUBLIC per 0015, and anon/authenticated too: Supabase grants
+-- those roles directly, so revoking from PUBLIC alone leaves them able to call it.
+revoke execute on function public.mirror_finished_match() from public, anon, authenticated;
 
 -- Writes a batch of matches from one source, merging into what is there.
 --
