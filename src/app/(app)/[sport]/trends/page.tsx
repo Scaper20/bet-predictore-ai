@@ -1,124 +1,69 @@
 import type { Metadata } from "next";
 import { PageHeader } from "@/components/ui/page-header";
-import { PredictionCard } from "@/components/match/prediction-card";
-import { EmptyState, ButtonLink, ProbabilityBar } from "@/components/ui/primitives";
+import { EmptyState, ButtonLink } from "@/components/ui/primitives";
+import { TrendsBoard } from "@/components/stats/trends-board";
+import { AnimatedNumber } from "@/components/motion/animated-number";
+import { streakTrends } from "@/lib/stats/trends";
 import { trends } from "@/lib/service";
-import { percent } from "@/lib/format";
 import { containerClass } from "@/components/ui/container";
 import { sportPath } from "@/lib/routes";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/football/trends" },
-  title: "Trends",
+  title: "Football Trends and Streaks",
   description:
-    "What the model reads across the whole upcoming slate: goal expectation, over/under lean, " +
-    "BTTS lean and the fixtures it feels most strongly about.",
+    "The streaks worth knowing before kick-off: winning runs, over 2.5 and GG streaks, clean sheets and slumps " +
+    "for every team playing in the next three days.",
 };
 
-export const revalidate = 300;
+export const revalidate = 600;
 
 export default async function TrendsPage() {
-  const snapshot = await trends(3).catch(() => null);
-
-  if (!snapshot || snapshot.total === 0) {
-    return (
-      <>
-        <PageHeader eyebrow="Trends" title="Trends" />
-        <div className={`${containerClass()} py-7 sm:py-10`}>
-          <EmptyState
-            icon="📈"
-            title="No slate to analyse yet"
-            description="Trends are computed across the upcoming fixtures the feeds return. When there are none, there is nothing honest to summarise."
-            action={<ButtonLink href={sportPath("fixtures")} variant="secondary">Browse fixtures</ButtonLink>}
-          />
-        </div>
-      </>
-    );
-  }
+  const [streaks, slate] = await Promise.all([streakTrends(3).catch(() => []), trends(3).catch(() => null)]);
 
   return (
     <>
       <PageHeader
         eyebrow="Trends"
-        title="What the slate looks like"
-        description={`Aggregated across ${snapshot.total} upcoming fixtures over the next three days, of which ${snapshot.publishable} have enough history to model properly.`}
+        title="Streaks to know before kick-off"
+        description="Every team playing in the next three days, checked against its last ten games. When a run stands out, it's here in one line, with the game coming up."
       />
+      <div className={`${containerClass()} space-y-7 py-7 sm:py-10`}>
+        {slate && slate.total > 0 && (
+          <section className="stagger grid gap-3 sm:grid-cols-3">
+            <Glance i={0} value={slate.total} label="games we rated for the next three days" />
+            <Glance i={1} value={Math.round(slate.overLeaning * 100)} suffix="%" label="of them we expect to have three or more goals" />
+            <Glance i={2} value={Math.round(slate.bttsLeaning * 100)} suffix="%" label="of them we expect both teams to score" />
+          </section>
+        )}
 
-      <div className={`${containerClass()} space-y-8 py-7 sm:py-10`}>
-        <section className="grid gap-4 sm:grid-cols-3">
-          <TrendCard
-            label="Average expected goals"
-            value={snapshot.avgExpectedGoals.toFixed(2)}
-            hint="Per match across the modelled slate"
-            meter={Math.min(1, snapshot.avgExpectedGoals / 4)}
-            tone="brand"
+        {streaks.length === 0 ? (
+          <EmptyState
+            icon="📈"
+            title="No streaks to show yet"
+            description="Streaks appear when the next few days have games and the teams have enough recent results."
+            action={<ButtonLink href={sportPath("fixtures")} variant="secondary">Browse fixtures</ButtonLink>}
           />
-          <TrendCard
-            label="Leaning over 2.5"
-            value={percent(snapshot.overLeaning)}
-            hint="Fixtures the model puts above 55% for over 2.5"
-            meter={snapshot.overLeaning}
-            tone="amber"
-          />
-          <TrendCard
-            label="Leaning BTTS"
-            value={percent(snapshot.bttsLeaning)}
-            hint="Fixtures the model puts above 55% for BTTS"
-            meter={snapshot.bttsLeaning}
-            tone="cyan"
-          />
-        </section>
+        ) : (
+          <TrendsBoard trends={streaks} />
+        )}
 
-        <section>
-          <h2 className="mb-2 text-sm font-semibold uppercase tracking-wider text-ink-muted">
-            Fixtures the model feels most strongly about
-          </h2>
-          <p className="mb-5 max-w-2xl text-xs leading-relaxed text-ink-dim">
-            Ranked by how far the outcome spread sits from a three-way coin flip. These are the
-            matches where the ratings are actually saying something — not necessarily the ones
-            offering the best price.
-          </p>
-
-          {snapshot.standouts.length === 0 ? (
-            <EmptyState
-              icon="🎯"
-              title="Nothing stands out yet"
-              description="No upcoming fixture currently has enough history behind it to make a confident read."
-            />
-          ) : (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {snapshot.standouts.map((p) => (
-                <PredictionCard key={p.match.id} prediction={p} />
-              ))}
-            </div>
-          )}
-        </section>
+        <p className="text-xs leading-relaxed text-ink-dim">
+          A streak is history, not a forecast: runs end. Our predictions weigh the whole record, so a streak here and our pick can
+          disagree. Last ten finished games in any competition.
+        </p>
       </div>
     </>
   );
 }
 
-function TrendCard({
-  label,
-  value,
-  hint,
-  meter,
-  tone,
-}: {
-  label: string;
-  value: string;
-  hint: string;
-  meter: number;
-  tone: "brand" | "amber" | "cyan";
-}) {
+function Glance({ value, suffix = "", label, i }: { value: number; suffix?: string; label: string; i: number }) {
   return (
-    <div className="card p-5">
-      <p className="text-xs font-medium uppercase tracking-wider text-ink-dim">{label}</p>
-      <p className="tnum mt-2 font-display text-3xl font-extrabold">{value}</p>
-      <div className="mt-4">
-        <ProbabilityBar value={meter} tone={tone} />
-      </div>
-      <p className="mt-3 text-[11px] leading-relaxed text-ink-dim">{hint}</p>
+    <div style={{ ["--i" as string]: i }} className="card flex items-center gap-4 p-4">
+      <span className="font-display text-3xl font-extrabold text-brand">
+        <AnimatedNumber value={value} suffix={suffix} />
+      </span>
+      <span className="text-sm leading-snug text-ink-muted">{label}</span>
     </div>
   );
 }

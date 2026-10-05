@@ -103,6 +103,15 @@
     "Brighton and Hove Albion": [
       "Brighton & Hove Albion FC",
       "Brighton & Hove Albion"
+    ],
+    "Sheffield Wednesday": [
+      "Sheffield Weds"
+    ],
+    "Queens Park Rangers": [
+      "QPR"
+    ],
+    "Nottingham Forest": [
+      "Nott'm Forest"
     ]
   },
   "france": {
@@ -157,6 +166,9 @@
     ],
     "PSV Eindhoven": [
       "PSV"
+    ],
+    "Fortuna Sittard": [
+      "For Sittard"
     ]
   },
   "portugal": {
@@ -180,11 +192,16 @@
     "Deportivo de A Coruña": [
       "RC Deportivo La Coruña",
       "Deportivo La Coruna",
-      "Dep. La Coruna"
+      "Dep. La Coruna",
+      "La Coruna"
     ],
     "Espanyol": [
       "RCD Espanyol de Barcelona",
       "RCD Espanyol"
+    ],
+    "Atlético Madrid": [
+      "Ath Madrid",
+      "Atletico Madrid"
     ]
   },
   "brazil": {
@@ -194,7 +211,11 @@
     ],
     "Athletico Paranaense": [
       "CA Paranaense",
-      "Atletico-PR"
+      "Atletico-PR",
+      "Athletico-PR"
+    ],
+    "Sport Club do Recife": [
+      "Sport Recife"
     ]
   },
   "africa": {

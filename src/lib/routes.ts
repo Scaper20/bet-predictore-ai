@@ -25,6 +25,12 @@ export const SPORT_ROUTES = {
   trackedSlips: "slip/tracked",
   forge: "forge",
   valueAlerts: "value-alerts",
+  results: "results",
+  tables: "tables",
+  h2h: "h2h",
+  teamForm: "team-form",
+  goals: "goals-stats",
+  ratings: "ratings",
 } as const;
 
 export type SportRoute = keyof typeof SPORT_ROUTES;

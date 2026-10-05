@@ -1,16 +1,25 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { Badge, ButtonLink } from "@/components/ui/primitives";
+import Link from "next/link";
+import { Badge, ButtonLink, LiveDot } from "@/components/ui/primitives";
 import { Crest } from "@/components/ui/crest";
 import { matchPath, sportPath } from "@/lib/routes";
 import {
-  BttsPanel, CorrectScorePanel, DoubleChancePanel, FormPanel, GoalsPanel,
+  BttsPanel, CorrectScorePanel, DoubleChancePanel, GoalsPanel,
   H2HPanel, OutcomePanel,
 } from "@/components/match/market-panels";
-import { ModelPanel } from "@/components/match/model-panel";
-import { ValueCalculator } from "@/components/match/value-calculator";
 import { AddToSlip } from "@/components/match/add-to-slip";
+import { MatchTabs, type MatchTab } from "@/components/match/match-tabs";
+import { MatchStats } from "@/components/match/match-stats";
+import { LeagueTable } from "@/components/stats/league-table";
+import { SplitBar } from "@/components/stats/split-bar";
+import { FormPips } from "@/components/stats/form-pips";
+import { Morph, morphName } from "@/components/motion/morph";
+import { AnimatedNumber } from "@/components/motion/animated-number";
+import { matchContext, type MatchContext } from "@/lib/stats/match-context";
+import type { Outcome } from "@/lib/stats/compute";
+import type { Analysis } from "@/lib/ai/analyst";
 import { AskAboutMatch, AskPageContext } from "@/components/ask/ask-page-context";
 import { PricesPanel, PricesPanelSkeleton } from "@/components/match/prices-panel";
 import { AsianHandicapClient } from "@/components/match/asian-handicap-client";
@@ -21,10 +30,11 @@ import { DepthGate } from "@/components/entitlements/depth-gate";
 import { JsonLd } from "@/components/seo/json-ld";
 import { matchDetail } from "@/lib/service";
 import { SITE_URL as SITE } from "@/lib/site-url";
-import { kickoffTime, odds, percent, relativeDay, statusLabel, isLive } from "@/lib/format";
+import { kickoffDay, kickoffTime, odds, percent, relativeDay, statusLabel, isLive } from "@/lib/format";
 import type { Match } from "@/lib/types";
 import type { Prediction } from "@/lib/model/predict";
 import { containerClass } from "@/components/ui/container";
+import { matchProgress } from "@/lib/live-board";
 
 /**
  * SportsEvent structured data — schema.org's real, documented vocabulary
@@ -126,232 +136,295 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   const detail = await matchDetail(decodeURIComponent(id)).catch(() => null);
   if (!detail) notFound();
 
-  const { match, prediction, analysis, trainedOn } = detail;
+  const { match, prediction, analysis } = detail;
+  const ctx = await matchContext(match).catch((): MatchContext => ({ teamIds: { home: null, away: null }, home: null, away: null, table: null }));
   const live = isLive(match);
+  const label = `${match.home.name} v ${match.away.name}`;
+
+  const tabs: MatchTab[] = [
+    { key: "overview", label: "Overview", panel: <Overview match={match} prediction={prediction} analysis={analysis} ctx={ctx} live={live} label={label} /> },
+    { key: "markets", label: "Markets", panel: <Markets prediction={prediction} matchId={match.id} /> },
+    { key: "stats", label: "Stats", panel: <MatchStats match={match} home={ctx.home} away={ctx.away} /> },
+    ...(ctx.table
+      ? [{
+          key: "table",
+          label: "Table",
+          panel: (
+            <section className="card overflow-hidden">
+              <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3 sm:px-5">
+                <h2 className="text-sm font-semibold uppercase tracking-wider text-ink-muted">{match.league.name}</h2>
+                <Link href={`${sportPath("tables")}?league=${match.league.code}`} className="text-xs font-medium text-brand hover:underline">
+                  Full table →
+                </Link>
+              </div>
+              <LeagueTable initial={ctx.table} highlight={[ctx.teamIds.home, ctx.teamIds.away].filter((x): x is string => Boolean(x))} compact />
+            </section>
+          ),
+        }]
+      : []),
+    {
+      key: "h2h",
+      label: "Head-to-head",
+      panel: (
+        <div className="space-y-4">
+          <H2HPanel prediction={prediction} />
+          {ctx.teamIds.home && ctx.teamIds.away && (
+            <ButtonLink href={`${sportPath("h2h")}?a=${ctx.teamIds.home}&b=${ctx.teamIds.away}`} variant="secondary" className="w-full justify-center py-3 text-sm">
+              Every meeting between these two →
+            </ButtonLink>
+          )}
+        </div>
+      ),
+    },
+  ];
 
   return (
     <>
       <JsonLd data={matchJsonLd(match, prediction)} />
+      <AskPageContext matchId={match.id} label={label} />
 
-      {/* ------------------------------------------------------ Match header */}
-      <div className="border-b border-line bg-shell">
-        <div className={`${containerClass()} py-7 sm:py-10`}>
-          <div className="mb-6 flex flex-wrap items-center gap-3">
-            {match.league.logo && <Crest src={match.league.logo} name={match.league.name} size={22} />}
-            <span className="text-sm font-medium text-ink-muted">{match.league.name}</span>
-            {match.round && <span className="text-xs text-ink-dim">· {match.round}</span>}
-            <span className="ml-auto">
-              {live ? (
-                <Badge tone="live">{statusLabel(match)}</Badge>
-              ) : match.status === "finished" ? (
-                <Badge tone="neutral">Full time</Badge>
-              ) : (
-                <Badge tone="neutral">
-                  {relativeDay(match.kickoff)} · {kickoffTime(match.kickoff)} WAT
-                </Badge>
-              )}
-            </span>
-          </div>
-
-          {/*
-            gap-3 below sm, not gap-4. The centre column is auto-sized and the
-            two team columns split what is left, so every pixel of gutter here
-            comes straight out of the space a club's name has to render in —
-            and at 375 there was not enough of it. See TeamBlock.
-          */}
-          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 sm:gap-8">
-            <TeamBlock team={match.home} align="right" />
-            <div className="text-center">
-              {live || match.status === "finished" ? (
-                <p className="tnum font-display text-4xl font-extrabold sm:text-5xl">
-                  {match.score.home ?? 0}
-                  <span className="mx-2 text-ink-dim">-</span>
-                  {match.score.away ?? 0}
-                </p>
-              ) : (
-                <p className="tnum font-display text-2xl font-bold text-ink-muted sm:text-3xl">
-                  {kickoffTime(match.kickoff)}
-                </p>
-              )}
-              {/*
-                The venue sets the width of the centre column, and at 12rem it
-                was claiming 192px of a 343px row — leaving the two clubs about
-                60px each, which is less than the crest alone. Narrower on a
-                phone, unchanged from sm up.
-              */}
-              {match.venue && (
-                <p className="mx-auto mt-2 max-w-32 text-xs text-ink-dim sm:max-w-48">
-                  {match.venue}
-                </p>
-              )}
-            </div>
-            <TeamBlock team={match.away} align="left" />
-          </div>
-
-          {prediction.topPick && (
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-3 rounded-xl border border-brand/25 bg-brand/[0.06] px-5 py-4">
-              <span className="text-xs font-semibold uppercase tracking-wider text-ink-dim">
-                Model&apos;s strongest read
-              </span>
-              <span className="text-base font-bold text-brand">{prediction.topPick.label}</span>
-              <span className="tnum text-sm text-ink-muted">
-                {percent(prediction.topPick.probability, 1)} · needs{" "}
-                {odds(prediction.topPick.fairOdds)}+
-              </span>
-              <Badge tone={prediction.topPick.confidence >= 55 ? "brand" : "amber"}>
-                {Math.round(prediction.topPick.confidence)}/100 confidence
-              </Badge>
-              {/*
-                The clause that turns a probability into a decision. Backtested
-                over three seasons this model returns about -2% at
-                market-average closing prices: close to the market, not ahead
-                of it. So the money question is never "will this land" but
-                "is the price long enough", and below break-even the answer is
-                no at any hit rate.
-              */}
-              <span className="w-full text-center text-[11px] text-ink-dim">
-                Below that price it loses money however often it lands.
+      {/* ------------------------------------------------------ Scoreboard */}
+      <h1 className="sr-only">
+        {match.home.name} vs {match.away.name} prediction, {match.league.name}
+      </h1>
+      <header className="relative overflow-hidden border-b border-line bg-shell">
+        <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_80%_at_50%_-10%,color-mix(in_oklab,var(--color-brand)_10%,transparent),transparent_70%)]" />
+        <div className={`${containerClass()} relative py-5 sm:py-8`}>
+          <div className="mx-auto max-w-5xl">
+            <div className="flex items-center gap-2.5">
+              {match.league.logo && <Crest src={match.league.logo} name={match.league.name} size={18} />}
+              <Link href={`${sportPath("fixtures")}?league=${match.league.code ?? ""}`} className="min-w-0 truncate text-xs font-medium text-ink-muted hover:text-ink sm:text-sm">
+                {match.league.name}
+                {match.round && <span className="text-ink-dim"> · {match.round}</span>}
+              </Link>
+              <span className="ml-auto shrink-0">
+                {live ? (
+                  <Badge tone="live"><LiveDot />{statusLabel(match)}</Badge>
+                ) : match.status === "finished" ? (
+                  <Badge tone="neutral">Full time</Badge>
+                ) : match.status === "postponed" ? (
+                  <Badge tone="amber">Postponed</Badge>
+                ) : (
+                  <Badge tone="neutral">{relativeDay(match.kickoff)}</Badge>
+                )}
               </span>
             </div>
-          )}
-        </div>
-      </div>
 
-      {/* ------------------------------------------------------------- Body */}
-      <div className={`${containerClass()} py-7 sm:py-10`}>
-        {/* min-w-0 on both tracks: a grid item defaults to min-width:auto, so
-            any nowrap content inside (every `truncate` is nowrap) sets a floor
-            the track cannot go below, and the page scrolls sideways on a phone. */}
-        <div className="grid gap-5 lg:grid-cols-[1.6fr_1fr]">
-          <div className="min-w-0 space-y-5">
-            {live && (
-              <Gate
-                requires="vip"
-                fallback={
-                  <div className="card border-brand/25 bg-brand/[0.04] p-5">
-                    <p className="text-sm font-semibold">🔴 Live win probability</p>
-                    <p className="mt-1 text-xs text-ink-muted">
-                      Updates every ~25s as the match plays out — VIP unlocks this.
-                    </p>
-                    <ButtonLink href="/account/billing?plan=vip" variant="ghost" className="mt-2 px-0 py-1 text-xs">
-                      Unlock VIP →
-                    </ButtonLink>
+            <div className="mt-5 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 sm:mt-7 sm:gap-8">
+              <TeamBlock team={match.home} matchId={match.id} side="home" />
+              <div className="text-center">
+                {live || match.status === "finished" ? (
+                  <p className="tnum font-display text-4xl font-extrabold leading-none sm:text-6xl">
+                    {match.score.home ?? 0}
+                    <span className="mx-1.5 text-ink-dim sm:mx-3">-</span>
+                    {match.score.away ?? 0}
+                  </p>
+                ) : (
+                  <p className="tnum font-display text-3xl font-bold leading-none sm:text-5xl">{kickoffTime(match.kickoff)}</p>
+                )}
+                {live ? (
+                  <div className="mx-auto mt-2.5 w-16">
+                    <span className="block h-0.5 overflow-hidden rounded-full bg-line" aria-hidden>
+                      <span className="block h-full rounded-full bg-rose" style={{ width: `${Math.round(matchProgress(match) * 100)}%` }} />
+                    </span>
                   </div>
-                }
-              >
-                <LiveWinProbabilityPanel matchId={match.id} />
-              </Gate>
-            )}
-            <AnalysisPanel analysis={analysis} matchId={match.id} />
-
-            {/*
-              Free, and server-rendered: the headline read, the 1X2 split,
-              form and head-to-head. That is what a crawler indexes and what
-              earns the click from search, so it must never sit behind the
-              wall — see the note in src/lib/gating.ts.
-            */}
-            <OutcomePanel prediction={prediction} />
-
-            {/*
-              The only numbers on this page a bookmaker produced. Streamed,
-              because two metered providers sit behind it and the rest of the
-              match must not wait on them.
-
-              DepthGate is soft — the children render server-side either way —
-              so this is a conversion wall, not a spend control. The spend
-              control is that both providers are fetched a whole competition
-              at a time and cached, so a thousand visitors to this page cost
-              exactly what one costs.
-            */}
-            <DepthGate reason="See the price you are actually being offered">
-              <Suspense fallback={<PricesPanelSkeleton />}>
-                <PricesPanel prediction={prediction} />
-              </Suspense>
-            </DepthGate>
-
-            {/*
-              Depth needs an account. Every market beyond 1X2 comes off the
-              same scoreline distribution, so this is one decision, not five.
-            */}
-            <DepthGate reason="See every market on this match">
-              <GoalsPanel prediction={prediction} />
-              <div className="grid gap-5 sm:grid-cols-2">
-                <BttsPanel prediction={prediction} />
-                <DoubleChancePanel prediction={prediction} />
+                ) : (
+                  <p className="mt-2 text-[11px] text-ink-dim sm:text-xs">
+                    {match.status === "finished" ? kickoffDay(match.kickoff) : `${kickoffDay(match.kickoff)} · WAT`}
+                  </p>
+                )}
               </div>
-              <CorrectScorePanel prediction={prediction} />
-            </DepthGate>
-
-            <Gate requires="pass">
-              <AsianHandicapClient matchId={match.id} />
-            </Gate>
-            <FormPanel prediction={prediction} />
-            <H2HPanel prediction={prediction} />
-          </div>
-
-          <aside className="min-w-0 space-y-5 lg:sticky lg:top-[calc(var(--header-h)+1rem)] lg:self-start">
-            {/*
-              Sample size, data quality and confidence are the "show your
-              working" panel — the reason to trust a number rather than the
-              number itself. Worth an account, not a payment.
-            */}
-            <DepthGate reason="See the sample size behind this prediction">
-              <ModelPanel prediction={prediction} trainedOn={trainedOn} />
-            </DepthGate>
-            <AddToSlip prediction={prediction} />
-            <AskPageContext matchId={match.id} label={`${match.home.name} v ${match.away.name}`} />
-            <AskAboutMatch label={`${match.home.name} v ${match.away.name}`} />
-            <Gate requires="pass">
-              <ValueCalculator prediction={prediction} />
-            </Gate>
-            <div className="card p-5">
-              <p className="text-[11px] leading-relaxed text-ink-dim">
-                Probabilities are estimates from a statistical model, not predictions of fact.
-                Prices shown are break-even — no bookmaker margin added — so they are the floor a
-                real price has to clear, not a price on offer. Bet responsibly — 18+.
-              </p>
-              <ButtonLink
-                href={sportPath("trackRecord")}
-                variant="ghost"
-                className="mt-3 px-0 py-1 text-xs"
-              >
-                See our settled record →
-              </ButtonLink>
+              <TeamBlock team={match.away} matchId={match.id} side="away" />
             </div>
-          </aside>
+
+            <div className="mx-auto mt-6 max-w-xl sm:mt-8">
+              <div className="mb-2 flex items-center justify-between text-[10.5px] font-semibold uppercase tracking-[0.12em] text-ink-dim">
+                <span>Model&apos;s read</span>
+                {match.venue && <span className="truncate pl-3 normal-case tracking-normal">{match.venue}</span>}
+              </div>
+              <SplitBar home={prediction.markets.home} draw={prediction.markets.draw} away={prediction.markets.away} size="lg" />
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* ------------------------------------------------------------ Tabs */}
+      <div className={`${containerClass()} pb-10 sm:pb-14`}>
+        <div className="mx-auto max-w-5xl">
+          <MatchTabs tabs={tabs} />
         </div>
       </div>
     </>
   );
 }
 
-/**
- * One side of the scoreline.
- *
- * Stacked below sm, side by side from there. The row layout does not survive a
- * phone: the crest is a fixed 48px and the club name sat next to it with
- * min-w-0, so once the column narrowed past about 60px the name was squeezed
- * to nothing and its text spilled out of its own box — "Vitória" clipped off
- * the left edge of the screen and "Grêmio" running past the right, taking the
- * whole document into horizontal scroll with them.
- *
- * min-w-0 is what allows that squeeze and is still needed for the grid track
- * to shrink at all, so the fix is to stop competing for the width: give the
- * name the column's full measure with the crest above it, and let a long name
- * wrap rather than overflow. break-words is the backstop for the case wrapping
- * cannot help — a single unbreakable club name longer than its column.
- */
-function TeamBlock({ team, align }: { team: { name: string; crest?: string }; align: "left" | "right" }) {
+/* ------------------------------------------------------------- Overview */
+
+function Overview({
+  match,
+  prediction,
+  analysis,
+  ctx,
+  live,
+  label,
+}: {
+  match: Match;
+  prediction: Prediction;
+  analysis: Analysis;
+  ctx: MatchContext;
+  live: boolean;
+  label: string;
+}) {
+  const m = prediction.markets;
+  const pick = prediction.topPick;
+  const homeForm: Outcome[] = ctx.home?.form.letters ?? prediction.form.home.entries.map((e) => e.result as Outcome);
+  const awayForm: Outcome[] = ctx.away?.form.letters ?? prediction.form.away.entries.map((e) => e.result as Outcome);
+
   return (
-    <div
-      className={`flex min-w-0 flex-col items-center gap-2 text-center sm:flex-row sm:gap-3 ${
-        align === "right" ? "sm:flex-row-reverse sm:text-right" : "sm:text-left"
-      }`}
-    >
-      <Crest src={team.crest} name={team.name} size={48} />
-      <h1 className="min-w-0 wrap-break-word font-display text-base font-bold leading-tight sm:text-2xl">
-        {team.name}
-      </h1>
+    <div className="grid gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] lg:items-start">
+      <div className="min-w-0 space-y-5">
+        {live && (
+          <Gate
+            requires="vip"
+            fallback={
+              <div className="card border-brand/25 bg-brand/[0.04] p-5">
+                <p className="flex items-center gap-2 text-sm font-semibold"><LiveDot /> Live win probability</p>
+                <p className="mt-1 text-xs text-ink-muted">Updates every ~25s as the match plays out. VIP unlocks this.</p>
+                <ButtonLink href="/account/billing?plan=vip" variant="ghost" className="mt-2 px-0 py-1 text-xs">Unlock VIP →</ButtonLink>
+              </div>
+            }
+          >
+            <LiveWinProbabilityPanel matchId={match.id} />
+          </Gate>
+        )}
+
+        {pick && prediction.sufficiency.publishable ? (
+          <section className="orbit-border card rounded-2xl p-5 sm:p-6">
+            <p className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-ink-dim">Our strongest read</p>
+            <div className="mt-2 flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+              <p className="font-display text-2xl font-bold text-ink sm:text-3xl">{pick.label}</p>
+              <div className="text-right">
+                <AnimatedNumber value={pick.probability * 100} decimals={1} suffix="%" className="font-display text-3xl font-extrabold text-brand sm:text-4xl" />
+              </div>
+            </div>
+            <p className="mt-3 text-sm leading-relaxed text-ink-muted">
+              Worth taking at <span className="tnum font-semibold text-ink">{odds(pick.fairOdds)}</span> or longer. Below that
+              price it loses money however often it lands.
+            </p>
+            {prediction.sufficiency.level === "limited" && (
+              <p className="mt-2 text-xs text-amber">Built on a thin history ({prediction.model.matchesUsed} games). Treat it as a guide.</p>
+            )}
+          </section>
+        ) : (
+          <section className="card p-5">
+            <p className="text-sm font-semibold text-amber">No pick for this game</p>
+            <p className="mt-1 text-xs leading-relaxed text-ink-dim">{prediction.sufficiency.reason}</p>
+          </section>
+        )}
+
+        <div className="stagger grid grid-cols-3 gap-3">
+          <Fact index={0} label="xG" value={`${m.expectedGoals.home.toFixed(1)} – ${m.expectedGoals.away.toFixed(1)}`} />
+          <Fact index={1} label="Over 2.5" value={percent(m.over["2.5"])} hot={m.over["2.5"] >= 0.6} />
+          <Fact index={2} label="Both score" value={percent(m.bttsYes)} hot={m.bttsYes >= 0.6} />
+        </div>
+
+        {(homeForm.length > 0 || awayForm.length > 0) && (
+          <section className="card p-5">
+            <div className="mb-3 flex items-baseline justify-between gap-3">
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-ink-muted">Form</h2>
+              <a href="#stats" className="text-xs font-medium text-brand hover:underline">Full stats →</a>
+            </div>
+            <div className="space-y-3">
+              <FormLine team={match.home} letters={homeForm} />
+              <FormLine team={match.away} letters={awayForm} />
+            </div>
+          </section>
+        )}
+
+        <AnalysisPanel analysis={analysis} matchId={match.id} />
+      </div>
+
+      <aside className="min-w-0 space-y-5 lg:sticky lg:top-[calc(var(--header-h)+4.5rem)]">
+        <AddToSlip prediction={prediction} />
+        <AskAboutMatch label={label} />
+        <p className="px-1 text-[11px] leading-relaxed text-ink-dim">
+          Probabilities are estimates from a statistical model, not facts. Prices shown are break-even, with no
+          bookmaker margin. 18+, bet responsibly.{" "}
+          <Link href={sportPath("trackRecord")} className="text-ink-muted underline-offset-2 hover:underline">See our record</Link>
+        </p>
+      </aside>
+    </div>
+  );
+}
+
+function Fact({ label, value, hot = false, index }: { label: string; value: string; hot?: boolean; index: number }) {
+  return (
+    <div style={{ ["--i" as string]: index }} className={`rounded-xl border px-3 py-3 text-center ${hot ? "border-brand/25 bg-brand/[0.06]" : "border-line bg-surface"}`}>
+      <p className="truncate text-[10px] font-medium uppercase tracking-wider text-ink-dim">{label}</p>
+      <p className={`tnum mt-1 font-display text-lg font-bold sm:text-xl ${hot ? "text-brand" : "text-ink"}`}>{value}</p>
+    </div>
+  );
+}
+
+function FormLine({ team, letters }: { team: Match["home"]; letters: Outcome[] }) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <span className="flex min-w-0 items-center gap-2.5">
+        <Crest src={team.crest} name={team.name} size={22} />
+        <span className="min-w-0 truncate text-sm font-medium">{team.name}</span>
+      </span>
+      {letters.length > 0 ? <FormPips letters={letters.slice(0, 5)} /> : <span className="text-xs text-ink-dim">No recent games</span>}
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------- Markets */
+
+function Markets({ prediction, matchId }: { prediction: Prediction; matchId: string }) {
+  return (
+    <div className="space-y-5">
+      {/* Free and server-rendered: the 1X2 split is what search indexes and
+          what earns the click, so it never sits behind a wall (lib/gating.ts). */}
+      <OutcomePanel prediction={prediction} />
+      {/* The only numbers here a bookmaker produced; streamed, because two
+          metered providers sit behind it. DepthGate is a conversion wall:
+          both providers are fetched a competition at a time and cached. */}
+      <DepthGate reason="See the price you are actually being offered">
+        <Suspense fallback={<PricesPanelSkeleton />}>
+          <PricesPanel prediction={prediction} />
+        </Suspense>
+      </DepthGate>
+      {/* Every market beyond 1X2 comes off the same scoreline distribution,
+          so depth is one decision, not five. */}
+      <DepthGate reason="See every market on this match">
+        <GoalsPanel prediction={prediction} />
+        <div className="grid gap-5 sm:grid-cols-2">
+          <BttsPanel prediction={prediction} />
+          <DoubleChancePanel prediction={prediction} />
+        </div>
+        <CorrectScorePanel prediction={prediction} />
+      </DepthGate>
+      <Gate requires="pass">
+        <AsianHandicapClient matchId={matchId} />
+      </Gate>
+    </div>
+  );
+}
+
+/**
+ * One side of the scoreboard: crest above the name on every screen, so a
+ * long club name wraps under its badge instead of squeezing the score.
+ * The crest morphs in from the row the visitor tapped.
+ */
+function TeamBlock({ team, matchId, side }: { team: Match["home"]; matchId: string; side: "home" | "away" }) {
+  return (
+    <div className="flex min-w-0 flex-col items-center gap-2 text-center sm:gap-3">
+      <Morph name={morphName(matchId, side)}>
+        <span className="inline-flex">
+          <Crest src={team.crest} name={team.name} size={56} />
+        </span>
+      </Morph>
+      <p className="min-w-0 wrap-break-word font-display text-base font-bold leading-tight sm:text-2xl">{team.name}</p>
     </div>
   );
 }

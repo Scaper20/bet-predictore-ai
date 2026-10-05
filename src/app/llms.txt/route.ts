@@ -50,7 +50,13 @@ BetriX is an analytics product, not a bookmaker: it takes no bets and holds no f
 - [Today's predictions](${SITE}${sportPath("predictions")}): every upcoming fixture with model probabilities
 - [Fixtures](${SITE}${sportPath("fixtures")}): upcoming matches, kickoff times in WAT
 - [Live scores](${SITE}${sportPath("live")})
-- [Trends](${SITE}${sportPath("trends")}): goal expectation, over/under and BTTS leans across the upcoming slate
+- [Results](${SITE}${sportPath("results")}): final scores by day, with how each published pick did
+- [League tables](${SITE}${sportPath("tables")}): standings, updated live while games are in play
+- [Head-to-head](${SITE}${sportPath("h2h")}): every meeting between any two teams
+- [Team form](${SITE}${sportPath("teamForm")}) and [goals stats](${SITE}${sportPath("goals")}): last ten games, over/under and GG rates by team
+- [Model ratings](${SITE}${sportPath("ratings")}): every team rated 1 to 10 from its results
+- [Trends](${SITE}${sportPath("trends")}): streaks for every team playing in the next three days
+- [How our picks work](${SITE}/how-it-works), [guides](${SITE}/guides) and [help](${SITE}/help)
 - [Track record](${SITE}${sportPath("trackRecord")}): every settled pick and how it did
 - [Pricing](${SITE}/pricing)
 - [Responsible gambling](${SITE}/responsible-gambling)

@@ -82,29 +82,34 @@ export function ForYouDashboard({ feed }: { feed: ForYouFeedPayload }) {
   const trackRecordHref = sportPath("trackRecord", feed.sport);
 
   return (
-    <Container width="shell" className="space-y-10 pb-14 pt-7 sm:space-y-14 sm:pb-20 sm:pt-10">
-      {!feed.signedIn && <SignedOutBanner />}
-
+    <Container width="shell" className="space-y-10 pb-14 pt-6 sm:space-y-14 sm:pb-20 sm:pt-8">
       <section>
-        <SectionHeading
-          eyebrow={feed.usingDefaults ? "A starting point" : "In your leagues"}
-          title={
-            feed.usingDefaults
-              ? "Picks from the competitions most people follow"
-              : "Picks from the competitions you follow"
-          }
-          description={
-            feed.usingDefaults
-              ? "You haven't chosen your competitions yet, so this is our default set. Pick your own and this page only shows those."
-              : "Only these competitions appear here. Anything from elsewhere is in the slate-wide sections below, and labelled as such."
-          }
-        />
+        {/* The page opens on the feed itself: no page title or explainer
+            above it, just what it is and whose leagues these are. */}
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-brand/12 text-brand" aria-hidden>
+              <svg viewBox="0 0 20 20" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.8">
+                <path d="M10 17s-6-3.6-6-8.2A3.4 3.4 0 0 1 10 6.4a3.4 3.4 0 0 1 6 2.4C16 13.4 10 17 10 17Z" strokeLinejoin="round" />
+              </svg>
+            </span>
+            <div className="min-w-0">
+              <h2 className="font-display text-2xl font-bold leading-tight">In your leagues</h2>
+              {feed.usingDefaults && (
+                <p className="text-xs text-ink-dim">A starting set until you choose your own competitions.</p>
+              )}
+            </div>
+          </div>
+          <ButtonLink href={predictionsHref} variant="secondary" className="px-4 py-2 text-xs">
+            All predictions →
+          </ButtonLink>
+        </div>
 
-        <div className="mt-5 flex flex-wrap items-center gap-2">
+        <div className="no-scrollbar -mx-4 mt-4 flex items-center gap-2 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:px-0">
           {feed.followedLeagues.map((league) => (
             <span
               key={league.code}
-              className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface-2 px-3 py-1 text-xs font-medium text-ink"
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-line bg-surface-2 px-3 py-1 text-xs font-medium text-ink"
             >
               <span aria-hidden>{league.flag}</span>
               <span>{league.shortName}</span>
@@ -113,7 +118,7 @@ export function ForYouDashboard({ feed }: { feed: ForYouFeedPayload }) {
           {feed.signedIn && (
             <Link
               href="/account#preferences"
-              className="ml-1 text-xs font-semibold text-brand underline underline-offset-2 hover:no-underline"
+              className="ml-1 shrink-0 text-xs font-semibold text-brand underline underline-offset-2 hover:no-underline"
             >
               {feed.usingDefaults ? "Choose your competitions" : "Edit"}
             </Link>
@@ -171,6 +176,8 @@ export function ForYouDashboard({ feed }: { feed: ForYouFeedPayload }) {
           )}
         </div>
       </section>
+
+      {!feed.signedIn && <SignedOutBanner />}
 
       {(feed.bestBet || feed.quickPicks.length > 0) && (
         <section>
@@ -321,10 +328,6 @@ function PickRow({
               would break even. Named accordingly. */}
           <p className="text-[11px] uppercase tracking-wider text-ink-muted">Break-even</p>
           <p className="tnum text-sm font-semibold">{odds(pick.fairOdds)}</p>
-        </div>
-        <div>
-          <p className="text-[11px] uppercase tracking-wider text-ink-muted">Confidence</p>
-          <p className="tnum text-sm font-semibold">{pick.confidence}%</p>
         </div>
       </div>
 

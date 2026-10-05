@@ -66,16 +66,15 @@ const nextConfig: NextConfig = {
         destination: `/${DEFAULT_SPORT}/match/:id`,
         permanent: true,
       },
-      /*
-       * /how-it-works is gone. It sent visitors to the track record rather
-       * than 404ing them, because the page's job was to earn trust and the
-       * settled record now does that job — with results rather than a formula.
-       */
-      {
-        source: "/how-it-works",
-        destination: `/${DEFAULT_SPORT}/track-record`,
-        permanent: true,
-      },
+      // The coming-soon slugs of features that have shipped, for anyone who
+      // bookmarked the placeholder.
+      ...[
+        ["results", "results"], ["tables", "tables"], ["h2h", "h2h"],
+        ["team-form", "team-form"], ["goals-stats", "goals-stats"], ["ratings", "ratings"],
+      ].map(([slug, route]) => ({ source: `/soon/${slug}`, destination: `/${DEFAULT_SPORT}/${route}`, permanent: true })),
+      ...["how-it-works", "guides", "help"].map((slug) => ({ source: `/soon/${slug}`, destination: `/${slug}`, permanent: true })),
+      ...["best-bets", "markets"].map((slug) => ({ source: `/soon/${slug}`, destination: `/${DEFAULT_SPORT}/predictions`, permanent: true })),
+      { source: "/soon/blog", destination: "/", permanent: true },
     ];
   },
 };

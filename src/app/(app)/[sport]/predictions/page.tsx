@@ -10,6 +10,8 @@ import { predictBatch, upcomingFeed, bestBetOfDay } from "@/lib/service";
 import { getPreferences } from "@/lib/preferences";
 import type { Prediction } from "@/lib/model/predict";
 import { leagueByCode } from "@/lib/leagues";
+import { groupByDay } from "@/lib/format";
+import { FixtureRow } from "@/components/match/fixture-row";
 import { containerClass } from "@/components/ui/container";
 import { sportPath } from "@/lib/routes";
 
@@ -88,15 +90,20 @@ export default async function PredictionsPage({
     .sort(def ? undefined : byFollowed);
   const withheld = predictions.filter((p) => !p.sufficiency.publishable);
 
+  const days = groupByDay(publishable.map((p) => p.match)).map((g) => ({
+    day: g.day,
+    predictions: g.matches.map((m) => publishable.find((p) => p.match.id === m.id)!).sort(def ? undefined : byFollowed),
+  }));
+
   return (
     <>
       <PageHeader
         eyebrow="Predictions"
-        title={def ? `${def.name} predictions` : "Today's predictions"}
-        description="Each fixture is modelled against its own competition's completed results. Where the history is too thin, no pick is published — that fixture is listed separately below."
+        title={def ? `${def.name} predictions` : "Predictions"}
+        description="Every game we can rate over the next few days. The bar shows who the model favours; the pick is the one selection it would stand on."
       />
 
-      <div className={`${containerClass()} space-y-6 py-7 sm:py-10`}>
+      <div className={`${containerClass()} space-y-7 py-7 sm:py-10`}>
         <Suspense fallback={<div className="h-10" />}>
           <LeagueFilter />
         </Suspense>
@@ -114,41 +121,43 @@ export default async function PredictionsPage({
           />
         ) : (
           <>
-            {publishable.length > 0 && (
-              <section>
+            {days.map((d) => (
+              <section key={d.day} className="scroll-reveal">
                 <div className="mb-4 flex items-center gap-3">
-                  <h2 className="text-sm font-semibold uppercase tracking-wider text-ink-muted">
-                    Modelled fixtures
-                  </h2>
-                  <Badge tone="brand">{publishable.length}</Badge>
+                  <h2 className="font-display text-xl font-bold">{d.day}</h2>
+                  <Badge tone="brand">{d.predictions.length}</Badge>
+                  <span className="h-px flex-1 bg-line" />
                 </div>
-                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                  {publishable.map((p) => (
-                    <PredictionCard key={p.match.id} prediction={p} />
+                <div className="stagger grid gap-4 sm:grid-cols-2 sm:gap-5 xl:grid-cols-3">
+                  {d.predictions.map((p, i) => (
+                    <div key={p.match.id} className="min-w-0" style={{ ["--i" as string]: i }}>
+                      <PredictionCard prediction={p} morph={p.match.id !== bestBet?.match.id} />
+                    </div>
                   ))}
                 </div>
               </section>
-            )}
+            ))}
 
             {withheld.length > 0 && (
-              <section className="pt-4">
-                <div className="mb-4 flex items-center gap-3">
-                  <h2 className="text-sm font-semibold uppercase tracking-wider text-ink-muted">
-                    Not enough history to call
-                  </h2>
+              <details className="card group overflow-hidden">
+                <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-3.5 sm:px-5">
                   <Badge tone="amber">{withheld.length}</Badge>
-                </div>
-                <p className="mb-4 max-w-2xl text-xs leading-relaxed text-ink-dim">
-                  These fixtures are real and the underlying numbers are still computed, but the
-                  competition does not have enough completed matches behind it to stand a
-                  selection on. They are shown so you know they exist, not so you bet them.
-                </p>
-                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-semibold text-ink">Not enough history to call</span>
+                    <span className="block text-xs text-ink-dim">Real fixtures in competitions too new to the model to stand a pick on.</span>
+                  </span>
+                  <svg viewBox="0 0 20 20" className="size-4 shrink-0 text-ink-dim transition-transform duration-300 group-open:rotate-180" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                    <path d="m5 7.5 5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </summary>
+                <ul className="divide-y divide-line border-t border-line">
                   {withheld.map((p) => (
-                    <PredictionCard key={p.match.id} prediction={p} />
+                    <li key={p.match.id}>
+                      <FixtureRow match={p.match} />
+                    </li>
                   ))}
-                </div>
-              </section>
+                </ul>
+              </details>
             )}
           </>
         )}

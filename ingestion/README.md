@@ -119,7 +119,7 @@ python -m betrix_ingest <job> [--league CODE ...] [--dry-run] [-v]
 
 | Job | What it does | Schedule (UTC) |
 |---|---|---|
-| `sync` | competitions from the catalogue; TheSportsDB club lists, alternates, badges | Mondays 02:00 |
+| `sync` | competitions from the catalogue; TheSportsDB club lists, alternates, badges; then links every club spelling in the training history to its club (`link-history`, so the model's history reads under fixture names) | Mondays 02:00 |
 | `fixtures [--days 14] [--with-espn]` | next N days from TheSportsDB + football-data.org (+ ESPN cross-check) | 03:15, 11:15, 17:15; with ESPN 02:45 |
 | `results [--days 2] [--full-season]` | finished games from TheSportsDB | 05:40 and hourly 14:40–23:40; whole season Mondays 04:30 |
 | `tables` | league standings (not cups), TheSportsDB first, football-data.org where it has none | 06:50, 23:50 |

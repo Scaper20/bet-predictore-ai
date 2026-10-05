@@ -1,52 +1,61 @@
 import Link from "next/link";
 import type { Prediction } from "@/lib/model/predict";
-import { Badge } from "@/components/ui/primitives";
-import { odds, percent } from "@/lib/format";
+import { Crest } from "@/components/ui/crest";
+import { SplitBar } from "@/components/stats/split-bar";
+import { AnimatedNumber } from "@/components/motion/animated-number";
+import { kickoffTime, odds, relativeDay } from "@/lib/format";
 import { matchPath } from "@/lib/routes";
 
 /**
  * The one deep pick given away free, no login. Headline numbers only — the
- * full panel stack (value, Kelly, Asian handicap, enhanced briefing) still lives
- * behind /match/[id]'s normal gates, so this reads as a hook, not a giveaway
- * of the whole paid experience.
+ * full panel stack still lives behind the match page's normal gates, so this
+ * reads as a hook, not the whole paid experience. Its border slowly orbits
+ * (.orbit-border) so it reads as the day's headline without shouting.
  */
 export function BestBetOfDay({ prediction }: { prediction: Prediction | null }) {
   if (!prediction?.topPick) return null;
-  const { match, topPick } = prediction;
+  const { match, topPick, markets } = prediction;
 
-  /*
-   * Stacked below sm, one row from there.
-   *
-   * As a single flex row this did not survive a phone. The badge and the
-   * right-hand cluster are both intrinsically sized, so the fixture line — the
-   * only part that identifies which match this is — absorbed whatever was left
-   * over, which at 375 was about ten pixels: the card advertised the best bet
-   * of the day as "A…". flex-wrap could not save it, because a min-w-0 flex-1
-   * child shrinks to nothing rather than wrapping to the next line.
-   */
   return (
     <Link
       href={matchPath(match.id)}
-      className="card card-hover flex flex-col gap-3 border-brand/30 p-5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4 sm:p-7"
+      className="orbit-border card card-hover group grid gap-5 overflow-hidden rounded-2xl p-5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-8 sm:p-7"
     >
-      <Badge tone="brand" className="self-start sm:self-auto">
-        Best bet today
-      </Badge>
-      <div className="min-w-0 flex-1">
-        {/* Two lines on a phone, where there is height to spare and no width. */}
-        <p className="text-sm text-ink-muted sm:truncate">
-          {match.league.name} · {match.home.name} vs {match.away.name}
-        </p>
-        <p className="mt-0.5 text-base font-semibold">{topPick.label}</p>
-      </div>
-      <div className="flex shrink-0 items-center justify-between gap-4 sm:justify-end sm:text-right">
-        <div>
-          <p className="tnum text-lg font-bold text-brand">{percent(topPick.probability, 1)}</p>
-          <p className="text-[11px] text-ink-dim">needs {odds(topPick.fairOdds)}+</p>
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-brand px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-[0.14em] text-brand-ink">
+            <svg viewBox="0 0 16 16" className="size-3" fill="currentColor" aria-hidden>
+              <path d="M8 1.5 9.9 5.6l4.4.5-3.3 3 1 4.4L8 11.3 4 13.5l1-4.4-3.3-3 4.4-.5Z" />
+            </svg>
+            Best bet today
+          </span>
+          <span className="truncate text-xs text-ink-muted">
+            {match.league.name} · {relativeDay(match.kickoff)} {kickoffTime(match.kickoff)}
+          </span>
         </div>
-        <Badge tone={topPick.confidence >= 55 ? "brand" : "amber"}>
-          {Math.round(topPick.confidence)}/100
-        </Badge>
+
+        <div className="mt-4 flex min-w-0 items-center gap-3">
+          <Crest src={match.home.crest} name={match.home.name} size={30} />
+          <p className="min-w-0 truncate font-display text-lg font-bold sm:text-xl">
+            {match.home.name} <span className="font-sans text-sm font-medium text-ink-dim">v</span> {match.away.name}
+          </p>
+          <Crest src={match.away.crest} name={match.away.name} size={30} />
+        </div>
+
+        <div className="mt-4 max-w-md">
+          <SplitBar home={markets.home} draw={markets.draw} away={markets.away} />
+        </div>
+      </div>
+
+      <div className="flex items-end justify-between gap-6 rounded-xl border border-brand/20 bg-brand/[0.06] px-5 py-4 sm:block sm:min-w-52 sm:text-right">
+        <div>
+          <p className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-ink-dim">Our pick</p>
+          <p className="mt-1 text-base font-bold text-ink sm:text-lg">{topPick.label}</p>
+        </div>
+        <div className="sm:mt-3">
+          <AnimatedNumber value={topPick.probability * 100} decimals={1} suffix="%" className="font-display text-3xl font-extrabold text-brand" />
+          <p className="tnum text-[11px] text-ink-dim">worth it at {odds(topPick.fairOdds)}+</p>
+        </div>
       </div>
     </Link>
   );

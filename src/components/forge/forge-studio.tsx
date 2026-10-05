@@ -228,7 +228,7 @@ export function ForgeStudio() {
 
   const share = async () => {
     if (!slip?.legs.length) return;
-    const t = slipTotals(slip.legs, settings.stake);
+    const t = slipTotals(slip.legs, EXAMPLE_STAKE);
     const text = [
       `My BetriX Forge slip · total odds ${t.odds.toFixed(2)}`,
       ...slip.legs.map((l) => `• ${l.fixture}: ${l.label} @ ${legOdds(l).toFixed(2)}`),
@@ -268,7 +268,6 @@ export function ForgeStudio() {
           {hasSlip && slip ? (
             <ResultPanel
               slip={slip}
-              stake={settings.stake}
               locked={locked}
               busy={busy}
               error={error}
@@ -300,6 +299,36 @@ export function ForgeStudio() {
   );
 }
 
+/**
+ * Forge doesn't take bets or stakes, so there is no stake box: a field for
+ * money reads as if the slip could be placed here. What a slip pays is
+ * still worth knowing, so it is shown on one fixed example amount.
+ */
+const EXAMPLE_STAKE = 1000;
+
+function ReturnInsight({ odds, probability }: { odds: number; probability: number }) {
+  const returns = Math.round(EXAMPLE_STAKE * odds);
+  return (
+    <div className="mt-4 flex items-start gap-3 rounded-xl border border-brand/20 bg-brand/[0.06] px-4 py-3.5">
+      <span className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-full bg-brand/15 text-brand" aria-hidden>
+        <svg viewBox="0 0 20 20" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+          <path d="M10 3v14M6.5 6.5h5a2.5 2.5 0 0 1 0 5h-3a2.5 2.5 0 0 0 0 5H14" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </span>
+      <p className="text-sm leading-relaxed text-ink-muted">
+        If you placed <span className="font-semibold text-ink">{naira(EXAMPLE_STAKE)}</span> on this slip with your bookmaker, it
+        would pay <span className="tnum font-bold text-brand">{naira(returns)}</span>{" "}
+        <span className="text-ink-dim">(₦{(returns - EXAMPLE_STAKE).toLocaleString("en-NG")} profit)</span> if every pick lands
+        {probability > 0 && probability < 1 ? (
+          <>, which a slip like this does {oneIn(probability)}{1 / probability >= 1.15 ? " times" : ""}.</>
+        ) : (
+          "."
+        )}
+      </p>
+    </div>
+  );
+}
+
 /* --------------------------------------------------------------- settings */
 
 function SettingsPanel({
@@ -318,14 +347,10 @@ function SettingsPanel({
   onGenerate: () => void;
 }) {
   const [oddsText, setOddsText] = useState(settings.targetOdds.toFixed(2));
-  const [stakeText, setStakeText] = useState(String(settings.stake));
   useEffect(() => {
-    const t = window.setTimeout(() => {
-      setOddsText(settings.targetOdds.toFixed(2));
-      setStakeText(String(settings.stake));
-    }, 0);
+    const t = window.setTimeout(() => setOddsText(settings.targetOdds.toFixed(2)), 0);
     return () => window.clearTimeout(t);
-  }, [settings.targetOdds, settings.stake]);
+  }, [settings.targetOdds]);
 
   const toggleMarket = (m: ForgeMarket) => {
     const has = settings.markets.includes(m);
@@ -478,20 +503,6 @@ function SettingsPanel({
             </Select>
           </Section>
         </div>
-
-        <Section title="Stake">
-          <label className="flex items-center gap-1 rounded-xl border border-line bg-surface-2 px-3.5 py-3 focus-within:border-brand/50">
-            <span className="font-mono text-lg font-bold text-ink-muted">₦</span>
-            <input
-              inputMode="numeric"
-              value={Number(stakeText || 0).toLocaleString("en-NG")}
-              onChange={(e) => setStakeText(e.target.value.replace(/\D/g, "").slice(0, 8))}
-              onBlur={() => patch({ stake: Number(stakeText || 0) })}
-              className="tnum w-full bg-transparent font-mono text-lg font-bold text-ink outline-none"
-              aria-label="Stake in naira"
-            />
-          </label>
-        </Section>
       </div>
 
       <div
@@ -537,7 +548,6 @@ function AllowanceLine({ allowance, remaining }: { allowance: Allowance | null; 
 
 function ResultPanel({
   slip,
-  stake,
   locked,
   busy,
   error,
@@ -553,7 +563,6 @@ function ResultPanel({
   onRemove,
 }: {
   slip: Slip;
-  stake: number;
   locked: Set<string>;
   busy: boolean;
   error: { message: string; code?: string } | null;
@@ -568,7 +577,7 @@ function ResultPanel({
   onSwap: (leg: ForgeLeg) => void;
   onRemove: (leg: ForgeLeg) => void;
 }) {
-  const t = useMemo(() => slipTotals(slip.legs, stake), [slip.legs, stake]);
+  const t = useMemo(() => slipTotals(slip.legs, EXAMPLE_STAKE), [slip.legs]);
   const onSlip = new Set(slip.legs.map((l) => l.matchId));
   const style = RISK_PRESETS[slip.settings.risk].label;
   const target = slip.settings.targetOdds;
@@ -604,11 +613,11 @@ function ResultPanel({
 
       {/* totals */}
       <div className="card p-5 sm:p-6">
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-3">
           <Total label="Total odds" value={t.odds.toFixed(2)} />
           <Total label="Chance to win" value={pct(t.probability)} hint={oneIn(t.probability)} />
-          <Total label={`${naira(stake)} returns`} value={naira(t.returns)} accent />
         </div>
+        <ReturnInsight odds={t.odds} probability={t.probability} />
         <p className="mt-4 text-xs leading-relaxed text-ink-dim">
           {t.picks} {t.picks === 1 ? "pick" : "picks"} across {slip.legs.length} {slip.legs.length === 1 ? "game" : "games"}.{" "}
           {t.priced > 0
