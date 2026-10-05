@@ -69,7 +69,20 @@ function gradeHandicap(side: "home" | "away", line: number, home: number, away: 
 }
 
 /** Grades a market against a score — final, or the current one for a live game. */
+/** Same-game combos from Forge are stored as "combo:<market>+<market>…". */
+export const COMBO_PREFIX = "combo:";
+
 export function gradeMarket(market: string, home: number, away: number): PickResult | null {
+  // A combo wins only if every part wins; any loss loses it. A part that
+  // pushes drops out, the way a bookmaker settles a void leg in a bet builder.
+  if (market.startsWith(COMBO_PREFIX)) {
+    const parts = market.slice(COMBO_PREFIX.length).split("+");
+    if (parts.length < 2) return null;
+    const grades = parts.map((m) => gradeMarket(m, home, away));
+    if (grades.some((g) => g === null)) return null;
+    if (grades.includes("lose")) return "lose";
+    return grades.includes("win") ? "win" : "push";
+  }
   const ah = market.match(/^ah:(home|away):(-?\d+(?:\.\d+)?)$/);
   if (ah) return gradeHandicap(ah[1] as "home" | "away", Number(ah[2]), home, away);
   return evaluatePick(market, home, away);

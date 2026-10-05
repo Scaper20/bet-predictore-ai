@@ -66,3 +66,15 @@ export function MySlipsLink({ className = "" }: { className?: string }) {
     </Link>
   );
 }
+
+/** Quiet link to Forge from the selection builder. */
+export function ForgeLink() {
+  return (
+    <Link
+      href={sportPath("forge")}
+      className="inline-flex items-center gap-2 rounded-lg border border-brand/30 bg-brand/10 px-4 py-2 text-xs font-semibold text-brand transition-colors hover:border-brand/60"
+    >
+      Build one with Forge
+    </Link>
+  );
+}

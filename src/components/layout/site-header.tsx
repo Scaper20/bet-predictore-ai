@@ -39,6 +39,7 @@ const NAV: readonly NavItem[] = [
   { route: "forYou", label: "For You" },
   { route: "live", label: "Live" },
   { route: "predictions", label: "Predictions" },
+  { route: "forge", label: "Forge" },
   { route: "fixtures", label: "Fixtures" },
   { route: "trackRecord", label: "Track Record" },
   { href: "/pricing", label: "Pricing" },

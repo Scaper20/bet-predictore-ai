@@ -34,8 +34,9 @@ export function ChatWidget() {
   const pathname = usePathname();
   const { entitlement } = useEntitlement();
   const vip = meetsTier(entitlement.tier, "vip");
-  // Ask BetriX's panel covers this corner (and its send button) while open.
-  const askOpen = useAskState().open;
+  // Ask BetriX's panel covers this corner (and its send button) while open,
+  // and Forge's action bar sits there on phones.
+  const askOpen = useAskState().open || /\/forge\/?$/.test(pathname);
   const [open, setOpen] = useState(false);
   const [thread, setThread] = useState<ThreadState>({ status: "idle" });
   const [draft, setDraft] = useState("");

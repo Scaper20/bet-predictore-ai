@@ -42,6 +42,7 @@ export function MobileNav() {
     {
       title: "Browse",
       links: [
+        { href: sportPath("forge", sport), label: "Forge — build my slip" },
         { href: sportPath("fixtures", sport), label: "Fixtures" },
         { href: sportPath("trends", sport), label: "Trends" },
         { href: sportPath("trackRecord", sport), label: "Track Record" },

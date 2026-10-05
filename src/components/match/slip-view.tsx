@@ -223,7 +223,12 @@ export function SlipView() {
         icon="🧾"
         title="No selections yet"
         description="Add selections from any match page and this builds the true combined probability — plus what the combined pick is really worth against the price you have been offered."
-        action={<ButtonLink href={sportPath("predictions")} variant="secondary">Browse predictions</ButtonLink>}
+        action={
+          <div className="flex flex-wrap justify-center gap-2">
+            <ButtonLink href={sportPath("forge")}>Let Forge build one</ButtonLink>
+            <ButtonLink href={sportPath("predictions")} variant="secondary">Browse predictions</ButtonLink>
+          </div>
+        }
       />
     );
   }
