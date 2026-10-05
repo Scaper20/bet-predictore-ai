@@ -8,10 +8,11 @@ record. This module maps every incoming name onto one ``teams`` row:
 1. a stored alias for this scope (team_aliases) wins outright;
 2. else a club in scope whose normalised name is identical (same rule as
    normaliseKey() in src/lib/model/fit.ts and team_key() in SQL);
-3. else the one club in scope whose name contains this one, or is contained
-   by it ("Bendel" / "Bendel Insurance"), when exactly one does;
-4. else a curated seed (aliases.json) for real renames no rule can see,
+3. else a curated seed (aliases.json) for real renames no rule can see,
    such as "Rangers International" and "Enugu Rangers";
+4. else the one club in scope whose name contains this one word for word, or
+   is contained by it ("Bendel" / "Bendel Insurance"), when exactly one does
+   (see ``_contains`` for when this guess is not made);
 5. else a new team, if this source may create teams there (``can_create``);
    otherwise the name is logged in unresolved_entities for a person to
    place, and the row skipped.
@@ -67,8 +68,7 @@ def can_create(source: str, scope: str) -> bool:
 _STRIP = re.compile(r"\b(fc|afc|cf|sc|ac|as|ss|ssc|bk|sk|if|club|de|the)\b")
 
 
-def team_key(name: str) -> str:
-    """Identical to normaliseKey() in src/lib/model/fit.ts. Do not diverge."""
+def _normalised(name: str) -> str:
     s = unicodedata.normalize("NFD", name.lower())
     s = "".join(c for c in s if not unicodedata.combining(c))
     s = _STRIP.sub("", s)
@@ -76,7 +76,33 @@ def team_key(name: str) -> str:
     s = re.sub(r"\bunited\b", "utd", s)
     s = re.sub(r"\bwolverhampton wanderers\b", "wolves", s)
     s = re.sub(r"\btottenham hotspur\b", "tottenham", s)
-    return re.sub(r"[^a-z0-9]", "", s)
+    return s
+
+
+def team_key(name: str) -> str:
+    """Identical to normaliseKey() in src/lib/model/fit.ts. Do not diverge."""
+    return re.sub(r"[^a-z0-9]", "", _normalised(name))
+
+
+def name_tokens(name: str) -> frozenset[str]:
+    """The words of a name after team_key's stripping ("Paris Saint-Germain" -> paris, saint, germain)."""
+    return frozenset(t for t in re.split(r"[^a-z0-9]+", _normalised(name.replace(".", ""))) if t)
+
+
+#: Scopes where containment is never guessed. Among countries it is wrong in
+#: exactly the cases that matter (Niger inside Nigeria, Congo inside DR
+#: Congo). The continental fallback scopes hold whichever clubs turned up in
+#: a Champions League, so the club that "contains" a name is rarely the one
+#: meant: Rayon Sports is not AS Port, Simba Bhora is not Simba.
+NO_CONTAINMENT_SCOPES = {"international", "europe", "africa", "world", "south america", "north america"}
+
+#: Words too common to identify a club on their own ("Sport", "Red Star").
+GENERIC_TOKENS = {
+    "sport", "sports", "sportif", "sportive", "sporting", "real", "athletic", "atletico", "utd", "city", "town",
+    "rovers", "stars", "star", "red", "al", "fk", "sv", "us", "cs", "es", "rc", "cd", "ud", "sd", "ca", "ec",
+    "se", "cr", "tp", "royal", "racing", "olympique", "inter", "dynamo", "dinamo", "young", "boys", "academy",
+    "and", "da", "do", "du", "la", "le", "1", "fbc", "ssd", "calcio", "football", "futbol", "clube",
+}
 
 
 def loose_key(name: str) -> str:
@@ -94,7 +120,35 @@ COUNTRY_CODES = {
     "POR": "portugal", "BEL": "belgium", "SCO": "scotland", "AUT": "austria", "SUI": "switzerland",
     "TUR": "turkey", "GRE": "greece", "UKR": "ukraine", "CZE": "czech republic", "CRO": "croatia",
     "SRB": "serbia", "DEN": "denmark", "BRA": "brazil",
+    # The rest of UEFA, as TheSportsDB names the countries (its club lists
+    # file cup clubs by country, so both sources must land in one scope).
+    "MCO": "france", "MON": "france",  # Monaco plays in Ligue 1
+    "NOR": "norway", "SWE": "sweden", "FIN": "finland", "ISL": "iceland", "IRL": "ireland",
+    "NIR": "northern ireland", "WAL": "wales", "POL": "poland", "RUS": "russia", "BLR": "belarus",
+    "MDA": "moldova", "ROU": "romania", "BUL": "bulgaria", "HUN": "hungary", "SVK": "slovakia",
+    "SVN": "slovenia", "BIH": "bosnia and herzegovina", "MNE": "montenegro", "MKD": "macedonia",
+    "ALB": "albania", "KOS": "kosovo", "KVX": "kosovo", "CYP": "cyprus", "ISR": "israel", "AZE": "azerbaijan",
+    "ARM": "armenia", "GEO": "georgia", "KAZ": "kazakhstan", "LVA": "latvia", "LTU": "lithuania",
+    "EST": "estonia", "LUX": "luxembourg", "MLT": "malta", "GIB": "gibraltar", "AND": "andorra",
+    "SMR": "san marino", "FRO": "faroe islands", "LIE": "liechtenstein",
+    # The rest of CAF.
+    "BEN": "benin", "BFA": "burkina faso", "BDI": "burundi", "CHA": "chad", "TCD": "chad", "COM": "comoros",
+    "DJI": "djibouti", "EQG": "equatorial guinea", "GNQ": "equatorial guinea", "GAB": "gabon", "GAM": "gambia",
+    "GNB": "guinea-bissau", "LES": "lesotho", "MAD": "madagascar", "MWI": "malawi", "MTN": "mauritania",
+    "MRI": "mauritius", "MOZ": "mozambique", "NAM": "namibia", "NIG": "niger", "RWA": "rwanda",
+    "SEY": "seychelles", "SLE": "sierra leone", "SOM": "somalia", "SWZ": "swaziland", "TOG": "togo",
+    "CGO": "congo", "LBR": "liberia", "CPV": "cape verde", "SSD": "south sudan", "ERI": "eritrea",
 }
+
+
+#: TheSportsDB country names that differ from the scopes above.
+_COUNTRY_SCOPE = {"the netherlands": "netherlands", "czechia": "czech republic", "cote d'ivoire": "ivory coast",
+                  "congo-dr": "dr congo", "democratic republic of congo": "dr congo"}
+
+
+def scope_for_country(country: str) -> str:
+    c = country.strip().lower()
+    return _COUNTRY_SCOPE.get(c, c)
 
 
 @dataclass
@@ -152,7 +206,7 @@ class Resolver:
 
     # -- matching ------------------------------------------------------------
 
-    def _match(self, name: str, scope: str) -> tuple[Team | None, str]:
+    def _match(self, name: str, scope: str, source: str = "") -> tuple[Team | None, str]:
         key = loose_key(name)
         if not key:
             return None, ""
@@ -164,24 +218,47 @@ class Resolver:
         if len(exact) == 1:
             return exact[0], "normalised"
 
-        # Containment is for clubs ("Bendel" / "Bendel Insurance"). Among
-        # countries it is wrong in exactly the cases that matter: Niger is
-        # inside Nigeria, Congo inside DR Congo, Guinea inside Guinea-Bissau.
-        if len(key) >= 4 and scope != "international":
-            near = [
-                t for t in teams
-                if len(loose_key(t.name)) >= 4 and (key in loose_key(t.name) or loose_key(t.name) in key)
-            ]
-            if len(near) == 1:
-                return near[0], "contains"
-
         canonical = self._seeds.get((scope, key))
         if canonical:
             seeded = [t for t in teams if loose_key(t.name) in {loose_key(canonical)} or
                       self._seeds.get((scope, loose_key(t.name))) == canonical]
             if len(seeded) == 1:
                 return seeded[0], "seed"
+
+        if (near := self._contains(name, scope, source, teams)) is not None:
+            return near, "contains"
         return None, ""
+
+    @staticmethod
+    def _contains(name: str, scope: str, source: str, teams: list[Team]) -> Team | None:
+        """The one club whose name holds this one word for word, or is held by it.
+
+        "Bendel" / "Bendel Insurance" and "Brighton" / "Brighton and Hove
+        Albion" match; "Rayon Sports" / "AS Port" and "Vita Club" / "VitalO" do
+        not (letters inside a word are not a word). The shorter name needs a
+        word that isn't generic, so "Sport" or "Red Star" never decide a match.
+
+        TheSportsDB creates clubs, so for it a miss is a new club, never a
+        guess onto another of its own clubs: AC Milan is not Inter Milan, Paris
+        Saint-Germain is not Paris FC. It may still take over a club that
+        history created under a shorter or longer spelling.
+        """
+        if scope in NO_CONTAINMENT_SCOPES:
+            return None
+        mine = name_tokens(name)
+        if not mine:
+            return None
+        hits = []
+        for t in teams:
+            if source == CANONICAL_SOURCE and t.created_from == CANONICAL_SOURCE:
+                continue
+            theirs = name_tokens(t.name)
+            if not theirs or theirs == mine:
+                continue
+            shorter, longer = (mine, theirs) if len(mine) <= len(theirs) else (theirs, mine)
+            if shorter <= longer and any(len(w) >= 3 and w not in GENERIC_TOKENS for w in shorter):
+                hits.append(t)
+        return hits[0] if len(hits) == 1 else None
 
     # -- public --------------------------------------------------------------
 
@@ -210,7 +287,11 @@ class Resolver:
                 return self._after_match(team, "alias", name, team.scope, source)
 
         self._load_scope(scope)
-        team, method = self._match(name, scope)
+        team, method = self._match(name, scope, source)
+        if team and not create and not log_unresolved:
+            # A pure lookup (ClubElo, the Elo job) reads; it never teaches the
+            # table a spelling another job would later trust.
+            return team
         if team:
             team = self._after_match(team, method, name, scope, source)
         elif create and can_create(source, scope):
@@ -255,12 +336,27 @@ class Resolver:
             if tid and (team := self._team_by_id(tid)):
                 return self.resolve(name, team.scope, source, league_code, source_team_id)
         if country_code and country_code in COUNTRY_CODES:
-            return self.resolve(name, COUNTRY_CODES[country_code], source, league_code, source_team_id)
+            scope = COUNTRY_CODES[country_code]
+            # TheSportsDB's cup fixtures carry no country, so a club it met
+            # only in the cup sits in the continental scope: find it there
+            # rather than create its twin.
+            self._load_scope(scope)
+            self._load_scope(fallback_scope)
+            if not self._match(name, scope, source)[0] and self._match(name, fallback_scope, source)[0]:
+                scope = fallback_scope
+            return self.resolve(name, scope, source, league_code, source_team_id)
         key = loose_key(name)
         hits = {t.id: t for t in self._teams.values() if loose_key(t.name) == key}
         if len(hits) == 1:
             team = next(iter(hits.values()))
             return self.resolve(name, team.scope, source, league_code, source_team_id)
+        # A curated spelling names its country ("FC Bayern München" is germany's).
+        seeded = {scope for (scope, k) in self._seeds if k == key and scope != fallback_scope}
+        if len(seeded) == 1:
+            scope = next(iter(seeded))
+            self._load_scope(scope)
+            if self._match(name, scope, source)[0]:
+                return self.resolve(name, scope, source, league_code, source_team_id)
         return self.resolve(name, fallback_scope, source, league_code, source_team_id)
 
     def _create(self, name: str, scope: str, source: str) -> Team:

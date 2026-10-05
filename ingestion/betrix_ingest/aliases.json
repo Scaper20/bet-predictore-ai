@@ -98,5 +98,165 @@
     "Timor-Leste": [
       "East Timor"
     ]
+  },
+  "england": {
+    "Brighton and Hove Albion": [
+      "Brighton & Hove Albion FC",
+      "Brighton & Hove Albion"
+    ]
+  },
+  "france": {
+    "Paris Saint-Germain": [
+      "Paris SG",
+      "Paris Saint-Germain FC",
+      "PSG",
+      "Paris S-G"
+    ],
+    "Rennes": [
+      "Stade Rennais",
+      "Stade Rennais FC 1901",
+      "Stade Rennais FC"
+    ]
+  },
+  "germany": {
+    "Bayern Munich": [
+      "FC Bayern München",
+      "Bayern München",
+      "Bayern Munchen"
+    ],
+    "Bayer Leverkusen": [
+      "Bayer 04 Leverkusen"
+    ],
+    "Borussia Mönchengladbach": [
+      "Bor. Mönchengladbach",
+      "M'gladbach",
+      "Borussia M'gladbach"
+    ]
+  },
+  "italy": {
+    "Inter Milan": [
+      "FC Internazionale Milano",
+      "Internazionale",
+      "Inter"
+    ],
+    "AC Milan": [
+      "Milan",
+      "AC Milan"
+    ],
+    "Lazio": [
+      "Lazio Roma",
+      "SS Lazio"
+    ]
+  },
+  "netherlands": {
+    "AZ Alkmaar": [
+      "AZ"
+    ],
+    "NEC Nijmegen": [
+      "NEC"
+    ],
+    "PSV Eindhoven": [
+      "PSV"
+    ]
+  },
+  "portugal": {
+    "Sporting CP": [
+      "Sporting Clube de Portugal",
+      "Sporting Lisbon",
+      "Sp Lisbon"
+    ],
+    "Nacional de Madeira": [
+      "CD Nacional"
+    ],
+    "Estrela Amadora": [
+      "CF Estrela da Amadora"
+    ],
+    "Vitória de Guimarães": [
+      "Vitória SC",
+      "Vitoria SC"
+    ]
+  },
+  "spain": {
+    "Deportivo de A Coruña": [
+      "RC Deportivo La Coruña",
+      "Deportivo La Coruna",
+      "Dep. La Coruna"
+    ],
+    "Espanyol": [
+      "RCD Espanyol de Barcelona",
+      "RCD Espanyol"
+    ]
+  },
+  "brazil": {
+    "Atlético Mineiro": [
+      "CA Mineiro",
+      "Atletico-MG"
+    ],
+    "Athletico Paranaense": [
+      "CA Paranaense",
+      "Atletico-PR"
+    ]
+  },
+  "africa": {
+    "Ferroviário Beira": [
+      "Ferroviário da Beira"
+    ]
+  },
+  "greece": {
+    "AEK Athens": [
+      "PAE AEK",
+      "AEK Athen"
+    ]
+  },
+  "azerbaijan": {
+    "Sabah Baku": [
+      "Sabah FK"
+    ]
+  },
+  "czech republic": {
+    "Slavia Prague": [
+      "SK Slavia Praha",
+      "Slavia Praha"
+    ]
+  },
+  "belgium": {
+    "Club Brugge": [
+      "Club Brugge KV"
+    ]
+  },
+  "ukraine": {
+    "Shakhtar Donetsk": [
+      "FK Shakhtar Donetsk"
+    ]
+  },
+  "austria": {
+    "LASK": [
+      "LASK Linz"
+    ]
+  },
+  "norway": {
+    "Viking": [
+      "Viking FK"
+    ]
+  },
+  "europe": {
+    "Apoel Nicosia": [
+      "APOEL Nikosia",
+      "APOEL FC"
+    ],
+    "CSKA Moscow": [
+      "CSKA Moskva"
+    ],
+    "Legia Warsaw": [
+      "Legia Warszawa"
+    ],
+    "Spartak Moscow": [
+      "Spartak Moskva"
+    ],
+    "Qarabağ": [
+      "Qarabağ FK",
+      "Qarabağ Ağdam FK",
+      "Qarabag"
+    ]
   }
 }

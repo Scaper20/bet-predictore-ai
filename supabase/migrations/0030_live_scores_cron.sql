@@ -11,7 +11,7 @@
 -- Before either does anything, store four Vault secrets (SQL editor):
 --   select vault.create_secret('https://<project-ref>.supabase.co/functions/v1', 'betrix_functions_url');
 --   select vault.create_secret('<same value as the INGEST_SECRET function secret>', 'betrix_ingest_secret');
---   select vault.create_secret('https://betrix.com.ng', 'betrix_site_url');
+--   select vault.create_secret('https://www.betrix.com.ng', 'betrix_site_url');  -- no redirect: pg_net does not follow one
 --   select vault.create_secret('<same value as CRON_SECRET on Vercel>', 'betrix_cron_secret');
 --   select vault.create_secret('<TheSportsDB paid key>', 'thesportsdb_api_key');
 -- Until they exist the functions return without calling anything.

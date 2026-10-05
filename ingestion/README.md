@@ -47,10 +47,17 @@ its terms require their logo).
   stored only when it changed since the last call, kept 90 days (live scores 7),
   and the latest payload per call is never deleted.
 - **One club, one row**: `resolve.py` maps every spelling onto `teams` (alias →
-  normalised name → unique containment → curated renames in `aliases.json` →
-  create or log). National teams never match by containment (Niger is inside
-  Nigeria, Congo inside DR Congo): exact names and `aliases.json` only. Cross-check sources (ESPN, football-data.org) never invent a
-  club; an unknown name is logged in `unresolved_entities` and its game skipped.
+  normalised name → curated renames in `aliases.json` → unique word-for-word
+  containment → create or log). Containment is a guess, so it is narrow:
+  whole words only ("Rayon Sports" is not "AS Port"), never on a generic word
+  alone ("Sport", "Red Star"), never among national teams (Niger is inside
+  Nigeria) or in the continental cup scopes, and never by TheSportsDB onto a
+  club it created itself (AC Milan is not Inter Milan). Lookups (the Elo
+  jobs) never store an alias. Cross-check sources (ESPN, football-data.org)
+  never invent a club; an unknown name is logged in `unresolved_entities` and
+  its game skipped.
+- **Senior men only** in international competitions: TheSportsDB files U21,
+  women's and Olympic games under International Friendlies; they are dropped.
 - **Scores only from trusted sources**: `ingest_matches()` lets TheSportsDB (and
   openfootball / football-data.co.uk for finished history) set status and score.
   Everyone else can only add fixture details.
@@ -86,14 +93,16 @@ python -m pytest -q
 
 ### Supabase, once
 
-1. Run migrations `0029_data_layer.sql` and `0030_live_scores_cron.sql`.
+1. Run migrations `0029_data_layer.sql` to `0032_resolution_repair.sql`.
 2. Deploy the live-scores function and its secrets:
    ```bash
    supabase functions deploy live-scores --no-verify-jwt
    supabase secrets set THESPORTSDB_API_KEY=... INGEST_SECRET=<random string>
    ```
-3. In the SQL editor, store the four Vault secrets listed at the top of
+3. In the SQL editor, store the five Vault secrets listed at the top of
    `0030_live_scores_cron.sql`. Until they exist the crons do nothing.
+   `betrix_site_url` must be the address that answers without a redirect
+   (`https://www.betrix.com.ng`): pg_net does not follow a 308.
 
 ### GitHub, once
 
@@ -113,7 +122,7 @@ python -m betrix_ingest <job> [--league CODE ...] [--dry-run] [-v]
 | `sync` | competitions from the catalogue; TheSportsDB club lists, alternates, badges | Mondays 02:00 |
 | `fixtures [--days 14] [--with-espn]` | next N days from TheSportsDB + football-data.org (+ ESPN cross-check) | 03:15, 11:15, 17:15; with ESPN 02:45 |
 | `results [--days 2] [--full-season]` | finished games from TheSportsDB | 05:40 and hourly 14:40–23:40; whole season Mondays 04:30 |
-| `tables` | standings, TheSportsDB first, football-data.org where it has none | 06:50, 23:50 |
+| `tables` | league standings (not cups), TheSportsDB first, football-data.org where it has none | 06:50, 23:50 |
 | `clubelo` | today's ClubElo ratings | 04:10 |
 | `elo [--full]` | BetriX Elo for every league from the training results | 04:35 |
 | `backfill-openfootball` | NPFL, CAF CL, UCL, World Cup, Euro history + coverage flags | manual, once |
@@ -146,6 +155,27 @@ The site keeps calling the live APIs until you flip the switch.
 4. Switch the data layer to **Database, with fallback**. Watch a match day.
 5. Switch to **Database only**. Now no page calls a sports or odds API while it
    renders. **Live APIs** is one click away if anything looks wrong.
+
+## Repairing merged clubs
+
+If two clubs ever resolve to one row (Data health: a table fails with
+"ON CONFLICT DO UPDATE command cannot affect row a second time", or a
+duplicate looks wrong):
+
+1. Delete the wrong `team_aliases` rows, including the `id:<source>` ones
+   that point the other club's id at the merged row.
+2. Delete the matches filed under the merged club (and, for leagues whose
+   `history_owner` is `matches`, their `historical_results` rows from
+   `thesportsdb` / `openfootball`). Nothing references a match by its uuid;
+   predictions and slips use the source ids, which come back on the rerun.
+3. Rerun `sync`, then `backfill-thesportsdb --league <codes>`,
+   `backfill-openfootball` (for its leagues), `results --full-season`,
+   `fixtures`, `tables`, `elo --full`.
+
+Add the spelling to `aliases.json` if a rule can't tell the clubs apart.
+The October 2026 repair (PSG into Paris FC, AC Milan into Inter, Aves into
+Chaves, African cup clubs into "AS Port") followed exactly these steps and
+rebuilt both club cups.
 
 ## Free-tier usage (estimated)
 

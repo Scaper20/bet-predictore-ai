@@ -19,6 +19,7 @@ from datetime import datetime, timezone
 from typing import Iterator
 
 from .db import Database
+from .http import redact
 
 log = logging.getLogger(__name__)
 
@@ -76,7 +77,7 @@ def run(db: Database, switch: SourceSwitch, job: str, source: str, league_code: 
         yield r
     except Exception as err:  # noqa: BLE001 - recorded, never propagated
         r.failed = True
-        log.error("%s/%s/%s failed: %s", job, source, league_code, err)
+        log.error("%s/%s/%s failed: %s", job, source, league_code, redact(str(err)))
         _record(db, r, "failed", started=started, error=f"{type(err).__name__}: {err}"[:2000], tb=traceback.format_exc())
         return
     status = "skipped" if r.skipped else ("partial" if r.warnings else "ok")
@@ -86,9 +87,10 @@ def run(db: Database, switch: SourceSwitch, job: str, source: str, league_code: 
 def _record(db: Database, r: Run, status: str, started: str, error: str | None = None, tb: str | None = None) -> None:
     meta = dict(r.meta)
     if r.warnings:
-        meta["warnings"] = r.warnings[:50]
+        meta["warnings"] = [redact(w) for w in r.warnings[:50]]
     if tb:
-        meta["traceback"] = tb[-4000:]
+        meta["traceback"] = redact(tb[-4000:])
+    error = redact(error) if error else error
     try:
         db.insert(
             "ingest_runs",

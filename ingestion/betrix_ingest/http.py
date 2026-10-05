@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import logging
 import random
+import re
 import time
 from typing import Any, Callable, TypeVar
 
@@ -33,9 +34,19 @@ DEFAULT_GAP = 4.0
 _last_call: dict[str, float] = {}
 
 
+#: TheSportsDB v1 puts the key in the path (/api/v1/json/<key>/...).
+_KEY_IN_PATH = re.compile(r"(/api/v\d/json/)[^/?#\s]+(?=/)")
+_KEY_IN_QUERY = re.compile(r"((?:api_?key|key|token|apikey)=)[^&\s]+", re.IGNORECASE)
+
+
+def redact(text: str) -> str:
+    """Strip API keys out of URLs before they reach a log or ingest_runs.error."""
+    return _KEY_IN_QUERY.sub(r"\1***", _KEY_IN_PATH.sub(r"\1***", text))
+
+
 class SourceError(RuntimeError):
     def __init__(self, source: str, message: str, status: int | None = None):
-        super().__init__(f"{source}: {message}")
+        super().__init__(f"{source}: {redact(message)}")
         self.source = source
         self.status = status
 
@@ -71,7 +82,7 @@ def with_backoff(
             last_err = err
         if attempt < attempts - 1:
             delay = base_delay * (2**attempt) * (0.8 + random.random() * 0.4)
-            log.warning("%s: attempt %d failed (%s); retrying in %.1fs", source, attempt + 1, last_err, delay)
+            log.warning("%s: attempt %d failed (%s); retrying in %.1fs", source, attempt + 1, redact(str(last_err)), delay)
             sleep(delay)
     raise SourceError(source, f"gave up after {attempts} attempts: {last_err}")
 
