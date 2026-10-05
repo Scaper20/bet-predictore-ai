@@ -117,3 +117,23 @@ def test_elo_regresses_between_seasons():
     after_first = history[0][2]
     # Before the second game A was pulled a third of the way back to 1500.
     assert ratings["A"] < after_first
+
+
+def test_international_feed_keeps_senior_men_only():
+    from betrix_ingest.sources.thesportsdb import is_senior_men, to_fixture
+
+    for name in ("Serbia U21", "South Korea Women", "Nigeria U-17", "Brazil Olympic", "England Under 20"):
+        assert not is_senior_men(name), name
+    for name in ("Nigeria", "Bosnia-Herzegovina", "United States", "Wales"):
+        assert is_senior_men(name), name
+    e = {"idEvent": "1", "strHomeTeam": "Japan Women", "strAwayTeam": "USA Women", "strTimestamp": "2026-10-10T10:00:00"}
+    assert to_fixture(e, "international-friendlies", senior_only=True) is None
+    assert to_fixture(e, "some-league") is not None
+
+
+def test_errors_never_carry_the_api_key():
+    from betrix_ingest.http import SourceError, redact
+
+    url = "https://www.thesportsdb.com/api/v1/json/2804633024/lookuptable.php?l=4334&s=2026-2027"
+    assert "2804633024" not in str(SourceError("thesportsdb", f"HTTP 404 for {url}", 404))
+    assert redact("https://x.org/odds?apiKey=abc123&regions=uk") == "https://x.org/odds?apiKey=***&regions=uk"

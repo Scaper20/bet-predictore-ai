@@ -41,6 +41,47 @@ def test_contains_rule_needs_a_unique_candidate():
     assert ("espn", "nigeria", "Kwara") in r.unresolved
 
 
+def test_contains_rule_matches_whole_words_only():
+    db, r = make()
+    port = r.resolve("AS Port", "gabon", "thesportsdb")
+    vital = r.resolve("VitalO", "burundi", "thesportsdb")
+    chaves = r.resolve("Chaves", "portugal", "thesportsdb")
+    # Letters inside another word are not a word.
+    assert r.resolve("Mangasport", "gabon", "openfootball").id != port.id
+    assert r.resolve("Vita Club", "burundi", "openfootball").id != vital.id
+    assert r.resolve("Aves", "portugal", "football-data-org") is None
+    assert chaves.name == "Chaves"
+    # A generic word alone never decides it.
+    r.resolve("Sport Club do Recife", "brazil", "thesportsdb")
+    assert r.resolve("Sport", "brazil", "football-data-org") is None
+
+
+def test_thesportsdb_never_guesses_onto_its_own_clubs():
+    db, r = make()
+    paris = r.resolve("Paris FC", "france", "thesportsdb")
+    inter = r.resolve("Inter Milan", "italy", "thesportsdb")
+    psg = r.resolve("Paris Saint-Germain", "france", "thesportsdb")
+    milan = r.resolve("AC Milan", "italy", "thesportsdb")
+    assert psg.id != paris.id and psg.name == "Paris Saint-Germain"
+    assert milan.id != inter.id and milan.name == "AC Milan"
+
+
+def test_no_containment_in_continental_scopes():
+    db, r = make()
+    simba = r.resolve("Simba", "africa", "thesportsdb")
+    assert r.resolve("Simba Bhora", "africa", "openfootball").id != simba.id
+    viking = r.resolve("Víkingur Reykjavík", "europe", "thesportsdb")
+    assert r.resolve("Viking", "europe", "thesportsdb").id != viking.id
+
+
+def test_pure_lookup_stores_no_alias():
+    db, r = make()
+    r.resolve("Brighton and Hove Albion", "england", "thesportsdb")
+    before = len(db.tables.get("team_aliases", []))
+    assert r.resolve("Brighton", "england", "betrix", create=False, log_unresolved=False) is not None
+    assert len(db.tables.get("team_aliases", [])) == before
+
+
 def test_seeded_rename_and_canonical_takes_over_display_name():
     db, r = make()
     # History loads first and creates the club under openfootball's name...
@@ -126,3 +167,17 @@ def test_wait_turn_spaces_requests():
     http.wait_turn("espn", sleep=slept.append, now=lambda: next(clock))
     http.wait_turn("espn", sleep=slept.append, now=lambda: next(clock))
     assert slept == [pytest.approx(http.MIN_GAP_SECONDS["espn"] - 1.0)]
+
+
+def test_curated_spelling_finds_its_club_from_a_cup():
+    db, r = make()
+    bayern = r.resolve("Bayern Munich", "germany", "thesportsdb")
+    assert r.resolve("FC Bayern München", "germany", "football-data-org").id == bayern.id
+    assert r.resolve_multinational("FC Bayern München", "europe", "football-data-org", None).id == bayern.id
+
+
+def test_cup_club_found_in_continental_scope_not_twinned():
+    db, r = make()
+    ahly = r.resolve_multinational("Al Ahly", "africa", "thesportsdb", None)
+    assert ahly.scope == "africa"
+    assert r.resolve_multinational("Al Ahly SC", "africa", "openfootball", "EGY").id == ahly.id

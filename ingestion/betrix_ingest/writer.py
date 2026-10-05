@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import logging
+from datetime import datetime, timezone
 
 from .config import League, leagues
 from .db import Database
 from .records import Fixture, TableRow, TeamListing
-from .resolve import Resolver, Team
+from .resolve import Resolver, Team, scope_for_country
 from .runlog import Run
 
 log = logging.getLogger(__name__)
@@ -69,11 +70,18 @@ def write_fixtures(db: Database, resolver: Resolver, source: str, league: League
 
 def write_table(db: Database, resolver: Resolver, source: str, league: League, table: list[TableRow], run: Run) -> int:
     rows = []
+    seen: dict[str, str] = {}
     for r in table:
         team = _team(resolver, league, r.team, source, None, r.source_team_id)
         if not team:
             run.warn(f"table row for {r.team!r} skipped: unresolved")
             continue
+        if team.id in seen:
+            # Two rows on one club means two names resolved together: write
+            # neither guess twice (Postgres refuses the whole upsert), flag it.
+            run.warn(f"table rows {seen[team.id]!r} and {r.team!r} both resolved to {team.name!r}; second skipped")
+            continue
+        seen[team.id] = r.team
         rows.append({
             "league_code": league.code, "season": r.season, "team_id": team.id, "team_name": team.name,
             "position": r.position, "played": r.played, "won": r.won, "drawn": r.drawn, "lost": r.lost,
@@ -89,7 +97,10 @@ def write_table(db: Database, resolver: Resolver, source: str, league: League, t
 def seed_teams(db: Database, resolver: Resolver, league: League, listings: list[TeamListing], run: Run) -> int:
     """Register a league's clubs under TheSportsDB's names, with their alternates and badges."""
     for t in listings:
-        team = resolver.resolve(t.name, league.scope, "thesportsdb", league.code, t.source_team_id)
+        # A Champions League list spans countries: each club goes to its own
+        # country's scope, where its domestic league's fixtures will look.
+        scope = scope_for_country(t.country) if league.multinational and t.country else league.scope
+        team = resolver.resolve(t.name, scope, "thesportsdb", league.code, t.source_team_id)
         if team:
             resolver.add_alternates(team, t.alternates, "thesportsdb")
             if t.crest:
@@ -107,15 +118,22 @@ def write_coverage(db: Database, league: League, source: str, seasons: dict[str,
     filled in; the gap is recorded as a gap.
     """
     full = max((e for e, _ in seasons.values() if e), default=None)
+    # Tournaments change size by design (a 16-team World Cup in 1930, 48 in
+    # 2026; a UCL league phase from 2024), so "short" only means something
+    # for a league.
+    league_format = not (league.international or league.multinational)
+    this_year = datetime.now(timezone.utc).year
     rows = []
     for season, (expected, loaded) in sorted(seasons.items()):
         note = (known_gaps or {}).get(season)
         if note is None:
             if loaded == 0:
-                note = "no data published for this season"
+                # A tournament that hasn't been played yet (Euro 2028) isn't a gap.
+                future = season[:4].isdigit() and int(season[:4]) > this_year
+                note = None if future else "no data published for this season"
             elif expected and loaded < expected:
                 note = f"partial: {loaded} of {expected} matches loaded"
-            elif full and expected and expected < full * 0.9:
+            elif league_format and full and expected and expected < full * 0.9:
                 note = f"short season: {expected} matches against {full} in a full one"
         rows.append({
             "league_code": league.code, "season": season, "source": source,

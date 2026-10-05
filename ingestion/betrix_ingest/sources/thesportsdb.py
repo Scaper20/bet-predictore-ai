@@ -8,6 +8,7 @@ season, 100-row tables). Live scores are polled by the Supabase Edge Function
 
 from __future__ import annotations
 
+import re
 from datetime import date, datetime, timedelta, timezone
 
 from ..config import League
@@ -72,8 +73,23 @@ def status_of(e: dict, kickoff: datetime | None) -> str:
     return status
 
 
-def to_fixture(e: dict, league_code: str) -> Fixture | None:
+_NOT_SENIOR_MEN = re.compile(r"\b(u-?\d{2}|under[ -]?\d{2}|women|womens|ladies|feminin[ae]?|olympic|youth|amateur)\b|\bb$",
+                             re.IGNORECASE)
+
+
+def is_senior_men(name: str) -> bool:
+    """TheSportsDB files youth, women's and Olympic games under "International Friendlies".
+
+    BetriX's international competitions are men's full internationals, and
+    "Serbia U21" would otherwise become a national team of its own.
+    """
+    return not _NOT_SENIOR_MEN.search(name)
+
+
+def to_fixture(e: dict, league_code: str, senior_only: bool = False) -> Fixture | None:
     if not e.get("strHomeTeam") or not e.get("strAwayTeam"):
+        return None
+    if senior_only and not (is_senior_men(e["strHomeTeam"]) and is_senior_men(e["strAwayTeam"])):
         return None
     ko = _kickoff(e)
     if ko is None:
@@ -134,7 +150,7 @@ class TheSportsDB:
         while day <= end:
             for e in self.events_on(day):
                 lg = by_id.get(str(e.get("idLeague")))
-                if lg and (f := to_fixture(e, lg.code)):
+                if lg and (f := to_fixture(e, lg.code, lg.international)):
                     out[lg.code].append(f)
             day += timedelta(days=1)
         return out
@@ -144,11 +160,12 @@ class TheSportsDB:
         if not lid:
             raise NotSupported(f"{league.code} has no TheSportsDB id")
         events = self._get("eventsseason.php", {"id": lid, "s": season}).get("events") or []
-        return [f for e in events if (f := to_fixture(e, league.code))]
+        return [f for e in events if (f := to_fixture(e, league.code, league.international))]
 
     def fetch_table(self, league: League, season: str) -> list[TableRow]:
         lid = league.ids.get("theSportsDb")
-        if not lid or league.international:
+        if not lid or league.international or league.multinational:
+            # Cups: TheSportsDB has no table for UCL / CAF CL (it answers with a web page).
             raise NotSupported("no table")
         rows = self._get("lookuptable.php", {"l": lid, "s": season}).get("table") or []
         out = []
@@ -169,7 +186,15 @@ class TheSportsDB:
         lid = league.ids.get("theSportsDb")
         if not lid:
             raise NotSupported(f"{league.code} has no TheSportsDB id")
-        rows = self._get("lookup_all_teams.php", {"id": lid}).get("teams") or []
+        # lookup_all_teams.php answers 404 on the paid key; search by the
+        # league's own name returns the same full rows, alternates included.
+        leagues = self._get("lookupleague.php", {"id": lid}).get("leagues") or []
+        name = (leagues[0].get("strLeague") or "").strip() if leagues else ""
+        if not name:
+            raise NotSupported(f"TheSportsDB has no league {lid}")
+        rows = self._get("search_all_teams.php", {"l": name}).get("teams") or []
+        rows = [t for t in rows if str(t.get("idLeague") or lid) == str(lid) or
+                str(lid) in {str(t.get(f"idLeague{i}")) for i in range(2, 8)}]
         out = []
         for t in rows:
             alts = [a.strip() for a in (t.get("strTeamAlternate") or "").split(",") if a.strip()]

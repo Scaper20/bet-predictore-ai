@@ -184,8 +184,8 @@ def job_tables(ctx: Context) -> None:
                           lambda: FootballDataOrg(ctx.settings.football_data_key, ctx.db))
     y = season_start_year()
     for lg in ctx.ordered():
-        if lg.international:
-            continue
+        if lg.international or lg.multinational:
+            continue  # cups have groups and knockouts, not a table TheSportsDB serves
         done = False
         if tsdb and lg.ids.get("theSportsDb"):
             with run(ctx.db, ctx.switch, "tables", "thesportsdb", lg.code) as r:
