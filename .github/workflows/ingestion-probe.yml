@@ -1,0 +1,25 @@
+name: Ingestion source probe
+
+# One-off: checks which soccerdata sources answer from a GitHub runner.
+on:
+  workflow_dispatch:
+  push:
+    branches: [dev]
+    paths: ["ingestion/probe/**", ".github/workflows/ingestion-probe.yml"]
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SOCCERDATA_DIR: ${{ github.workspace }}/.soccerdata
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install soccerdata==1.9.1
+      - run: |
+          mkdir -p "$SOCCERDATA_DIR/config"
+          cp ingestion/probe/league_dict.json "$SOCCERDATA_DIR/config/league_dict.json"
+      - run: python ingestion/probe/probe_sources.py
