@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { type NextFetchEvent, type NextRequest, NextResponse } from "next/server";
 import { FIRST_TOUCH_COOKIE, type FirstTouch, trimFirstTouchValue } from "@/lib/first-touch";
+import { isMaintenanceExempt, maintenanceHtml } from "@/lib/maintenance";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const anonKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -87,6 +88,24 @@ export async function proxy(request: NextRequest, event: NextFetchEvent) {
 
   captureFirstTouch(request, response);
 
+  if (!isMaintenanceExempt(request.nextUrl.pathname)) {
+    const maintenance = await readMaintenance(supabase);
+    if (maintenance.enabled && !(user && (await isAdmin(supabase, user.id)))) {
+      const blocked = new NextResponse(maintenanceHtml(maintenance.message), {
+        status: 503,
+        headers: {
+          "Content-Type": "text/html; charset=utf-8",
+          "Cache-Control": "no-store",
+          "Retry-After": "600",
+        },
+      });
+      // Keep any refreshed session cookies — the visitor is still signed in
+      // once the site comes back.
+      for (const cookie of response.cookies.getAll()) blocked.cookies.set(cookie);
+      return blocked;
+    }
+  }
+
   if (user) {
     const cutoff = new Date(Date.now() - 10 * 60 * 1000).toISOString();
     event.waitUntil(
@@ -101,6 +120,47 @@ export async function proxy(request: NextRequest, event: NextFetchEvent) {
   }
 
   return response;
+}
+
+type SupabaseClient = ReturnType<typeof createServerClient>;
+type MaintenanceState = { enabled: boolean; message: string | null };
+
+/*
+ * Maintenance mode (lib/maintenance.ts), read from site_settings.
+ *
+ * Remembered for a few seconds per server instance so a burst of requests
+ * costs one read, not one each — the proxy already makes a round trip to
+ * Supabase per request for getUser(), and this shouldn't double it. The
+ * trade-off is that flipping the switch takes up to MAINTENANCE_TTL_MS to
+ * reach every instance. Module state is only ever a cache here: losing it
+ * just means the next request reads again.
+ *
+ * A failed read keeps the last known value, or "off" if there is none — a
+ * database blip must never lock every visitor out of a site that's up.
+ */
+const MAINTENANCE_TTL_MS = 10_000;
+let maintenanceCache: (MaintenanceState & { expires: number }) | null = null;
+
+async function readMaintenance(supabase: SupabaseClient): Promise<MaintenanceState> {
+  if (maintenanceCache && maintenanceCache.expires > Date.now()) return maintenanceCache;
+  const { data, error } = await supabase
+    .from("site_settings")
+    .select("maintenance_enabled, maintenance_message")
+    .maybeSingle();
+  if (error) return maintenanceCache ?? { enabled: false, message: null };
+  maintenanceCache = {
+    enabled: data?.maintenance_enabled === true,
+    message: (data?.maintenance_message as string | null | undefined) ?? null,
+    expires: Date.now() + MAINTENANCE_TTL_MS,
+  };
+  return maintenanceCache;
+}
+
+/** Admins see the real site during maintenance, to check the changes before
+ * switching it back on. Same self-select as getGate() in lib/admin.ts. */
+async function isAdmin(supabase: SupabaseClient, userId: string): Promise<boolean> {
+  const { data } = await supabase.from("admin_users").select("id").eq("id", userId).maybeSingle();
+  return Boolean(data);
 }
 
 /**
