@@ -169,6 +169,9 @@ class MemoryDb:
         if fn == "store_raw_payload":
             self.tables.setdefault("raw_payloads", []).append(args)
             return len(self.tables["raw_payloads"])
+        if fn in {"upsert_historical_results", "upsert_historic_odds"}:
+            self.tables.setdefault(fn, []).extend(args["p_rows"])
+            return len(args["p_rows"])
         if fn == "rename_team":
             for t in self.tables.get("teams", []):
                 if t["id"] == args["p_team_id"]:

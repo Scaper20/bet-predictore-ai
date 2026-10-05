@@ -535,6 +535,60 @@ create index if not exists elo_ratings_team_idx on public.elo_ratings (team_id, 
 alter table public.elo_ratings enable row level security;
 create policy "elo_ratings_select_all" on public.elo_ratings for select using (true);
 
+-- Batch writers for the two tables whose natural keys are expressions
+-- (kickoff day), which PostgREST's on_conflict can't target.
+
+-- Archive results under the archive's own club names, the same rows
+-- src/lib/archive/refresh.ts writes. A row already there keeps its source.
+create or replace function public.upsert_historical_results(p_rows jsonb)
+returns integer
+language sql
+security definer
+set search_path = public
+as $$
+  with ins as (
+    insert into public.historical_results (league_code, kickoff, home_name, away_name, home_goals, away_goals, source)
+    select r ->> 'league_code', (r ->> 'kickoff')::timestamptz, r ->> 'home_name', r ->> 'away_name',
+           (r ->> 'home_goals')::int, (r ->> 'away_goals')::int, coalesce(r ->> 'source', 'football-data-uk')
+      from jsonb_array_elements(p_rows) r
+    on conflict (league_code, ((kickoff at time zone 'UTC')::date), home_name, away_name)
+    do update set home_goals = excluded.home_goals, away_goals = excluded.away_goals
+    returning 1
+  )
+  select count(*)::int from ins;
+$$;
+
+-- Opening and closing prices from archives: one row per match, book, market
+-- and phase, replaced if the archive is re-read.
+create or replace function public.upsert_historic_odds(p_rows jsonb)
+returns integer
+language sql
+security definer
+set search_path = public
+as $$
+  with ins as (
+    insert into public.odds_snapshots (league_code, kickoff, home_name, away_name, source, bookmaker, market,
+                                       prices, is_opening, is_closing, captured_at)
+    select r ->> 'league_code', (r ->> 'kickoff')::timestamptz, r ->> 'home_name', r ->> 'away_name',
+           r ->> 'source', r ->> 'bookmaker', r ->> 'market', r -> 'prices',
+           coalesce((r ->> 'is_opening')::boolean, false), coalesce((r ->> 'is_closing')::boolean, false),
+           (r ->> 'kickoff')::timestamptz
+      from jsonb_array_elements(p_rows) r
+     where coalesce((r ->> 'is_opening')::boolean, false) or coalesce((r ->> 'is_closing')::boolean, false)
+    on conflict (league_code, ((kickoff at time zone 'UTC')::date), home_name, away_name, source, bookmaker, market,
+                 is_opening, is_closing)
+      where is_opening or is_closing
+    do update set prices = excluded.prices
+    returning 1
+  )
+  select count(*)::int from ins;
+$$;
+
+revoke all on function public.upsert_historical_results(jsonb) from public, anon, authenticated;
+revoke all on function public.upsert_historic_odds(jsonb) from public, anon, authenticated;
+grant execute on function public.upsert_historical_results(jsonb) to service_role;
+grant execute on function public.upsert_historic_odds(jsonb) to service_role;
+
 -- ---------------------------------------------------------------------------
 -- Coverage and health
 
@@ -574,6 +628,22 @@ select
   (select count(*) from public.season_coverage s
     where s.league_code = c.code and s.gap_note is not null) as flagged_gaps
 from public.competitions c;
+
+-- Clubs that may be one club under two names: same scope, one named by
+-- TheSportsDB and one created by another source, sharing a first word of
+-- four letters or more ("Bendel FC" / "Bendel Insurance"). For a person to
+-- check on the data-health page; nothing merges automatically.
+create or replace view public.team_duplicate_candidates
+with (security_invoker = true)
+as
+select a.scope, a.id as canonical_id, a.name as canonical_name, b.id as other_id, b.name as other_name,
+       b.created_from as other_source
+  from public.teams a
+  join public.teams b
+    on a.scope = b.scope and a.id <> b.id
+   and a.created_from = 'thesportsdb' and b.created_from <> 'thesportsdb'
+   and split_part(lower(extensions.unaccent(a.name)), ' ', 1) = split_part(lower(extensions.unaccent(b.name)), ' ', 1)
+   and length(split_part(a.name, ' ', 1)) >= 4;
 
 -- ---------------------------------------------------------------------------
 -- Which data layer pages read (admin toggle, next to maintenance mode)

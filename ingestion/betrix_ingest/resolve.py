@@ -12,8 +12,13 @@ record. This module maps every incoming name onto one ``teams`` row:
    by it ("Bendel" / "Bendel Insurance"), when exactly one does;
 4. else a curated seed (aliases.json) for real renames no rule can see,
    such as "Rangers International" and "Enugu Rangers";
-5. else a new team, if this source may create teams; otherwise the name is
-   logged in unresolved_entities for a person to place, and the row skipped.
+5. else a new team, if this source may create teams there (``can_create``);
+   otherwise the name is logged in unresolved_entities for a person to
+   place, and the row skipped.
+
+Before any of that, a source's own club id (TheSportsDB's idTeam) is checked:
+once a club has been seen in its domestic league, its Champions League
+fixtures, which carry no country, land on the same row.
 
 TheSportsDB is the feed live scores and fixtures arrive under, so its
 spelling is the display name: when it resolves onto a team another source
@@ -34,11 +39,27 @@ from .db import Database
 
 log = logging.getLogger(__name__)
 
-#: Sources whose names may create a team when nothing matches. ESPN and
-#: football-data.org are cross-checks: an unknown name from them is logged,
-#: not invented into a club.
-CREATORS = {"thesportsdb", "openfootball", "football-data-uk", "clubelo", "betrix"}
 CANONICAL_SOURCE = "thesportsdb"
+
+#: Countries whose top flight BetriX lists from TheSportsDB, so every current
+#: club there already exists under its canonical name. openfootball's long
+#: official names ("FC Bayern München") would only make duplicates there, so
+#: in these scopes it must match an existing club or log the name.
+CANONICAL_SCOPES = {"england", "spain", "germany", "italy", "france", "netherlands", "portugal", "brazil"}
+
+
+def can_create(source: str, scope: str) -> bool:
+    """Whether an unmatched name from ``source`` may become a new club.
+
+    ESPN and football-data.org are cross-checks and never invent clubs.
+    openfootball may, outside CANONICAL_SCOPES: relegated NPFL sides and
+    foreign Champions League opponents exist nowhere else.
+    """
+    if source == CANONICAL_SOURCE:
+        return True
+    if source == "openfootball":
+        return scope not in CANONICAL_SCOPES
+    return False
 
 _STRIP = re.compile(r"\b(fc|afc|cf|sc|ac|as|ss|ssc|bk|sk|if|club|de|the)\b")
 
@@ -115,6 +136,14 @@ class Resolver:
             self._aliases[(a["scope"], a["alias_key"])] = a["team_id"]
         self._loaded.add(scope)
 
+    def _team_by_id(self, team_id: str) -> Team | None:
+        if team_id not in self._teams:
+            rows = self.db.select("teams", {"select": "id,name,scope,created_from", "id": f"eq.{team_id}"})
+            if rows:
+                t = rows[0]
+                self._teams[t["id"]] = Team(t["id"], t["name"], t["scope"], t["created_from"])
+        return self._teams.get(team_id)
+
     def _in_scope(self, scope: str) -> list[Team]:
         return [t for t in self._teams.values() if t.scope == scope]
 
@@ -150,43 +179,83 @@ class Resolver:
 
     # -- public --------------------------------------------------------------
 
-    def resolve(self, name: str, scope: str, source: str, league_code: str | None = None) -> Team | None:
-        """The team this name refers to, creating or logging it as the rules say."""
+    def resolve(
+        self,
+        name: str,
+        scope: str,
+        source: str,
+        league_code: str | None = None,
+        source_team_id: str | None = None,
+        create: bool = True,
+        log_unresolved: bool = True,
+    ) -> Team | None:
+        """The team this name refers to, creating or logging it as the rules say.
+
+        ``create=False`` and ``log_unresolved=False`` make it a pure lookup
+        (ClubElo rates hundreds of clubs BetriX doesn't track).
+        """
         name = name.strip()
         scope = scope.lower()
+        id_scope = f"id:{source}"
+        if source_team_id:
+            self._load_scope(id_scope)
+            tid = self._aliases.get((id_scope, str(source_team_id)))
+            if tid and (team := self._team_by_id(tid)):
+                return self._after_match(team, "alias", name, team.scope, source)
+
         self._load_scope(scope)
         team, method = self._match(name, scope)
-
         if team:
-            key = loose_key(name)
-            if method != "alias":
-                self._remember(scope, key, name, team.id, source, method)
-            if source == CANONICAL_SOURCE and team.created_from != CANONICAL_SOURCE and team.name != name:
-                log.info("renaming %r -> %r (TheSportsDB spelling)", team.name, name)
-                self.db.rpc("rename_team", {"p_team_id": team.id, "p_name": name, "p_source": source})
-                team.name, team.created_from = name, source
-                self._remember(scope, key, name, team.id, source, "canonical")
-            return team
+            team = self._after_match(team, method, name, scope, source)
+        elif create and can_create(source, scope):
+            team = self._create(name, scope, source)
+        elif log_unresolved:
+            self._log_unresolved(name, scope, source, league_code)
+            return None
+        else:
+            return None
 
-        if source in CREATORS:
-            return self._create(name, scope, source)
+        if source_team_id:
+            self._remember(id_scope, str(source_team_id), name, team.id, source, "canonical")
+        return team
 
-        self._log_unresolved(name, scope, source, league_code)
-        return None
+    def _after_match(self, team: Team, method: str, name: str, scope: str, source: str) -> Team:
+        key = loose_key(name)
+        if method != "alias":
+            self._remember(scope, key, name, team.id, source, method)
+        if source == CANONICAL_SOURCE and team.created_from != CANONICAL_SOURCE and team.name != name:
+            log.info("renaming %r -> %r (TheSportsDB spelling)", team.name, name)
+            self.db.rpc("rename_team", {"p_team_id": team.id, "p_name": name, "p_source": source})
+            team.name, team.created_from = name, source
+            self._remember(team.scope, key, name, team.id, source, "canonical")
+        return team
+
+    def add_alternates(self, team: Team, alternates: list[str], source: str) -> None:
+        """Alternate names a source lists for a club ("Leicester City Football Club").
+
+        Very short ones (codes like "LEI") are skipped: too easy to collide.
+        """
+        for alt in alternates:
+            key = loose_key(alt)
+            if len(key) >= 4 and (team.scope, key) not in self._aliases:
+                self._remember(team.scope, key, alt, team.id, source, "seed")
 
     def resolve_multinational(self, name: str, fallback_scope: str, source: str, country_code: str | None,
-                              league_code: str | None = None) -> Team | None:
-        """Clubs in UCL / CAF CL: their own country's scope when known, else a unique match anywhere."""
+                              league_code: str | None = None, source_team_id: str | None = None) -> Team | None:
+        """Clubs in UCL / CAF CL: their club id, else their own country's scope, else a unique match anywhere."""
+        if source_team_id:
+            self._load_scope(f"id:{source}")
+            tid = self._aliases.get((f"id:{source}", str(source_team_id)))
+            if tid and (team := self._team_by_id(tid)):
+                return self.resolve(name, team.scope, source, league_code, source_team_id)
         if country_code and country_code in COUNTRY_CODES:
-            return self.resolve(name, COUNTRY_CODES[country_code], source, league_code)
+            return self.resolve(name, COUNTRY_CODES[country_code], source, league_code, source_team_id)
         key = loose_key(name)
-        for scope in list(self._loaded):
-            self._load_scope(scope)
         hits = {t.id: t for t in self._teams.values() if loose_key(t.name) == key}
         if len(hits) == 1:
             team = next(iter(hits.values()))
-            return self.resolve(name, team.scope, source, league_code)
-        return self.resolve(name, fallback_scope, source, league_code)
+            return self.resolve(name, team.scope, source, league_code, source_team_id)
+        return self.resolve(name, fallback_scope, source, league_code, source_team_id)
 
     def _create(self, name: str, scope: str, source: str) -> Team:
         canonical = self._seeds.get((scope, loose_key(name)), name) if source != CANONICAL_SOURCE else name

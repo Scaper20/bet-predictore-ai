@@ -79,8 +79,8 @@ def run(db: Database, switch: SourceSwitch, job: str, source: str, league_code: 
         log.error("%s/%s/%s failed: %s", job, source, league_code, err)
         _record(db, r, "failed", started=started, error=f"{type(err).__name__}: {err}"[:2000], tb=traceback.format_exc())
         return
-    status = "partial" if r.warnings else "ok"
-    _record(db, r, status, started=started)
+    status = "skipped" if r.skipped else ("partial" if r.warnings else "ok")
+    _record(db, r, status, started=started, error=r.warnings[0] if r.skipped and r.warnings else None)
 
 
 def _record(db: Database, r: Run, status: str, started: str, error: str | None = None, tb: str | None = None) -> None:
