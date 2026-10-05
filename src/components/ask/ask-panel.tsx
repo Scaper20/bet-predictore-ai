@@ -8,7 +8,7 @@ import { useSlip } from "@/lib/slip";
 import { useEntitlement } from "@/components/entitlements/entitlement-provider";
 import { kickoffDay, kickoffTime } from "@/lib/format";
 import type { AskEvent, AskPickCard, AskTurn } from "@/lib/ask/request";
-import { ASK_FREE_DAILY, ASK_MAX_QUESTION } from "@/lib/ask/request";
+import { ASK_FREE_DAILY, ASK_GUEST_TOTAL, ASK_MAX_QUESTION } from "@/lib/ask/request";
 
 /* ------------------------------------------------------------------ types */
 
@@ -96,6 +96,8 @@ function AskPanelInner({ page }: { page: { matchId: string; label: string } | nu
   const [busy, setBusy] = useState(false);
   const [allowance, setAllowance] = useState<Allowance | null>(null);
   const [useContextPage, setUseContextPage] = useState(true);
+  /** A signed-out visitor has used their free questions: the sign-up overlay is up. */
+  const [guestGated, setGuestGated] = useState(false);
   const scroller = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLTextAreaElement>(null);
   const abort = useRef<AbortController | null>(null);
@@ -135,6 +137,13 @@ function AskPanelInner({ page }: { page: { matchId: string; label: string } | nu
     };
   }, []);
 
+  const signedIn = allowance?.signedIn ?? entitlement.signedIn;
+  const enabled = allowance?.enabled ?? true;
+  const remaining = allowance && allowance.limit !== null && allowance.used !== null ? Math.max(0, allowance.limit - allowance.used) : null;
+  /** Signed-in accounts that are out for today; guests get the overlay instead. */
+  const outOfQuestions = signedIn && remaining === 0;
+  const guestOut = !signedIn && remaining === 0;
+
   const patchLast = useCallback((fn: (m: ChatMessage) => ChatMessage) => {
     setMessages((prev) => {
       const next = [...prev];
@@ -148,6 +157,11 @@ function AskPanelInner({ page }: { page: { matchId: string; label: string } | nu
     async (text: string) => {
       const question = text.trim().slice(0, ASK_MAX_QUESTION);
       if (!question || busy) return;
+      if (guestOut) {
+        setDraft(question);
+        setGuestGated(true);
+        return;
+      }
       setDraft("");
       setBusy(true);
 
@@ -187,6 +201,14 @@ function AskPanelInner({ page }: { page: { matchId: string; label: string } | nu
 
         if (!res.ok || !res.body) {
           const body = (await res.json().catch(() => null)) as Extract<AskEvent, { type: "error" }> | null;
+          if (body?.code === "guest_limit" || body?.code === "sign_in") {
+            // The overlay explains it; drop the empty reply and keep the question for after sign-up.
+            setGuestGated(true);
+            setAllowance((a) => (a ? { ...a, used: a.limit } : a));
+            setMessages((prev) => prev.filter((m) => m.id !== reply.id && m.id !== userMsg.id));
+            setDraft(question);
+            return;
+          }
           patchLast((m) => ({
             ...m,
             pending: false,
@@ -257,7 +279,7 @@ function AskPanelInner({ page }: { page: { matchId: string; label: string } | nu
         }
       }
     },
-    [busy, messages, matchContext, slipContext, patchLast],
+    [busy, guestOut, messages, matchContext, slipContext, patchLast],
   );
 
   // A question queued by a button elsewhere on the page.
@@ -284,10 +306,9 @@ function AskPanelInner({ page }: { page: { matchId: string; label: string } | nu
     return ["Safest picks today", "Best value tonight", "3-leg acca for the weekend", "What's live right now?"];
   }, [matchContext, slipContext]);
 
-  const signedIn = allowance?.signedIn ?? entitlement.signedIn;
-  const enabled = allowance?.enabled ?? true;
-  const remaining = allowance && allowance.limit !== null && allowance.used !== null ? Math.max(0, allowance.limit - allowance.used) : null;
-  const outOfQuestions = remaining === 0;
+  // A signed-out visitor who has used their questions sees the overlay when
+  // they try another — not the moment their last answer finishes.
+  const showGuestGate = enabled && !signedIn && guestGated;
   const subtitle = matchContext
     ? `Knows this page: ${matchContext.label}`
     : slipContext
@@ -335,6 +356,7 @@ function AskPanelInner({ page }: { page: { matchId: string; label: string } | nu
         </button>
       </div>
 
+      <div className="relative flex min-h-0 flex-1 flex-col">
       {/* conversation */}
       <div ref={scroller} className="flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 py-4 sm:px-5">
         {(matchContext || slipContext) && (
@@ -374,11 +396,9 @@ function AskPanelInner({ page }: { page: { matchId: string; label: string } | nu
           <p className="rounded-xl border border-line bg-surface px-4 py-3 text-sm text-ink-muted">
             Ask BetriX isn&apos;t available right now. Check back soon.
           </p>
-        ) : !signedIn ? (
-          <SignInPrompt pathname={pathname} />
         ) : (
           <>
-            {!busy && !outOfQuestions && (
+            {!busy && !outOfQuestions && !guestOut && (
               <div className="no-scrollbar -mx-4 mb-3 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:px-0">
                 {suggestions.map((s) => (
                   <button
@@ -412,7 +432,7 @@ function AskPanelInner({ page }: { page: { matchId: string; label: string } | nu
                 rows={1}
                 maxLength={ASK_MAX_QUESTION}
                 disabled={outOfQuestions}
-                placeholder={outOfQuestions ? "No questions left today" : "Ask about any match…"}
+                placeholder={outOfQuestions ? "No questions left today" : guestOut ? "Create a free account to keep asking" : "Ask about any match…"}
                 className="max-h-32 min-h-12 flex-1 resize-none rounded-3xl border border-line bg-surface-2 px-4 py-3 text-sm text-ink outline-none transition-colors placeholder:text-ink-dim focus:border-brand/50 disabled:opacity-60"
               />
               {busy ? (
@@ -440,6 +460,16 @@ function AskPanelInner({ page }: { page: { matchId: string; label: string } | nu
             <p className="mt-2 text-center text-[11px] text-ink-dim">
               {allowance?.paid ? (
                 "Unlimited with your plan · Never invents injuries or news"
+              ) : !signedIn ? (
+                <>
+                  {remaining !== null
+                    ? `${remaining} of ${ASK_GUEST_TOTAL} free questions left`
+                    : `${ASK_GUEST_TOTAL} free questions, no account needed`}
+                  {" · "}
+                  <Link href={`/account/sign-up?next=${encodeURIComponent(pathname)}`} onClick={closeAsk} className="underline-offset-2 hover:text-ink hover:underline">
+                    Sign up free for {ASK_FREE_DAILY} a day
+                  </Link>
+                </>
               ) : (
                 <>
                   {remaining !== null ? `${remaining} of ${ASK_FREE_DAILY} free questions left today` : `Free: ${ASK_FREE_DAILY} questions a day`}
@@ -452,6 +482,9 @@ function AskPanelInner({ page }: { page: { matchId: string; label: string } | nu
             </p>
           </>
         )}
+      </div>
+
+      {showGuestGate && <GuestGate pathname={pathname} />}
       </div>
     </div>
   );
@@ -492,27 +525,37 @@ function EmptyIntro({ context }: { context: boolean }) {
   );
 }
 
-function SignInPrompt({ pathname }: { pathname: string }) {
+/** Blurs the chat once a signed-out visitor has used their free questions. */
+function GuestGate({ pathname }: { pathname: string }) {
   const next = encodeURIComponent(pathname);
   return (
-    <div className="rounded-2xl border border-line bg-surface p-4 text-center">
-      <p className="text-sm font-semibold text-ink">Create a free account to ask BetriX</p>
-      <p className="mt-1 text-xs text-ink-muted">{ASK_FREE_DAILY} questions a day free. Unlimited with a Pass or higher.</p>
-      <div className="mt-3 flex gap-2">
-        <Link
-          href={`/account/sign-up?next=${next}`}
-          onClick={closeAsk}
-          className="flex-1 rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-brand-ink transition-colors hover:bg-brand-strong"
-        >
-          Create free account
-        </Link>
-        <Link
-          href={`/account/login?next=${next}`}
-          onClick={closeAsk}
-          className="rounded-lg border border-line px-4 py-2.5 text-sm font-medium text-ink transition-colors hover:border-line-strong"
-        >
-          Sign in
-        </Link>
+    <div className="absolute inset-0 z-10 flex items-center justify-center bg-canvas/55 p-5 backdrop-blur-md">
+      <div className="w-full max-w-sm rounded-2xl border border-line bg-shell/95 p-6 text-center shadow-2xl">
+        <div className="mx-auto w-fit">
+          <AskAvatar />
+        </div>
+        <p className="mt-4 font-display text-2xl font-bold">Keep asking BetriX</p>
+        <p className="mt-2 text-sm leading-relaxed text-ink-muted">
+          You&apos;ve used your {ASK_GUEST_TOTAL} free questions. Create a free account to get {ASK_FREE_DAILY} questions
+          a day. Your chat stays right here.
+        </p>
+        <div className="mt-5 space-y-2.5">
+          <Link
+            href={`/account/sign-up?next=${next}`}
+            onClick={closeAsk}
+            className="block rounded-lg bg-brand px-4 py-3 text-sm font-semibold text-brand-ink transition-colors hover:bg-brand-strong"
+          >
+            Create free account
+          </Link>
+          <Link
+            href={`/account/login?next=${next}`}
+            onClick={closeAsk}
+            className="block rounded-lg border border-line px-4 py-3 text-sm font-medium text-ink transition-colors hover:border-line-strong"
+          >
+            I already have an account
+          </Link>
+        </div>
+        <p className="mt-4 text-[11px] text-ink-dim">Takes a minute. Pass and up: unlimited questions.</p>
       </div>
     </div>
   );

@@ -4,6 +4,8 @@
  */
 
 export const ASK_FREE_DAILY = 5;
+/** Questions a visitor gets before the panel asks them to create an account. */
+export const ASK_GUEST_TOTAL = 2;
 /** Fair-use ceiling for paid tiers, which the panel advertises as unlimited. */
 export const ASK_PAID_DAILY = 150;
 
@@ -61,7 +63,7 @@ export type AskEvent =
   | { type: "status"; label: string }
   | { type: "picks"; picks: AskPickCard[] }
   | { type: "done"; used: number | null; limit: number | null }
-  | { type: "error"; message: string; code?: "limit" | "sign_in" | "unavailable" };
+  | { type: "error"; message: string; code?: "limit" | "sign_in" | "guest_limit" | "unavailable" };
 
 const clip = (v: unknown, max: number) => (typeof v === "string" ? v.slice(0, max) : "");
 

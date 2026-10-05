@@ -4,8 +4,10 @@ import { supabaseServer } from "@/lib/supabase/server";
 import { aiEnabled } from "@/lib/ai/analyst";
 import { ASK_SYSTEM_PROMPT } from "@/lib/ask/prompt";
 import { ASK_TOOLS, runTool, toolStatus, type AskTier } from "@/lib/ask/tools";
+import { claimGuest, guestIdentity, guestUsed, refundGuest } from "@/lib/ask/guest";
 import {
   ASK_FREE_DAILY,
+  ASK_GUEST_TOTAL,
   ASK_PAID_DAILY,
   contextPreamble,
   parseAskRequest,
@@ -22,26 +24,40 @@ const MAX_ROUNDS = 6;
 
 const NO_STORE = { "Cache-Control": "no-store" };
 
-/** The panel's header line: whether it works here, and today's allowance. */
-export async function GET() {
+/** The panel's header line: whether it works here, and the allowance left. */
+export async function GET(request: Request) {
   const entitlement = await getEntitlement();
   const paid = meets(entitlement.tier, "pass");
   let used: number | null = null;
+  let setCookie: string | null = null;
   if (entitlement.signedIn) {
     const supabase = await supabaseServer();
     const { data } = await supabase.rpc("ask_used_today");
     used = typeof data === "number" ? data : null;
+  } else {
+    const guest = guestIdentity(request);
+    setCookie = guest.setCookie;
+    used = await guestUsed(guest);
   }
+  const headers = new Headers(NO_STORE);
+  if (setCookie) headers.append("Set-Cookie", setCookie);
   return Response.json(
     {
       enabled: aiEnabled(),
       signedIn: entitlement.signedIn,
       paid,
       used,
-      limit: entitlement.signedIn ? (paid ? null : ASK_FREE_DAILY) : null,
+      limit: entitlement.signedIn ? (paid ? null : ASK_FREE_DAILY) : ASK_GUEST_TOTAL,
     },
-    { headers: NO_STORE },
+    { headers },
   );
+}
+
+/** A JSON error, carrying the guest cookie when this browser just got one. */
+function fail(event: Extract<AskEvent, { type: "error" }>, status: number, setCookie?: string | null) {
+  const headers = new Headers(NO_STORE);
+  if (setCookie) headers.append("Set-Cookie", setCookie);
+  return Response.json(event, { status, headers });
 }
 
 /**
@@ -49,53 +65,74 @@ export async function GET() {
  * (AskEvent): text deltas as they're written, a status line while tools
  * run, pick cards from show_picks, then done.
  *
- * Signed-in accounts only, with a daily allowance claimed in the database
- * before the model is called and handed back if no answer arrives.
+ * Allowances are claimed in the database before the model is called and
+ * handed back if no answer arrives: accounts get a daily allowance by tier,
+ * visitors without one get ASK_GUEST_TOTAL questions per browser (lib/ask/guest.ts).
  */
 export async function POST(request: Request) {
   if (!aiEnabled()) {
-    return Response.json(
-      { type: "error", code: "unavailable", message: "Ask BetriX isn't available right now." },
-      { status: 503, headers: NO_STORE },
-    );
+    return fail({ type: "error", code: "unavailable", message: "Ask BetriX isn't available right now." }, 503);
   }
 
   const parsed = parseAskRequest(await request.json().catch(() => null));
-  if (typeof parsed === "string") {
-    return Response.json({ type: "error", message: parsed }, { status: 400, headers: NO_STORE });
-  }
+  if (typeof parsed === "string") return fail({ type: "error", message: parsed }, 400);
 
   const entitlement = await getEntitlement();
-  if (!entitlement.signedIn) {
-    return Response.json(
-      { type: "error", code: "sign_in", message: "Create a free account to ask BetriX." },
-      { status: 401, headers: NO_STORE },
-    );
-  }
   const paid = meets(entitlement.tier, "pass");
-  const limit = paid ? ASK_PAID_DAILY : ASK_FREE_DAILY;
   const tier: AskTier = paid ? "paid" : "free";
+  const unavailable = { type: "error", code: "unavailable", message: "Ask BetriX isn't available right now. Try again shortly." } as const;
 
-  const supabase = await supabaseServer();
-  const { data: claim, error: claimError } = await supabase.rpc("ask_claim", { p_limit: limit });
-  const row = Array.isArray(claim) ? (claim[0] as { allowed: boolean; used: number } | undefined) : undefined;
-  if (claimError || !row) {
-    return Response.json(
-      { type: "error", code: "unavailable", message: "Ask BetriX isn't available right now. Try again shortly." },
-      { status: 503, headers: NO_STORE },
-    );
-  }
-  if (!row.allowed) {
-    return Response.json(
-      {
-        type: "error",
-        code: "limit",
-        message: paid
-          ? "You've hit today's fair-use limit. Ask again tomorrow."
-          : `That's your ${ASK_FREE_DAILY} free questions for today. A Pass or higher makes it unlimited.`,
-      },
-      { status: 429, headers: NO_STORE },
-    );
+  let used: number;
+  let limit: number | null;
+  let refund: () => Promise<void>;
+  let setCookie: string | null = null;
+
+  if (entitlement.signedIn) {
+    limit = paid ? ASK_PAID_DAILY : ASK_FREE_DAILY;
+    const supabase = await supabaseServer();
+    const { data: claim, error: claimError } = await supabase.rpc("ask_claim", { p_limit: limit });
+    const row = Array.isArray(claim) ? (claim[0] as { allowed: boolean; used: number } | undefined) : undefined;
+    if (claimError || !row) return fail(unavailable, 503);
+    if (!row.allowed) {
+      return fail(
+        {
+          type: "error",
+          code: "limit",
+          message: paid
+            ? "You've hit today's fair-use limit. Ask again tomorrow."
+            : `That's your ${ASK_FREE_DAILY} free questions for today. A Pass or higher makes it unlimited.`,
+        },
+        429,
+      );
+    }
+    used = row.used;
+    refund = async () => {
+      await supabase.rpc("ask_refund").then(
+        () => undefined,
+        () => undefined,
+      );
+    };
+    // Paid plans are advertised as unlimited; the fair-use cap isn't shown.
+    if (paid) limit = null;
+  } else {
+    const guest = guestIdentity(request);
+    setCookie = guest.setCookie;
+    const claim = await claimGuest(guest);
+    if (!claim) return fail(unavailable, 503, setCookie);
+    if (!claim.allowed) {
+      return fail(
+        {
+          type: "error",
+          code: "guest_limit",
+          message: `That's your ${ASK_GUEST_TOTAL} free questions. Create a free account to keep asking — ${ASK_FREE_DAILY} a day.`,
+        },
+        429,
+        setCookie,
+      );
+    }
+    used = claim.used;
+    limit = ASK_GUEST_TOTAL;
+    refund = () => refundGuest(guest);
   }
 
   const messages: Anthropic.Beta.BetaMessageParam[] = parsed.turns.map((t, i) =>
@@ -206,13 +243,13 @@ export async function POST(request: Request) {
         }
 
         if (!answered) {
-          await supabase.rpc("ask_refund");
+          await refund();
           send({ type: "error", message: "I couldn't put an answer together. Try asking another way." });
         } else {
-          send({ type: "done", used: row.used, limit: paid ? null : limit });
+          send({ type: "done", used, limit });
         }
       } catch {
-        if (!answered) await supabase.rpc("ask_refund").then(() => undefined, () => undefined);
+        if (!answered) await refund();
         send({
           type: "error",
           message: answered
@@ -229,11 +266,11 @@ export async function POST(request: Request) {
     },
   });
 
-  return new Response(stream, {
-    headers: {
-      "Content-Type": "application/x-ndjson; charset=utf-8",
-      "Cache-Control": "no-store",
-      "X-Accel-Buffering": "no",
-    },
+  const headers = new Headers({
+    "Content-Type": "application/x-ndjson; charset=utf-8",
+    "Cache-Control": "no-store",
+    "X-Accel-Buffering": "no",
   });
+  if (setCookie) headers.append("Set-Cookie", setCookie);
+  return new Response(stream, { headers });
 }
