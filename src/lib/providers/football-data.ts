@@ -1,16 +1,23 @@
 /**
- * football-data.org adapter — the recommended production feed.
+ * football-data.org adapter: the reference feed for the top competitions.
  *
- * The free tier covers the twelve competitions that matter most to this
- * audience (EPL, UCL, the rest of the European top five, Championship,
- * Eredivisie, Primeira Liga, Brasileirão) at 10 requests/minute with no result
- * truncation, which is why it outranks TheSportsDB when a key is present.
+ * The free plan covers twelve competitions (EPL, UCL, the rest of the European
+ * top five, Championship, Eredivisie, Primeira Liga, Brasileirão, World Cup,
+ * Euros) with clean, untruncated fixtures, results, tables and crests, which is
+ * why its record wins a merge. Its two limits shape how it is used:
+ *
+ * - Scores are delayed on the free plan, so it is not polled for live games;
+ *   TheSportsDB's live feed owns in-play scores (see LIVE_PRIORITY in
+ *   ./index.ts). Set FOOTBALL_DATA_LIVESCORES=1 on the paid livescores plan.
+ * - 10 requests a minute. Every call goes through a budget gate that also
+ *   obeys the X-Requests-Available-Minute / X-RequestCounter-Reset headers.
+ *
  * Set FOOTBALL_DATA_API_KEY to enable it.
  */
 
 import type { Match, MatchStatus, ResultRow, StandingRow, Team } from "@/lib/types";
 import { LEAGUES, leagueByProviderId, type LeagueDef } from "@/lib/leagues";
-import { getJson } from "./http";
+import { getJson, RateGate } from "./http";
 import { cached } from "./cache";
 
 const BASE = "https://api.football-data.org/v4";
@@ -20,9 +27,33 @@ export const apiKey = (): string | undefined =>
 
 export const isConfigured = (): boolean => Boolean(apiKey());
 
+/** The paid "livescores" add-on lifts the delay; only then is this feed polled live. */
+export const hasLivescores = (): boolean =>
+  isConfigured() && /^(1|true|yes)$/i.test(process.env.FOOTBALL_DATA_LIVESCORES?.trim() ?? "");
+
+/** One under the published 10/min, leaving room for a clock skew at the boundary. */
+const gate = new RateGate("football-data", Number(process.env.FOOTBALL_DATA_RATE_PER_MIN) || 9);
+
+/** The longest window /matches accepts in one request. */
+const MAX_RANGE_DAYS = 10;
+
 function headers(): Record<string, string> {
   const k = apiKey();
   return k ? { "X-Auth-Token": k } : {};
+}
+
+function fdGet<T>(path: string): Promise<T> {
+  return getJson<T>(`${BASE}${path}`, {
+    headers: headers(),
+    provider: "football-data",
+    gate,
+    onHeaders: (h) => {
+      // The server's own count beats ours when several instances share a key.
+      const left = Number(h.get("X-Requests-Available-Minute"));
+      const reset = Number(h.get("X-RequestCounter-Reset"));
+      if (h.has("X-Requests-Available-Minute") && left <= 0) gate.pause(Number.isFinite(reset) ? reset : 60);
+    },
+  });
 }
 
 interface FdTeam {
@@ -116,25 +147,32 @@ function toMatch(m: FdMatch): Match {
   };
 }
 
-/** Matches across all subscribed competitions in a UTC date window. */
+/**
+ * Matches across all subscribed competitions in a UTC date window
+ * (YYYY-MM-DD, inclusive). Windows longer than the API allows are split.
+ */
 export async function fetchRange(dateFrom: string, dateTo: string): Promise<Match[]> {
   if (!isConfigured()) return [];
+  const from = Date.parse(`${dateFrom}T00:00:00Z`);
+  const to = Date.parse(`${dateTo}T00:00:00Z`);
+  const span = Math.round((to - from) / 86_400_000) + 1;
+  if (span > MAX_RANGE_DAYS) {
+    const mid = new Date(from + MAX_RANGE_DAYS * 86_400_000).toISOString().slice(0, 10);
+    const last = new Date(from + (MAX_RANGE_DAYS - 1) * 86_400_000).toISOString().slice(0, 10);
+    const [a, b] = await Promise.all([fetchRange(dateFrom, last), fetchRange(mid, dateTo)]);
+    return [...a, ...b];
+  }
   return cached(`fd:range:${dateFrom}:${dateTo}`, 3 * 60_000, async () => {
-    const data = await getJson<{ matches?: FdMatch[] | null }>(
-      `${BASE}/matches?dateFrom=${dateFrom}&dateTo=${dateTo}`,
-      { headers: headers(), provider: "football-data" },
-    );
+    const data = await fdGet<{ matches?: FdMatch[] | null }>(`/matches?dateFrom=${dateFrom}&dateTo=${dateTo}`);
     return (data.matches ?? []).map(toMatch);
   });
 }
 
+/** In-play matches. Empty unless the livescores plan is on: free-plan scores lag. */
 export async function fetchLive(): Promise<Match[]> {
-  if (!isConfigured()) return [];
+  if (!hasLivescores()) return [];
   return cached("fd:live", 20_000, async () => {
-    const data = await getJson<{ matches?: FdMatch[] | null }>(
-      `${BASE}/matches?status=LIVE`,
-      { headers: headers(), provider: "football-data" },
-    );
+    const data = await fdGet<{ matches?: FdMatch[] | null }>(`/matches?status=LIVE`);
     return (data.matches ?? []).map(toMatch);
   });
 }
@@ -147,10 +185,7 @@ export async function fetchLeagueUpcoming(league: LeagueDef): Promise<Match[]> {
   const code = league.ids.footballData;
   if (!isConfigured() || !code) return [];
   return cached(`fd:next:${code}`, 10 * 60_000, async () => {
-    const data = await getJson<{ matches?: FdMatch[] | null }>(
-      `${BASE}/competitions/${code}/matches?status=SCHEDULED`,
-      { headers: headers(), provider: "football-data" },
-    );
+    const data = await fdGet<{ matches?: FdMatch[] | null }>(`/competitions/${code}/matches?status=SCHEDULED`);
     return (data.matches ?? []).map(toMatch);
   });
 }
@@ -170,10 +205,7 @@ export async function fetchSeasonResults(
   if (!isConfigured() || !code) return [];
   const q = season ? `&season=${season}` : "";
   return cached(`fd:results:${code}:${season ?? "current"}`, 30 * 60_000, async () => {
-    const data = await getJson<{ matches?: FdMatch[] | null }>(
-      `${BASE}/competitions/${code}/matches?status=FINISHED${q}`,
-      { headers: headers(), provider: "football-data" },
-    );
+    const data = await fdGet<{ matches?: FdMatch[] | null }>(`/competitions/${code}/matches?status=FINISHED${q}`);
     return (data.matches ?? [])
       .map((m): ResultRow | null => {
         const hg = m.score?.fullTime?.home;
@@ -205,10 +237,7 @@ export async function fetchStandings(league: LeagueDef): Promise<StandingRow[]> 
       draw?: number; lost?: number; goalsFor?: number; goalsAgainst?: number;
       goalDifference?: number; points?: number;
     }
-    const data = await getJson<{ standings?: { type?: string; table?: Row[] }[] | null }>(
-      `${BASE}/competitions/${code}/standings`,
-      { headers: headers(), provider: "football-data" },
-    );
+    const data = await fdGet<{ standings?: { type?: string; table?: Row[] }[] | null }>(`/competitions/${code}/standings`);
     const total = data.standings?.find((s) => s.type === "TOTAL") ?? data.standings?.[0];
     return (total?.table ?? []).map((r, i): StandingRow => ({
       position: r.position ?? i + 1,
@@ -230,10 +259,7 @@ export async function fetchMatch(rawId: string): Promise<Match | null> {
   if (!isConfigured()) return null;
   return cached(`fd:match:${id}`, 30_000, async () => {
     try {
-      const m = await getJson<FdMatch>(`${BASE}/matches/${id}`, {
-        headers: headers(),
-        provider: "football-data",
-      });
+      const m = await fdGet<FdMatch>(`/matches/${id}`);
       return m?.id ? toMatch(m) : null;
     } catch {
       return null;
@@ -246,10 +272,7 @@ export async function fetchH2H(rawId: string, limit = 10): Promise<ResultRow[]> 
   if (!isConfigured()) return [];
   return cached(`fd:h2h:${id}`, 60 * 60_000, async () => {
     try {
-      const data = await getJson<{ matches?: FdMatch[] | null }>(
-        `${BASE}/matches/${id}/head2head?limit=${limit}`,
-        { headers: headers(), provider: "football-data" },
-      );
+      const data = await fdGet<{ matches?: FdMatch[] | null }>(`/matches/${id}/head2head?limit=${limit}`);
       return (data.matches ?? [])
         .map((m): ResultRow | null => {
           const hg = m.score?.fullTime?.home;

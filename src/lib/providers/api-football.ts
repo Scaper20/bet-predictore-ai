@@ -5,11 +5,16 @@
  * competitions properly, which matters for the home market. The free tier
  * allows 100 requests/day, so TTLs here are deliberately long.
  * Set API_FOOTBALL_KEY to enable it.
+ *
+ * Optional: TheSportsDB now covers the NPFL and CAF too. An account that is
+ * suspended or out of quota still answers 200 with an `errors` object and no
+ * data; the adapter notices, stands down for a few hours, and the merge
+ * carries on with the other feeds.
  */
 
 import type { Match, MatchStatus, ResultRow, StandingRow, Team } from "@/lib/types";
 import { LEAGUES, leagueByProviderId, type LeagueDef } from "@/lib/leagues";
-import { getJson } from "./http";
+import { getJson, ProviderError } from "./http";
 import { cached } from "./cache";
 import { sportOrDefault } from "@/lib/sports";
 
@@ -23,7 +28,33 @@ const BASE =
 export const apiKey = (): string | undefined =>
   process.env.API_FOOTBALL_KEY?.trim() || undefined;
 
-export const isConfigured = (): boolean => Boolean(apiKey());
+/** Until when the account is known to be refusing requests (suspended, quota spent). */
+let standDownUntil = 0;
+let standDownReason: string | null = null;
+const STAND_DOWN_MS = 6 * 60 * 60_000;
+
+export const isConfigured = (): boolean => Boolean(apiKey()) && Date.now() >= standDownUntil;
+
+/** Why the adapter is standing down, when it is. */
+export const unavailableReason = (): string | null =>
+  apiKey() && Date.now() < standDownUntil ? standDownReason : null;
+
+/** GET that treats API-Sports' "200 with errors" replies as the failures they are. */
+async function afGet<T extends { errors?: unknown }>(path: string): Promise<T> {
+  const data = await getJson<T>(`${BASE}${path}`, { headers: headers(), provider: "api-football" });
+  const errors = data.errors;
+  const messages = Array.isArray(errors) ? errors : errors && typeof errors === "object" ? Object.values(errors) : [];
+  if (messages.length > 0) {
+    const text = messages.map(String).join("; ");
+    // Account-level refusals won't clear on the next request; per-query ones might.
+    if (/suspend|subscri|plan|limit|quota|token|key/i.test(text)) {
+      standDownUntil = Date.now() + STAND_DOWN_MS;
+      standDownReason = text;
+    }
+    throw new ProviderError(text, 403, "api-football");
+  }
+  return data;
+}
 
 function headers(): Record<string, string> {
   const k = apiKey();
@@ -115,10 +146,7 @@ function toMatch(f: AfFixture): Match {
 async function fixtures(query: string, key: string, ttlMs: number): Promise<Match[]> {
   if (!isConfigured()) return [];
   return cached(`af:${key}`, ttlMs, async () => {
-    const data = await getJson<{ response?: AfFixture[] | null }>(
-      `${BASE}/fixtures?${query}`,
-      { headers: headers(), provider: "api-football" },
-    );
+    const data = await afGet<{ response?: AfFixture[] | null; errors?: unknown }>(`/fixtures?${query}`);
     return (data.response ?? []).map(toMatch);
   });
 }
@@ -146,10 +174,7 @@ export async function fetchSeasonResults(
   if (!isConfigured() || !id) return [];
   const season = seasonOverride ?? seasonYear();
   return cached(`af:results:${id}:${season}`, 60 * 60_000, async () => {
-    const data = await getJson<{ response?: AfFixture[] | null }>(
-      `${BASE}/fixtures?league=${id}&season=${season}&status=FT`,
-      { headers: headers(), provider: "api-football" },
-    );
+    const data = await afGet<{ response?: AfFixture[] | null; errors?: unknown }>(`/fixtures?league=${id}&season=${season}&status=FT`);
     return (data.response ?? [])
       .map((f): ResultRow | null => {
         const hg = f.goals?.home;
@@ -182,12 +207,10 @@ export async function fetchStandings(league: LeagueDef): Promise<StandingRow[]> 
         goals?: { for?: number; against?: number };
       };
     }
-    const data = await getJson<{
+    const data = await afGet<{
       response?: { league?: { standings?: Row[][] } }[] | null;
-    }>(`${BASE}/standings?league=${id}&season=${season}`, {
-      headers: headers(),
-      provider: "api-football",
-    });
+      errors?: unknown;
+    }>(`/standings?league=${id}&season=${season}`);
     const table = data.response?.[0]?.league?.standings?.[0] ?? [];
     return table.map((r, i): StandingRow => ({
       position: r.rank ?? i + 1,
@@ -216,10 +239,7 @@ export async function fetchH2H(homeId: string, awayId: string): Promise<ResultRo
   const pair = `${homeId}-${awayId}`;
   return cached(`af:h2h:${pair}`, 60 * 60_000, async () => {
     try {
-      const data = await getJson<{ response?: AfFixture[] | null }>(
-        `${BASE}/fixtures/headtohead?h2h=${encodeURIComponent(pair)}&last=10`,
-        { headers: headers(), provider: "api-football" },
-      );
+      const data = await afGet<{ response?: AfFixture[] | null; errors?: unknown }>(`/fixtures/headtohead?h2h=${encodeURIComponent(pair)}&last=10`);
       return (data.response ?? [])
         .map((f): ResultRow | null => {
           const hg = f.goals?.home;

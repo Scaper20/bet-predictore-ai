@@ -1,12 +1,22 @@
 /**
  * Provider resolver.
  *
- * All three feeds can be active at once, and they overlap: football-data and
- * TheSportsDB both carry the Premier League, for example. Rather than picking
- * one winner we query everything configured and merge, preferring the record
- * from the higher-priority feed whenever two describe the same fixture. That
- * way NPFL coverage from API-Football and broad live scores from TheSportsDB
- * both survive alongside football-data's richer European data.
+ * The feeds are queried together and merged, because each is best at
+ * something different:
+ *
+ * - football-data.org: the reference record for its twelve competitions.
+ *   Clean names, crests, matchdays, tables, untruncated results. Its free-plan
+ *   scores are delayed, so it is never trusted for what is happening now.
+ * - TheSportsDB: real-time live scores for every competition, plus the
+ *   leagues football-data doesn't carry (NPFL, CAF, internationals, the rest
+ *   of the world), and extra training depth with a paid key.
+ * - API-Football: optional; used when its account is active.
+ *
+ * When two feeds describe the same fixture, the higher-PRIORITY record wins
+ * on identity (id, names, league, round), and the in-play fields (status,
+ * score, minute) come from whichever record has progressed furthest, with
+ * LIVE_PRIORITY breaking ties. So a Premier League game shows football-data's
+ * crest and matchday with TheSportsDB's live score.
  *
  * No adapter ever fabricates a fixture. If every feed comes back empty, the
  * caller gets an empty list and the UI renders an explicit empty state.
@@ -21,27 +31,42 @@ import * as sdb from "./thesportsdb";
 /** Lower index wins when the same fixture appears in several feeds. */
 const PRIORITY: ProviderId[] = ["football-data", "api-football", "thesportsdb"];
 
+/**
+ * Who to believe about the score of a game in progress. football-data drops
+ * to last unless its paid livescores plan is on, since free-plan scores lag.
+ */
+function livePriority(): ProviderId[] {
+  return fd.hasLivescores()
+    ? ["football-data", "thesportsdb", "api-football"]
+    : ["thesportsdb", "api-football", "football-data"];
+}
+
 export function providerHealth(): ProviderHealth[] {
+  const afDown = af.unavailableReason();
   return [
     {
       id: "football-data",
       label: "football-data.org",
       configured: fd.isConfigured(),
-      note: "Top European competitions, full result sets. Free tier: 10 req/min.",
+      note: fd.hasLivescores()
+        ? "Top 12 competitions: fixtures, results, tables, crests and live scores. 10 req/min."
+        : "Top 12 competitions: fixtures, results, tables, crests. Free-plan scores are delayed, so live scores come from TheSportsDB. 10 req/min.",
     },
     {
       id: "api-football",
       label: "API-Football",
       configured: af.isConfigured(),
-      note: "Widest coverage including NPFL and CAF competitions. Free tier: 100 req/day.",
+      note: afDown
+        ? `Standing down: the account refused requests (${afDown}). Retrying in a few hours.`
+        : "Optional. Wide coverage including NPFL and CAF. Free tier: 100 req/day.",
     },
     {
       id: "thesportsdb",
       label: "TheSportsDB",
       configured: true,
       note: sdb.isFreeTierKey
-        ? "Active on the shared public key — live scores are complete, list endpoints are truncated."
-        : "Active with a private key: full list coverage.",
+        ? "Public key: real-time live scores for every league, but lists are cut to a few rows. A paid key unlocks full fixtures, NPFL, CAF and training history."
+        : "Paid key: real-time live scores (v2), full fixture lists, NPFL, CAF, internationals, team histories. 100 req/min.",
     },
   ];
 }
@@ -75,17 +100,39 @@ function normaliseClub(name: string): string {
     .trim();
 }
 
-function mergeMatches(groups: Match[][]): Match[] {
+/**
+ * Looser identity for the pairs fixtureKey misses: feeds disagree on more
+ * than suffixes ("Brighton & Hove Albion FC" against "Brighton", "Inter"
+ * against "Internazionale"). Same kickoff day, and one side matching while
+ * the other at least contains its counterpart, is the same game: no club
+ * plays twice in a day.
+ */
+function sameFixture(a: Match, b: Match): boolean {
+  if (a.kickoff.slice(0, 10) !== b.kickoff.slice(0, 10)) return false;
+  const near = (x: string, y: string) => x === y || (x.length >= 4 && y.length >= 4 && (x.includes(y) || y.includes(x)));
+  const [ah, aa, bh, ba] = [a.home.name, a.away.name, b.home.name, b.away.name].map(normaliseClub);
+  if (!ah || !aa || !bh || !ba) return false;
+  return (ah === bh && near(aa, ba)) || (aa === ba && near(ah, bh)) || (near(ah, bh) && near(aa, ba) && Math.abs(Date.parse(a.kickoff) - Date.parse(b.kickoff)) <= 15 * 60_000);
+}
+
+export function mergeMatches(groups: Match[][]): Match[] {
   const byKey = new Map<string, Match>();
+  const byDay = new Map<string, string[]>();
   for (const group of groups) {
     for (const m of group) {
-      const key = fixtureKey(m);
+      let key = fixtureKey(m);
+      if (!byKey.has(key)) {
+        const day = m.kickoff.slice(0, 10);
+        const loose = byDay.get(day)?.find((k) => sameFixture(byKey.get(k)!, m));
+        if (loose) key = loose;
+      }
       const existing = byKey.get(key);
       if (!existing) {
         byKey.set(key, m);
+        const day = m.kickoff.slice(0, 10);
+        byDay.set(day, [...(byDay.get(day) ?? []), key]);
         continue;
       }
-      // Keep the higher-priority record, but never lose a live score.
       const winner =
         PRIORITY.indexOf(m.source) < PRIORITY.indexOf(existing.source) ? m : existing;
       const other = winner === m ? existing : m;
@@ -95,18 +142,57 @@ function mergeMatches(groups: Match[][]): Match[] {
   return [...byKey.values()].sort(compareMatches);
 }
 
-/** Fill gaps in the preferred record from the runner-up feed. */
+/** How far through its life a fixture is, as far as one feed knows. */
+function progress(m: Match): number {
+  switch (m.status) {
+    case "live":
+    case "halftime":
+      return 1;
+    case "finished":
+      return 2;
+    default:
+      return 0;
+  }
+}
+
+/**
+ * Which record to take status, score and minute from. The one that has seen
+ * more of the game wins (a delayed feed still saying "scheduled" loses to one
+ * saying "live"), except that a finished result from the identity feed is
+ * kept: it carries corrections a live feed's last tick may not. Postponed or
+ * cancelled from the identity feed always stands.
+ */
+function liveSource(primary: Match, secondary: Match): Match {
+  if (primary.status === "postponed" || primary.status === "cancelled") return primary;
+  const p = progress(primary);
+  const s = progress(secondary);
+  if (s > p) return secondary;
+  if (p > s) return primary;
+  if (p === 1) {
+    const order = livePriority();
+    return order.indexOf(secondary.source) < order.indexOf(primary.source) ? secondary : primary;
+  }
+  return primary;
+}
+
+/**
+ * Fill gaps in the preferred record from the runner-up feed, and take the
+ * in-play fields from whichever is more current.
+ */
 function enrich(primary: Match, secondary: Match): Match {
+  const live = liveSource(primary, secondary);
+  const rest = live === primary ? secondary : primary;
   return {
     ...primary,
-    minute: primary.minute ?? secondary.minute,
+    status: live.status,
+    minute: live.minute ?? (progress(live) === 1 ? rest.minute : null) ?? null,
     venue: primary.venue ?? secondary.venue,
     round: primary.round ?? secondary.round,
     score: {
-      home: primary.score.home ?? secondary.score.home,
-      away: primary.score.away ?? secondary.score.away,
+      home: live.score.home ?? rest.score.home,
+      away: live.score.away ?? rest.score.away,
     },
-    halftime: primary.halftime ?? secondary.halftime,
+    halftime: live.halftime ?? rest.halftime,
     home: { ...primary.home, crest: primary.home.crest ?? secondary.home.crest },
     away: { ...primary.away, crest: primary.away.crest ?? secondary.away.crest },
     league: {
@@ -163,8 +249,10 @@ export async function getUpcoming(days = 7, leagueCode?: string): Promise<Match[
     fd.fetchRange(dates[0], dates[dates.length - 1]),
   ];
 
-  // Per-day fan-out for the feeds without a range endpoint.
-  const perDayCap = Math.min(days, 4);
+  // Per-day fan-out for the feeds without a range endpoint. On TheSportsDB's
+  // public key a day returns three games, so scanning far ahead buys nothing;
+  // a paid key returns the whole day and is worth scanning the full window.
+  const perDayCap = Math.min(days, sdb.isPremium ? 10 : 4);
   for (const d of dates.slice(0, perDayCap)) {
     windowTasks.push(sdb.fetchByDate(d));
     if (af.isConfigured()) windowTasks.push(af.fetchByDate(d));
@@ -210,8 +298,23 @@ export async function getMatch(id: string): Promise<Match | null> {
   // already swallow their own errors, but af's doesn't, and the fallback
   // below must run regardless of which adapter a future change touches.
   const direct = await fetchDirect(id).catch(() => null);
-  if (direct) return direct;
+  if (direct) return withLiveScore(direct);
   return findInFeeds(id);
+}
+
+/**
+ * A single-match lookup asks only the feed that owns the id, which for a top
+ * competition is football-data, whose free-plan score lags. Around kickoff,
+ * lay the live feed's state over it (the live list is cached for 20 seconds,
+ * so this is normally free).
+ */
+async function withLiveScore(match: Match): Promise<Match> {
+  if (match.status === "finished" || match.status === "postponed" || match.status === "cancelled") return match;
+  const ko = Date.parse(match.kickoff);
+  if (Number.isFinite(ko) && (Date.now() < ko - 10 * 60_000 || Date.now() > ko + 4 * 60 * 60_000)) return match;
+  const live = await getLive().catch(() => [] as Match[]);
+  const twin = live.find((m) => m.id === match.id || fixtureKey(m) === fixtureKey(match) || sameFixture(m, match));
+  return twin && twin.id !== match.id ? enrich(match, twin) : twin ?? match;
 }
 
 async function fetchDirect(id: string): Promise<Match | null> {
@@ -353,8 +456,8 @@ function poolLabel(league: LeagueDef): string {
   return league.confederation === "global" ? "national-team" : `${league.confederation} and global`;
 }
 
-/** Pooled competitions fetched this many at a time — the public TheSportsDB key rate-limits bursts. */
-const POOL_CONCURRENCY = 3;
+/** Pooled competitions fetched this many at a time: the public TheSportsDB key rate-limits bursts. */
+const POOL_CONCURRENCY = sdb.isPremium ? 6 : 3;
 
 /**
  * Results from every competition in a national-team fixture's pool, merged.
@@ -395,7 +498,13 @@ export async function getH2H(match: Match): Promise<ResultRow[]> {
   const tasks: Promise<ResultRow[]>[] = [];
   if (match.id.startsWith("fd:")) tasks.push(fd.fetchH2H(match.id));
   if (match.id.startsWith("af:")) tasks.push(af.fetchH2H(match.home.id, match.away.id));
-  tasks.push(sdb.fetchH2H(match.home.name, match.away.name));
+  tasks.push(
+    sdb.fetchH2H(
+      match.home.name,
+      match.away.name,
+      match.source === "thesportsdb" ? { home: match.home.id, away: match.away.id } : undefined,
+    ),
+  );
 
   const groups = await gather<ResultRow>(tasks);
   const seen = new Map<string, ResultRow>();

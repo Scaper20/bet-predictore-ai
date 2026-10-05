@@ -1,18 +1,25 @@
 /**
- * TheSportsDB adapter.
+ * TheSportsDB adapter: live scores, and everything football-data doesn't carry.
  *
- * This is the zero-config feed: the public test key "123" works without any
- * signup, which means a fresh clone of this repo shows real fixtures and real
- * live scores immediately. The trade-off is that the test key truncates most
- * list endpoints to a handful of rows, so a paid key (THESPORTSDB_API_KEY)
- * lifts coverage substantially. Live scores are the one endpoint that is not
- * truncated, which is why this adapter stays useful even unpaid.
+ * Two modes, picked by THESPORTSDB_API_KEY:
+ *
+ * - Public test key "123" (no signup): live scores are complete, but list
+ *   endpoints are cut to a few rows (3 games a day, 15 a season, 1 "next").
+ *   30 requests a minute.
+ * - Paid key: the same v1 lists return in full (1,500 games a day, 3,000 a
+ *   season, 20 "next", 100-row tables), and the v2 API opens: live scores at
+ *   /livescore/{sport} and a team's full schedule (250 games) for
+ *   head-to-heads. 100 requests a minute.
+ *
+ * Its live feed is in real time, where football-data's free plan is delayed,
+ * so it owns in-play scores. It is also the only feed here that covers the
+ * NPFL, CAF competitions and national-team football.
  */
 
 import type { Match, MatchStatus, ResultRow, StandingRow, Team } from "@/lib/types";
 import { sportOrDefault } from "@/lib/sports";
 import { LEAGUES, leagueByProviderId, type LeagueDef } from "@/lib/leagues";
-import { getJson } from "./http";
+import { getJson, RateGate } from "./http";
 import { cached } from "./cache";
 
 const KEY = process.env.THESPORTSDB_API_KEY?.trim() || "123";
@@ -20,9 +27,33 @@ const KEY = process.env.THESPORTSDB_API_KEY?.trim() || "123";
 const SPORT = sportOrDefault().providers.theSportsDb ?? "Soccer";
 
 const BASE = `https://www.thesportsdb.com/api/v1/json/${KEY}`;
+const V2 = "https://www.thesportsdb.com/api/v2/json";
 
 /** True when running on the shared public key, which is heavily truncated. */
 export const isFreeTierKey = KEY === "123";
+/** A paid key: full v1 lists plus the v2 API. */
+export const isPremium = !isFreeTierKey;
+
+/** Published limits are 30/min free and 100/min paid; stay a little under. */
+const gate = new RateGate(
+  "thesportsdb",
+  Number(process.env.THESPORTSDB_RATE_PER_MIN) || (isPremium ? 95 : 28),
+);
+
+/**
+ * Most games one eventsday.php call returns. The free key's three makes a
+ * per-day scan nearly worthless, which is why callers cap it there.
+ */
+export const DAY_ROW_LIMIT = isPremium ? 1500 : 3;
+
+function v1<T>(path: string): Promise<T> {
+  return getJson<T>(`${BASE}/${path}`, { provider: "thesportsdb", gate });
+}
+
+/** v2 is paid-only and takes the key in a header rather than the path. */
+function v2<T>(path: string): Promise<T> {
+  return getJson<T>(`${V2}${path}`, { provider: "thesportsdb", gate, headers: { "X-API-KEY": KEY } });
+}
 
 interface SdbEvent {
   idEvent: string;
@@ -180,24 +211,29 @@ function liveToMatch(e: SdbLive): Match | null {
   };
 }
 
-/** Live soccer scores across every competition the feed tracks. */
+/**
+ * Live soccer scores across every competition the feed tracks.
+ *
+ * A paid key reads v2's /livescore, the documented home of live scores now;
+ * the v1 endpoint stays as the fallback and as the free-key path.
+ */
 export async function fetchLive(): Promise<Match[]> {
   return cached("sdb:live", 20_000, async () => {
-    const data = await getJson<{ livescore?: SdbLive[] | null }>(
-      `${BASE}/livescore.php?s=${encodeURIComponent(SPORT)}`,
-      { provider: "thesportsdb" },
-    );
-    return (data.livescore ?? []).map(liveToMatch).filter((m): m is Match => m !== null);
+    let rows: SdbLive[] | null | undefined;
+    if (isPremium) {
+      rows = await v2<{ livescore?: SdbLive[] | null }>(`/livescore/${encodeURIComponent(SPORT.toLowerCase())}`)
+        .then((d) => d.livescore)
+        .catch(() => undefined);
+    }
+    rows ??= (await v1<{ livescore?: SdbLive[] | null }>(`livescore.php?s=${encodeURIComponent(SPORT)}`)).livescore;
+    return (rows ?? []).map(liveToMatch).filter((m): m is Match => m !== null);
   });
 }
 
 /** Every soccer fixture on a given calendar day (YYYY-MM-DD, UTC). */
 export async function fetchByDate(date: string): Promise<Match[]> {
   return cached(`sdb:day:${date}`, 5 * 60_000, async () => {
-    const data = await getJson<{ events?: SdbEvent[] | null }>(
-      `${BASE}/eventsday.php?d=${encodeURIComponent(date)}&s=${encodeURIComponent(SPORT)}`,
-      { provider: "thesportsdb" },
-    );
+    const data = await v1<{ events?: SdbEvent[] | null }>(`eventsday.php?d=${encodeURIComponent(date)}&s=${encodeURIComponent(SPORT)}`);
     return (data.events ?? []).map(toMatch).filter((m): m is Match => m !== null);
   });
 }
@@ -207,10 +243,7 @@ export async function fetchLeagueUpcoming(league: LeagueDef): Promise<Match[]> {
   const id = league.ids.theSportsDb;
   if (!id) return [];
   return cached(`sdb:next:${id}`, 10 * 60_000, async () => {
-    const data = await getJson<{ events?: SdbEvent[] | null }>(
-      `${BASE}/eventsnextleague.php?id=${id}`,
-      { provider: "thesportsdb" },
-    );
+    const data = await v1<{ events?: SdbEvent[] | null }>(`eventsnextleague.php?id=${id}`);
     return (data.events ?? []).map(toMatch).filter((m): m is Match => m !== null);
   });
 }
@@ -226,27 +259,8 @@ export async function fetchSeasonResults(league: LeagueDef, season?: string): Pr
   if (!id) return [];
   const s = season ?? currentSeasonLabel();
   return cached(`sdb:season:${id}:${s}`, 30 * 60_000, async () => {
-    const data = await getJson<{ events?: SdbEvent[] | null }>(
-      `${BASE}/eventsseason.php?id=${id}&s=${encodeURIComponent(s)}`,
-      { provider: "thesportsdb" },
-    );
-    return (data.events ?? [])
-      .map((e): ResultRow | null => {
-        const hg = num(e.intHomeScore ?? null);
-        const ag = num(e.intAwayScore ?? null);
-        if (hg === null || ag === null || !e.strHomeTeam || !e.strAwayTeam) return null;
-        return {
-          homeId: e.idHomeTeam || e.strHomeTeam,
-          awayId: e.idAwayTeam || e.strAwayTeam,
-          homeName: e.strHomeTeam,
-          awayName: e.strAwayTeam,
-          homeGoals: hg,
-          awayGoals: ag,
-          date: kickoffMs(e),
-          leagueId: e.idLeague || id,
-        };
-      })
-      .filter((r): r is ResultRow => r !== null);
+    const data = await v1<{ events?: SdbEvent[] | null }>(`eventsseason.php?id=${id}&s=${encodeURIComponent(s)}`);
+    return (data.events ?? []).map((e) => toResult(e, id)).filter((r): r is ResultRow => r !== null);
   });
 }
 
@@ -266,27 +280,8 @@ export async function fetchSeasonResultsByLeagueId(
   const s = season ?? currentSeasonLabel();
   return cached(`sdb:season-raw:${leagueId}:${s}`, 30 * 60_000, async () => {
     try {
-      const data = await getJson<{ events?: SdbEvent[] | null }>(
-        `${BASE}/eventsseason.php?id=${encodeURIComponent(leagueId)}&s=${encodeURIComponent(s)}`,
-        { provider: "thesportsdb" },
-      );
-      return (data.events ?? [])
-        .map((e): ResultRow | null => {
-          const hg = num(e.intHomeScore ?? null);
-          const ag = num(e.intAwayScore ?? null);
-          if (hg === null || ag === null || !e.strHomeTeam || !e.strAwayTeam) return null;
-          return {
-            homeId: e.idHomeTeam || e.strHomeTeam,
-            awayId: e.idAwayTeam || e.strAwayTeam,
-            homeName: e.strHomeTeam,
-            awayName: e.strAwayTeam,
-            homeGoals: hg,
-            awayGoals: ag,
-            date: kickoffMs(e),
-            leagueId: e.idLeague || leagueId,
-          };
-        })
-        .filter((r): r is ResultRow => r !== null);
+      const data = await v1<{ events?: SdbEvent[] | null }>(`eventsseason.php?id=${encodeURIComponent(leagueId)}&s=${encodeURIComponent(s)}`);
+      return (data.events ?? []).map((e) => toResult(e, leagueId)).filter((r): r is ResultRow => r !== null);
     } catch {
       return [];
     }
@@ -303,10 +298,7 @@ export async function fetchStandings(league: LeagueDef, season?: string): Promis
       intPlayed?: string; intWin?: string; intDraw?: string; intLoss?: string;
       intGoalsFor?: string; intGoalsAgainst?: string; intGoalDifference?: string; intPoints?: string;
     }
-    const data = await getJson<{ table?: Row[] | null }>(
-      `${BASE}/lookuptable.php?l=${id}&s=${encodeURIComponent(s)}`,
-      { provider: "thesportsdb" },
-    );
+    const data = await v1<{ table?: Row[] | null }>(`lookuptable.php?l=${id}&s=${encodeURIComponent(s)}`);
     return (data.table ?? []).map((r, i): StandingRow => ({
       position: num(r.intRank ?? null) ?? i + 1,
       team: team(r.idTeam, r.strTeam, r.strBadge),
@@ -326,10 +318,7 @@ export async function fetchMatch(rawId: string): Promise<Match | null> {
   const id = rawId.replace(/^sdb:/, "");
   return cached(`sdb:event:${id}`, 30_000, async () => {
     try {
-      const data = await getJson<{ events?: SdbEvent[] | null }>(
-        `${BASE}/lookupevent.php?id=${encodeURIComponent(id)}`,
-        { provider: "thesportsdb" },
-      );
+      const data = await v1<{ events?: SdbEvent[] | null }>(`lookupevent.php?id=${encodeURIComponent(id)}`);
       const first = data.events?.[0];
       return first ? toMatch(first) : null;
     } catch {
@@ -342,36 +331,70 @@ export async function fetchMatch(rawId: string): Promise<Match | null> {
   });
 }
 
-/** Head-to-head history between two clubs, newest first. */
-export async function fetchH2H(homeName: string, awayName: string): Promise<ResultRow[]> {
-  const key = `sdb:h2h:${homeName}|${awayName}`.toLowerCase();
+function toResult(e: SdbEvent, fallbackLeague = "0"): ResultRow | null {
+  const hg = num(e.intHomeScore ?? null);
+  const ag = num(e.intAwayScore ?? null);
+  if (hg === null || ag === null || !e.strHomeTeam || !e.strAwayTeam) return null;
+  // Some rows for games not yet played carry "0"/"0"; a result that hasn't
+  // happened would teach the model a 0-0.
+  if (kickoffMs(e) > Date.now()) return null;
+  return {
+    homeId: e.idHomeTeam || e.strHomeTeam,
+    awayId: e.idAwayTeam || e.strAwayTeam,
+    homeName: e.strHomeTeam,
+    awayName: e.strAwayTeam,
+    homeGoals: hg,
+    awayGoals: ag,
+    date: kickoffMs(e),
+    leagueId: e.idLeague || fallbackLeague,
+  };
+}
+
+/**
+ * Head-to-head history between two clubs, newest first.
+ *
+ * With a paid key and TheSportsDB team ids (a fixture that came from this
+ * feed), the home side's full schedule, up to 250 games across every
+ * competition, is filtered to meetings with the opponent: far deeper than
+ * the name search. Otherwise the name search runs both ways round, since
+ * "A_vs_B" only finds games A hosted.
+ */
+export async function fetchH2H(
+  homeName: string,
+  awayName: string,
+  teamIds?: { home: string; away: string },
+): Promise<ResultRow[]> {
+  const key = `sdb:h2h:${homeName}|${awayName}|${teamIds?.home ?? ""}`.toLowerCase();
   return cached(key, 60 * 60_000, async () => {
-    const url =
-      `${BASE}/searchevents.php?e=${encodeURIComponent(`${homeName}_vs_${awayName}`)}`;
-    try {
-      const data = await getJson<{ event?: SdbEvent[] | null }>(url, { provider: "thesportsdb" });
-      return (data.event ?? [])
-        .map((e): ResultRow | null => {
-          const hg = num(e.intHomeScore ?? null);
-          const ag = num(e.intAwayScore ?? null);
-          if (hg === null || ag === null || !e.strHomeTeam || !e.strAwayTeam) return null;
-          return {
-            homeId: e.idHomeTeam || e.strHomeTeam,
-            awayId: e.idAwayTeam || e.strAwayTeam,
-            homeName: e.strHomeTeam,
-            awayName: e.strAwayTeam,
-            homeGoals: hg,
-            awayGoals: ag,
-            date: kickoffMs(e),
-            leagueId: e.idLeague || "0",
-          };
-        })
-        .filter((r): r is ResultRow => r !== null)
-        .sort((a, b) => b.date - a.date);
-    } catch {
-      // H2H search is best-effort; absence must not fail a match page.
-      return [];
+    const rows: ResultRow[] = [];
+    if (isPremium && teamIds && /^\d+$/.test(teamIds.home) && /^\d+$/.test(teamIds.away)) {
+      const full = await v2<{ schedule?: SdbEvent[] | null; events?: SdbEvent[] | null }>(
+        `/schedule/full/team/${teamIds.home}`,
+      ).catch(() => null);
+      const games = full?.schedule ?? full?.events ?? [];
+      for (const e of games) {
+        const pair = [e.idHomeTeam, e.idAwayTeam];
+        if (!pair.includes(teamIds.home) || !pair.includes(teamIds.away)) continue;
+        const r = toResult(e);
+        if (r) rows.push(r);
+      }
     }
+    if (rows.length === 0) {
+      const searches = [`${homeName}_vs_${awayName}`, ...(isPremium ? [`${awayName}_vs_${homeName}`] : [])];
+      const found = await Promise.all(
+        searches.map((q) =>
+          v1<{ event?: SdbEvent[] | null }>(`searchevents.php?e=${encodeURIComponent(q)}`)
+            .then((d) => d.event ?? [])
+            // H2H is best-effort; absence must not fail a match page.
+            .catch(() => [] as SdbEvent[]),
+        ),
+      );
+      for (const e of found.flat()) {
+        const r = toResult(e);
+        if (r) rows.push(r);
+      }
+    }
+    return rows.sort((a, b) => b.date - a.date);
   });
 }
 

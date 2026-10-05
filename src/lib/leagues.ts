@@ -204,11 +204,10 @@ export const LEAGUES: LeagueDef[] = [
     country: "Africa",
     flag: "🌍",
     rank: 15,
-    // No theSportsDb id: 4552 resolves to "AAF", a defunct United States
-    // American-football league, which would have filed its fixtures under CAF
-    // Champions League. Omitting the id is strictly better than a wrong one —
-    // the adapter skips the competition instead of mislabelling another sport.
-    ids: { apiFootball: 12, sportyBet: "sr:tournament:1054" },
+    // 4720, checked against lookupleague.php: "CAF Champions League", soccer,
+    // seasons keyed "2026-2027". (An earlier guess, 4552, was a defunct
+    // American-football league; never add an id here without looking it up.)
+    ids: { theSportsDb: "4720", apiFootball: 12, sportyBet: "sr:tournament:1054" },
     archive: { sportApi: 1054 },
   },
   {
