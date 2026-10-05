@@ -1,6 +1,7 @@
 import "server-only";
 
 import { cached } from "@/lib/providers/cache";
+import { fromLayer } from "./boards";
 import { matchesSelection, readOdds, toSportyBet } from "./markets";
 import { findFixture, type FixtureLike } from "./match-fixture";
 
@@ -78,6 +79,22 @@ async function upcomingPage(
   pageSize: number,
   tournamentId?: string,
 ): Promise<SportyBetEvent[]> {
+  // In db modes the board comes from the scheduled snapshot (odds_boards).
+  return fromLayer(sportyBetBoardKey(page, pageSize, tournamentId), [], () =>
+    fetchUpcomingPage(page, pageSize, tournamentId),
+  );
+}
+
+export function sportyBetBoardKey(page: number, pageSize: number, tournamentId?: string): string {
+  return `sportybet:upcoming:${tournamentId ?? "all"}:${page}:${pageSize}`;
+}
+
+/** The live fetch: one metered call per page. Used by the page path in live mode and by the snapshot job. */
+export async function fetchUpcomingPage(
+  page: number,
+  pageSize: number,
+  tournamentId?: string,
+): Promise<SportyBetEvent[]> {
   const key = configured();
   if (!key) return [];
 
@@ -127,7 +144,7 @@ async function upcomingPage(
  * returns whole tournaments rather than a fixed count, so a page is between
  * about 30 and 60 events.
  */
-const PAGE_SIZE = 100;
+export const PAGE_SIZE = 100;
 
 /**
  * How far into the unfiltered board to look for a competition with no id.

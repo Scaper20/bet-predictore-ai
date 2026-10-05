@@ -178,6 +178,7 @@ create table if not exists public.competitions (
   -- One writer per league, so the same game is never counted twice under two
   -- spellings of a club's name.
   history_owner text not null default 'matches' check (history_owner in ('matches', 'football-data-uk')),
+  logo text,
   updated_at timestamptz not null default now()
 );
 
@@ -217,6 +218,8 @@ create table if not exists public.teams (
   -- ("nigeria"), or "international" for national teams.
   scope text not null,
   created_from text not null references public.ingest_sources (id),
+  -- Badge URL from TheSportsDB's club list, shown beside the name.
+  crest text,
   created_at timestamptz not null default now()
 );
 
@@ -289,6 +292,8 @@ create index if not exists matches_kickoff_idx on public.matches (kickoff);
 create index if not exists matches_league_kickoff_idx on public.matches (league_code, kickoff desc);
 create index if not exists matches_in_play_idx on public.matches (kickoff) where status in ('live', 'halftime');
 create index if not exists matches_sdb_id_idx on public.matches ((source_ids ->> 'thesportsdb'));
+-- Pages look games up by any feed's id: source_ids @> '{"football-data-org": "537785"}'.
+create index if not exists matches_source_ids_idx on public.matches using gin (source_ids jsonb_path_ops);
 
 alter table public.matches enable row level security;
 create policy "matches_select_all" on public.matches for select using (true);
@@ -519,6 +524,21 @@ create index if not exists odds_snapshots_kickoff_idx on public.odds_snapshots (
 
 alter table public.odds_snapshots enable row level security;
 create policy "odds_snapshots_select_all" on public.odds_snapshots for select using (true);
+
+-- Latest odds "board" per competition and market, exactly as the odds
+-- modules fetch it (src/lib/odds), captured on a schedule by
+-- /api/cron/odds-snapshot. In db modes the odds modules read these instead
+-- of calling SportyBet or The Odds API while a page renders; matching a
+-- fixture to a board stays in the app, unchanged. Service role only.
+create table if not exists public.odds_boards (
+  key text primary key,
+  source text not null references public.ingest_sources (id),
+  payload jsonb not null,
+  meta jsonb not null default '{}'::jsonb,
+  fetched_at timestamptz not null default now()
+);
+
+alter table public.odds_boards enable row level security;
 
 create table if not exists public.elo_ratings (
   source text not null references public.ingest_sources (id),

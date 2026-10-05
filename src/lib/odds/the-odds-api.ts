@@ -12,6 +12,7 @@ import {
   type Quota,
 } from "./budget";
 import { findFixture, type FixtureLike } from "./match-fixture";
+import { fromLayer } from "./boards";
 
 /**
  * The Odds API -- forty-odd bookmakers' prices for the same match.
@@ -111,6 +112,21 @@ function configured(): string | null {
  * falling back to the model's own break-even.
  */
 async function board(leagueCode: string, marketKey: string): Promise<ConsensusEvent[]> {
+  // In db modes the board comes from the scheduled snapshot (odds_boards).
+  return fromLayer(oddsApiBoardKey(leagueCode, marketKey), [], () => fetchBoard(leagueCode, marketKey));
+}
+
+export function oddsApiBoardKey(leagueCode: string, marketKey: string): string {
+  return `odds-api:${SPORT_KEYS[leagueCode] ?? leagueCode}:${marketKey}`;
+}
+
+/** Competitions and markets The Odds API covers, for the snapshot job. */
+export const ODDS_API_BOARDS: { leagueCode: string; marketKey: "h2h" | "totals" }[] = Object.keys(SPORT_KEYS).flatMap(
+  (leagueCode) => (["h2h", "totals"] as const).map((marketKey) => ({ leagueCode, marketKey })),
+);
+
+/** The live fetch, spending credits. Used by the page path in live mode and by the snapshot job. */
+export async function fetchBoard(leagueCode: string, marketKey: string): Promise<ConsensusEvent[]> {
   const key = configured();
   const sportKey = SPORT_KEYS[leagueCode];
   if (!key || !sportKey) return [];

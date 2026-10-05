@@ -27,6 +27,8 @@ import { internationalPool, leagueByCode as leagueByCodeSync, rankLeague, type L
 import * as fd from "./football-data";
 import * as af from "./api-football";
 import * as sdb from "./thesportsdb";
+import * as dbs from "./db-source";
+import { dataLayer, viaLayer } from "./data-layer";
 
 /** Lower index wins when the same fixture appears in several feeds. */
 const PRIORITY: ProviderId[] = ["football-data", "api-football", "thesportsdb"];
@@ -221,14 +223,22 @@ async function gather<T>(tasks: Promise<T[]>[]): Promise<T[][]> {
   return settled.map((s) => (s.status === "fulfilled" ? s.value : []));
 }
 
-export async function getLive(): Promise<Match[]> {
+export function getLive(): Promise<Match[]> {
+  return viaLayer(dbs.dbLive, liveGetLive, [], (v) => v.length === 0);
+}
+
+async function liveGetLive(): Promise<Match[]> {
   const groups = await gather<Match>([fd.fetchLive(), af.fetchLive(), sdb.fetchLive()]);
   return mergeMatches(groups).filter(
     (m) => m.status === "live" || m.status === "halftime",
   );
 }
 
-export async function getByDate(date: string): Promise<Match[]> {
+export function getByDate(date: string): Promise<Match[]> {
+  return viaLayer(() => dbs.dbByDate(date), () => liveGetByDate(date), [], (v) => v.length === 0);
+}
+
+async function liveGetByDate(date: string): Promise<Match[]> {
   const groups = await gather<Match>([
     fd.fetchByDate(date),
     af.fetchByDate(date),
@@ -243,7 +253,11 @@ export async function getByDate(date: string): Promise<Match[]> {
  * football-data can answer a whole window in one request; the other feeds are
  * per-day, so those are fanned out but capped to keep free-tier quotas intact.
  */
-export async function getUpcoming(days = 7, leagueCode?: string): Promise<Match[]> {
+export function getUpcoming(days = 7, leagueCode?: string): Promise<Match[]> {
+  return viaLayer(() => dbs.dbUpcoming(days, leagueCode), () => liveGetUpcoming(days, leagueCode), [], (v) => v.length === 0);
+}
+
+async function liveGetUpcoming(days = 7, leagueCode?: string): Promise<Match[]> {
   const dates = upcomingDates(days);
   const windowTasks: Promise<Match[]>[] = [
     fd.fetchRange(dates[0], dates[dates.length - 1]),
@@ -293,7 +307,11 @@ export async function getUpcoming(days = 7, leagueCode?: string): Promise<Match[
  * recovers exactly that case at near-zero extra cost, since they're normally
  * already warm.
  */
-export async function getMatch(id: string): Promise<Match | null> {
+export function getMatch(id: string): Promise<Match | null> {
+  return viaLayer<Match | null>(() => dbs.dbMatch(id), () => liveGetMatch(id), null, (v) => v === null);
+}
+
+async function liveGetMatch(id: string): Promise<Match | null> {
   // Caught here rather than trusted to each adapter: fd/sdb's fetchMatch
   // already swallow their own errors, but af's doesn't, and the fallback
   // below must run regardless of which adapter a future change touches.
@@ -355,7 +373,14 @@ export const MIN_TRAINING_ROWS = 40;
  * Results from every configured feed are combined and de-duplicated on club
  * pair plus date, since deeper history means a better fit.
  */
-export async function getSeasonResults(
+export function getSeasonResults(
+  league: LeagueDef,
+  opts: { minRows?: number; maxSeasons?: number } = {},
+): Promise<ResultRow[]> {
+  return viaLayer(() => dbs.dbSeasonResults(league), () => liveGetSeasonResults(league, opts), [], (v) => v.length === 0);
+}
+
+async function liveGetSeasonResults(
   league: LeagueDef,
   opts: { minRows?: number; maxSeasons?: number } = {},
 ): Promise<ResultRow[]> {
@@ -434,6 +459,11 @@ export async function getTrainingResults(
 
   // Uncurated competition: fit it against its own history. Both season-label
   // conventions are tried, since the payload does not say which one applies.
+  // The scheduled layer only ingests catalogued competitions, so in db mode
+  // there is nothing to fetch, and fetching it live is what db mode rules out.
+  if ((await dataLayer()) === "db") {
+    return { rows: [], leagueName: match.league.name, curated: false };
+  }
   const seasons = sdb.seasonCandidates(3);
   const seen = new Map<string, ResultRow>();
   for (const season of seasons) {
@@ -484,7 +514,11 @@ async function getInternationalResults(league: LeagueDef): Promise<ResultRow[]> 
   return [...seen.values()].sort((a, b) => a.date - b.date);
 }
 
-export async function getStandings(league: LeagueDef): Promise<StandingRow[]> {
+export function getStandings(league: LeagueDef): Promise<StandingRow[]> {
+  return viaLayer(() => dbs.dbStandings(league), () => liveGetStandings(league), [], (v) => v.length === 0);
+}
+
+async function liveGetStandings(league: LeagueDef): Promise<StandingRow[]> {
   const groups = await gather<StandingRow>([
     fd.fetchStandings(league),
     af.fetchStandings(league),
@@ -494,7 +528,11 @@ export async function getStandings(league: LeagueDef): Promise<StandingRow[]> {
   return groups.find((g) => g.length > 0) ?? [];
 }
 
-export async function getH2H(match: Match): Promise<ResultRow[]> {
+export function getH2H(match: Match): Promise<ResultRow[]> {
+  return viaLayer(() => dbs.dbH2H(match), () => liveGetH2H(match), [], (v) => v.length === 0);
+}
+
+async function liveGetH2H(match: Match): Promise<ResultRow[]> {
   const tasks: Promise<ResultRow[]>[] = [];
   if (match.id.startsWith("fd:")) tasks.push(fd.fetchH2H(match.id));
   if (match.id.startsWith("af:")) tasks.push(af.fetchH2H(match.home.id, match.away.id));
