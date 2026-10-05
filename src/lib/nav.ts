@@ -98,90 +98,6 @@ export const SOON: Record<string, SoonFeature> = {
     points: ["Kelly and flat staking, side by side.", "Keeps every stake inside limits you set."],
     meanwhile: [{ label: "Pricing", href: "/pricing" }],
   },
-  results: {
-    title: "Results",
-    blurb: "Every final score, by league and by day.",
-    points: ["Yesterday's and this week's results.", "How each of our picks did, game by game."],
-    meanwhile: [
-      { label: "Track record", href: fb("trackRecord") },
-      { label: "Live scores", href: fb("live") },
-    ],
-  },
-  tables: {
-    title: "League tables",
-    blurb: "Standings for every league we model.",
-    points: ["Home and away tables.", "Our strength rating beside each club."],
-    meanwhile: [{ label: "Fixtures", href: fb("fixtures") }],
-  },
-  h2h: {
-    title: "Head-to-head",
-    blurb: "Any two teams, every meeting.",
-    points: ["Past results and goals.", "How often each side wins at home."],
-    meanwhile: [{ label: "Match pages", href: fb("predictions") }],
-  },
-  "team-form": {
-    title: "Team form",
-    blurb: "Last 10, home and away, for every team.",
-    points: ["Results, goals and clean sheets.", "Who's improving and who's slipping."],
-    meanwhile: [{ label: "Trends", href: fb("trends") }],
-  },
-  "goals-stats": {
-    title: "Goals stats",
-    blurb: "Over/under and GG rates by team and league.",
-    points: ["Which teams play high and low.", "League averages to compare against."],
-    meanwhile: [{ label: "Trends", href: fb("trends") }],
-  },
-  ratings: {
-    title: "Model ratings",
-    blurb: "How strong we rate every team, attack and defence.",
-    points: ["The ratings behind every prediction.", "Movers since last week."],
-    meanwhile: [{ label: "Predictions", href: fb("predictions") }],
-  },
-  markets: {
-    title: "Predictions by market",
-    blurb: "Every game's read for one market at a time.",
-    points: ["1X2, double chance, over/under, GG/NG, draw no bet, handicap and correct score.", "Sorted by our confidence."],
-    meanwhile: [
-      { label: "Today's predictions", href: fb("predictions") },
-      { label: "Forge — pick your markets", href: fb("forge") },
-    ],
-  },
-  "best-bets": {
-    title: "Best bets",
-    blurb: "Our highest-confidence picks across every league.",
-    points: ["Ranked by confidence and data behind them.", "Refreshed through the day."],
-    meanwhile: [
-      { label: "Today's predictions", href: fb("predictions") },
-      { label: "Forge, safe mode", href: fb("forge") },
-    ],
-  },
-  "how-it-works": {
-    title: "How our picks work",
-    blurb: "The model, in plain words.",
-    points: ["What a Dixon-Coles model is and why we use it.", "How we decide there's enough data to publish."],
-    meanwhile: [{ label: "Track record", href: fb("trackRecord") }],
-  },
-  guides: {
-    title: "Guides",
-    blurb: "Markets and staking, explained.",
-    points: ["What each market means.", "Value, margin and staking without the jargon."],
-    meanwhile: [{ label: "Responsible gambling", href: "/responsible-gambling" }],
-  },
-  blog: {
-    title: "Blog",
-    blurb: "Model updates and matchday reads.",
-    points: ["What changed in the model and why.", "Weekend previews."],
-    meanwhile: [{ label: "Track record", href: fb("trackRecord") }],
-  },
-  help: {
-    title: "Help centre",
-    blurb: "Answers to common questions.",
-    points: ["Accounts, payments and plans.", "How to read a prediction."],
-    meanwhile: [
-      { label: "Pricing", href: "/pricing" },
-      { label: "Your account", href: "/account" },
-    ],
-  },
   "odds-format": {
     title: "Odds format",
     blurb: "Show prices as decimal, fractional or American.",
@@ -262,7 +178,7 @@ export function navFor(sport: SportId): { tabs: NavTab[]; tools: NavLink[] } {
   const predictions: NavMenu = {
     id: "predictions",
     label: "Predictions",
-    match: [p("predictions"), p("forYou"), p("valueAlerts"), "/soon/best-bets", "/soon/markets"],
+    match: [p("predictions"), p("forYou"), p("valueAlerts")],
     columns: [
       {
         title: "Picks",
@@ -270,15 +186,8 @@ export function navFor(sport: SportId): { tabs: NavTab[]; tools: NavLink[] } {
           { label: "For You", desc: "Picks from your leagues and markets", href: p("forYou") },
           { label: "Today", desc: "Every game we rate today", href: p("predictions") },
           { label: "Tomorrow & this weekend", desc: "What's coming, day by day", href: p("fixtures") },
-          soon("Best bets", "best-bets", "Our highest-confidence picks"),
           { label: "Value Alerts", desc: "When the bookie price beats ours", href: p("valueAlerts"), badge: { text: "VIP", tone: "amber" } },
         ],
-      },
-      {
-        title: "By market",
-        links: ["1X2", "Double chance", "Over/Under goals", "GG/NG", "Draw no bet", "Handicap", "Correct score"].map((m) =>
-          soon(m, "markets"),
-        ),
       },
       {
         title: "Top leagues",
@@ -298,25 +207,25 @@ export function navFor(sport: SportId): { tabs: NavTab[]; tools: NavLink[] } {
   const matches: NavMenu = {
     id: "matches",
     label: "Matches",
-    match: [p("fixtures"), p("trends"), "/soon/results", "/soon/tables", "/soon/h2h", "/soon/team-form", "/soon/goals-stats", "/soon/ratings"],
+    match: [p("fixtures"), p("trends"), p("results"), p("tables"), p("h2h"), p("teamForm"), p("goals"), p("ratings")],
     columns: [
       {
         title: "Matches",
         links: [
           { label: "Fixtures", desc: "The next two weeks, day by day", href: p("fixtures") },
           { label: "Live scores", href: p("live"), badge: { text: "Live", tone: "rose" } },
-          soon("Results", "results"),
-          soon("League tables", "tables"),
-          soon("Head-to-head", "h2h"),
+          { label: "Results", desc: "Every final score, day by day", href: p("results") },
+          { label: "League tables", desc: "Standings that move while games are on", href: p("tables"), badge: { text: "Live", tone: "rose" } },
+          { label: "Head-to-head", desc: "Any two teams, every meeting", href: p("h2h") },
         ],
       },
       {
         title: "Insights",
         links: [
-          { label: "Trends", desc: "Streaks and patterns across leagues", href: p("trends") },
-          soon("Team form", "team-form", "Last 10, home and away"),
-          soon("Goals stats", "goals-stats", "Over/under and GG rates by team"),
-          soon("Model ratings", "ratings", "How strong we rate every team"),
+          { label: "Trends", desc: "Streaks worth knowing before kick-off", href: p("trends") },
+          { label: "Team form", desc: "Last 10, home and away", href: p("teamForm") },
+          { label: "Goals stats", desc: "Over/under and GG rates by team", href: p("goals") },
+          { label: "Model ratings", desc: "Every team rated 1 to 10", href: p("ratings"), badge: { text: "New", tone: "brand" } },
         ],
       },
     ],
@@ -392,22 +301,21 @@ export function navFor(sport: SportId): { tabs: NavTab[]; tools: NavLink[] } {
   const more: NavMenu = {
     id: "more",
     label: "More",
-    match: ["/responsible-gambling", "/soon/how-it-works", "/soon/guides", "/soon/blog", "/soon/help"],
+    match: [p("trackRecord"), "/responsible-gambling", "/how-it-works", "/guides", "/help"],
     columns: [
       {
         title: "BetriX",
         links: [
           { label: "Track record", desc: "Every pick we've published, graded", href: p("trackRecord") },
-          soon("How our picks work", "how-it-works"),
-          soon("Guides", "guides", "Markets and staking, explained"),
-          soon("Blog", "blog"),
+          { label: "How our picks work", desc: "The model, in plain words", href: "/how-it-works" },
+          { label: "Guides", desc: "Markets and staking, explained", href: "/guides" },
         ],
       },
       {
         title: "Help",
         links: [
           { label: "Your account", href: "/account" },
-          soon("Help centre", "help"),
+          { label: "Help centre", desc: "Answers to common questions", href: "/help" },
           { label: "Responsible gambling", desc: "Limits, breaks and support", href: "/responsible-gambling" },
         ],
       },
@@ -428,7 +336,6 @@ export function navFor(sport: SportId): { tabs: NavTab[]; tools: NavLink[] } {
       { kind: "menu", menu: matches },
       { kind: "menu", menu: tools },
       { kind: "menu", menu: league },
-      { kind: "link", id: "track", label: "Track Record", href: p("trackRecord") },
       { kind: "link", id: "pricing", label: "Pricing", href: "/pricing" },
       { kind: "menu", menu: more },
     ],

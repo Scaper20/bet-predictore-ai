@@ -2,10 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getForYouFeed } from "@/lib/for-you-feed";
 import { ForYouDashboard } from "@/components/for-you/for-you-dashboard";
-import { PageHeader } from "@/components/ui/page-header";
-import { ButtonLink } from "@/components/ui/primitives";
 import { isSportId } from "@/lib/sports";
-import { sportPath } from "@/lib/routes";
 
 export const metadata: Metadata = {
   // The root layout's template appends "· BetriX" — spelling the brand out
@@ -31,28 +28,11 @@ export default async function ForYouPage({ params }: PageProps<"/[sport]/for-you
 
   const feed = await getForYouFeed(sport);
 
-  const greeting = feed.userName ? `Welcome back, ${feed.userName}` : "Your feed";
-
   return (
     <>
-      <PageHeader
-        eyebrow="For You"
-        title={greeting}
-        description={
-          feed.signedIn
-            ? "Picks from the competitions you follow, plus the strongest reads across the whole slate — each section labelled so you always know which is which."
-            : "A preview of the personalised feed. Create a free account to choose your own competitions."
-        }
-        actions={
-          <ButtonLink
-            href={sportPath("predictions", sport)}
-            variant="secondary"
-            className="px-4 py-2 text-sm"
-          >
-            All predictions
-          </ButtonLink>
-        }
-      />
+      {/* Named for screen readers and the document outline; the visible page
+          starts straight on the feed. */}
+      <h1 className="sr-only">{feed.userName ? `For You — ${feed.userName}` : "For You"}</h1>
       <ForYouDashboard feed={feed} />
     </>
   );

@@ -318,6 +318,137 @@
   .card-hover:hover { transform: none; }
 }
 
+/* ============================================================
+   Motion v2 — the stats pages, fixtures, predictions and match page.
+
+   Everything here is CSS: registered custom properties (@property) let a
+   dial or a border angle animate like any other value, scroll-driven
+   animations reveal sections where the browser supports them, and the
+   match page's crest morph is React's <ViewTransition>. Every effect is
+   switched off under prefers-reduced-motion at the end of the block.
+   ============================================================ */
+
+/* Staggered entrance: children rise out of a slight blur one after another.
+   Each child sets --i (its index); the delay caps so a long list doesn't
+   keep the last rows waiting. */
+@keyframes rise-blur {
+  from { opacity: 0; transform: translateY(12px) scale(0.985); filter: blur(4px); }
+  to   { opacity: 1; transform: none; filter: none; }
+}
+.stagger > * {
+  animation: rise-blur .55s var(--ease-out-expo) both;
+  animation-delay: calc(min(var(--i, 0), 14) * 40ms);
+}
+
+/* Scroll-driven reveal: tied to the element's own entry into the viewport,
+   no observer, no JS. Browsers without animation-timeline just show it. */
+@supports (animation-timeline: view()) {
+  .scroll-reveal {
+    animation: rise-blur linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 35%;
+  }
+}
+
+/* Tab panels slide in from the side the tab sits on. */
+@keyframes panel-from-right {
+  from { opacity: 0; transform: translateX(28px); filter: blur(3px); }
+  to   { opacity: 1; transform: none; filter: none; }
+}
+@keyframes panel-from-left {
+  from { opacity: 0; transform: translateX(-28px); filter: blur(3px); }
+  to   { opacity: 1; transform: none; filter: none; }
+}
+.panel-in-right { animation: panel-from-right .42s var(--ease-out-expo) both; }
+.panel-in-left  { animation: panel-from-left  .42s var(--ease-out-expo) both; }
+
+/* Segments of a probability split grow from the left, one after another. */
+@keyframes seg-grow {
+  from { transform: scaleX(0); opacity: .4; }
+  to   { transform: scaleX(1); opacity: 1; }
+}
+.seg-grow { transform-origin: left; animation: seg-grow .8s var(--ease-out-expo) both; }
+
+/* Rating dial: a conic gradient whose sweep is a registered number, so it
+   animates from 0 to the club's rating instead of snapping. */
+@property --dial {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+@keyframes dial-fill {
+  from { --dial: 0; }
+  to   { --dial: var(--dial-to, 0); }
+}
+.dial {
+  --dial: var(--dial-to, 0);
+  background:
+    radial-gradient(closest-side, var(--color-surface) 76%, transparent 78% 100%),
+    conic-gradient(var(--dial-color, var(--color-brand)) calc(var(--dial) * 1turn), var(--color-surface-3) 0);
+  animation: dial-fill 1.2s var(--ease-out-expo) both;
+  animation-delay: calc(min(var(--i, 0), 14) * 40ms);
+}
+
+/* A gradient border that slowly orbits: the strongest read on a match page
+   and the best bet of the day. */
+@property --orbit {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+@keyframes orbit { to { --orbit: 360deg; } }
+.orbit-border {
+  position: relative;
+  isolation: isolate;
+}
+.orbit-border::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  z-index: -1;
+  border-radius: inherit;
+  padding: 1px;
+  background: conic-gradient(from var(--orbit), transparent 0 55%, var(--color-brand) 75%, var(--color-cyan) 85%, transparent 100%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: orbit 5s linear infinite;
+}
+
+/* A score that just changed: a quick pop and a green flash. */
+@keyframes score-pop {
+  0%   { transform: scale(1); color: inherit; }
+  30%  { transform: scale(1.35); color: var(--color-brand); }
+  100% { transform: scale(1); }
+}
+.score-pop { display: inline-block; animation: score-pop .7s var(--ease-out-expo); }
+
+/* A table row that just moved: a sweep of colour across it. */
+@keyframes row-up   { from { background-color: color-mix(in oklab, var(--color-brand) 18%, transparent); } }
+@keyframes row-down { from { background-color: color-mix(in oklab, var(--color-rose) 16%, transparent); } }
+.row-moved-up   { animation: row-up 2.4s ease-out both; }
+.row-moved-down { animation: row-down 2.4s ease-out both; }
+
+/* Form pips pop in like a scoreboard. */
+@keyframes pip-in {
+  from { opacity: 0; transform: scale(.4) rotate(-12deg); }
+  to   { opacity: 1; transform: none; }
+}
+.pip { animation: pip-in .45s var(--ease-out-expo) both; animation-delay: calc(var(--p, 0) * 55ms + min(var(--i, 0), 14) * 30ms); }
+
+/* Shared-element morph for a club crest travelling from a list row into
+   the match page (React <ViewTransition share="morph">). */
+::view-transition-group(.morph) { animation-duration: 420ms; animation-timing-function: var(--ease-out-expo); }
+::view-transition-image-pair(.morph) { animation-name: via-blur; }
+@keyframes via-blur { 35% { filter: blur(2px); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .stagger > *, .scroll-reveal, .panel-in-right, .panel-in-left, .seg-grow, .dial, .pip,
+  .score-pop, .row-moved-up, .row-moved-down { animation: none !important; }
+  .orbit-border::before { animation: none; }
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
+}
+
 /* Landscape on a notched phone with viewport-fit=cover: keep content out from
    under the camera housing. Zero on every other device. */
 body {

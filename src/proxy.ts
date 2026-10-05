@@ -88,7 +88,12 @@ export async function proxy(request: NextRequest, event: NextFetchEvent) {
 
   captureFirstTouch(request, response);
 
-  if (!isMaintenanceExempt(request.nextUrl.pathname)) {
+  // Local development against the production database: preview the site
+  // while it's in maintenance without an admin login. Never honoured in a
+  // production build.
+  const ignoreMaintenance = process.env.NODE_ENV !== "production" && process.env.MAINTENANCE_IGNORE === "1";
+
+  if (!ignoreMaintenance && !isMaintenanceExempt(request.nextUrl.pathname)) {
     const maintenance = await readMaintenance(supabase);
     if (maintenance.enabled && !(user && (await isAdmin(supabase, user.id)))) {
       const blocked = new NextResponse(maintenanceHtml(maintenance.message), {

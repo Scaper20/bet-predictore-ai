@@ -29,6 +29,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE}${sportPath("live")}`, lastModified: now, changeFrequency: "always", priority: 0.8 },
     { url: `${SITE}${sportPath("fixtures")}`, lastModified: now, changeFrequency: "hourly", priority: 0.8 },
     { url: `${SITE}${sportPath("trends")}`, lastModified: now, changeFrequency: "daily", priority: 0.7 },
+    { url: `${SITE}${sportPath("results")}`, lastModified: now, changeFrequency: "hourly", priority: 0.7 },
+    { url: `${SITE}${sportPath("tables")}`, lastModified: now, changeFrequency: "hourly", priority: 0.7 },
+    { url: `${SITE}${sportPath("h2h")}`, lastModified: now, changeFrequency: "weekly", priority: 0.5 },
+    { url: `${SITE}${sportPath("teamForm")}`, lastModified: now, changeFrequency: "daily", priority: 0.6 },
+    { url: `${SITE}${sportPath("goals")}`, lastModified: now, changeFrequency: "daily", priority: 0.6 },
+    { url: `${SITE}${sportPath("ratings")}`, lastModified: now, changeFrequency: "daily", priority: 0.6 },
+    { url: `${SITE}/how-it-works`, lastModified: now, changeFrequency: "monthly", priority: 0.5 },
+    { url: `${SITE}/guides`, lastModified: now, changeFrequency: "monthly", priority: 0.5 },
+    { url: `${SITE}/help`, lastModified: now, changeFrequency: "monthly", priority: 0.4 },
     { url: `${SITE}${sportPath("trackRecord")}`, lastModified: now, changeFrequency: "daily", priority: 0.6 },
     { url: `${SITE}${sportPath("slip")}`, lastModified: now, changeFrequency: "monthly", priority: 0.4 },
     { url: `${SITE}${sportPath("valueAlerts")}`, lastModified: now, changeFrequency: "weekly", priority: 0.5 },
@@ -37,6 +46,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
 
   const leagues: MetadataRoute.Sitemap = LEAGUES.flatMap((l) => [
+    ...(l.confederation
+      ? []
+      : [{
+          url: `${SITE}${sportPath("tables", l.sport)}?league=${l.code}`,
+          lastModified: now,
+          changeFrequency: "hourly" as const,
+          priority: 0.6,
+        }]),
     {
       url: `${SITE}${sportPath("fixtures", l.sport)}?league=${l.code}`,
       lastModified: now,

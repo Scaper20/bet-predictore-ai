@@ -34,7 +34,7 @@ export interface MatchRow {
   away: { id: string; name: string; crest: string | null } | null;
 }
 
-const MATCH_SELECT =
+export const MATCH_SELECT =
   "id, league_code, kickoff, status, minute, home_goals, away_goals, ht_home, ht_away, round, venue, source_ids, " +
   "home_name, away_name, home:teams!matches_home_team_id_fkey(id, name, crest), away:teams!matches_away_team_id_fkey(id, name, crest)";
 
@@ -168,14 +168,19 @@ export function dbStandings(league: LeagueDef): Promise<StandingRow[]> {
   return cached(`db:table:${league.code}`, 10 * 60_000, async () => {
     const c = await client();
     const { data, error } = await c.from("standings")
-      .select("season, team_id, team_name, position, played, won, drawn, lost, goals_for, goals_against, goal_difference, points, team:teams(crest)")
+      .select("season, source, fetched_at, team_id, team_name, position, played, won, drawn, lost, goals_for, goals_against, goal_difference, points, team:teams(crest)")
       .eq("league_code", league.code)
-      .order("season", { ascending: false })
       .order("position");
     if (error) throw error;
     const rows = (data ?? []) as unknown as Array<Record<string, unknown> & { team: { crest: string | null } | null }>;
-    const season = rows[0]?.season;
-    return rows.filter((r) => r.season === season).map((r) => ({
+    // Two feeds can hold a table under two season spellings ("2026-2027",
+    // "2026-27"); the set refreshed last is the current one. Sorting on the
+    // season string picked a stale copy ("2026-27" sorts after "2026-2027").
+    const latest = rows.reduce<(typeof rows)[number] | undefined>(
+      (best, r) => (!best || Date.parse(r.fetched_at as string) > Date.parse(best.fetched_at as string) ? r : best),
+      undefined,
+    );
+    return rows.filter((r) => latest && r.season === latest.season && r.source === latest.source).map((r) => ({
       position: r.position as number,
       team: {
         id: (r.team_id as string) ?? (r.team_name as string),

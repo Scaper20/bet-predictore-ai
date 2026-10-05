@@ -1,106 +1,116 @@
 import Link from "next/link";
 import type { Prediction } from "@/lib/model/predict";
-import { Badge, ProbabilityBar } from "@/components/ui/primitives";
 import { kickoffTime, odds, percent, relativeDay } from "@/lib/format";
 import { Crest } from "@/components/ui/crest";
+import { SplitBar } from "@/components/stats/split-bar";
+import { Morph, morphName } from "@/components/motion/morph";
 import { matchPath } from "@/lib/routes";
 
-/** Richer card for the predictions grid: the model's read, front and centre. */
-export function PredictionCard({ prediction }: { prediction: Prediction }) {
+/**
+ * A fixture's read at a glance: who the model favours (the split bar), the
+ * one selection it would stand on, and the price that pick needs to be worth
+ * taking. Three small numbers underneath for the goals markets.
+ *
+ * No confidence score: the split bar already says how one-sided the game
+ * is, and a second scale out of 100 next to a percentage read as a second
+ * probability.
+ */
+export function PredictionCard({ prediction, morph = true }: { prediction: Prediction; morph?: boolean }) {
   const { match, markets, topPick, sufficiency, model } = prediction;
-  const homeLeads = markets.home >= markets.away;
+  const publishable = sufficiency.publishable && topPick;
 
   return (
     <Link
       href={matchPath(match.id)}
-      /*
-       * min-w-0: as a grid item this defaults to min-width:auto, i.e. its
-       * min-content width. On a 320px screen that sized the single grid track
-       * to 327px inside a 288px container and pushed the whole page sideways.
-       * With it, the track wins and the truncating text inside gives way.
-       */
-      className="card card-hover flex min-w-0 flex-col p-5"
+      // min-w-0: a grid item defaults to its min-content width, which let a
+      // long club name push a 320px screen sideways.
+      className="card card-hover group flex min-w-0 flex-col overflow-hidden"
     >
-      <div className="flex items-center gap-2">
-        {match.league.logo ? <Crest src={match.league.logo} name={match.league.name} size={18} /> : null}
-        {/* min-w-0 is what makes the truncate actually bite. A flex item
-            defaults to min-width:auto, i.e. its min-content width, so a long
-            competition name ("American USL League One") pushed the whole card
-            past the viewport at 320px instead of ellipsising. */}
+      <div className="flex items-center gap-2 px-4 pt-4 sm:px-5">
+        {match.league.logo ? <Crest src={match.league.logo} name={match.league.name} size={16} /> : null}
         <span className="min-w-0 truncate text-xs font-medium text-ink-muted">{match.league.name}</span>
-        <span className="tnum ml-auto shrink-0 text-xs text-ink-dim">
+        <span className="tnum ml-auto shrink-0 rounded-md bg-surface-2 px-2 py-0.5 text-[11px] font-semibold text-ink-muted">
           {relativeDay(match.kickoff)} · {kickoffTime(match.kickoff)}
         </span>
       </div>
 
-      <div className="mt-4 space-y-2.5">
-        <div className="flex min-w-0 items-center gap-3">
-          <Crest src={match.home.crest} name={match.home.name} size={28} />
-          <span className="min-w-0 flex-1 truncate text-sm font-medium">{match.home.name}</span>
-          <span className={`tnum text-sm font-bold ${homeLeads ? "text-brand" : "text-ink-muted"}`}>
-            {percent(markets.home)}
-          </span>
-        </div>
-        <div className="flex min-w-0 items-center gap-3">
-          <Crest src={match.away.crest} name={match.away.name} size={28} />
-          <span className="min-w-0 flex-1 truncate text-sm font-medium">{match.away.name}</span>
-          <span className={`tnum text-sm font-bold ${homeLeads ? "text-ink-muted" : "text-brand"}`}>
-            {percent(markets.away)}
-          </span>
-        </div>
+      <div className="space-y-2.5 px-4 pt-4 sm:px-5">
+        <TeamLine team={match.home} side="home" matchId={match.id} morph={morph} p={markets.home} lead={markets.home >= markets.away && markets.home >= markets.draw} />
+        <TeamLine team={match.away} side="away" matchId={match.id} morph={morph} p={markets.away} lead={markets.away > markets.home && markets.away >= markets.draw} />
       </div>
 
-      <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-        <Stat label="xG" value={markets.expectedGoals.total.toFixed(2)} />
-        <Stat label="O2.5" value={percent(markets.over["2.5"])} />
-        <Stat label="BTTS" value={percent(markets.bttsYes)} />
+      <div className="px-4 pt-4 sm:px-5">
+        <SplitBar home={markets.home} draw={markets.draw} away={markets.away} />
       </div>
 
-      <div className="mt-4 border-t border-line pt-4">
-        {sufficiency.publishable && topPick ? (
-          <>
-            <div className="flex items-center justify-between gap-2">
-              <div className="min-w-0">
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-dim">
-                  Top selection
-                </p>
-                <p className="mt-1 truncate text-sm font-semibold text-ink">{topPick.label}</p>
-              </div>
-              <div className="shrink-0 text-right">
-                <p className="text-[11px] text-ink-dim">Break-even</p>
-                <p className="tnum text-sm font-bold text-brand">{odds(topPick.fairOdds)}</p>
-              </div>
+      <div className="mt-4 flex-1 border-t border-line bg-surface-2/40 px-4 py-3.5 sm:px-5">
+        {publishable ? (
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-ink-dim">Our pick</p>
+              <p className="mt-0.5 truncate text-[15px] font-semibold text-ink">{topPick.label}</p>
             </div>
-            <div className="mt-3">
-              <ProbabilityBar
-                value={topPick.confidence / 100}
-                tone={topPick.confidence >= 60 ? "brand" : topPick.confidence >= 40 ? "amber" : "neutral"}
-                label="Confidence"
-                sublabel={`${Math.round(topPick.confidence)}/100`}
-              />
+            <div className="shrink-0 text-right">
+              <p className="tnum text-[15px] font-bold text-brand">{percent(topPick.probability)}</p>
+              <p className="tnum text-[11px] text-ink-dim">worth it at {odds(topPick.fairOdds)}+</p>
             </div>
-            {sufficiency.level === "limited" && (
-              <p className="mt-3 text-[11px] leading-relaxed text-amber">
-                Thin sample — {model.matchesUsed} matches. Treat as indicative.
-              </p>
-            )}
-          </>
-        ) : (
-          <div>
-            <Badge tone="amber">Insufficient data</Badge>
-            <p className="mt-2 text-[11px] leading-relaxed text-ink-dim">{sufficiency.reason}</p>
           </div>
+        ) : (
+          <p className="text-xs leading-relaxed text-ink-dim">
+            <span className="font-semibold text-amber">No pick.</span> {sufficiency.reason}
+          </p>
+        )}
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          <Chip label="xG" value={markets.expectedGoals.total.toFixed(1)} />
+          <Chip label="Over 2.5" value={percent(markets.over["2.5"])} hot={markets.over["2.5"] >= 0.6} />
+          <Chip label="GG" value={percent(markets.bttsYes)} hot={markets.bttsYes >= 0.6} />
+        </div>
+        {publishable && sufficiency.level === "limited" && (
+          <p className="mt-2.5 text-[11px] leading-relaxed text-amber">Thin history ({model.matchesUsed} games). Treat as a guide.</p>
         )}
       </div>
     </Link>
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function TeamLine({
+  team,
+  side,
+  matchId,
+  morph,
+  p,
+  lead,
+}: {
+  team: Prediction["match"]["home"];
+  side: "home" | "away";
+  matchId: string;
+  morph: boolean;
+  p: number;
+  lead: boolean;
+}) {
+  const crest = (
+    <span className="inline-flex shrink-0">
+      <Crest src={team.crest} name={team.name} size={26} />
+    </span>
+  );
   return (
-    <div className="rounded-lg bg-surface-2 px-2 py-2">
-      <p className="text-[10px] font-medium uppercase tracking-wider text-ink-dim">{label}</p>
-      <p className="tnum mt-0.5 text-sm font-bold">{value}</p>
+    <div className="flex min-w-0 items-center gap-3">
+      {morph ? <Morph name={morphName(matchId, side)}>{crest}</Morph> : crest}
+      <span className={`min-w-0 flex-1 truncate text-sm ${lead ? "font-semibold text-ink" : "text-ink-muted"}`}>{team.name}</span>
+      <span className={`tnum text-sm font-bold ${lead ? "text-brand" : "text-ink-dim"}`}>{percent(p)}</span>
     </div>
+  );
+}
+
+function Chip({ label, value, hot = false }: { label: string; value: string; hot?: boolean }) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] ${
+        hot ? "border-brand/25 bg-brand/8 text-ink" : "border-line bg-surface text-ink-muted"
+      }`}
+    >
+      <span className="text-ink-dim">{label}</span>
+      <span className="tnum font-semibold">{value}</span>
+    </span>
   );
 }
