@@ -52,6 +52,8 @@ export interface LeagueDef {
      * for that competition and nobody would notice.
      */
     sportyBet?: string;
+    /** ESPN league slug ("nga.1"), checked against site.api.espn.com. Read by ingestion/. */
+    espn?: string;
   };
   /**
    * Where a COMPLETE season history comes from.
@@ -77,6 +79,11 @@ export interface LeagueDef {
      * African and continental competitions that differentiate this product.
      */
     sportApi?: number;
+    /**
+     * openfootball (CC0) season files: the repository, and a glob relative to
+     * it. Used by ingestion/ to backfill competitions no CSV archive carries.
+     */
+    openfootball?: { repo: string; glob: string };
   };
 }
 
@@ -89,7 +96,7 @@ export const LEAGUES: LeagueDef[] = [
     country: "England",
     flag: "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
     rank: 1,
-    ids: { footballData: "PL", theSportsDb: "4328", apiFootball: 39, sportyBet: "sr:tournament:17" },
+    ids: { footballData: "PL", theSportsDb: "4328", apiFootball: 39, sportyBet: "sr:tournament:17", espn: "eng.1" },
     archive: { footballDataUk: "E0" },
   },
   {
@@ -100,8 +107,8 @@ export const LEAGUES: LeagueDef[] = [
     country: "Europe",
     flag: "🇪🇺",
     rank: 2,
-    ids: { footballData: "CL", theSportsDb: "4480", apiFootball: 2, sportyBet: "sr:tournament:7" },
-    archive: { sportApi: 7 },
+    ids: { footballData: "CL", theSportsDb: "4480", apiFootball: 2, sportyBet: "sr:tournament:7", espn: "uefa.champions" },
+    archive: { sportApi: 7, openfootball: { repo: "champions-league", glob: "*/cl.txt" } },
   },
   {
     code: "la-liga",
@@ -111,7 +118,7 @@ export const LEAGUES: LeagueDef[] = [
     country: "Spain",
     flag: "🇪🇸",
     rank: 6,
-    ids: { footballData: "PD", theSportsDb: "4335", apiFootball: 140, sportyBet: "sr:tournament:8" },
+    ids: { footballData: "PD", theSportsDb: "4335", apiFootball: 140, sportyBet: "sr:tournament:8", espn: "esp.1" },
     archive: { footballDataUk: "SP1" },
   },
   {
@@ -122,7 +129,7 @@ export const LEAGUES: LeagueDef[] = [
     country: "Italy",
     flag: "🇮🇹",
     rank: 7,
-    ids: { footballData: "SA", theSportsDb: "4332", apiFootball: 135, sportyBet: "sr:tournament:23" },
+    ids: { footballData: "SA", theSportsDb: "4332", apiFootball: 135, sportyBet: "sr:tournament:23", espn: "ita.1" },
     archive: { footballDataUk: "I1" },
   },
   {
@@ -133,7 +140,7 @@ export const LEAGUES: LeagueDef[] = [
     country: "Germany",
     flag: "🇩🇪",
     rank: 8,
-    ids: { footballData: "BL1", theSportsDb: "4331", apiFootball: 78, sportyBet: "sr:tournament:35" },
+    ids: { footballData: "BL1", theSportsDb: "4331", apiFootball: 78, sportyBet: "sr:tournament:35", espn: "ger.1" },
     archive: { footballDataUk: "D1" },
   },
   {
@@ -144,7 +151,7 @@ export const LEAGUES: LeagueDef[] = [
     country: "France",
     flag: "🇫🇷",
     rank: 9,
-    ids: { footballData: "FL1", theSportsDb: "4334", apiFootball: 61, sportyBet: "sr:tournament:34" },
+    ids: { footballData: "FL1", theSportsDb: "4334", apiFootball: 61, sportyBet: "sr:tournament:34", espn: "fra.1" },
     archive: { footballDataUk: "F1" },
   },
   {
@@ -160,8 +167,8 @@ export const LEAGUES: LeagueDef[] = [
     // never publish a pick. 4827 is "Nigerian NPFL". Verified by lookup, not
     // assumed: TheSportsDB ids are opaque integers and a wrong one fails
     // silently as an empty result rather than an error.
-    ids: { theSportsDb: "4827", apiFootball: 399, sportyBet: "sr:tournament:2112" },
-    archive: { sportApi: 2060 },
+    ids: { theSportsDb: "4827", apiFootball: 399, sportyBet: "sr:tournament:2112", espn: "nga.1" },
+    archive: { sportApi: 2060, openfootball: { repo: "world", glob: "africa/nigeria/*_ng1.txt" } },
   },
   {
     code: "championship",
@@ -171,7 +178,7 @@ export const LEAGUES: LeagueDef[] = [
     country: "England",
     flag: "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
     rank: 12,
-    ids: { footballData: "ELC", theSportsDb: "4329", apiFootball: 40, sportyBet: "sr:tournament:18" },
+    ids: { footballData: "ELC", theSportsDb: "4329", apiFootball: 40, sportyBet: "sr:tournament:18", espn: "eng.2" },
     archive: { footballDataUk: "E1" },
   },
   {
@@ -182,7 +189,7 @@ export const LEAGUES: LeagueDef[] = [
     country: "Netherlands",
     flag: "🇳🇱",
     rank: 13,
-    ids: { footballData: "DED", theSportsDb: "4337", apiFootball: 88, sportyBet: "sr:tournament:37" },
+    ids: { footballData: "DED", theSportsDb: "4337", apiFootball: 88, sportyBet: "sr:tournament:37", espn: "ned.1" },
     archive: { footballDataUk: "N1" },
   },
   {
@@ -193,7 +200,7 @@ export const LEAGUES: LeagueDef[] = [
     country: "Portugal",
     flag: "🇵🇹",
     rank: 14,
-    ids: { footballData: "PPL", theSportsDb: "4344", apiFootball: 94 },
+    ids: { footballData: "PPL", theSportsDb: "4344", apiFootball: 94, espn: "por.1" },
     archive: { footballDataUk: "P1" },
   },
   {
@@ -207,8 +214,8 @@ export const LEAGUES: LeagueDef[] = [
     // 4720, checked against lookupleague.php: "CAF Champions League", soccer,
     // seasons keyed "2026-2027". (An earlier guess, 4552, was a defunct
     // American-football league; never add an id here without looking it up.)
-    ids: { theSportsDb: "4720", apiFootball: 12, sportyBet: "sr:tournament:1054" },
-    archive: { sportApi: 1054 },
+    ids: { theSportsDb: "4720", apiFootball: 12, sportyBet: "sr:tournament:1054", espn: "caf.champions" },
+    archive: { sportApi: 1054, openfootball: { repo: "world", glob: "africa/champions-league/*_cafcl.txt" } },
   },
   {
     code: "brasileirao",
@@ -218,7 +225,7 @@ export const LEAGUES: LeagueDef[] = [
     country: "Brazil",
     flag: "🇧🇷",
     rank: 16,
-    ids: { footballData: "BSA", theSportsDb: "4351", apiFootball: 71, sportyBet: "sr:tournament:325" },
+    ids: { footballData: "BSA", theSportsDb: "4351", apiFootball: 71, sportyBet: "sr:tournament:325", espn: "bra.1" },
     archive: { footballDataUkCountry: { file: "BRA", league: "Serie A" } },
   },
 
@@ -244,7 +251,7 @@ export const LEAGUES: LeagueDef[] = [
     rank: 3,
     confederation: "CAF",
     neutralVenue: true,
-    ids: { theSportsDb: "4496" },
+    ids: { theSportsDb: "4496", espn: "caf.nations" },
   },
   {
     code: "wcq-caf",
@@ -255,7 +262,7 @@ export const LEAGUES: LeagueDef[] = [
     flag: "🌍",
     rank: 4,
     confederation: "CAF",
-    ids: { theSportsDb: "5514" },
+    ids: { theSportsDb: "5514", espn: "fifa.worldq.caf" },
   },
   {
     code: "world-cup",
@@ -267,7 +274,8 @@ export const LEAGUES: LeagueDef[] = [
     rank: 5,
     confederation: "global",
     neutralVenue: true,
-    ids: { footballData: "WC", theSportsDb: "4429" },
+    ids: { footballData: "WC", theSportsDb: "4429", espn: "fifa.world" },
+    archive: { openfootball: { repo: "worldcup.json", glob: "*/worldcup.json" } },
   },
   {
     code: "afcon-qualifiers",
@@ -278,7 +286,7 @@ export const LEAGUES: LeagueDef[] = [
     flag: "🌍",
     rank: 11,
     confederation: "CAF",
-    ids: { theSportsDb: "5520" },
+    ids: { theSportsDb: "5520", espn: "caf.nations_qual" },
   },
   {
     code: "euro",
@@ -290,7 +298,8 @@ export const LEAGUES: LeagueDef[] = [
     rank: 17,
     confederation: "UEFA",
     neutralVenue: true,
-    ids: { footballData: "EC", theSportsDb: "4502" },
+    ids: { footballData: "EC", theSportsDb: "4502", espn: "uefa.euro" },
+    archive: { openfootball: { repo: "euro.json", glob: "*/euro.json" } },
   },
   {
     code: "nations-league",
@@ -301,7 +310,7 @@ export const LEAGUES: LeagueDef[] = [
     flag: "🇪🇺",
     rank: 18,
     confederation: "UEFA",
-    ids: { theSportsDb: "4490" },
+    ids: { theSportsDb: "4490", espn: "uefa.nations" },
   },
   {
     code: "wcq-uefa",
@@ -312,7 +321,7 @@ export const LEAGUES: LeagueDef[] = [
     flag: "🇪🇺",
     rank: 19,
     confederation: "UEFA",
-    ids: { theSportsDb: "5518" },
+    ids: { theSportsDb: "5518", espn: "fifa.worldq.uefa" },
   },
   {
     code: "copa-america",
@@ -324,7 +333,7 @@ export const LEAGUES: LeagueDef[] = [
     rank: 20,
     confederation: "CONMEBOL",
     neutralVenue: true,
-    ids: { theSportsDb: "4499" },
+    ids: { theSportsDb: "4499", espn: "conmebol.america" },
   },
   {
     code: "wcq-conmebol",
@@ -335,7 +344,7 @@ export const LEAGUES: LeagueDef[] = [
     flag: "🌎",
     rank: 21,
     confederation: "CONMEBOL",
-    ids: { theSportsDb: "5515" },
+    ids: { theSportsDb: "5515", espn: "fifa.worldq.conmebol" },
   },
   {
     code: "euro-qualifiers",
@@ -346,7 +355,7 @@ export const LEAGUES: LeagueDef[] = [
     flag: "🇪🇺",
     rank: 22,
     confederation: "UEFA",
-    ids: { theSportsDb: "5519" },
+    ids: { theSportsDb: "5519", espn: "uefa.euroq" },
   },
   {
     code: "international-friendlies",
@@ -357,7 +366,7 @@ export const LEAGUES: LeagueDef[] = [
     flag: "🤝",
     rank: 23,
     confederation: "global",
-    ids: { theSportsDb: "4562" },
+    ids: { theSportsDb: "4562", espn: "fifa.friendly" },
   },
   {
     code: "gold-cup",
@@ -369,7 +378,7 @@ export const LEAGUES: LeagueDef[] = [
     rank: 24,
     confederation: "CONCACAF",
     neutralVenue: true,
-    ids: { theSportsDb: "4873" },
+    ids: { theSportsDb: "4873", espn: "concacaf.gold" },
   },
   {
     code: "wcq-concacaf",
@@ -380,7 +389,7 @@ export const LEAGUES: LeagueDef[] = [
     flag: "🌎",
     rank: 25,
     confederation: "CONCACAF",
-    ids: { theSportsDb: "5516" },
+    ids: { theSportsDb: "5516", espn: "fifa.worldq.concacaf" },
   },
 ];
 

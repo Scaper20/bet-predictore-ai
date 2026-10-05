@@ -330,6 +330,141 @@ create trigger matches_mirror_finished
   after insert or update of status, home_goals, away_goals on public.matches
   for each row execute function public.mirror_finished_match();
 
+-- Trigger-only; see 0015 for why PUBLIC (not anon/authenticated) is the grant to drop.
+revoke execute on function public.mirror_finished_match() from public;
+
+-- Writes a batch of matches from one source, merging into what is there.
+--
+-- Each row is a JSON object with league_code, kickoff, home_team_id,
+-- away_team_id, home_name, away_name, source_id, and optionally season,
+-- status, minute, home_goals, away_goals, ht_home, ht_away, round, venue.
+--
+-- A game is found by this source's own id first (so a rescheduled fixture
+-- moves instead of duplicating), then by league + teams + kickoff day. Every
+-- source adds its id to source_ids. Only sources trusted for scores
+-- (TheSportsDB live and results; openfootball and football-data.co.uk for
+-- finished history) may set status and score; the rest may only fill in
+-- fixture details while a game is still scheduled, and never blank a field.
+create or replace function public.ingest_matches(p_source text, p_rows jsonb)
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  r jsonb;
+  v_id uuid;
+  v_scores boolean := p_source in ('thesportsdb', 'openfootball', 'football-data-uk');
+  v_count integer := 0;
+  v_kickoff timestamptz;
+begin
+  for r in select * from jsonb_array_elements(p_rows) loop
+    v_kickoff := (r ->> 'kickoff')::timestamptz;
+    v_id := null;
+
+    if r ? 'source_id' and (r ->> 'source_id') is not null then
+      select id into v_id from public.matches
+       where source_ids ->> p_source = r ->> 'source_id'
+       limit 1;
+    end if;
+    if v_id is null then
+      select id into v_id from public.matches
+       where league_code = r ->> 'league_code'
+         and home_team_id = (r ->> 'home_team_id')::uuid
+         and away_team_id = (r ->> 'away_team_id')::uuid
+         and kickoff_day = (v_kickoff at time zone 'UTC')::date
+       limit 1;
+    end if;
+
+    if v_id is null then
+      insert into public.matches (
+        league_code, season, kickoff, home_team_id, away_team_id, home_name, away_name,
+        status, minute, home_goals, away_goals, ht_home, ht_away, round, venue, source_ids, score_source
+      ) values (
+        r ->> 'league_code', r ->> 'season', v_kickoff,
+        (r ->> 'home_team_id')::uuid, (r ->> 'away_team_id')::uuid, r ->> 'home_name', r ->> 'away_name',
+        case when v_scores then coalesce(r ->> 'status', 'scheduled') else 'scheduled' end,
+        case when v_scores then (r ->> 'minute')::int end,
+        case when v_scores then (r ->> 'home_goals')::int end,
+        case when v_scores then (r ->> 'away_goals')::int end,
+        case when v_scores then (r ->> 'ht_home')::int end,
+        case when v_scores then (r ->> 'ht_away')::int end,
+        r ->> 'round', r ->> 'venue',
+        case when r ->> 'source_id' is not null then jsonb_build_object(p_source, r ->> 'source_id') else '{}'::jsonb end,
+        case when v_scores and r ? 'status' then p_source end
+      );
+    elsif v_scores then
+      update public.matches m set
+        season = coalesce(r ->> 'season', m.season),
+        kickoff = v_kickoff,
+        status = coalesce(r ->> 'status', m.status),
+        minute = case when r ? 'minute' then (r ->> 'minute')::int else m.minute end,
+        home_goals = coalesce((r ->> 'home_goals')::int, m.home_goals),
+        away_goals = coalesce((r ->> 'away_goals')::int, m.away_goals),
+        ht_home = coalesce((r ->> 'ht_home')::int, m.ht_home),
+        ht_away = coalesce((r ->> 'ht_away')::int, m.ht_away),
+        round = coalesce(r ->> 'round', m.round),
+        venue = coalesce(r ->> 'venue', m.venue),
+        source_ids = m.source_ids || case when r ->> 'source_id' is not null
+                                          then jsonb_build_object(p_source, r ->> 'source_id') else '{}'::jsonb end,
+        score_source = case when r ? 'status' then p_source else m.score_source end,
+        updated_at = now()
+      where m.id = v_id;
+    else
+      update public.matches m set
+        kickoff = case when m.status = 'scheduled' then v_kickoff else m.kickoff end,
+        season = coalesce(m.season, r ->> 'season'),
+        round = coalesce(m.round, r ->> 'round'),
+        venue = coalesce(m.venue, r ->> 'venue'),
+        source_ids = m.source_ids || case when r ->> 'source_id' is not null
+                                          then jsonb_build_object(p_source, r ->> 'source_id') else '{}'::jsonb end,
+        updated_at = now()
+      where m.id = v_id;
+    end if;
+    v_count := v_count + 1;
+  end loop;
+  return v_count;
+end;
+$$;
+
+-- Gives a team a new canonical name and carries it everywhere the old one
+-- was written, including the training rows this table owns. Without the
+-- carry, a club renamed from openfootball's spelling to TheSportsDB's would
+-- train under one name and be predicted under another.
+create or replace function public.rename_team(p_team_id uuid, p_name text, p_source text)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_old text;
+begin
+  select name into v_old from public.teams where id = p_team_id for update;
+  if v_old is null or v_old = p_name then
+    return;
+  end if;
+  update public.teams set name = p_name, created_from = p_source where id = p_team_id;
+  update public.matches set home_name = p_name where home_team_id = p_team_id;
+  update public.matches set away_name = p_name where away_team_id = p_team_id;
+  update public.historical_results h set home_name = p_name
+   where h.home_name = v_old
+     and h.league_code in (select code from public.competitions where history_owner = 'matches')
+     and h.league_code in (select distinct league_code from public.matches
+                            where home_team_id = p_team_id or away_team_id = p_team_id);
+  update public.historical_results h set away_name = p_name
+   where h.away_name = v_old
+     and h.league_code in (select code from public.competitions where history_owner = 'matches')
+     and h.league_code in (select distinct league_code from public.matches
+                            where home_team_id = p_team_id or away_team_id = p_team_id);
+end;
+$$;
+
+revoke all on function public.ingest_matches(text, jsonb) from public, anon, authenticated;
+revoke all on function public.rename_team(uuid, text, text) from public, anon, authenticated;
+grant execute on function public.ingest_matches(text, jsonb) to service_role;
+grant execute on function public.rename_team(uuid, text, text) to service_role;
+
 -- ---------------------------------------------------------------------------
 -- Standings, odds, ratings
 

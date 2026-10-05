@@ -1,0 +1,411 @@
+[
+  {
+    "code": "premier-league",
+    "sport": "football",
+    "name": "English Premier League",
+    "country": "England",
+    "international": false,
+    "ids": {
+      "footballData": "PL",
+      "theSportsDb": "4328",
+      "apiFootball": 39,
+      "sportyBet": "sr:tournament:17",
+      "espn": "eng.1"
+    },
+    "archive": {
+      "footballDataUk": "E0"
+    },
+    "historyOwner": "football-data-uk"
+  },
+  {
+    "code": "champions-league",
+    "sport": "football",
+    "name": "UEFA Champions League",
+    "country": "Europe",
+    "international": false,
+    "ids": {
+      "footballData": "CL",
+      "theSportsDb": "4480",
+      "apiFootball": 2,
+      "sportyBet": "sr:tournament:7",
+      "espn": "uefa.champions"
+    },
+    "archive": {
+      "sportApi": 7,
+      "openfootball": {
+        "repo": "champions-league",
+        "glob": "*/cl.txt"
+      }
+    },
+    "historyOwner": "matches"
+  },
+  {
+    "code": "la-liga",
+    "sport": "football",
+    "name": "Spanish La Liga",
+    "country": "Spain",
+    "international": false,
+    "ids": {
+      "footballData": "PD",
+      "theSportsDb": "4335",
+      "apiFootball": 140,
+      "sportyBet": "sr:tournament:8",
+      "espn": "esp.1"
+    },
+    "archive": {
+      "footballDataUk": "SP1"
+    },
+    "historyOwner": "football-data-uk"
+  },
+  {
+    "code": "serie-a",
+    "sport": "football",
+    "name": "Italian Serie A",
+    "country": "Italy",
+    "international": false,
+    "ids": {
+      "footballData": "SA",
+      "theSportsDb": "4332",
+      "apiFootball": 135,
+      "sportyBet": "sr:tournament:23",
+      "espn": "ita.1"
+    },
+    "archive": {
+      "footballDataUk": "I1"
+    },
+    "historyOwner": "football-data-uk"
+  },
+  {
+    "code": "bundesliga",
+    "sport": "football",
+    "name": "German Bundesliga",
+    "country": "Germany",
+    "international": false,
+    "ids": {
+      "footballData": "BL1",
+      "theSportsDb": "4331",
+      "apiFootball": 78,
+      "sportyBet": "sr:tournament:35",
+      "espn": "ger.1"
+    },
+    "archive": {
+      "footballDataUk": "D1"
+    },
+    "historyOwner": "football-data-uk"
+  },
+  {
+    "code": "ligue-1",
+    "sport": "football",
+    "name": "French Ligue 1",
+    "country": "France",
+    "international": false,
+    "ids": {
+      "footballData": "FL1",
+      "theSportsDb": "4334",
+      "apiFootball": 61,
+      "sportyBet": "sr:tournament:34",
+      "espn": "fra.1"
+    },
+    "archive": {
+      "footballDataUk": "F1"
+    },
+    "historyOwner": "football-data-uk"
+  },
+  {
+    "code": "npfl",
+    "sport": "football",
+    "name": "Nigeria Professional Football League",
+    "country": "Nigeria",
+    "international": false,
+    "ids": {
+      "theSportsDb": "4827",
+      "apiFootball": 399,
+      "sportyBet": "sr:tournament:2112",
+      "espn": "nga.1"
+    },
+    "archive": {
+      "sportApi": 2060,
+      "openfootball": {
+        "repo": "world",
+        "glob": "africa/nigeria/*_ng1.txt"
+      }
+    },
+    "historyOwner": "matches"
+  },
+  {
+    "code": "championship",
+    "sport": "football",
+    "name": "English Championship",
+    "country": "England",
+    "international": false,
+    "ids": {
+      "footballData": "ELC",
+      "theSportsDb": "4329",
+      "apiFootball": 40,
+      "sportyBet": "sr:tournament:18",
+      "espn": "eng.2"
+    },
+    "archive": {
+      "footballDataUk": "E1"
+    },
+    "historyOwner": "football-data-uk"
+  },
+  {
+    "code": "eredivisie",
+    "sport": "football",
+    "name": "Dutch Eredivisie",
+    "country": "Netherlands",
+    "international": false,
+    "ids": {
+      "footballData": "DED",
+      "theSportsDb": "4337",
+      "apiFootball": 88,
+      "sportyBet": "sr:tournament:37",
+      "espn": "ned.1"
+    },
+    "archive": {
+      "footballDataUk": "N1"
+    },
+    "historyOwner": "football-data-uk"
+  },
+  {
+    "code": "primeira-liga",
+    "sport": "football",
+    "name": "Portuguese Primeira Liga",
+    "country": "Portugal",
+    "international": false,
+    "ids": {
+      "footballData": "PPL",
+      "theSportsDb": "4344",
+      "apiFootball": 94,
+      "espn": "por.1"
+    },
+    "archive": {
+      "footballDataUk": "P1"
+    },
+    "historyOwner": "football-data-uk"
+  },
+  {
+    "code": "caf-champions-league",
+    "sport": "football",
+    "name": "CAF Champions League",
+    "country": "Africa",
+    "international": false,
+    "ids": {
+      "theSportsDb": "4720",
+      "apiFootball": 12,
+      "sportyBet": "sr:tournament:1054",
+      "espn": "caf.champions"
+    },
+    "archive": {
+      "sportApi": 1054,
+      "openfootball": {
+        "repo": "world",
+        "glob": "africa/champions-league/*_cafcl.txt"
+      }
+    },
+    "historyOwner": "matches"
+  },
+  {
+    "code": "brasileirao",
+    "sport": "football",
+    "name": "Brazilian Série A",
+    "country": "Brazil",
+    "international": false,
+    "ids": {
+      "footballData": "BSA",
+      "theSportsDb": "4351",
+      "apiFootball": 71,
+      "sportyBet": "sr:tournament:325",
+      "espn": "bra.1"
+    },
+    "archive": {
+      "footballDataUkCountry": {
+        "file": "BRA",
+        "league": "Serie A"
+      }
+    },
+    "historyOwner": "football-data-uk"
+  },
+  {
+    "code": "afcon",
+    "sport": "football",
+    "name": "Africa Cup of Nations",
+    "country": "Africa",
+    "international": true,
+    "ids": {
+      "theSportsDb": "4496",
+      "espn": "caf.nations"
+    },
+    "archive": {},
+    "historyOwner": "matches"
+  },
+  {
+    "code": "wcq-caf",
+    "sport": "football",
+    "name": "World Cup Qualifying CAF",
+    "country": "Africa",
+    "international": true,
+    "ids": {
+      "theSportsDb": "5514",
+      "espn": "fifa.worldq.caf"
+    },
+    "archive": {},
+    "historyOwner": "matches"
+  },
+  {
+    "code": "world-cup",
+    "sport": "football",
+    "name": "FIFA World Cup",
+    "country": "World",
+    "international": true,
+    "ids": {
+      "footballData": "WC",
+      "theSportsDb": "4429",
+      "espn": "fifa.world"
+    },
+    "archive": {
+      "openfootball": {
+        "repo": "worldcup.json",
+        "glob": "*/worldcup.json"
+      }
+    },
+    "historyOwner": "matches"
+  },
+  {
+    "code": "afcon-qualifiers",
+    "sport": "football",
+    "name": "Africa Cup of Nations Qualifying",
+    "country": "Africa",
+    "international": true,
+    "ids": {
+      "theSportsDb": "5520",
+      "espn": "caf.nations_qual"
+    },
+    "archive": {},
+    "historyOwner": "matches"
+  },
+  {
+    "code": "euro",
+    "sport": "football",
+    "name": "UEFA European Championship",
+    "country": "Europe",
+    "international": true,
+    "ids": {
+      "footballData": "EC",
+      "theSportsDb": "4502",
+      "espn": "uefa.euro"
+    },
+    "archive": {
+      "openfootball": {
+        "repo": "euro.json",
+        "glob": "*/euro.json"
+      }
+    },
+    "historyOwner": "matches"
+  },
+  {
+    "code": "nations-league",
+    "sport": "football",
+    "name": "UEFA Nations League",
+    "country": "Europe",
+    "international": true,
+    "ids": {
+      "theSportsDb": "4490",
+      "espn": "uefa.nations"
+    },
+    "archive": {},
+    "historyOwner": "matches"
+  },
+  {
+    "code": "wcq-uefa",
+    "sport": "football",
+    "name": "World Cup Qualifying UEFA",
+    "country": "Europe",
+    "international": true,
+    "ids": {
+      "theSportsDb": "5518",
+      "espn": "fifa.worldq.uefa"
+    },
+    "archive": {},
+    "historyOwner": "matches"
+  },
+  {
+    "code": "copa-america",
+    "sport": "football",
+    "name": "Copa America",
+    "country": "South America",
+    "international": true,
+    "ids": {
+      "theSportsDb": "4499",
+      "espn": "conmebol.america"
+    },
+    "archive": {},
+    "historyOwner": "matches"
+  },
+  {
+    "code": "wcq-conmebol",
+    "sport": "football",
+    "name": "World Cup Qualifying CONMEBOL",
+    "country": "South America",
+    "international": true,
+    "ids": {
+      "theSportsDb": "5515",
+      "espn": "fifa.worldq.conmebol"
+    },
+    "archive": {},
+    "historyOwner": "matches"
+  },
+  {
+    "code": "euro-qualifiers",
+    "sport": "football",
+    "name": "UEFA European Championship Qualifying",
+    "country": "Europe",
+    "international": true,
+    "ids": {
+      "theSportsDb": "5519",
+      "espn": "uefa.euroq"
+    },
+    "archive": {},
+    "historyOwner": "matches"
+  },
+  {
+    "code": "international-friendlies",
+    "sport": "football",
+    "name": "International Friendlies",
+    "country": "World",
+    "international": true,
+    "ids": {
+      "theSportsDb": "4562",
+      "espn": "fifa.friendly"
+    },
+    "archive": {},
+    "historyOwner": "matches"
+  },
+  {
+    "code": "gold-cup",
+    "sport": "football",
+    "name": "CONCACAF Gold Cup",
+    "country": "North America",
+    "international": true,
+    "ids": {
+      "theSportsDb": "4873",
+      "espn": "concacaf.gold"
+    },
+    "archive": {},
+    "historyOwner": "matches"
+  },
+  {
+    "code": "wcq-concacaf",
+    "sport": "football",
+    "name": "World Cup Qualifying CONCACAF",
+    "country": "North America",
+    "international": true,
+    "ids": {
+      "theSportsDb": "5516",
+      "espn": "fifa.worldq.concacaf"
+    },
+    "archive": {},
+    "historyOwner": "matches"
+  }
+]

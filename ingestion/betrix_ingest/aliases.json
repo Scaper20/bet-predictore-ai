@@ -1,0 +1,8 @@
+{
+  "_doc": "Club renames no spelling rule can see. Scope -> canonical name -> other names the same club has used. Only certain identities belong here: a wrong entry silently merges two clubs' records. Mergers (e.g. Sharks + Dolphins -> Rivers United) are different clubs and must NOT be listed.",
+  "nigeria": {
+    "Enugu Rangers": ["Rangers International", "Rangers International FC", "Rangers"],
+    "Bendel Insurance": ["Bendel FC", "Bendel Insurance FC"],
+    "Shooting Stars": ["Shooting Stars SC", "3SC"]
+  }
+}

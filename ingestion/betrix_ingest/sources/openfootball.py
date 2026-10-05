@@ -83,6 +83,8 @@ class ParsedMatch:
     ht_away: int | None
     status: str  # "finished" | "awarded" | "cancelled" | "scheduled"
     decided_by: str | None = None  # "extra_time" | "penalties"
+    #: Offset of kickoff_time from UTC when the file states one ("13:00 UTC-3").
+    utc_offset_minutes: int | None = None
 
 
 @dataclass
@@ -249,12 +251,81 @@ def parse_file(path: str | Path) -> ParsedSeason:
     return parse_text(p.read_text(encoding="utf-8"), season_hint=hint)
 
 
-def kickoff_utc(match: ParsedMatch, utc_offset_hours: int = 1) -> datetime:
-    """Kickoff as UTC. Football.TXT times are local; Nigeria is UTC+1 all year.
+def kickoff_utc(match: ParsedMatch, default_offset_hours: int = 1) -> datetime:
+    """Kickoff as UTC.
 
-    Rows without a time get 15:00 local, the usual NPFL slot, purely so the
-    timestamp sorts on the right day. The training fit only uses the date.
+    Uses the offset the file states when it states one; otherwise
+    ``default_offset_hours`` (Nigeria is UTC+1 all year, the right default for
+    the NPFL files). Rows without a time get 15:00 local purely so the
+    timestamp sorts on the right day; the training fit only uses the date.
     """
     t = match.kickoff_time or time(15, 0)
     local = datetime.combine(match.kickoff_date, t)
-    return local - timedelta(hours=utc_offset_hours)
+    if match.utc_offset_minutes is not None:
+        return local - timedelta(minutes=match.utc_offset_minutes)
+    return local - timedelta(hours=default_offset_hours)
+
+
+_JSON_TIME = re.compile(r"^(?P<h>\d{1,2}):(?P<m>\d{2})(?:\s*UTC(?P<oh>[+-]\d{1,2})(?::?(?P<om>\d{2}))?)?")
+
+
+def parse_json_file(path: str | Path) -> ParsedSeason:
+    """Parse an openfootball JSON file (worldcup.json, euro.json, football.json).
+
+    Scores arrive split by period: ``ft`` is after 90 minutes, ``et`` after
+    extra time and ``p`` the shootout, so no inference is needed.
+    """
+    import json
+
+    p = Path(path)
+    data = json.loads(p.read_text(encoding="utf-8"))
+    name = data.get("name", "")
+    m = re.search(r"(\d{4})(?:/(\d{2,4}))?", name) or re.search(r"(\d{4})", p.parent.name)
+    y1 = int(m.group(1)) if m else 0
+    y2 = None
+    if m and m.lastindex and m.lastindex >= 2 and m.group(2):
+        y2 = int(m.group(2))
+        if y2 < 100:
+            y2 += (y1 // 100) * 100
+    out: list[ParsedMatch] = []
+    for raw in data.get("matches", []):
+        score = raw.get("score") or {}
+        if isinstance(score, list):
+            # Older files give one bare pair. In a group game that is the
+            # 90-minute score; in a knockout it may include extra time, which
+            # can't be told apart, so the game is kept but carries no score.
+            group_game = bool(raw.get("group")) or "group" in (raw.get("round") or "").lower()
+            score = {"ft": score} if group_game and len(score) == 2 else {"unknown": score}
+        ft = score.get("ft")
+        ht = score.get("ht")
+        decided = "penalties" if score.get("p") else ("extra_time" if score.get("et") else None)
+        tm = _JSON_TIME.match(raw.get("time") or "")
+        hh, mm = (int(tm["h"]), int(tm["m"])) if tm else (None, None)
+        offset = None
+        if tm and tm["oh"]:
+            sign = -1 if tm["oh"].startswith("-") else 1
+            offset = sign * (abs(int(tm["oh"])) * 60 + int(tm["om"] or 0))
+        out.append(
+            ParsedMatch(
+                season=season_label(y1, y2),
+                round=raw.get("round"),
+                kickoff_date=date.fromisoformat(raw["date"]),
+                kickoff_time=time(hh, mm) if hh is not None else None,
+                home=_split_country(raw["team1"])[0],
+                away=_split_country(raw["team2"])[0],
+                home_country=_split_country(raw["team1"])[1],
+                away_country=_split_country(raw["team2"])[1],
+                home_goals=ft[0] if ft else None,
+                away_goals=ft[1] if ft else None,
+                ht_home=ht[0] if ht else None,
+                ht_away=ht[1] if ht else None,
+                status="finished" if (ft or "unknown" in score) else "scheduled",
+                decided_by=decided if ft else None,
+                utc_offset_minutes=offset,
+            )
+        )
+    return ParsedSeason(title=name, season=season_label(y1, y2), expected_matches=None, matches=out)
+
+
+def parse_any(path: str | Path) -> ParsedSeason:
+    return parse_json_file(path) if str(path).endswith(".json") else parse_file(path)

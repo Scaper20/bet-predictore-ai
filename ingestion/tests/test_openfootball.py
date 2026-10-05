@@ -90,3 +90,12 @@ def test_date_outside_season_is_an_error_not_a_guess():
 """
     with pytest.raises(ValueError):
         parse_text(text)
+
+
+def test_json_tournament_keeps_the_90_minute_score():
+    from betrix_ingest.sources.openfootball import parse_any
+
+    s = parse_any(FIX / "worldcup-2022.json")
+    assert s.season == "2022" and len(s.results) == 64
+    japan = next(m for m in s.matches if m.home == "Japan" and m.away == "Croatia")
+    assert (japan.home_goals, japan.away_goals, japan.decided_by) == (1, 1, "penalties")
