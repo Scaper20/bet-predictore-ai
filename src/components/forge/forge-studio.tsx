@@ -251,7 +251,7 @@ export function ForgeStudio() {
     <div className="relative">
       <div className="grid gap-6 lg:grid-cols-[minmax(0,25rem)_minmax(0,1fr)] lg:items-start xl:gap-8">
         {/* ------------------------------------------------------ settings */}
-        <div className={`${view === "result" && hasSlip ? "hidden lg:block" : ""} lg:sticky lg:top-20`}>
+        <div className={`${view === "result" && hasSlip ? "hidden lg:block" : ""} lg:sticky lg:top-[calc(var(--header-h)+1rem)]`}>
           <SettingsPanel
             settings={settings}
             patch={patch}

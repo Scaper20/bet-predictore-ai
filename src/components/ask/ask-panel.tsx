@@ -319,7 +319,7 @@ function AskPanelInner({ page }: { page: { matchId: string; label: string } | nu
     <div
       role="dialog"
       aria-label="Ask BetriX"
-      className="fixed inset-0 z-[60] flex flex-col bg-canvas lg:inset-auto lg:bottom-0 lg:right-0 lg:top-16 lg:z-40 lg:w-[27rem] lg:border-l lg:border-line lg:bg-shell lg:shadow-[-24px_0_60px_-30px_rgb(0_0_0/0.9)]"
+      className="fixed inset-0 z-[60] flex flex-col bg-canvas lg:inset-auto lg:bottom-0 lg:right-0 lg:top-[var(--header-h)] lg:z-40 lg:w-[27rem] lg:border-l lg:border-line lg:bg-shell lg:shadow-[-24px_0_60px_-30px_rgb(0_0_0/0.9)]"
       style={{ paddingTop: "env(safe-area-inset-top)" }}
     >
       {/* header */}

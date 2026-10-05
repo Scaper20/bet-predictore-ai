@@ -343,7 +343,7 @@ export function SlipView() {
         </Button>
       </div>
 
-      <aside className="min-w-0 lg:sticky lg:top-20 lg:self-start">
+      <aside className="min-w-0 lg:sticky lg:top-[calc(var(--header-h)+1rem)] lg:self-start">
         <div className="card p-5 sm:p-7">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-ink-muted">
             Combined pick

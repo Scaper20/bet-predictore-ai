@@ -289,7 +289,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
             <H2HPanel prediction={prediction} />
           </div>
 
-          <aside className="min-w-0 space-y-5 lg:sticky lg:top-20 lg:self-start">
+          <aside className="min-w-0 space-y-5 lg:sticky lg:top-[calc(var(--header-h)+1rem)] lg:self-start">
             {/*
               Sample size, data quality and confidence are the "show your
               working" panel — the reason to trust a number rather than the

@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
 /**
  * The one horizontal container for the whole site.
@@ -53,11 +53,17 @@ export function containerClass(width: ContainerWidth = "page"): string {
 export function Container({
   width = "page",
   className = "",
+  style,
   children,
 }: {
   width?: ContainerWidth;
   className?: string;
+  style?: CSSProperties;
   children: ReactNode;
 }) {
-  return <div className={`${containerClass(width)} ${className}`}>{children}</div>;
+  return (
+    <div className={`${containerClass(width)} ${className}`} style={style}>
+      {children}
+    </div>
+  );
 }

@@ -254,6 +254,14 @@
    which rules reference it. */
 :root { --bottom-nav-h: 3.5rem; }
 
+/* The sticky header's height: one row on phones, two (bar + section nav) on
+   desktop. Sticky asides, anchored sections and the docked Ask panel all sit
+   below it, so they read this rather than repeating the number. */
+:root { --header-h: 4rem; }
+@media (min-width: 1024px) {
+  :root { --header-h: 7rem; }
+}
+
 /* Floating controls clear the bottom bar on mobile and sit at their normal
    inset above lg, where the bar does not exist. 1.5rem matches bottom-6, so
    the desktop position is byte-identical to what these had before. */
@@ -291,9 +299,22 @@
 .animate-dialog-in  { animation: dialog-in .22s var(--ease-out-expo) both; }
 .animate-drawer-in  { animation: drawer-in .26s var(--ease-out-expo) both; }
 
+/* Desktop section menus drop a few pixels into place; the mobile menu rises
+   from the bottom bar it was opened from. */
+@keyframes menu-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes sheet-in {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: none; }
+}
+.animate-menu-in  { animation: menu-in .16s ease-out both; }
+.animate-sheet-in { animation: sheet-in .24s var(--ease-out-expo) both; }
+
 @media (prefers-reduced-motion: reduce) {
   .animate-marquee, .live-dot, .animate-rise, .bar-fill { animation: none !important; }
-  .animate-overlay-in, .animate-dialog-in, .animate-drawer-in { animation: none !important; }
+  .animate-overlay-in, .animate-dialog-in, .animate-drawer-in, .animate-menu-in, .animate-sheet-in { animation: none !important; }
   .card-hover:hover { transform: none; }
 }
 
