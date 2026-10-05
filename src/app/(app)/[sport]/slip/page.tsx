@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { PageHeader } from "@/components/ui/page-header";
 import { SlipView } from "@/components/match/slip-view";
 import { DownloadSlipImage } from "@/components/slip/download-slip-image";
+import { MySlipsLink, TrackSlipButton } from "@/components/slip/track-slip";
 import { containerClass } from "@/components/ui/container";
 
 export const metadata: Metadata = {
@@ -19,10 +20,12 @@ export default function SlipPage() {
         eyebrow="Selections"
         title="Selection builder"
         description="Combine selections and see what the accumulator is really worth. Your slip is stored on this device only — nothing is sent anywhere."
+        actions={<MySlipsLink />}
       />
       <div className={`${containerClass()} py-7 sm:py-10`}>
         <SlipView />
-        <div className="mt-5">
+        <div className="mt-5 grid gap-5 lg:grid-cols-2">
+          <TrackSlipButton />
           <DownloadSlipImage />
         </div>
       </div>
