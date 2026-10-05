@@ -197,18 +197,49 @@
       "Atletico-PR"
     ]
   },
-  "europe": {
+  "africa": {
+    "Ferroviário Beira": [
+      "Ferroviário da Beira"
+    ]
+  },
+  "greece": {
     "AEK Athens": [
       "PAE AEK",
       "AEK Athen"
-    ],
+    ]
+  },
+  "azerbaijan": {
     "Sabah Baku": [
       "Sabah FK"
-    ],
+    ]
+  },
+  "czech republic": {
     "Slavia Prague": [
       "SK Slavia Praha",
       "Slavia Praha"
-    ],
+    ]
+  },
+  "belgium": {
+    "Club Brugge": [
+      "Club Brugge KV"
+    ]
+  },
+  "ukraine": {
+    "Shakhtar Donetsk": [
+      "FK Shakhtar Donetsk"
+    ]
+  },
+  "austria": {
+    "LASK": [
+      "LASK Linz"
+    ]
+  },
+  "norway": {
+    "Viking": [
+      "Viking FK"
+    ]
+  },
+  "europe": {
     "Apoel Nicosia": [
       "APOEL Nikosia",
       "APOEL FC"
@@ -221,11 +252,11 @@
     ],
     "Spartak Moscow": [
       "Spartak Moskva"
-    ]
-  },
-  "africa": {
-    "Ferroviário Beira": [
-      "Ferroviário da Beira"
+    ],
+    "Qarabağ": [
+      "Qarabağ FK",
+      "Qarabağ Ağdam FK",
+      "Qarabag"
     ]
   }
 }
