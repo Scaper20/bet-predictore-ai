@@ -40,15 +40,18 @@ export interface PassOption {
 /**
  * The three lengths of the one-off pass, cheapest first.
  *
- * A day is the way in: ₦250 is about the cost of a data top-up, and it is the
- * first payment that matters most. The week is priced so that four of them
- * (₦4,800) cost more than a month of Pro (₦3,500) — a regular pass buyer has a
- * reason to subscribe. Expiry rules live in paystack/pass-window.ts.
+ * Repriced in October 2026 once the cost of serving a paying user was
+ * measured (docs/pricing.md): every
+ * paid day includes Ask BetriX and the written breakdowns, both metered AI
+ * calls, so ₦250 a day could lose money on one active user. ₦500 is still
+ * under a data bundle. The week stays priced so four of them (₦8,000) cost
+ * more than a month of Pro (₦5,000), so a regular pass buyer has a reason to
+ * subscribe. Expiry rules live in paystack/pass-window.ts.
  */
 export const PASS_OPTIONS: PassOption[] = [
-  { id: "day", label: "Day", price: 250, window: "24 hours" },
-  { id: "weekend", label: "Weekend", price: 700, window: "Fri–Mon" },
-  { id: "week", label: "Week", price: 1200, window: "7 days" },
+  { id: "day", label: "Day", price: 500, window: "24 hours" },
+  { id: "weekend", label: "Weekend", price: 1000, window: "Fri–Mon" },
+  { id: "week", label: "Week", price: 2000, window: "7 days" },
 ];
 
 export function passOption(id: string | undefined): PassOption {
@@ -108,7 +111,7 @@ export const PLANS: PlanDefinition[] = [
       "Everything in Pass, every day — no repurchasing week to week",
       "Pay monthly, quarterly (save about 10%) or yearly (save 20%)",
     ],
-    price: { monthly: 3500, quarterly: 9500, yearly: 33600 },
+    price: { monthly: 5000, quarterly: 13500, yearly: 48000 },
     cadence: "per month",
     badge: "Most popular",
     ctaLabel: "Go Pro",
@@ -124,7 +127,7 @@ export const PLANS: PlanDefinition[] = [
       "Value-shift alerts: SportyBet prices that move above fair value, live and by email",
       "Priority support: your messages go to the front of the queue",
     ],
-    price: { monthly: 8000, yearly: 76800 },
+    price: { monthly: 12000, yearly: 115200 },
     cadence: "per month",
     ctaLabel: "Go VIP",
     order: 4,

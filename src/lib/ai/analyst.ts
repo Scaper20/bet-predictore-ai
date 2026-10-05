@@ -156,6 +156,10 @@ export async function writeAnalysis(p: Prediction): Promise<Analysis> {
 
   try {
     return await cached(key, 60 * 60_000, async () => {
+      // Stored once per match and model read (match_analyses), so a cold
+      // server instance reuses yesterday's text instead of paying again.
+      const stored = await readStoredAnalysis(key);
+      if (stored) return stored;
       const client = new Anthropic();
       const response = await client.messages.create({
         model: "claude-opus-5",
@@ -194,10 +198,32 @@ export async function writeAnalysis(p: Prediction): Promise<Analysis> {
 
       const parsed = parseAnalysis(text);
       // A malformed response is not worth showing; keep the reliable version.
-      return parsed ?? base;
+      if (!parsed) return base;
+      await storeAnalysis(key, p.match.id, parsed);
+      return parsed;
     });
   } catch {
     return base;
+  }
+}
+
+async function readStoredAnalysis(key: string): Promise<Analysis | null> {
+  try {
+    const { supabaseAdmin } = await import("@/lib/supabase/admin");
+    const { data } = await supabaseAdmin().from("match_analyses").select("analysis").eq("cache_key", key).maybeSingle();
+    const a = data?.analysis as Analysis | undefined;
+    return a && typeof a.headline === "string" && Array.isArray(a.body) ? a : null;
+  } catch {
+    return null;
+  }
+}
+
+async function storeAnalysis(key: string, matchId: string, analysis: Analysis): Promise<void> {
+  try {
+    const { supabaseAdmin } = await import("@/lib/supabase/admin");
+    await supabaseAdmin().from("match_analyses").upsert({ cache_key: key, match_id: matchId, analysis }, { onConflict: "cache_key" });
+  } catch {
+    // Storage is a saving, not a requirement: the page already has its text.
   }
 }
 

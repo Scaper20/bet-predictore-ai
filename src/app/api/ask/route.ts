@@ -9,6 +9,7 @@ import {
   ASK_FREE_DAILY,
   ASK_GUEST_TOTAL,
   ASK_PAID_DAILY,
+  ASK_VIP_DAILY,
   contextPreamble,
   parseAskRequest,
   type AskEvent,
@@ -88,7 +89,7 @@ export async function POST(request: Request) {
   let setCookie: string | null = null;
 
   if (entitlement.signedIn) {
-    limit = paid ? ASK_PAID_DAILY : ASK_FREE_DAILY;
+    limit = meets(entitlement.tier, "vip") ? ASK_VIP_DAILY : paid ? ASK_PAID_DAILY : ASK_FREE_DAILY;
     const supabase = await supabaseServer();
     const { data: claim, error: claimError } = await supabase.rpc("ask_claim", { p_limit: limit });
     const row = Array.isArray(claim) ? (claim[0] as { allowed: boolean; used: number } | undefined) : undefined;

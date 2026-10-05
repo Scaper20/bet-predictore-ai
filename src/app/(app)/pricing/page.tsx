@@ -9,7 +9,7 @@ import { PlanMatrix } from "@/components/pricing/plan-matrix";
 import { PlanMatrixMobile } from "@/components/pricing/plan-matrix-mobile";
 import { IntervalToggle } from "@/components/pricing/interval-toggle";
 import { sportPath } from "@/lib/routes";
-import { cycleSaving, planById, type BillingCycle } from "@/lib/pricing";
+import { cycleSaving, passOption, planById, type BillingCycle } from "@/lib/pricing";
 import { naira } from "@/lib/format";
 
 export const metadata: Metadata = {
@@ -30,7 +30,7 @@ const FAQS = [
   },
   {
     q: "What is a pass?",
-    a: "One-off access to everything in Pro, with no subscription attached. A Day pass (₦250) lasts 24 hours from purchase, a Week pass (₦1,200) lasts 7 days, and a Weekend pass (₦700) runs to 23:59 West Africa Time on the following Monday, so a Friday purchase covers the whole weekend. Buying another while one is running never shortens it.",
+    a: `One-off access to everything in Pro, with no subscription attached. A Day pass (${naira(passOption("day").price)}) lasts 24 hours from purchase, a Week pass (${naira(passOption("week").price)}) lasts 7 days, and a Weekend pass (${naira(passOption("weekend").price)}) runs to 23:59 West Africa Time on the following Monday, so a Friday purchase covers the whole weekend. Buying another while one is running never shortens it.`,
   },
   {
     q: "Can I cancel?",
