@@ -135,7 +135,7 @@ export default async function AccountPage() {
         </div>
       )}
 
-      <section id="overview" className="scroll-mt-32 pt-10">
+      <section id="overview" className="scroll-mt-[calc(var(--header-h)+4rem)] pt-10">
         <SectionHeading eyebrow="Overview" title="At a glance" />
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard
@@ -171,7 +171,7 @@ export default async function AccountPage() {
         </div>
       </section>
 
-      <section id="preferences" className="scroll-mt-32 pt-14">
+      <section id="preferences" className="scroll-mt-[calc(var(--header-h)+4rem)] pt-14">
         <SectionHeading
           eyebrow="Preferences"
           title="Your feed and your details"
@@ -188,7 +188,7 @@ export default async function AccountPage() {
         </div>
       </section>
 
-      <section id="notifications" className="scroll-mt-32 pt-14">
+      <section id="notifications" className="scroll-mt-[calc(var(--header-h)+4rem)] pt-14">
         <SectionHeading
           eyebrow="Notifications"
           title="On this device"
@@ -199,7 +199,7 @@ export default async function AccountPage() {
         </div>
       </section>
 
-      <section id="billing" className="scroll-mt-32 pt-14">
+      <section id="billing" className="scroll-mt-[calc(var(--header-h)+4rem)] pt-14">
         <SectionHeading eyebrow="Plan & billing" title="What you're on" />
         <div className="card mt-6 flex flex-wrap items-center gap-5 p-5 sm:p-7">
           <div className="min-w-[14rem] flex-1">
@@ -219,7 +219,7 @@ export default async function AccountPage() {
         </div>
       </section>
 
-      <section id="security" className="scroll-mt-32 pt-14">
+      <section id="security" className="scroll-mt-[calc(var(--header-h)+4rem)] pt-14">
         <SectionHeading eyebrow="Security" title="Login & security" />
         <div className="mt-6 grid gap-6 lg:grid-cols-2 lg:items-start">
           <div className="card divide-y divide-line p-5 sm:p-7">
@@ -268,7 +268,7 @@ export default async function AccountPage() {
         </div>
       </section>
 
-      <section id="danger" className="scroll-mt-32 pb-4 pt-14">
+      <section id="danger" className="scroll-mt-[calc(var(--header-h)+4rem)] pb-4 pt-14">
         <SectionHeading eyebrow="Danger zone" title="Delete account" />
         <div className="card mt-6 max-w-2xl border-rose/25 p-5 sm:p-7">
           <DeleteAccountForm hasActiveSubscription={hasActiveSubscription} />

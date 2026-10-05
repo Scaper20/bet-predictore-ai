@@ -23,6 +23,7 @@ export const SPORT_ROUTES = {
   trackRecord: "track-record",
   slip: "slip",
   trackedSlips: "slip/tracked",
+  forge: "forge",
   valueAlerts: "value-alerts",
 } as const;
 

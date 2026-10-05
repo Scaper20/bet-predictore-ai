@@ -2,22 +2,18 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useSlip } from "@/lib/slip";
 import { sportPath, sportFromPathname, type SportRoute } from "@/lib/routes";
+import { isActive } from "@/lib/nav";
+import { useLiveCount } from "@/components/layout/use-live-count";
 
 /**
  * Primary navigation for a thumb.
  *
- * Not a miniature of the desktop nav, and the difference is the whole point.
- * Desktop navigation is a site map — it shows what exists. Thumb navigation is
- * a frequency ranking — it shows what you reach for on a matchday. Conflating
- * the two is what makes a mobile site feel like a shrunk desktop one.
- *
- * So Fixtures, Track Record, Trends and Pricing are not here. Fixtures is
- * reachable from both Live and Predictions; Track Record is a trust document
- * read once or twice, not on every visit; Pricing belongs beside an upgrade
- * prompt rather than in permanent chrome. All of them keep a real link in the
- * drawer behind "More".
+ * Not a miniature of the desktop nav: desktop navigation is a site map,
+ * thumb navigation is a frequency ranking. For You and Live sit under the
+ * left thumb, Forge is the raised centre action, Picks and More on the right.
+ * The slip moved up beside Ask BetriX in the header, where it's visible on
+ * every screen without spending a tab. Everything else is behind More.
  *
  * Deliberately static — no hide-on-scroll. A bar that disappears makes people
  * scroll up to find it, which costs more than the 56px it saves.
@@ -25,25 +21,46 @@ import { sportPath, sportFromPathname, type SportRoute } from "@/lib/routes";
 
 const HEIGHT_CLASS = "h-14"; // 56px — mirrors --bottom-nav-h in globals.css.
 
-type Item =
-  | { route: SportRoute; label: string; icon: IconName }
-  | { action: "more"; label: string; icon: IconName };
+type Tab = { route: SportRoute; label: string; icon: IconName };
 
-const ITEMS: readonly Item[] = [
+const LEFT: readonly Tab[] = [
   { route: "forYou", label: "For You", icon: "star" },
   { route: "live", label: "Live", icon: "live" },
-  // "Predictions" does not fit under a 20px icon at this type size, and a
-  // truncated label is worse than a shorter true one.
+];
+const RIGHT: readonly Tab[] = [
+  // "Predictions" does not fit under a 20px icon at this type size.
   { route: "predictions", label: "Picks", icon: "chart" },
-  { route: "slip", label: "Slip", icon: "slip" },
-  { action: "more", label: "More", icon: "more" },
 ];
 
 export function BottomNav({ onOpenMenu, menuOpen }: { onOpenMenu: () => void; menuOpen: boolean }) {
   const pathname = usePathname();
   const sport = sportFromPathname(pathname);
-  const { legs } = useSlip();
-  const slipCount = legs.length;
+  const live = useLiveCount();
+  const forgeHref = sportPath("forge", sport);
+  const forgeActive = isActive(pathname, forgeHref);
+
+  const tab = (t: Tab) => {
+    const href = sportPath(t.route, sport);
+    const active = !menuOpen && isActive(pathname, href);
+    return (
+      <li key={t.route} className="contents">
+        <Link href={href} aria-current={active ? "page" : undefined} className={cell(active)}>
+          <span className="relative">
+            <Icon name={t.icon} active={active} />
+            {t.route === "live" && live !== null && live > 0 && (
+              <span
+                className="tnum absolute -right-3 -top-1.5 grid min-w-4 place-items-center rounded-full bg-rose px-1 font-mono text-[9.5px] font-bold leading-4 text-canvas"
+                aria-label={`${live} live`}
+              >
+                {live}
+              </span>
+            )}
+          </span>
+          <Label active={active}>{t.label}</Label>
+        </Link>
+      </li>
+    );
+  };
 
   return (
     <nav
@@ -52,59 +69,45 @@ export function BottomNav({ onOpenMenu, menuOpen }: { onOpenMenu: () => void; me
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       <ul className={`grid grid-cols-5 ${HEIGHT_CLASS}`}>
-        {ITEMS.map((item) => {
-          if ("action" in item) {
-            return (
-              <li key={item.action} className="contents">
-                <button
-                  type="button"
-                  onClick={onOpenMenu}
-                  aria-expanded={menuOpen}
-                  aria-label="More"
-                  className={cell(menuOpen)}
-                >
-                  <Icon name={item.icon} active={menuOpen} />
-                  <Label active={menuOpen}>{item.label}</Label>
-                </button>
-              </li>
-            );
-          }
+        {LEFT.map(tab)}
 
-          const href = sportPath(item.route, sport);
-          const active = pathname === href || pathname.startsWith(`${href}/`);
+        {/* Forge: the raised centre action. */}
+        <li className="contents">
+          <Link
+            href={forgeHref}
+            aria-current={forgeActive ? "page" : undefined}
+            className="flex h-full flex-col items-center justify-end gap-1 pb-1.5 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand"
+          >
+            <span
+              className={`-mt-6 grid size-[52px] place-items-center rounded-full border-4 border-shell bg-brand text-brand-ink shadow-[0_6px_18px_-6px_rgb(0_244_142/0.6)] transition-transform active:scale-95 ${
+                forgeActive ? "ring-2 ring-brand/40" : ""
+              }`}
+            >
+              <svg viewBox="0 0 24 24" className="size-[22px]" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinejoin="round" aria-hidden>
+                <path d="M13 3 5 14h6l-1 7 8-11h-6z" />
+              </svg>
+            </span>
+            <Label active={forgeActive}>Forge</Label>
+          </Link>
+        </li>
 
-          return (
-            <li key={href} className="contents">
-              <Link
-                href={href}
-                aria-current={active ? "page" : undefined}
-                className={cell(active)}
-              >
-                <span className="relative">
-                  <Icon name={item.icon} active={active} />
-                  {item.route === "slip" && slipCount > 0 && (
-                    <span
-                      className="tnum absolute -right-2 -top-1 grid min-w-4 place-items-center rounded-full bg-brand px-1 text-[10px] font-bold leading-4 text-brand-ink"
-                      aria-hidden
-                    >
-                      {slipCount}
-                    </span>
-                  )}
-                </span>
-                <Label active={active}>{item.label}</Label>
-              </Link>
-            </li>
-          );
-        })}
+        {RIGHT.map(tab)}
+
+        <li className="contents">
+          <button type="button" onClick={onOpenMenu} aria-expanded={menuOpen} aria-label="More" className={cell(menuOpen)}>
+            <Icon name="more" active={menuOpen} />
+            <Label active={menuOpen}>More</Label>
+          </button>
+        </li>
       </ul>
     </nav>
   );
 }
 
 /**
- * The active state carries three signals, not just hue: colour, a tinted
- * backing pill and a heavier label. Colour alone fails a colourblind reader
- * and washes out on a sunlit screen, which is most of this audience.
+ * The active state carries more than hue: colour, a heavier stroke and a
+ * heavier label. Colour alone fails a colourblind reader and washes out on a
+ * sunlit screen, which is most of this audience.
  */
 function cell(active: boolean): string {
   return [
@@ -116,13 +119,11 @@ function cell(active: boolean): string {
 
 function Label({ active, children }: { active: boolean; children: string }) {
   return (
-    <span className={`text-[10px] leading-none ${active ? "font-semibold" : "font-medium"}`}>
-      {children}
-    </span>
+    <span className={`text-[10px] leading-none ${active ? "font-semibold text-brand" : "font-medium"}`}>{children}</span>
   );
 }
 
-type IconName = "star" | "live" | "chart" | "slip" | "more";
+type IconName = "star" | "live" | "chart" | "more";
 
 function Icon({ name, active }: { name: IconName; active: boolean }) {
   const common = {
@@ -156,17 +157,12 @@ function Icon({ name, active }: { name: IconName; active: boolean }) {
           <path d="M4 19V11M9.3 19V5M14.7 19v-7M20 19v-10" />
         </svg>
       );
-    case "slip":
-      return (
-        <svg {...common}>
-          <path d="M5 4h14v16l-3-2-2 2-2-2-2 2-2-2-3 2V4Z" />
-          <path d="M9 9h6M9 12.5h4" />
-        </svg>
-      );
     case "more":
       return (
         <svg {...common}>
-          <path d="M4 7h16M4 12h16M4 17h16" />
+          <circle cx="5" cy="12" r="1.4" />
+          <circle cx="12" cy="12" r="1.4" />
+          <circle cx="19" cy="12" r="1.4" />
         </svg>
       );
   }

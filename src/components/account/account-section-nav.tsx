@@ -45,7 +45,7 @@ export function AccountSectionNav({
   }, [sections]);
 
   return (
-    <div className="sticky top-16 z-30 -mx-4 border-b border-line bg-canvas/90 px-4 backdrop-blur-xl sm:mx-0 sm:px-0">
+    <div className="sticky top-[var(--header-h)] z-30 -mx-4 border-b border-line bg-canvas/90 px-4 backdrop-blur-xl sm:mx-0 sm:px-0">
       <nav aria-label="Account sections">
         <ul className="no-scrollbar flex gap-1 overflow-x-auto py-2">
           {sections.map((s) => {

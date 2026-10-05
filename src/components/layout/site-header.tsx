@@ -7,52 +7,38 @@ import { Container } from "@/components/ui/container";
 import { AccountMenu } from "@/components/layout/account-menu";
 import { SlipButton } from "@/components/layout/slip-button";
 import { AskButton } from "@/components/ask/ask-button";
+import { SportSwitch } from "@/components/layout/sport-switch";
+import { NavSearch } from "@/components/layout/nav-search";
+import { MegaNav } from "@/components/layout/mega-nav";
+import { openNotifications } from "@/components/layout/nav-actions";
 import { useEntitlement } from "@/components/entitlements/entitlement-provider";
 import { useAuthHint } from "@/components/entitlements/use-auth-hint";
-import { sportPath, sportFromPathname, type SportRoute } from "@/lib/routes";
+import { sportFromPathname } from "@/lib/routes";
+import { navFor } from "@/lib/nav";
 
 /**
- * The primary nav.
+ * The site header.
  *
- * Trends and Selections stay out: Trends is a browsing surface for people
- * already invested, so it keeps its footer link and a route in from
- * /predictions; Selections is the counter in the right-hand cluster, which is
- * a better shape for it. Track Record earns its place because deleting
- * /how-it-works made the settled record the site's entire trust argument, and
- * a trust argument nobody can find does not work.
+ * Desktop is two rows: identity, sport, search and the personal cluster on
+ * top; the section nav with its menus below (mega-nav.tsx). Every section
+ * BetriX has or has announced is in those menus — the announced ones are
+ * tagged "Soon" and lead to their coming-soon page — so the nav shows where
+ * the product is going and new features slot in without a redesign. The
+ * menus themselves are data, in lib/nav.ts.
  *
- * Entries are either sport-scoped (resolved through sportPath) or absolute.
- * Pricing is the first that is neither a data surface nor under /[sport]/,
- * which is why this widened from a plain route list.
+ * Phones get one row: identity, Ask BetriX, the slip and the sign-up CTA.
+ * Navigation there lives in the bottom bar and the menu behind its "More"
+ * tab (mobile-nav.tsx), both reading the same lib/nav.ts.
  *
- * Six items plus the logo and the auth cluster do not fit at md — they did not
- * quite fit at five either — so this nav starts at lg. Below that it is not a
- * narrower version of itself: navigation moves to the bottom bar and the
- * drawer behind it (see mobile-nav.tsx), and this header keeps only identity
- * and the sign-up CTA.
+ * The header's height is --header-h in globals.css; sticky things below it
+ * read that rather than repeating a number.
  */
-type NavItem =
-  | { route: SportRoute; label: string }
-  | { href: string; label: string };
-
-const NAV: readonly NavItem[] = [
-  { route: "forYou", label: "For You" },
-  { route: "live", label: "Live" },
-  { route: "predictions", label: "Predictions" },
-  { route: "fixtures", label: "Fixtures" },
-  { route: "trackRecord", label: "Track Record" },
-  { href: "/pricing", label: "Pricing" },
-];
-
 export function SiteHeader() {
   const pathname = usePathname();
   // Renders in the (app) layout, above the [sport] segment, so there are no
   // params to read — the active sport comes off the pathname.
   const sport = sportFromPathname(pathname);
-  const nav = NAV.map((item) => ({
-    label: item.label,
-    href: "href" in item ? item.href : sportPath(item.route, sport),
-  }));
+  const { tabs } = navFor(sport);
 
   // Auth state comes from the entitlement context, never from cookies() in a
   // layout — see the comment in (app)/layout.tsx for why that distinction is
@@ -68,47 +54,46 @@ export function SiteHeader() {
 
   return (
     <header
-      className="sticky top-0 z-50 border-b border-line bg-canvas/85 backdrop-blur-xl"
+      className="sticky top-0 z-50 border-b border-line bg-canvas/90 backdrop-blur-xl"
       // Installed on iOS the status bar is translucent and the page runs up
       // under it (layout.tsx); this keeps the header clear of the notch. Zero
       // everywhere else.
       style={{ paddingTop: "env(safe-area-inset-top)" }}
     >
-      <Container className="flex h-16 items-center gap-4">
-        {/* -mx-1.5 px-1.5 py-2 rather than a bare inline row: the logo is the
-            "go home" control on every page and measured 32px tall, which is a
-            fiddly tap on a phone. The negative margin keeps it optically
-            flush with the container edge. */}
+      <Container className="flex h-16 items-center gap-3 lg:gap-4">
+        {/* -mx-1.5 px-1.5 py-2: the logo is the "go home" control on every
+            page, and 32px tall alone is a fiddly tap on a phone. */}
         <Link
           href="/"
+          aria-label="BetriX home"
           className="-mx-1.5 flex shrink-0 items-center gap-2.5 rounded-lg px-1.5 py-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
         >
           <Logo />
-          <span className="font-display text-lg font-bold tracking-tight">
+          <span className="font-display text-lg font-bold tracking-tight max-[379px]:hidden">
             Betri<span className="text-brand">X</span>
           </span>
         </Link>
 
-        <nav className="ml-6 hidden items-center gap-1 lg:flex">
-          {nav.map((item) => {
-            const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                  active ? "bg-surface-2 text-ink" : "text-ink-muted hover:text-ink"
-                }`}
-              >
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
+        <div className="hidden lg:block">
+          <SportSwitch />
+        </div>
+        <div className="hidden min-w-0 flex-1 lg:block">
+          <NavSearch sport={sport} />
+        </div>
 
+        {/* Desktop: the personal cluster. */}
         <div className="ml-auto hidden items-center gap-2 lg:flex">
           <AskButton />
           <SlipButton sport={sport} />
+          <button
+            type="button"
+            onClick={openNotifications}
+            aria-label="Notifications"
+            title="Notifications"
+            className="grid size-10 place-items-center rounded-lg text-ink-muted transition-colors hover:bg-surface-2 hover:text-ink"
+          >
+            <BellIcon />
+          </button>
           {resolving ? (
             <AuthPlaceholder />
           ) : signedIn ? (
@@ -135,22 +120,20 @@ export function SiteHeader() {
           )}
         </div>
 
-        {/*
-          No hamburger. Navigation on mobile lives in the bottom bar, whose
-          "More" tab opens the drawer — a second trigger in the hardest-to-
-          reach corner of the screen was two systems competing for one job.
-          What is left is the one thing the bar cannot carry: the reason an
-          anonymous visitor is here.
-        */}
-        <div className="ml-auto flex items-center gap-1.5 lg:hidden">
-          <AskButton compact />
+        {/* Phones: Ask BetriX with the slip beside it, then the reason an
+            anonymous visitor is here. Everything else is in the bottom bar. */}
+        <div className="ml-auto flex items-center gap-1 lg:hidden">
+          <AskButton size="sm" />
+          <SlipButton sport={sport} />
           {!resolving && !signedIn && (
-            <ButtonLink href="/account/sign-up" variant="primary" className="px-3.5 py-2 text-xs">
+            <ButtonLink href="/account/sign-up" variant="primary" className="ml-1 px-3 py-2 text-xs">
               Sign up
             </ButtonLink>
           )}
         </div>
       </Container>
+
+      <MegaNav tabs={tabs} />
     </header>
   );
 }
@@ -158,12 +141,8 @@ export function SiteHeader() {
 /**
  * Holds the space when there is nothing to go on — no hint cookie yet and the
  * entitlement fetch still in flight, which in practice means a first-ever
- * visit before proxy.ts has set one.
- *
- * The alternative — assuming logged-out and rendering the sign-up CTA — puts
- * "Create free account" in front of someone who already has one. A neutral
- * shape is the cheaper mistake, and unlike <Gate> there is nothing here that
- * failing open would leak.
+ * visit before proxy.ts has set one. Assuming logged-out would put "Create
+ * free account" in front of someone who already has one.
  */
 function AuthPlaceholder() {
   return <div className="size-10 rounded-full bg-surface-2" aria-hidden />;
@@ -173,5 +152,14 @@ function Logo() {
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img src="/brand/icon-green-96.png" alt="" width={32} height={32} className="size-8 rounded-lg" aria-hidden />
+  );
+}
+
+function BellIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+      <path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z" strokeLinejoin="round" />
+      <path d="M10 20.5a2 2 0 0 0 4 0" />
+    </svg>
   );
 }

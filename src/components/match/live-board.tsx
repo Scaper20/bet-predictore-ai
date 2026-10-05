@@ -289,7 +289,7 @@ function LeagueGroup({
   goals: Record<string, GoalFlash>;
 }) {
   return (
-    <section id={`live-${slug(group.key)}`} className="card scroll-mt-24 overflow-hidden">
+    <section id={`live-${slug(group.key)}`} className="card scroll-mt-[calc(var(--header-h)+1rem)] overflow-hidden">
       <button
         type="button"
         onClick={onToggle}

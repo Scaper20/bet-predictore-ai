@@ -223,7 +223,12 @@ export function SlipView() {
         icon="🧾"
         title="No selections yet"
         description="Add selections from any match page and this builds the true combined probability — plus what the combined pick is really worth against the price you have been offered."
-        action={<ButtonLink href={sportPath("predictions")} variant="secondary">Browse predictions</ButtonLink>}
+        action={
+          <div className="flex flex-wrap justify-center gap-2">
+            <ButtonLink href={sportPath("forge")}>Let Forge build one</ButtonLink>
+            <ButtonLink href={sportPath("predictions")} variant="secondary">Browse predictions</ButtonLink>
+          </div>
+        }
       />
     );
   }
@@ -338,7 +343,7 @@ export function SlipView() {
         </Button>
       </div>
 
-      <aside className="min-w-0 lg:sticky lg:top-20 lg:self-start">
+      <aside className="min-w-0 lg:sticky lg:top-[calc(var(--header-h)+1rem)] lg:self-start">
         <div className="card p-5 sm:p-7">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-ink-muted">
             Combined pick

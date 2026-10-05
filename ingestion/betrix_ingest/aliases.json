@@ -1,0 +1,102 @@
+{
+  "_doc": "Club renames no spelling rule can see. Scope -> canonical name -> other names the same club has used. Only certain identities belong here: a wrong entry silently merges two clubs' records. Mergers (e.g. Sharks + Dolphins -> Rivers United) are different clubs and must NOT be listed. National teams: canonical is TheSportsDB's spelling. Never list 'Congo' under 'DR Congo', 'Niger' under 'Nigeria', or any Guinea under another: they are different countries.",
+  "nigeria": {
+    "Enugu Rangers": [
+      "Rangers International",
+      "Rangers International FC",
+      "Rangers"
+    ],
+    "Bendel Insurance": [
+      "Bendel FC",
+      "Bendel Insurance FC"
+    ],
+    "Shooting Stars": [
+      "Shooting Stars SC",
+      "3SC"
+    ]
+  },
+  "international": {
+    "USA": [
+      "United States",
+      "United States of America",
+      "USMNT"
+    ],
+    "South Korea": [
+      "Korea Republic",
+      "Republic of Korea"
+    ],
+    "North Korea": [
+      "Korea DPR",
+      "DPR Korea"
+    ],
+    "Turkey": [
+      "Türkiye",
+      "Turkiye"
+    ],
+    "Czech Republic": [
+      "Czechia"
+    ],
+    "Bosnia-Herzegovina": [
+      "Bosnia and Herzegovina",
+      "Bosnia & Herzegovina"
+    ],
+    "Ivory Coast": [
+      "Côte d'Ivoire",
+      "Cote d'Ivoire"
+    ],
+    "Cape Verde": [
+      "Cabo Verde",
+      "Cape Verde Islands"
+    ],
+    "Eswatini": [
+      "Swaziland"
+    ],
+    "Iran": [
+      "IR Iran"
+    ],
+    "China": [
+      "China PR"
+    ],
+    "DR Congo": [
+      "Congo DR",
+      "Democratic Republic of the Congo",
+      "Congo-Kinshasa"
+    ],
+    "Congo": [
+      "Congo Republic",
+      "Republic of the Congo",
+      "Congo-Brazzaville"
+    ],
+    "Gambia": [
+      "The Gambia"
+    ],
+    "North Macedonia": [
+      "Macedonia",
+      "FYR Macedonia"
+    ],
+    "Republic of Ireland": [
+      "Ireland"
+    ],
+    "Kyrgyzstan": [
+      "Kyrgyz Republic"
+    ],
+    "Vietnam": [
+      "Viet Nam"
+    ],
+    "Saint Kitts and Nevis": [
+      "St Kitts and Nevis",
+      "St. Kitts and Nevis"
+    ],
+    "Saint Lucia": [
+      "St Lucia",
+      "St. Lucia"
+    ],
+    "Saint Vincent and the Grenadines": [
+      "St Vincent and the Grenadines",
+      "St. Vincent and the Grenadines"
+    ],
+    "Timor-Leste": [
+      "East Timor"
+    ]
+  }
+}

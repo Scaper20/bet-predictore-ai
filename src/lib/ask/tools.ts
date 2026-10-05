@@ -7,7 +7,8 @@ import { getLive } from "@/lib/providers";
 import { cached } from "@/lib/providers/cache";
 import { matchPrediction, predictBatch, upcomingFeed } from "@/lib/service";
 import { priceSelections } from "@/lib/odds";
-import { APP_TIMEZONE, appDayBounds, kickoffDay, kickoffTime } from "@/lib/format";
+import { kickoffDay, kickoffTime } from "@/lib/format";
+import { windowFor, type KickoffWindow } from "@/lib/time-windows";
 import { isLive } from "@/lib/format";
 import type { AskPickCard } from "@/lib/ask/request";
 
@@ -33,7 +34,7 @@ export interface ToolOutcome {
 /* ------------------------------------------------------------ definitions */
 
 const WHEN = ["live", "today", "tonight", "tomorrow", "weekend", "next_7_days"] as const;
-type When = (typeof WHEN)[number];
+type When = (typeof WHEN)[number] & KickoffWindow;
 
 export const ASK_TOOLS: Anthropic.Beta.BetaTool[] = [
   {
@@ -160,32 +161,6 @@ const fixtureName = (m: Match) => `${m.home.name} v ${m.away.name}`;
 /** Asian handicap is a paid feature everywhere else on the site; the assistant keeps to the same line. */
 function visiblePicks(p: Prediction, tier: AskTier): Pick[] {
   return tier === "paid" ? p.picks : p.picks.filter((pk) => pk.group !== "Asian Handicap");
-}
-
-/** [start, end) in epoch ms for a time window, in Lagos time. */
-function windowFor(when: When, now = new Date()): [number, number] {
-  const today = appDayBounds(now);
-  switch (when) {
-    case "live":
-    case "today":
-      return [now.getTime() - 3 * 3600_000, today.end.getTime()];
-    case "tonight": {
-      const evening = today.start.getTime() + 16 * 3600_000; // 16:00 WAT
-      return [Math.max(now.getTime(), evening), today.end.getTime() + 4 * 3600_000];
-    }
-    case "tomorrow": {
-      const t = appDayBounds(now, 1);
-      return [t.start.getTime(), t.end.getTime()];
-    }
-    case "weekend": {
-      const dow = new Date(now.toLocaleString("en-US", { timeZone: APP_TIMEZONE })).getDay(); // 0 Sun … 6 Sat
-      const toSat = dow === 0 ? -1 : 6 - dow;
-      const sat = appDayBounds(now, toSat);
-      return [Math.max(now.getTime(), sat.start.getTime()), sat.start.getTime() + 2 * 86_400_000];
-    }
-    default:
-      return [now.getTime() - 3 * 3600_000, now.getTime() + 7 * 86_400_000];
-  }
 }
 
 async function slate(): Promise<Match[]> {

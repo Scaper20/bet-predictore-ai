@@ -6,10 +6,10 @@ import { APP_TIMEZONE } from "@/lib/format";
 import { ASK_GUEST_TOTAL } from "@/lib/ask/request";
 
 /**
- * Ask BetriX for visitors without an account: ASK_GUEST_TOTAL questions per
- * browser, ever, then the panel asks them to sign up. Enforced here, not in
- * the browser — see migration 0027 for the table and why the network cap is
- * generous.
+ * Free tries for visitors without an account — Ask BetriX's questions,
+ * Forge's slips — per browser, ever, then the feature asks them to sign up.
+ * Enforced here, not in the browser — see migration 0027 for the table and
+ * why the network cap is generous. Each feature counts under its own scope.
  */
 
 export const GUEST_COOKIE = "bx_ask_guest";
@@ -49,13 +49,13 @@ export interface GuestIdentity {
   setCookie: string | null;
 }
 
-export function guestIdentity(request: Request): GuestIdentity {
+export function guestIdentity(request: Request, scope = "ask"): GuestIdentity {
   const existing = readCookie(request, GUEST_COOKIE);
   const id = existing && /^[0-9a-f-]{36}$/.test(existing) ? existing : randomUUID();
   const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
   return {
-    deviceKey: hash("device", id),
-    ipKey: hash("ip", clientIp(request)),
+    deviceKey: hash(`${scope}:device`, id),
+    ipKey: hash(`${scope}:ip`, clientIp(request)),
     setCookie: id === existing ? null : `${GUEST_COOKIE}=${id}; Path=/; Max-Age=31536000; HttpOnly; SameSite=Lax${secure}`,
   };
 }
@@ -82,9 +82,12 @@ async function refundKey(key: string, day: string) {
  * (not configured, database down) — the caller treats that as unavailable,
  * never as unlimited.
  */
-export async function claimGuest(g: GuestIdentity): Promise<{ allowed: boolean; used: number } | null> {
+export async function claimGuest(
+  g: GuestIdentity,
+  total = ASK_GUEST_TOTAL,
+): Promise<{ allowed: boolean; used: number } | null> {
   try {
-    const device = await claim(g.deviceKey, LIFETIME, ASK_GUEST_TOTAL);
+    const device = await claim(g.deviceKey, LIFETIME, total);
     if (!device) return null;
     if (!device.allowed) return { allowed: false, used: device.used };
     const network = await claim(g.ipKey, today(), IP_DAILY);
@@ -94,7 +97,7 @@ export async function claimGuest(g: GuestIdentity): Promise<{ allowed: boolean; 
     }
     if (!network.allowed) {
       await refundKey(g.deviceKey, LIFETIME);
-      return { allowed: false, used: ASK_GUEST_TOTAL };
+      return { allowed: false, used: total };
     }
     return device;
   } catch {
