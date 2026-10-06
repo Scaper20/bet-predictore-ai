@@ -21,7 +21,6 @@ import type { Outcome } from "@/lib/stats/compute";
 import type { Analysis } from "@/lib/ai/analyst";
 import { AskAboutMatch, AskPageContext } from "@/components/ask/ask-page-context";
 import { PricesPanel, PricesPanelSkeleton } from "@/components/match/prices-panel";
-import { AsianHandicapClient } from "@/components/match/asian-handicap-client";
 import { AnalysisPanel } from "@/components/match/analysis-panel";
 import { LiveWinProbabilityPanel } from "@/components/match/live-win-probability-panel";
 import { Gate } from "@/components/entitlements/gate";
@@ -148,7 +147,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
 
   const tabs: MatchTab[] = [
     { key: "overview", label: "Overview", panel: <Overview match={match} prediction={prediction} analysis={analysis} ctx={ctx} live={live} label={label} /> },
-    { key: "markets", label: "Markets", panel: <Markets prediction={prediction} matchId={match.id} /> },
+    { key: "markets", label: "Markets", panel: <Markets prediction={prediction} /> },
     { key: "stats", label: "Stats", panel: <MatchStats match={match} home={ctx.home} away={ctx.away} /> },
     ...(ctx.table
       ? [{
@@ -383,7 +382,7 @@ function FormLine({ team, letters }: { team: Match["home"]; letters: Outcome[] }
 
 /* -------------------------------------------------------------- Markets */
 
-function Markets({ prediction, matchId }: { prediction: Prediction; matchId: string }) {
+function Markets({ prediction }: { prediction: Prediction }) {
   return (
     <div className="space-y-5">
       {/* Free and server-rendered: the 1X2 split is what search indexes and
@@ -399,10 +398,8 @@ function Markets({ prediction, matchId }: { prediction: Prediction; matchId: str
       </DepthGate>
       {/* Every market beyond 1X2 is Pro (lib/access.ts), fetched after the
           plan check so none of it is in the shared HTML. */}
+      {/* Asian handicap sits inside ProMarkets: one Pro wall, not two. */}
       <ProMarkets />
-      <Gate requires="pass">
-        <AsianHandicapClient matchId={matchId} />
-      </Gate>
     </div>
   );
 }

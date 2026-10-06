@@ -8,6 +8,7 @@ import { BttsPanel, CorrectScorePanel, DoubleChancePanel, GoalsPanel, HalvesPane
 import { LockedPreview } from "@/components/entitlements/account-gate";
 import { ProTag } from "@/components/entitlements/locked-pick";
 import { GatedPanelSkeleton } from "@/components/match/gated-panel-states";
+import { AsianHandicapClient } from "@/components/match/asian-handicap-client";
 
 /**
  * What this viewer may see on a match page, fetched once.
@@ -115,7 +116,7 @@ export function ProMarkets() {
           Pro
         </span>
         <p className="mt-2 font-display text-lg font-bold leading-snug text-ink">
-          Goals, both teams to score, double chance, correct score and halves
+          Goals, both teams to score, double chance, correct score, halves and Asian handicap
         </p>
         <Link
           href={UPGRADE_HREF}
@@ -135,6 +136,7 @@ export function ProMarkets() {
       </div>
       <CorrectScorePanel prediction={prediction} />
       <HalvesPanel prediction={prediction} />
+      <AsianHandicapClient matchId={prediction.match.id} />
     </div>
   );
 }
