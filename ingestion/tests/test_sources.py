@@ -145,3 +145,13 @@ def test_division_csv_reads_shots_on_target_when_present():
     assert (a.home_shots_on_target, a.away_shots_on_target) == (9, 3)
     # A blank column stays unknown, never zero shots.
     assert (b.home_shots_on_target, b.away_shots_on_target) == (None, None)
+
+
+def test_stale_live_is_finished():
+    from datetime import timedelta
+    from betrix_ingest.sources.thesportsdb import status_of
+
+    now = datetime.now(timezone.utc)
+    assert status_of({"strStatus": "2H"}, now - timedelta(days=5)) == "finished"
+    assert status_of({"strStatus": "HT"}, now - timedelta(hours=5)) == "finished"
+    assert status_of({"strStatus": "2H"}, now - timedelta(minutes=80)) == "live"

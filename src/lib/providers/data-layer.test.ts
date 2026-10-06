@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { dataLayer, viaLayer } from "./data-layer";
 import { publicMatchId, rowToMatch, sourceKeyForId, type MatchRow } from "./db-source";
 
@@ -22,6 +22,10 @@ const row: MatchRow = {
 };
 
 describe("db-source ids", () => {
+  // The row is mid-game at 15:00; see src/lib/match-status.ts.
+  beforeAll(() => vi.setSystemTime(new Date("2026-10-04T16:00:00Z")));
+  afterAll(() => vi.useRealTimers());
+
   it("keeps the id a game had under the live feeds", () => {
     expect(publicMatchId(row)).toBe("sdb:2598057");
     expect(publicMatchId({ ...row, source_ids: { ...row.source_ids, "football-data-org": "537785" } })).toBe("fd:537785");

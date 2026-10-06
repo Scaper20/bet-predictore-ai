@@ -35,12 +35,14 @@ export async function replyToTicket(
 
   const { data: ticket } = await admin
     .from("support_tickets")
-    .select("subject, profiles(email)")
+    .select("subject, guest_email, profiles(email)")
     .eq("id", ticketId)
     .maybeSingle();
   const profile = ticket ? (Array.isArray(ticket.profiles) ? ticket.profiles[0] : ticket.profiles) : undefined;
-  if (ticket && profile?.email) {
-    void sendEmail({ to: profile.email, ...ticketReplyNotificationEmail({ subject: ticket.subject }) });
+  // Guests have no account, so their address is on the ticket itself.
+  const to = profile?.email ?? (ticket?.guest_email as string | null | undefined);
+  if (ticket && to) {
+    void sendEmail({ to, ...ticketReplyNotificationEmail({ subject: ticket.subject }) });
   }
 
   revalidatePath(`/admin/tickets/${ticketId}`);

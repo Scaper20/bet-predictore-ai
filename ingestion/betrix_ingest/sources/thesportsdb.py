@@ -66,6 +66,10 @@ def status_of(e: dict, kickoff: datetime | None) -> str:
         status = "live"
     else:
         status = "scheduled"
+    # The feed sometimes never sends full time; a game "in play" four hours
+    # after kickoff is finished on its last score (src/lib/match-status.ts).
+    if status in {"live", "halftime"} and kickoff and kickoff < datetime.now(timezone.utc) - timedelta(hours=4):
+        return "finished"
     # Rows long past kickoff with a score but no status are finished games.
     if status == "scheduled" and kickoff and kickoff < datetime.now(timezone.utc) - timedelta(hours=3):
         if _int(e.get("intHomeScore")) is not None and _int(e.get("intAwayScore")) is not None:

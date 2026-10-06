@@ -39,7 +39,7 @@ export default async function ResultsPage({ searchParams }: { searchParams: Prom
   const { start, end } = appDayBounds(now, -offset);
 
   const matches = await playedBetween(start, end, def?.code).catch(() => []);
-  const picks = await picksFor(matches.map((m) => m.id)).catch(() => new Map<string, LoggedPick>());
+  const picks = await picksFor(matches).catch(() => new Map<string, LoggedPick>());
   const groups = groupLiveMatches(matches).map((g) => ({
     ...g,
     matches: [...g.matches].sort((a, b) => Date.parse(a.kickoff) - Date.parse(b.kickoff)),

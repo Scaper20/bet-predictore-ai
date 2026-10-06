@@ -29,8 +29,7 @@ const TOPICS: { label: string; starter: string }[] = [
 type ThreadState =
   | { status: "idle" }
   | { status: "loading" }
-  | { status: "signed-out" }
-  | { status: "ready"; messages: Message[] };
+  | { status: "ready"; messages: Message[]; guest: boolean; guestEmail: string | null };
 
 /**
  * Floating support chat. Lazy — unlike EntitlementProvider (which must
@@ -56,7 +55,10 @@ export function ChatWidget() {
   const [view, setView] = useState<"chat" | "feedback">("chat");
   const inputRef = useRef<HTMLInputElement>(null);
   const openRef = useRef(open);
-  const signedIn = entitlement.signedIn;
+  const [email, setEmail] = useState("");
+  const [sendError, setSendError] = useState<string | null>(null);
+  // A guest with no conversation yet gives an email first, so Oma can reply.
+  const needsEmail = thread.status === "ready" && thread.guest && !thread.guestEmail;
 
   // Kept in sync via an effect (a plain ref sync, not a setState — refs
   // don't trigger re-renders), so the polling loop below always reads the
@@ -69,8 +71,13 @@ export function ChatWidget() {
     try {
       const res = await fetch("/api/support/thread", { cache: "no-store" });
       const data = await res.json();
-      if (!data.signedIn) setThread({ status: "signed-out" });
-      else setThread({ status: "ready", messages: data.messages });
+      // Signed-out visitors chat too; their thread is found by cookie.
+      setThread({
+        status: "ready",
+        messages: data.messages ?? [],
+        guest: !data.signedIn,
+        guestEmail: data.email ?? null,
+      });
     } catch {
       // Leave whatever was showing — a blip shouldn't blank the panel.
     }
@@ -80,7 +87,7 @@ export function ChatWidget() {
     // Triggered from a click handler, not an effect — the very first open
     // kicks off the initial fetch here rather than as a synchronous
     // setState inside a useEffect body.
-    if (!open && thread.status === "idle" && signedIn) {
+    if (!open && thread.status === "idle") {
       setThread({ status: "loading" });
       void loadThread();
     }
@@ -88,7 +95,7 @@ export function ChatWidget() {
   }
 
   useEffect(() => {
-    if (!open || !signedIn) return;
+    if (!open) return;
 
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout>;
@@ -112,7 +119,7 @@ export function ChatWidget() {
       clearTimeout(timer);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [open, signedIn]);
+  }, [open]);
 
   function pickTopic(starter: string) {
     setDraft(starter);
@@ -127,14 +134,24 @@ export function ChatWidget() {
   async function send() {
     const body = draft.trim();
     if (!body) return;
+    if (needsEmail && !email.trim()) {
+      setSendError("Add your email so we can reply.");
+      return;
+    }
     setSending(true);
-    setDraft("");
+    setSendError(null);
     try {
-      await fetch("/api/support/thread", {
+      const res = await fetch("/api/support/thread", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ body }),
+        body: JSON.stringify({ body, ...(needsEmail ? { email: email.trim() } : {}) }),
       });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        setSendError(data?.error ?? "Couldn't send. Try again.");
+        return;
+      }
+      setDraft("");
       await loadThread();
     } finally {
       setSending(false);
@@ -159,15 +176,13 @@ export function ChatWidget() {
               </span>
             </span>
             <span className="flex items-center gap-3">
-              {signedIn && (
-                <button
-                  type="button"
-                  onClick={() => setView((v) => (v === "feedback" ? "chat" : "feedback"))}
-                  className="text-xs font-medium text-ink-muted hover:text-ink"
-                >
-                  {view === "feedback" ? "Chat" : "Feedback"}
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={() => setView((v) => (v === "feedback" ? "chat" : "feedback"))}
+                className="text-xs font-medium text-ink-muted hover:text-ink"
+              >
+                {view === "feedback" ? "Chat" : "Feedback"}
+              </button>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
@@ -184,22 +199,7 @@ export function ChatWidget() {
               Hi, I&apos;m Oma 👋 How can I help?
             </OmaBubble>
 
-            {!signedIn ? (
-              <div className="pt-2">
-                <p className="text-xs text-ink-muted">Sign in to chat with support.</p>
-                <div className="mt-3 flex flex-wrap items-center gap-3">
-                  <Link
-                    href={`/account/login?next=${encodeURIComponent(pathname)}`}
-                    className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-brand-ink hover:bg-brand-strong"
-                  >
-                    Sign in
-                  </Link>
-                  <Link href="/help" className="text-xs font-medium text-ink-muted underline underline-offset-2 hover:text-ink">
-                    Help Centre
-                  </Link>
-                </div>
-              </div>
-            ) : view === "feedback" ? (
+            {view === "feedback" ? (
               <FeedbackForm onDone={() => setView("chat")} />
             ) : (
               <>
@@ -241,14 +241,26 @@ export function ChatWidget() {
             )}
           </div>
 
-          {signedIn && view === "chat" && thread.status === "ready" && (
+          {view === "chat" && thread.status === "ready" && (
             <form
               onSubmit={(e) => {
                 e.preventDefault();
                 void send();
               }}
-              className="flex gap-2 border-t border-line p-3"
+              className="space-y-2 border-t border-line p-3"
             >
+              {needsEmail && (
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="email"
+                  placeholder="Your email, so we can reply"
+                  className="w-full rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm outline-none focus:border-brand/50"
+                />
+              )}
+              {sendError && <p className="text-xs text-rose">{sendError}</p>}
+              <div className="flex gap-2">
               <input
                 ref={inputRef}
                 type="text"
@@ -261,6 +273,16 @@ export function ChatWidget() {
                 {sending ? <Spinner className="size-3.5" /> : null}
                 {sending ? "Sending…" : "Send"}
               </Button>
+              </div>
+              {thread.guest && (
+                <p className="text-[11px] text-ink-dim">
+                  Have an account?{" "}
+                  <Link href={`/account/login?next=${encodeURIComponent(pathname)}`} className="text-brand hover:underline">
+                    Sign in
+                  </Link>{" "}
+                  to keep this on every device.
+                </p>
+              )}
             </form>
           )}
         </div>

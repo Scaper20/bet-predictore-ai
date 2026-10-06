@@ -21,6 +21,7 @@ import { sportOrDefault } from "@/lib/sports";
 import { LEAGUES, leagueByProviderId, type LeagueDef } from "@/lib/leagues";
 import { getJson, RateGate } from "./http";
 import { cached } from "./cache";
+import { isStaleInPlay } from "@/lib/match-status";
 
 const KEY = process.env.THESPORTSDB_API_KEY?.trim() || "123";
 /** What TheSportsDB calls this sport in its `s=` filter. */
@@ -132,8 +133,10 @@ function team(id: string | null | undefined, name: string | null | undefined, cr
 function mapStatus(raw: string | null | undefined, kickoff: number): MatchStatus {
   const s = (raw || "").trim().toUpperCase();
   if (["FT", "AET", "PEN", "MATCH FINISHED", "FINISHED"].includes(s)) return "finished";
-  if (["HT", "HALF TIME", "HALFTIME"].includes(s)) return "halftime";
-  if (["1H", "2H", "ET", "LIVE", "IN PLAY", "PLAYING"].includes(s)) return "live";
+  if (["HT", "HALF TIME", "HALFTIME"].includes(s)) return isStaleInPlay("halftime", kickoff) ? "finished" : "halftime";
+  if (["1H", "2H", "ET", "LIVE", "IN PLAY", "PLAYING"].includes(s)) {
+    return isStaleInPlay("live", kickoff) ? "finished" : "live";
+  }
   if (["PST", "POSTP", "POSTPONED"].includes(s)) return "postponed";
   if (["CANC", "CANCELLED", "ABD", "ABANDONED"].includes(s)) return "cancelled";
   if (s === "NS" || s === "NOT STARTED" || s === "") {
@@ -141,7 +144,7 @@ function mapStatus(raw: string | null | undefined, kickoff: number): MatchStatus
     return Date.now() > kickoff + 3 * 60 * 60 * 1000 ? "finished" : "scheduled";
   }
   // Numeric progress like "67" means the game is running.
-  if (/^\d+\+?$/.test(s)) return "live";
+  if (/^\d+\+?$/.test(s)) return isStaleInPlay("live", kickoff) ? "finished" : "live";
   return "scheduled";
 }
 

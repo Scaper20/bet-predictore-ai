@@ -25,26 +25,48 @@ export function AnimatedNumber({
 }) {
   const ref = useRef<HTMLSpanElement>(null);
   const [shown, setShown] = useState(value);
-  const done = useRef(false);
+  // What is on screen right now, so a new value can count from it.
+  const current = useRef(value);
+  const revealed = useRef(false);
 
   useEffect(() => {
     const el = ref.current;
-    if (!el || done.current) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches || !("IntersectionObserver" in window)) return;
+    if (!el) return;
     let raf = 0;
-    const io = new IntersectionObserver(([entry]) => {
-      if (!entry.isIntersecting) return;
-      io.disconnect();
-      done.current = true;
+    const set = (v: number) => {
+      current.current = v;
+      setShown(v);
+    };
+    const run = (from: number) => {
       const start = performance.now();
       const tick = (now: number) => {
         const t = Math.min(1, (now - start) / duration);
-        const eased = 1 - Math.pow(1 - t, 4);
-        setShown(value * eased);
+        set(from + (value - from) * (1 - Math.pow(1 - t, 4)));
         if (t < 1) raf = requestAnimationFrame(tick);
       };
-      setShown(0);
       raf = requestAnimationFrame(tick);
+    };
+
+    const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches || !("IntersectionObserver" in window);
+    if (still) {
+      raf = requestAnimationFrame(() => set(value));
+      return () => cancelAnimationFrame(raf);
+    }
+
+    // A value that changes after the first count-up (switching a day tab
+    // keeps this mounted) counts from the number on screen to the new one.
+    // It used to stay on its first value, so every Results date read 0
+    // when the page opened on a day with no games.
+    if (revealed.current) {
+      run(current.current);
+      return () => cancelAnimationFrame(raf);
+    }
+
+    const io = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) return;
+      io.disconnect();
+      revealed.current = true;
+      run(0);
     }, { threshold: 0.3 });
     io.observe(el);
     return () => {

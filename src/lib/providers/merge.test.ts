@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import type { Match, ProviderId } from "@/lib/types";
 import { mergeMatches } from "./index";
 import { RateGate } from "./http";
@@ -20,6 +20,11 @@ function match(source: ProviderId, over: Omit<Partial<Match>, "home" | "away"> &
 }
 
 describe("mergeMatches", () => {
+  // The fixtures are mid-game at 15:00; a clock days later would (correctly)
+  // settle them as stale. See src/lib/match-status.ts.
+  beforeAll(() => vi.setSystemTime(new Date("2026-10-05T16:00:00Z")));
+  afterAll(() => vi.useRealTimers());
+
   it("keeps football-data's identity but TheSportsDB's live score", () => {
     const fd = match("football-data", { home: "Arsenal FC", away: "Chelsea FC", round: "Matchday 7" });
     const sdb = match("thesportsdb", { status: "live", minute: 63, score: { home: 2, away: 1 } });

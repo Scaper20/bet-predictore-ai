@@ -12,6 +12,7 @@ import { cached } from "@/lib/providers/cache";
 import { publicMatchId, type MatchRow } from "@/lib/providers/db-source";
 import type { Match, StandingRow } from "@/lib/types";
 import type { TeamResult } from "./compute";
+import { attachPicks, type PickRow } from "./attach-picks";
 
 async function client() {
   const { supabasePublic } = await import("@/lib/supabase/public");
@@ -297,33 +298,33 @@ export interface LoggedPick {
   result: string | null;
 }
 
-/** Our published picks for these games, for the results page's tick and cross. */
-export function picksFor(matchIds: string[]): Promise<Map<string, LoggedPick>> {
-  const ids = [...new Set(matchIds)].sort();
-  if (ids.length === 0) return Promise.resolve(new Map());
-  return cached(`stats:picks:${ids.join(",")}`, 5 * 60_000, async () => {
+/**
+ * Our published picks for these games, for the results page's tick and cross.
+ * Read by id and by kickoff window, then paired in attachPicks: a pick can be
+ * logged under a different feed's id from the one the stored match carries.
+ */
+export function picksFor(matches: Match[]): Promise<Map<string, LoggedPick>> {
+  if (matches.length === 0) return Promise.resolve(new Map());
+  const times = matches.map((m) => Date.parse(m.kickoff));
+  const from = new Date(Math.min(...times) - 3 * 3_600_000).toISOString();
+  const to = new Date(Math.max(...times) + 3 * 3_600_000).toISOString();
+  const ids = [...new Set(matches.map((m) => m.id))].sort();
+  return cached(`stats:picks:${from}:${to}:${ids.join(",")}`, 5 * 60_000, async () => {
     const c = await client();
-    const out = new Map<string, LoggedPick>();
-    for (let i = 0; i < ids.length; i += 100) {
-      const { data, error } = await c.from("predictions_log")
-        .select("match_id, label, result, published_at")
-        .in("match_id", ids.slice(i, i + 100))
-        .order("published_at", { ascending: false });
-      if (error) throw error;
-      for (const p of data ?? []) {
-        if (!out.has(p.match_id as string)) {
-          out.set(p.match_id as string, { matchId: p.match_id as string, label: p.label as string, result: (p.result as string | null) ?? null });
-        }
-      }
-    }
-    return out;
+    const cols = "match_id, label, result, kickoff, home_name, away_name";
+    const [byTime, ...byIds] = await Promise.all([
+      c.from("predictions_log").select(cols).gte("kickoff", from).lte("kickoff", to).limit(1000),
+      ...Array.from({ length: Math.ceil(ids.length / 100) }, (_, i) =>
+        c.from("predictions_log").select(cols).in("match_id", ids.slice(i * 100, i * 100 + 100)),
+      ),
+    ]);
+    for (const r of [byTime, ...byIds]) if (r.error) throw r.error;
+    const rows = new Map<string, PickRow>();
+    for (const r of [byTime, ...byIds]) for (const p of (r.data ?? []) as PickRow[]) rows.set(p.match_id, p);
+    return attachPicks(matches, [...rows.values()]);
   }).catch(() => new Map());
 }
 
-/**
- * Every game played (or in play) between two instants, newest league data
- * from the scheduled tables. The results page asks for one Lagos day.
- */
 export function playedBetween(start: Date, end: Date, league?: string): Promise<Match[]> {
   return cached(`stats:played:${start.toISOString()}:${league ?? "*"}`, 2 * 60_000, async () => {
     const { MATCH_SELECT, rowToMatch } = await import("@/lib/providers/db-source");
