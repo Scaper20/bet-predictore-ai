@@ -2,10 +2,9 @@
  * The site's navigation, in one place.
  *
  * Desktop menus, the mobile menu, the bottom bar and search all read from
- * here, so a destination is defined once. Anything not built yet is still
- * listed — the menus show where BetriX is going — but points at its
- * coming-soon page (/soon/<slug>). Shipping a feature is a one-line change:
- * give its item an `href` and delete its `soon` slug.
+ * here, so a destination is defined once. Features not built yet stay out of
+ * the menus (docs/roadmap.md lists them); basketball is the one announced
+ * sport, behind its coming-soon page.
  */
 
 import { DEFAULT_SPORT, type SportId } from "@/lib/sports";
@@ -26,7 +25,10 @@ export interface SoonFeature {
 
 const fb = (route: Parameters<typeof sportPath>[0]) => sportPath(route, DEFAULT_SPORT);
 
-/** Everything announced but not yet built, by slug. */
+/**
+ * Everything announced but not yet built, by slug. Only basketball is
+ * announced; the rest of the plan lives in docs/roadmap.md until it ships.
+ */
 export const SOON: Record<string, SoonFeature> = {
   basketball: {
     title: "Basketball",
@@ -40,69 +42,6 @@ export const SOON: Record<string, SoonFeature> = {
       { label: "Football predictions", href: fb("predictions") },
       { label: "Live scores", href: fb("live") },
     ],
-  },
-  "slip-checker": {
-    title: "Slip Checker",
-    blurb: "Paste any slip or booking code and see how likely it is to land.",
-    points: [
-      "Every leg graded with our chance of landing.",
-      "Weak legs flagged, with a stronger swap from the same game.",
-      "Works with SportyBet booking codes or games added by hand.",
-    ],
-    meanwhile: [
-      { label: "Selection builder", href: fb("slip") },
-      { label: "Forge", href: fb("forge") },
-    ],
-  },
-  "cash-out": {
-    title: "Cash-out Checker",
-    blurb: "Is SportyBet's cash-out offer fair? We'll tell you.",
-    points: [
-      "Your slip's real value right now, from live win probability.",
-      "A clear Hold or Cash out verdict against the offer.",
-      "An alert when the offer becomes fair.",
-    ],
-    meanwhile: [
-      { label: "Track my slips", href: fb("trackedSlips") },
-      { label: "Live scores", href: fb("live") },
-    ],
-  },
-  "tipster-league": {
-    title: "Tipster League",
-    blurb: "Publish picks, build a public record, climb the monthly table.",
-    points: [
-      "Every pick locked at publish and graded automatically — no edits, no deletes.",
-      "Ranked on return, not wins, with prizes for the top three each month.",
-      "Follow the best tipsters and copy their picks to your slip.",
-    ],
-    meanwhile: [
-      { label: "Our own track record", href: fb("trackRecord") },
-      { label: "Forge", href: fb("forge") },
-    ],
-  },
-  "odds-converter": {
-    title: "Odds converter",
-    blurb: "Decimal, fractional, American and implied chance, side by side.",
-    points: ["Type any price in any format.", "See the implied chance and the bookmaker's margin."],
-    meanwhile: [{ label: "Selection builder", href: fb("slip") }],
-  },
-  "bet-calculator": {
-    title: "Bet calculator",
-    blurb: "Returns on singles, accumulators and systems.",
-    points: ["Stake, odds and returns for any slip.", "Each-way and system bets explained."],
-    meanwhile: [{ label: "Selection builder", href: fb("slip") }],
-  },
-  "stake-planner": {
-    title: "Stake planner",
-    blurb: "How much to stake on each pick for your bankroll.",
-    points: ["Kelly and flat staking, side by side.", "Keeps every stake inside limits you set."],
-    meanwhile: [{ label: "Pricing", href: "/pricing" }],
-  },
-  "odds-format": {
-    title: "Odds format",
-    blurb: "Show prices as decimal, fractional or American.",
-    points: ["One setting, used across the whole site."],
-    meanwhile: [{ label: "Predictions", href: fb("predictions") }],
   },
 };
 
@@ -151,15 +90,6 @@ export interface NavMenu {
 export type NavTab =
   | { kind: "menu"; menu: NavMenu }
   | { kind: "link"; id: string; label: string; href: string; live?: boolean };
-
-const SOON_BADGE: Badge = { text: "Soon", tone: "muted" };
-const soon = (label: string, slug: string, desc?: string): NavLink => ({
-  label,
-  desc,
-  href: soonHref(slug),
-  soon: true,
-  badge: SOON_BADGE,
-});
 
 const TOP_LEAGUES = ["premier-league", "npfl", "champions-league", "la-liga", "serie-a", "afcon-qualifiers"];
 
@@ -241,7 +171,7 @@ export function navFor(sport: SportId): { tabs: NavTab[]; tools: NavLink[] } {
   const tools: NavMenu = {
     id: "tools",
     label: "Tools",
-    match: [p("forge"), p("slip"), "/soon/slip-checker", "/soon/cash-out", "/soon/odds-converter", "/soon/bet-calculator", "/soon/stake-planner"],
+    match: [p("forge"), p("slip"), p("trackedSlips")],
     columns: [
       {
         title: "Build and check",
@@ -249,16 +179,6 @@ export function navFor(sport: SportId): { tabs: NavTab[]; tools: NavLink[] } {
           { label: "Forge", desc: "Build a slip from how you like to bet", href: p("forge"), badge: { text: "New", tone: "brand" } },
           { label: "Selection builder", desc: "Your slip, priced against the model", href: p("slip") },
           { label: "My slips", desc: "Track your slips live", href: p("trackedSlips") },
-          soon("Slip Checker", "slip-checker", "Grade any slip or booking code"),
-          soon("Cash-out Checker", "cash-out", "Is the cash-out offer fair?"),
-        ],
-      },
-      {
-        title: "Calculators",
-        links: [
-          soon("Odds converter", "odds-converter", "Decimal, fractional, American and %"),
-          soon("Bet calculator", "bet-calculator", "Returns on singles and accas"),
-          soon("Stake planner", "stake-planner", "How much to stake on each pick"),
         ],
       },
     ],
@@ -268,33 +188,6 @@ export function navFor(sport: SportId): { tabs: NavTab[]; tools: NavLink[] } {
       body: "“Is Over 2.5 a good bet in Arsenal v Brighton?” Answers use the same model as our picks.",
       cta: { label: "Open Ask BetriX", href: "#ask", action: "ask" },
       tone: "violet",
-    },
-  };
-
-  const league: NavMenu = {
-    id: "league",
-    label: "Tipster League",
-    match: ["/soon/tipster-league"],
-    columns: [
-      {
-        title: "The league",
-        links: [
-          soon("Leaderboard", "tipster-league", "Ranked on results, not followers"),
-          soon("Following", "tipster-league", "Tipsters you follow"),
-          soon("Publish a pick", "tipster-league"),
-        ],
-      },
-      {
-        title: "About",
-        links: [soon("How the league works", "tipster-league"), soon("Rules and prizes", "tipster-league"), soon("My tipster profile", "tipster-league")],
-      },
-    ],
-    feature: {
-      kicker: "Coming soon",
-      title: "Think you can beat the model?",
-      body: "Publish picks, build a public record and climb the table every month.",
-      cta: { label: "See what's coming", href: soonHref("tipster-league") },
-      tone: "gold",
     },
   };
 
@@ -335,15 +228,12 @@ export function navFor(sport: SportId): { tabs: NavTab[]; tools: NavLink[] } {
       { kind: "link", id: "live", label: "Live", href: p("live"), live: true },
       { kind: "menu", menu: matches },
       { kind: "menu", menu: tools },
-      { kind: "menu", menu: league },
       { kind: "link", id: "pricing", label: "Pricing", href: "/pricing" },
       { kind: "menu", menu: more },
     ],
     tools: [
       { label: "Forge", desc: "Build a slip from how you bet", href: p("forge") },
       { label: "Ask BetriX", desc: "Ask anything about a match", href: "#ask", action: "ask" },
-      soon("Slip Checker", "slip-checker", "Grade any slip or code"),
-      soon("Cash-out Checker", "cash-out", "Is the offer fair?"),
     ],
   };
 }
