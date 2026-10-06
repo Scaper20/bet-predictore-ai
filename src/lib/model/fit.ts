@@ -339,7 +339,10 @@ export function fitLeague(results: ResultRow[], opts: FitOptions = {}): LeagueFi
     recentre(attack);
     recentre(defence);
 
-    if (maxStep < 1e-10) break;
+    // Converged: by here no rating moves by more than 1e-7, which changes no
+    // probability at any displayed precision. Typically ~40 iterations of the
+    // 200 allowed, so this is most of the cost of a fit.
+    if (maxStep < 1e-7) break;
   }
 
   const rho = fitRho(H, A, X, Y, W, attack, defence, homeAdv, intercept);
@@ -423,8 +426,24 @@ function clamp(v: number, lo: number, hi: number): number {
   return Math.min(hi, Math.max(lo, v));
 }
 
+/**
+ * Memo for normaliseKey. The same few hundred club names are normalised
+ * thousands of times per page (form, insights and baselines all scan the
+ * training rows), and each call is a chain of regexes.
+ */
+const keyMemo = new Map<string, string>();
+
 /** Club names differ across feeds, so ratings are keyed on a normalised form. */
 export function normaliseKey(name: string): string {
+  const hit = keyMemo.get(name);
+  if (hit !== undefined) return hit;
+  const key = computeKey(name);
+  if (keyMemo.size > 50_000) keyMemo.clear();
+  keyMemo.set(name, key);
+  return key;
+}
+
+function computeKey(name: string): string {
   return name
     .toLowerCase()
     .normalize("NFD")
