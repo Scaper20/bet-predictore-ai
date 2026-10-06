@@ -26,3 +26,14 @@ describe("plan pricing", () => {
     expect(passLength(undefined)).toBe("weekend");
   });
 });
+
+describe("plan copy matches the limits the app enforces", () => {
+  it("quotes the real Forge and Ask allowances", async () => {
+    const { FORGE_FREE_DAILY, FORGE_PAID_DAILY } = await import("./forge");
+    const { ASK_FREE_DAILY, ASK_PAID_DAILY, ASK_VIP_DAILY } = await import("./ask/request");
+    const row = (label: string) => PLAN_MATRIX.flatMap((g) => g.rows).find((r) => r.label === label)!.values;
+    expect(row("Forge slip builder").free).toBe(`${FORGE_FREE_DAILY} a day, 1X2`);
+    expect(row("Forge slip builder").pro).toBe(`${FORGE_PAID_DAILY} a day`);
+    expect(row("Ask BetriX")).toEqual({ free: `${ASK_FREE_DAILY} a day`, pro: `${ASK_PAID_DAILY} a day`, vip: `${ASK_VIP_DAILY} a day` });
+  });
+});

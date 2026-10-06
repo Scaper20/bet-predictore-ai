@@ -565,8 +565,7 @@ function SignedOutBanner() {
           </h2>
           <p className="text-sm leading-relaxed text-ink-muted">
             This page is showing our default set. With a free account it shows only the leagues
-            you pick, keeps your selection slip across devices, and unlocks every market on the
-            match pages.
+            you pick and keeps your selection slip across devices.
           </p>
         </div>
 
