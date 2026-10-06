@@ -7,6 +7,7 @@ import { ServiceWorkerRegister } from "@/components/pwa/service-worker-register"
 import { MaintenanceWatcher } from "@/components/layout/maintenance-watcher";
 import { INSTALL_CAPTURE_SCRIPT } from "@/lib/pwa";
 import "./globals.css";
+import { AppSplash } from "@/components/pwa/app-splash";
 
 /**
  * Organization + WebSite structured data, sitewide. Deliberately does NOT
@@ -144,6 +145,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           suppressHydrationWarning
         />
         <JsonLd data={ORG_JSON_LD} />
+        <AppSplash />
         {children}
         <ServiceWorkerRegister />
         <MaintenanceWatcher />
