@@ -197,6 +197,12 @@ export interface ModelOptions {
   /** A fit already computed on exactly `results`, so a backtest can reuse it per matchday. */
   prefit?: LeagueFit;
   totalsShrink?: number;
+  /**
+   * The clubs' canonical names, when the fixture spells them differently
+   * ("Norwich City FC" for "Norwich"). Ratings and form are looked up under
+   * these; the fixture keeps its own names for display.
+   */
+  ratingNames?: { home: string; away: string };
   /** Overrides FAMILY_RELIABILITY entries when ranking the headline pick. */
   familyReliability?: Record<string, number>;
   /** Market ids barred from the headline, on top of headlineEligible's rules. */
@@ -220,7 +226,9 @@ export function buildPrediction(
    */
   const neutralVenue = Boolean(league?.neutralVenue);
   const fit = neutralVenue ? { ...fitted, homeAdvantage: 0 } : fitted;
-  const rates = expectedRates(fit, match.home.name, match.away.name);
+  const homeName = options.ratingNames?.home ?? match.home.name;
+  const awayName = options.ratingNames?.away ?? match.away.name;
+  const rates = expectedRates(fit, homeName, awayName);
   const { homeRating, awayRating } = rates;
   const { lambda, mu } = calibrateTotals(rates.lambda, rates.mu, fit, options.totalsShrink ?? TOTALS_SHRINK);
 
@@ -229,8 +237,8 @@ export function buildPrediction(
   const asianHandicap = deriveAsianHandicap(grid);
 
   const form = {
-    home: teamForm(results, match.home.name),
-    away: teamForm(results, match.away.name),
+    home: teamForm(results, homeName),
+    away: teamForm(results, awayName),
   };
   const h2h = summariseH2H(h2hRows, match.home.name);
 

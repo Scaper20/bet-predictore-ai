@@ -12,7 +12,7 @@ import {
   providerHealth, hasFullCoverage,
 } from "@/lib/providers";
 import { cached } from "@/lib/providers/cache";
-import { buildPrediction, type Prediction } from "@/lib/model/predict";
+import { buildPrediction, type ModelOptions, type Prediction } from "@/lib/model/predict";
 import { after } from "next/server";
 import { archivedResults, storeResults } from "@/lib/archive/history-store";
 import { normaliseKey } from "@/lib/model/fit";
@@ -22,7 +22,7 @@ import { isLive } from "@/lib/format";
 import { internationalPool, leagueByCode } from "@/lib/leagues";
 import { sportOrDefault } from "@/lib/sports";
 import { selectFeatured, shortlist, type FeaturedMatch } from "@/lib/featured";
-import { canonicaliseRows, nameBook, nameScope } from "@/lib/teams/canonical";
+import { canonicaliseRows, looseKey, nameBook, nameScope, type NameBook } from "@/lib/teams/canonical";
 
 export interface FixtureFeed {
   matches: Match[];
@@ -74,7 +74,7 @@ export interface MatchDetail {
  */
 async function trainingRows(
   match: Match,
-): Promise<{ rows: ResultRow[]; leagueName: string; curated: boolean }> {
+): Promise<{ rows: ResultRow[]; leagueName: string; curated: boolean; book?: NameBook }> {
   const code = match.league.code;
   if (!code) return getTrainingResults(match);
 
@@ -84,13 +84,14 @@ async function trainingRows(
   // Forest"); the fixture uses the canonical name. Linked here, or a club
   // with years of history fits on none of it.
   const scope = def ? nameScope(def) : null;
-  const archived = scope ? canonicaliseRows(raw, await nameBook(scope)) : raw;
+  const book = scope ? await nameBook(scope) : undefined;
+  const archived = book ? canonicaliseRows(raw, book) : raw;
   // Deep enough to stand on its own; refreshed nightly (archive/refresh.ts).
   if (archived.length >= RICH_ARCHIVE) {
     const leagueName = def?.confederation
       ? `${match.league.name} (rated on all ${def.confederation === "global" ? "national-team" : `${def.confederation} and global`} internationals)`
       : match.league.name;
-    return { rows: archived, leagueName, curated: true };
+    return { rows: archived, leagueName, curated: true, book };
   }
 
   /*
@@ -108,8 +109,21 @@ async function trainingRows(
   }
   const merged = mergeResults(archived, live.rows);
   return merged.length > live.rows.length
-    ? { rows: merged, leagueName: live.leagueName, curated: true }
-    : live;
+    ? { rows: merged, leagueName: live.leagueName, curated: true, book }
+    : { ...live, book };
+}
+
+/**
+ * The fixture's clubs under the names the training rows use. The archive is
+ * canonicalised (canonicaliseRows); a fixture from a feed that spells a club
+ * its own way ("Norwich City FC" for "Norwich") has to be looked up the same
+ * way, or the model finds no history for a club with years of it.
+ */
+function modelOptions(match: Match, training: { book?: NameBook }): ModelOptions {
+  const book = training.book;
+  if (!book || book.canonical.size === 0) return {};
+  const name = (n: string) => book.canonical.get(looseKey(n)) ?? n;
+  return { ratingNames: { home: name(match.home.name), away: name(match.away.name) } };
 }
 
 /**
@@ -162,7 +176,7 @@ export async function matchDetail(id: string): Promise<MatchDetail | null> {
   if (!match) return null;
 
   const [training, h2h] = await Promise.all([trainingRows(match), getH2H(match)]);
-  const prediction = buildPrediction(match, training.rows, h2h);
+  const prediction = buildPrediction(match, training.rows, h2h, modelOptions(match, training));
   const analysis = await writeAnalysis(prediction);
 
   return {
@@ -190,7 +204,7 @@ export async function matchPrediction(id: string): Promise<Prediction | null> {
     const match = await getMatch(id);
     if (!match) return null;
     const [training, h2h] = await Promise.all([trainingRows(match), getH2H(match)]);
-    return buildPrediction(match, training.rows, h2h);
+    return buildPrediction(match, training.rows, h2h, modelOptions(match, training));
   });
 }
 
@@ -243,7 +257,7 @@ export async function liveWinProbability(matchId: string): Promise<LiveProbabili
   if (!match || !isLive(match)) return null;
 
   const training = await trainingRows(match);
-  const prediction = buildPrediction(match, training.rows);
+  const prediction = buildPrediction(match, training.rows, [], modelOptions(match, training));
   const { home: lambda, away: mu } = prediction.markets.expectedGoals;
 
   const elapsedMinutes = elapsedMinutesFor(match);
@@ -282,7 +296,7 @@ export async function predictBatch(matches: Match[], limit = 12): Promise<Predic
       // One training fetch per competition, reused across its fixtures.
       const training = await trainingRows(group[0]);
       for (const m of group) {
-        out.push(buildPrediction(m, training.rows));
+        out.push(buildPrediction(m, training.rows, [], modelOptions(m, training)));
       }
     }),
   );
