@@ -37,6 +37,7 @@ describe("free-tier access", () => {
     expect(v.locked).toEqual({ pick: true, markets: true });
     expect(v.topPick).toMatchObject({ market: "locked", label: "", probability: 0 });
     expect(v.markets.over).toEqual({});
+    expect(v.markets.halves).toBeUndefined();
     expect(v.markets.home).toBe(0.5);
     expect(v.picks.map((x) => x.market)).toEqual(["1x2:home"]);
     expect(v.asianHandicap).toEqual([]);

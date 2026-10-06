@@ -350,3 +350,62 @@ function LabelledBar({ label, value }: { label: string; value: number }) {
 function Footnote({ children }: { children: React.ReactNode }) {
   return <p className="mt-5 text-[11px] leading-relaxed text-ink-dim">{children}</p>;
 }
+
+/**
+ * Half-time and second-half markets. Pro only (ProMarkets), and shown as
+ * probabilities, never as picks: see halves.ts for what the walk-forward
+ * test supports.
+ */
+export function HalvesPanel({ prediction }: { prediction: Prediction }) {
+  const h = prediction.markets.halves;
+  if (!h) return null;
+  const { match } = prediction;
+  const ht = [
+    { label: match.home.shortName, value: h.ht.home },
+    { label: "Draw", value: h.ht.draw },
+    { label: match.away.shortName, value: h.ht.away },
+  ];
+  const bestHt = Math.max(h.ht.home, h.ht.draw, h.ht.away);
+  const htft = Object.entries(h.htft)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 4);
+  const name = (k: string) => {
+    const side = (c: string) => (c === "H" ? match.home.shortName : c === "A" ? match.away.shortName : "Draw");
+    const [a, b] = k.split("/");
+    return `${side(a)} / ${side(b)}`;
+  };
+
+  return (
+    <Panel title="Halves" hint="Half time and second half">
+      <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-ink-dim">Half-time result</p>
+      <div className="space-y-3">
+        {ht.map((r) => (
+          <div key={r.label}>
+            <div className="mb-1.5 flex items-baseline justify-between gap-3">
+              <span className={`min-w-0 truncate text-sm ${r.value === bestHt ? "font-semibold text-ink" : "text-ink-muted"}`}>{r.label}</span>
+              <span className="tnum text-sm font-bold">{percent(r.value, 1)}</span>
+            </div>
+            <ProbabilityBar value={r.value} tone={r.value === bestHt ? "brand" : "neutral"} />
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-5 grid grid-cols-2 gap-3">
+        <BigStat label="1st half over 0.5" value={percent(h.htOver["0.5"])} highlight={h.htOver["0.5"] > 0.5} />
+        <BigStat label="1st half over 1.5" value={percent(h.htOver["1.5"])} highlight={h.htOver["1.5"] > 0.5} />
+        <BigStat label="2nd half over 0.5" value={percent(h.shOver["0.5"])} highlight={h.shOver["0.5"] > 0.5} />
+        <BigStat label="2nd half over 1.5" value={percent(h.shOver["1.5"])} highlight={h.shOver["1.5"] > 0.5} />
+      </div>
+
+      <p className="mb-2 mt-5 text-[11px] font-semibold uppercase tracking-wider text-ink-dim">Half time / full time, likeliest</p>
+      <ul className="space-y-1.5">
+        {htft.map(([k, v]) => (
+          <li key={k} className="flex items-baseline justify-between gap-3 text-sm">
+            <span className="min-w-0 truncate text-ink-muted">{name(k)}</span>
+            <span className="tnum font-semibold">{percent(v)}</span>
+          </li>
+        ))}
+      </ul>
+    </Panel>
+  );
+}

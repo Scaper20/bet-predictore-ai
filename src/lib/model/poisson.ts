@@ -89,7 +89,11 @@ export interface MarketProbabilities {
   correctScore: { home: number; away: number; probability: number }[];
   /** Expected goals implied by the fitted rates. */
   expectedGoals: { home: number; away: number; total: number };
+  /** Half-time and second-half markets (halves.ts). Pro only; absent when locked. */
+  halves?: HalfMarkets;
 }
+
+import type { HalfMarkets } from "@/lib/model/halves";
 
 export const GOAL_LINES = [0.5, 1.5, 2.5, 3.5, 4.5] as const;
 

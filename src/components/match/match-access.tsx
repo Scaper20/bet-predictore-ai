@@ -4,7 +4,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import Link from "next/link";
 import type { ViewedPrediction } from "@/lib/access";
 import { percent } from "@/lib/format";
-import { BttsPanel, CorrectScorePanel, DoubleChancePanel, GoalsPanel } from "@/components/match/market-panels";
+import { BttsPanel, CorrectScorePanel, DoubleChancePanel, GoalsPanel, HalvesPanel } from "@/components/match/market-panels";
 import { LockedPreview } from "@/components/entitlements/account-gate";
 import { ProTag } from "@/components/entitlements/locked-pick";
 import { GatedPanelSkeleton } from "@/components/match/gated-panel-states";
@@ -115,7 +115,7 @@ export function ProMarkets() {
           Pro
         </span>
         <p className="mt-2 font-display text-lg font-bold leading-snug text-ink">
-          Goals, both teams to score, double chance and correct score
+          Goals, both teams to score, double chance, correct score and halves
         </p>
         <Link
           href={UPGRADE_HREF}
@@ -134,6 +134,7 @@ export function ProMarkets() {
         <DoubleChancePanel prediction={prediction} />
       </div>
       <CorrectScorePanel prediction={prediction} />
+      <HalvesPanel prediction={prediction} />
     </div>
   );
 }

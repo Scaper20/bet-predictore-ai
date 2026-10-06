@@ -284,6 +284,14 @@ function predictionSummary(p: Prediction, ctx: ToolContext) {
           over_pct: Object.fromEntries(Object.entries(m.over).map(([k, v]) => [k, pct(v)])),
           btts_yes_pct: pct(m.bttsYes),
           likely_scores: m.correctScore.slice(0, 3).map((s) => `${s.home}-${s.away} (${pct(s.probability)}%)`),
+          ...(m.halves
+            ? {
+                // Probabilities only: half markets are never headline picks (model/halves.ts).
+                half_time_result_pct: { home: pct(m.halves.ht.home), draw: pct(m.halves.ht.draw), away: pct(m.halves.ht.away) },
+                first_half_over_pct: { "0.5": pct(m.halves.htOver["0.5"]), "1.5": pct(m.halves.htOver["1.5"]) },
+                second_half_over_pct: { "0.5": pct(m.halves.shOver["0.5"]), "1.5": pct(m.halves.shOver["1.5"]) },
+              }
+            : {}),
         }),
     top_pick:
       p.topPick && p.sufficiency.publishable

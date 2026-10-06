@@ -150,6 +150,7 @@ export const PLAN_MATRIX: MatrixGroup[] = [
       },
       { label: "Picks in every market", values: { free: false, pro: true, vip: true } },
       { label: "Asian handicap", values: { free: false, pro: true, vip: true } },
+      { label: "Half-time and second-half markets", values: { free: false, pro: true, vip: true } },
     ],
   },
   {
