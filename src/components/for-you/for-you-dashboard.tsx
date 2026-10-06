@@ -8,6 +8,8 @@ import { Container } from "@/components/ui/container";
 import { useSlip } from "@/lib/slip";
 import { kickoffDay, kickoffTime, percent } from "@/lib/format";
 import { sportPath } from "@/lib/routes";
+import { Crest } from "@/components/ui/crest";
+import { CommentThread, LoveButton, useSocialCounts } from "@/components/for-you/pick-social";
 
 /**
  * The personalised dashboard.
@@ -24,6 +26,11 @@ import { sportPath } from "@/lib/routes";
  */
 export function ForYouDashboard({ feed }: { feed: ForYouFeedPayload }) {
   const { add } = useSlip();
+  const social = useSocialCounts([
+    ...feed.inYourLeagues.slice(0, 6).map((p) => p.id),
+    ...(feed.bestBet ? [feed.bestBet.id] : []),
+    ...feed.quickPicks.map((p) => p.id),
+  ]);
   const [added, setAdded] = useState<string | null>(null);
 
   // One timer, cleared on unmount and on every replacement — the previous
@@ -155,6 +162,8 @@ export function ForYouDashboard({ feed }: { feed: ForYouFeedPayload }) {
                     pick={pick}
                     added={added === pick.id}
                     onAdd={() => addPick(pick)}
+                    social={social}
+                    signedIn={feed.signedIn}
                   />
                 ))}
                 {feed.inYourLeagues.length > 6 && (
@@ -195,6 +204,8 @@ export function ForYouDashboard({ feed }: { feed: ForYouFeedPayload }) {
                   onAdd={() => addPick(feed.bestBet!)}
                   badge="Pick of the day"
                   featured
+                  social={social}
+                  signedIn={feed.signedIn}
                 />
               </div>
             )}
@@ -204,7 +215,8 @@ export function ForYouDashboard({ feed }: { feed: ForYouFeedPayload }) {
                 pick={pick}
                 added={added === pick.id}
                 onAdd={() => addPick(pick)}
-                compact
+                social={social}
+                signedIn={feed.signedIn}
               />
             ))}
           </div>
@@ -269,74 +281,124 @@ export function ForYouDashboard({ feed }: { feed: ForYouFeedPayload }) {
 
 /* --------------------------------------------------------------- Pick row */
 
+type Social = ReturnType<typeof useSocialCounts>;
+
+/**
+ * One pick, collapsed to who, what and how likely. Expanding it shows the
+ * full-analysis link and the comment thread; love, comments and add-to-slip
+ * stay on the collapsed card because they are what people do most.
+ */
 function PickRow({
   pick,
   added,
   onAdd,
   badge,
   featured = false,
-  compact = false,
+  social,
+  signedIn,
 }: {
   pick: PersonalizedPick;
   added: boolean;
   onAdd: () => void;
   badge?: string;
   featured?: boolean;
-  compact?: boolean;
+  social: Social;
+  signedIn: boolean;
 }) {
+  const [open, setOpen] = useState(false);
+  const count = social.counts[pick.id];
+
   return (
     <article
-      className={`card p-5 transition-colors hover:border-line-strong ${
+      className={`card p-4 transition-colors hover:border-line-strong sm:p-5 ${
         featured ? "border-brand/30 bg-brand/[0.03]" : ""
       }`}
     >
-      <div className="flex flex-wrap items-center gap-2 text-xs text-ink-muted">
-        {badge && <Badge tone="brand">{badge}</Badge>}
-        <span aria-hidden>{pick.league.flag}</span>
-        <span>{pick.league.shortName}</span>
-        <span aria-hidden>·</span>
-        <span>
-          {kickoffDay(pick.kickoff)} {kickoffTime(pick.kickoff)}
-        </span>
-      </div>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="block w-full text-left"
+      >
+        <div className="flex items-center gap-2 text-xs text-ink-muted">
+          {badge && <Badge tone="brand">{badge}</Badge>}
+          <span aria-hidden>{pick.league.flag}</span>
+          <span className="truncate">{pick.league.shortName}</span>
+          <span aria-hidden>·</span>
+          <span className="shrink-0">
+            {kickoffDay(pick.kickoff)} {kickoffTime(pick.kickoff)}
+          </span>
+          <svg
+            viewBox="0 0 20 20"
+            className={`ml-auto size-4 shrink-0 text-ink-dim transition-transform ${open ? "rotate-180" : ""}`}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            aria-hidden
+          >
+            <path d="m5 7.5 5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </div>
 
-      {/* The link gets its own vertical padding rather than inheriting the
-          text's line box: as a bare inline it measured 19-22px tall, under the
-          24px WCAG 2.5.8 floor and awkward to hit on a phone. The negative
-          margin keeps the card's rhythm unchanged. */}
-      <h3 className={`mt-1.5 font-semibold ${featured ? "text-lg" : "text-base"}`}>
-        <Link
-          href={pick.href}
-          className="-mx-1 inline-block rounded px-1 py-1.5 transition-colors hover:text-brand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+        <div className={`mt-2.5 space-y-1.5 font-semibold ${featured ? "text-base" : "text-sm"}`}>
+          <p className="flex min-w-0 items-center gap-2.5">
+            <Crest src={pick.homeCrest} name={pick.homeTeam} size={22} />
+            <span className="truncate">{pick.homeTeam}</span>
+          </p>
+          <p className="flex min-w-0 items-center gap-2.5">
+            <Crest src={pick.awayCrest} name={pick.awayTeam} size={22} />
+            <span className="truncate">{pick.awayTeam}</span>
+          </p>
+        </div>
+
+        <div className="mt-3 flex items-center justify-between gap-3 rounded-lg bg-surface-2/60 px-3 py-2">
+          <span className="min-w-0 truncate text-sm font-semibold text-brand">{pick.label}</span>
+          <span className="tnum shrink-0 text-sm font-bold">{percent(pick.probability, 1)}</span>
+        </div>
+      </button>
+
+      <div className="mt-2 flex items-center gap-1">
+        <LoveButton
+          matchId={pick.id}
+          count={count}
+          signedIn={signedIn}
+          onChange={(patch) => social.update(pick.id, patch)}
+        />
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-label="Comments"
+          className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-semibold text-ink-muted transition-colors hover:bg-surface-2 hover:text-ink"
         >
-          {pick.homeTeam} <span className="font-normal text-ink-muted">vs</span> {pick.awayTeam}
-        </Link>
-      </h3>
-
-      <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-2">
-        <div>
-          <p className="text-[11px] uppercase tracking-wider text-ink-muted">Pick</p>
-          <p className="text-sm font-semibold text-brand">{pick.label}</p>
-        </div>
-        <div>
-          <p className="text-[11px] uppercase tracking-wider text-ink-muted">Probability</p>
-          <p className="tnum text-sm font-semibold">{percent(pick.probability, 1)}</p>
-        </div>
-      </div>
-
-
-      <div className="mt-4 flex flex-wrap gap-2">
+          <svg viewBox="0 0 20 20" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+            <path d="M4 5.5A1.5 1.5 0 0 1 5.5 4h9A1.5 1.5 0 0 1 16 5.5v6a1.5 1.5 0 0 1-1.5 1.5H9l-3.5 3v-3h0A1.5 1.5 0 0 1 4 11.5v-6Z" strokeLinejoin="round" />
+          </svg>
+          <span className="tnum">{count?.comments ? count.comments : ""}</span>
+        </button>
         <Button
           onClick={onAdd}
           variant={added ? "secondary" : "primary"}
-          className="px-4 py-2 text-xs"
+          className="ml-auto px-3.5 py-1.5 text-xs"
         >
-          {added ? "✓ Added to slip" : "Add to slip"}
+          {added ? "✓ On slip" : "+ Slip"}
         </Button>
-        <ButtonLink href={pick.href} variant="secondary" className="px-4 py-2 text-xs">
-          Full analysis
-        </ButtonLink>
       </div>
+
+      {open && (
+        <>
+          <Link
+            href={pick.href}
+            className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-brand hover:underline"
+          >
+            Full analysis →
+          </Link>
+          <CommentThread
+            matchId={pick.id}
+            signedIn={signedIn}
+            onCountChange={(d) => social.update(pick.id, (c) => ({ ...c, comments: Math.max(0, c.comments + d) }))}
+          />
+        </>
+      )}
     </article>
   );
 }

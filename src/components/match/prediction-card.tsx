@@ -7,9 +7,9 @@ import { Morph, morphName } from "@/components/motion/morph";
 import { matchPath } from "@/lib/routes";
 
 /**
- * A fixture's read at a glance: who the model favours (the split bar), the
- * one selection it would stand on, and the price that pick needs to be worth
- * taking. Three small numbers underneath for the goals markets.
+ * A fixture's read at a glance: each side's chance and the one selection
+ * the model would stand on. The split bar and goals numbers fold away under
+ * "More".
  *
  * No confidence score: the split bar already says how one-sided the game
  * is, and a second scale out of 100 next to a percentage read as a second
@@ -20,55 +20,63 @@ export function PredictionCard({ prediction, morph = true }: { prediction: Predi
   const publishable = sufficiency.publishable && topPick;
 
   return (
-    <Link
-      href={matchPath(match.id)}
-      // min-w-0: a grid item defaults to its min-content width, which let a
-      // long club name push a 320px screen sideways.
-      className="card card-hover group flex min-w-0 flex-col overflow-hidden"
-    >
-      <div className="flex items-center gap-2 px-4 pt-4 sm:px-5">
-        {match.league.logo ? <Crest src={match.league.logo} name={match.league.name} size={16} /> : null}
-        <span className="min-w-0 truncate text-xs font-medium text-ink-muted">{match.league.name}</span>
-        <span className="tnum ml-auto shrink-0 rounded-md bg-surface-2 px-2 py-0.5 text-[11px] font-semibold text-ink-muted">
-          {relativeDay(match.kickoff)} · {kickoffTime(match.kickoff)}
-        </span>
-      </div>
-
-      <div className="space-y-2.5 px-4 pt-4 sm:px-5">
-        <TeamLine team={match.home} side="home" matchId={match.id} morph={morph} p={markets.home} lead={markets.home >= markets.away && markets.home >= markets.draw} />
-        <TeamLine team={match.away} side="away" matchId={match.id} morph={morph} p={markets.away} lead={markets.away > markets.home && markets.away >= markets.draw} />
-      </div>
-
-      <div className="px-4 pt-4 sm:px-5">
-        <SplitBar home={markets.home} draw={markets.draw} away={markets.away} />
-      </div>
-
-      <div className="mt-4 flex-1 border-t border-line bg-surface-2/40 px-4 py-3.5 sm:px-5">
-        {publishable ? (
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-ink-dim">Our pick</p>
-              <p className="mt-0.5 truncate text-[15px] font-semibold text-ink">{topPick.label}</p>
-            </div>
-            <div className="shrink-0 text-right">
-              <p className="tnum text-[15px] font-bold text-brand">{percent(topPick.probability)}</p>
-            </div>
-          </div>
-        ) : (
-          <p className="text-xs text-ink-dim">
-            <span className="font-semibold text-amber">No pick</span> · not enough history yet
-          </p>
-        )}
-        <div className="mt-3 flex flex-wrap gap-1.5">
-          <Chip label="xG" value={markets.expectedGoals.total.toFixed(1)} />
-          <Chip label="Over 2.5" value={percent(markets.over["2.5"])} hot={markets.over["2.5"] >= 0.6} />
-          <Chip label="GG" value={percent(markets.bttsYes)} hot={markets.bttsYes >= 0.6} />
+    // min-w-0: a grid item defaults to its min-content width, which let a
+    // long club name push a 320px screen sideways.
+    <article className="card card-hover group flex min-w-0 flex-col overflow-hidden">
+      <Link href={matchPath(match.id)} className="block flex-1">
+        <div className="flex items-center gap-2 px-4 pt-4 sm:px-5">
+          {match.league.logo ? <Crest src={match.league.logo} name={match.league.name} size={16} /> : null}
+          <span className="min-w-0 truncate text-xs font-medium text-ink-muted">{match.league.name}</span>
+          <span className="tnum ml-auto shrink-0 rounded-md bg-surface-2 px-2 py-0.5 text-[11px] font-semibold text-ink-muted">
+            {relativeDay(match.kickoff)} · {kickoffTime(match.kickoff)}
+          </span>
         </div>
-        {publishable && sufficiency.level === "limited" && (
-          <p className="mt-2.5 text-[11px] text-amber">Thin data · treat as a guide</p>
-        )}
-      </div>
-    </Link>
+
+        <div className="space-y-2.5 px-4 pt-4 sm:px-5">
+          <TeamLine team={match.home} side="home" matchId={match.id} morph={morph} p={markets.home} lead={markets.home >= markets.away && markets.home >= markets.draw} />
+          <TeamLine team={match.away} side="away" matchId={match.id} morph={morph} p={markets.away} lead={markets.away > markets.home && markets.away >= markets.draw} />
+        </div>
+
+        <div className="mt-4 border-t border-line bg-surface-2/40 px-4 py-3 sm:px-5">
+          {publishable ? (
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-ink-dim">Our pick</p>
+                <p className="mt-0.5 truncate text-[15px] font-semibold text-ink">{topPick.label}</p>
+              </div>
+              <p className="tnum shrink-0 text-[15px] font-bold text-brand">{percent(topPick.probability)}</p>
+            </div>
+          ) : (
+            <p className="text-xs text-ink-dim">
+              <span className="font-semibold text-amber">No pick</span> · not enough history yet
+            </p>
+          )}
+        </div>
+      </Link>
+
+      {/* Collapsed by default: the card answers "who and what" on its own;
+          the split and goals numbers are one tap away. A native <details>
+          needs no client JavaScript on a page with dozens of these. */}
+      <details className="group/more border-t border-line">
+        <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-2 text-[11px] font-medium text-ink-dim transition-colors hover:text-ink sm:px-5 [&::-webkit-details-marker]:hidden">
+          More
+          <svg viewBox="0 0 20 20" className="size-3.5 transition-transform group-open/more:rotate-180" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+            <path d="m5 7.5 5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </summary>
+        <div className="space-y-3 px-4 pb-4 sm:px-5">
+          <SplitBar home={markets.home} draw={markets.draw} away={markets.away} />
+          <div className="flex flex-wrap gap-1.5">
+            <Chip label="xG" value={markets.expectedGoals.total.toFixed(1)} />
+            <Chip label="Over 2.5" value={percent(markets.over["2.5"])} hot={markets.over["2.5"] >= 0.6} />
+            <Chip label="GG" value={percent(markets.bttsYes)} hot={markets.bttsYes >= 0.6} />
+          </div>
+          {publishable && sufficiency.level === "limited" && (
+            <p className="text-[11px] text-amber">Thin data · treat as a guide</p>
+          )}
+        </div>
+      </details>
+    </article>
   );
 }
 

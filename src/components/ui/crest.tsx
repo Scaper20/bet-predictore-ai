@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { flagUrl } from "@/lib/flags";
 
 /**
  * Club or competition badge with a graceful fallback.
@@ -8,6 +9,7 @@ import { useState } from "react";
  * Crests come from several upstream CDNs and individual images 404 or time
  * out fairly regularly, so a failed load falls back to the club's initials
  * rather than leaving a broken-image icon in the middle of a fixture row.
+ * National teams usually arrive with no crest at all; they get their flag.
  * next/image is deliberately avoided here: the hosts change often enough that
  * maintaining remotePatterns would be a standing chore.
  */
@@ -21,6 +23,8 @@ export function Crest({
   size?: number;
 }) {
   const [failed, setFailed] = useState(false);
+  const [flagFailed, setFlagFailed] = useState(false);
+  const flag = !src || failed ? flagUrl(name, size > 36 ? 160 : 80) : null;
 
   const letters = name
     .split(/\s+/)
@@ -28,6 +32,22 @@ export function Crest({
     .slice(0, 2)
     .map((w) => w[0]?.toUpperCase() ?? "")
     .join("");
+
+  if (flag && !flagFailed) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={flag}
+        alt=""
+        width={size}
+        height={size}
+        loading="lazy"
+        onError={() => setFlagFailed(true)}
+        className="shrink-0 rounded-full object-cover ring-1 ring-line"
+        style={{ width: size, height: size }}
+      />
+    );
+  }
 
   if (!src || failed) {
     return (
