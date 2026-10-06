@@ -2,7 +2,7 @@
 
 import { Badge, Button } from "@/components/ui/primitives";
 import { kickoffDay, kickoffTime, odds, percent } from "@/lib/format";
-import { isModelId, modelById, ACTIVE_MODEL_ID } from "@/lib/model/registry";
+import { isModelId, modelById, LEGACY_MODEL_ID } from "@/lib/model/registry";
 import { useOverlay } from "@/components/ui/use-overlay";
 
 export interface TrackRecordMatch {
@@ -49,7 +49,7 @@ export function RecordDetailModal({
 
   const tone = match.result === "win" ? "brand" : match.result === "lose" ? "rose" : "neutral";
   const family = match.market.split(":")[0];
-  const modelId = match.model_id && isModelId(match.model_id) ? match.model_id : ACTIVE_MODEL_ID;
+  const modelId = match.model_id && isModelId(match.model_id) ? match.model_id : LEGACY_MODEL_ID;
   const model = modelById(modelId);
 
   return (

@@ -64,7 +64,8 @@ export default function HowItWorksPage() {
               <ul className="list-disc space-y-1.5 pl-5">
                 <li><strong className="text-ink">Recent games count more.</strong> A result loses half its weight every six months or so, because squads and form change.</li>
                 <li><strong className="text-ink">Home advantage is measured</strong> for each competition, not assumed, and switched off at neutral-venue tournaments.</li>
-                <li><strong className="text-ink">Small samples are pulled to the middle.</strong> A newly promoted side with three games doesn&apos;t get an extreme rating from one lucky win.</li>
+                <li><strong className="text-ink">Chances count, not just goals.</strong> Where the data records shots on target, half of each rating comes from the chances a team creates and allows, because goals alone are a noisy count of which chances went in.</li>
+                <li><strong className="text-ink">Small samples are pulled to the middle.</strong> A newly promoted side with three games doesn&apos;t get an extreme rating from one lucky win, and starts a little below average, where promoted sides usually are.</li>
                 <li><strong className="text-ink">National teams</strong> play too few games in one competition, so they are rated on every international in their confederation plus the World Cup and friendlies.</li>
               </ul>
             </>
@@ -96,13 +97,15 @@ export default function HowItWorksPage() {
             <>
               <p>We only publish a pick when the history behind it is deep enough:</p>
               <ul className="list-disc space-y-1.5 pl-5">
-                <li>at least <strong className="text-ink">15 finished games</strong> in the competition, and</li>
+                <li>at least <strong className="text-ink">200 finished games</strong> in the competition, and</li>
                 <li>at least <strong className="text-ink">3 games for each team</strong> in that sample.</li>
               </ul>
               <p>
                 Below that the game is still listed, marked &ldquo;not enough history&rdquo;, with no pick. When the
-                sample clears the bar but is still thin, the pick is labelled as a guide. We would rather show nothing
-                than a confident number built on a handful of games.
+                sample clears the bar but is under 400 games, the pick is labelled as a guide. We tested this: on 40
+                games of history, picks landed 58% of the time against the 72% they claimed; on 200 they landed 71%,
+                and on 400 they matched their claims. We would rather show nothing than a confident number built on a
+                handful of games.
               </p>
             </>
           ),

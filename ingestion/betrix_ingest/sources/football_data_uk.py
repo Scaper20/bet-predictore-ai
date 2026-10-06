@@ -50,6 +50,9 @@ class ArchiveMatch:
     away_goals: int
     season: str | None = None
     odds: list[dict] = field(default_factory=list)
+    # Shots on target (HST/AST); only the per-division files carry them.
+    home_shots_on_target: int | None = None
+    away_shots_on_target: int | None = None
 
 
 def season_code(start_year: int) -> str:
@@ -125,7 +128,9 @@ def parse_division_csv(text: str, league_code: str, season: str | None = None) -
         home, away = (row.get("HomeTeam") or "").strip(), (row.get("AwayTeam") or "").strip()
         if not ko or not home or not away:
             continue
-        out.append(ArchiveMatch(league_code, ko, home, away, int(hg), int(ag), season, _odds(row, has)))
+        hst, ast = (row.get("HST") or "").strip(), (row.get("AST") or "").strip()
+        shots = (int(hst), int(ast)) if hst.isdigit() and ast.isdigit() else (None, None)
+        out.append(ArchiveMatch(league_code, ko, home, away, int(hg), int(ag), season, _odds(row, has), *shots))
     return out
 
 

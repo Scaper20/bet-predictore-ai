@@ -58,12 +58,13 @@ function modelRows(breakdown: Awaited<ReturnType<typeof settledRecords>>): Model
     // Market and league breakdowns are only meaningful for a model that has
     // actually published. Attributing the shared aggregates to a model with no
     // rows would recreate exactly the fiction this replaced.
-    if (model.status !== "live" || !isPublishable(record)) {
+    if (model.status === "development" || !isPublishable(record)) {
       return { model, record, topLeague: null, markets: [] };
     }
 
-    const markets = [...breakdown.byMarket.entries()]
-      .filter(([family, r]) => model.pickTypes.includes(family) && isPublishable(r))
+    // This model's own picks only (a retired model's record sits beside the live one).
+    const markets = [...(breakdown.byModelMarket.get(model.id) ?? new Map()).entries()]
+      .filter(([, r]) => isPublishable(r))
       .map(([family, r]) => ({ family, record: r }))
       .sort((a, b) => b.record.sample - a.record.sample);
 
@@ -71,7 +72,7 @@ function modelRows(breakdown: Awaited<ReturnType<typeof settledRecords>>): Model
     // catalogue too. Before 0013 this rendered best[0] directly, which was
     // whatever the answering provider called the competition — and in
     // practice rendered nothing, because the lookup never matched.
-    const best = [...breakdown.byLeague.entries()]
+    const best = [...(breakdown.byModelLeague.get(model.id) ?? new Map()).entries()]
       .filter(([, r]) => isPublishable(r))
       .sort((a, b) => (b[1].winRate ?? 0) - (a[1].winRate ?? 0))[0];
     const bestLeague = best ? leagueByCode(best[0]) : undefined;

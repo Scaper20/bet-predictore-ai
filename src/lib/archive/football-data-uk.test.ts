@@ -39,6 +39,17 @@ describe("parseArchiveDate", () => {
   });
 });
 
+describe("parseDivisionCsv shots on target", () => {
+  it("keeps HST/AST when the file has them and leaves them unset when blank", () => {
+    const rows = parseDivisionCsv(
+      ["Div,Date,HomeTeam,AwayTeam,FTHG,FTAG,HST,AST", "E0,16/08/2025,Arsenal,Chelsea,2,1,7,4", "E0,17/08/2025,Leeds,Everton,0,0,,"].join("\n"),
+      "premier-league",
+    );
+    expect(rows[0]).toMatchObject({ homeShotsOnTarget: 7, awayShotsOnTarget: 4 });
+    expect(rows[1].homeShotsOnTarget).toBeUndefined();
+  });
+});
+
 describe("parseDivisionCsv", () => {
   const csv = [
     "Div,Date,Time,HomeTeam,AwayTeam,FTHG,FTAG,FTR,AvgCH",

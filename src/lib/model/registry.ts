@@ -22,14 +22,16 @@
 
 import type { SportId } from "@/lib/sports";
 
-export type ModelId = "goals-v1" | "result-v1" | "value-v1" | "hoops-v1";
+export type ModelId = "goals-v1" | "goals-v2" | "result-v1" | "value-v1" | "hoops-v1";
 
 /**
- * `live` means it has produced picks that are in predictions_log and can be
- * graded. `development` means it has no published record, and any surface
- * rendering it MUST NOT show statistics — that is the whole point of the flag.
+ * `live` means it is producing picks now. `retired` means it produced picks
+ * that are in predictions_log, still graded and shown under its own name, but
+ * it owns no markets any more. `development` means it has no published
+ * record, and any surface rendering it MUST NOT show statistics — that is the
+ * whole point of the flag.
  */
-export type ModelStatus = "live" | "development";
+export type ModelStatus = "live" | "retired" | "development";
 
 export interface ModelDescriptor {
   id: ModelId;
@@ -72,15 +74,29 @@ const MODELS: Record<ModelId, ModelDescriptor> = {
     id: "goals-v1",
     brandName: "BetriX Strike",
     publicLabel: "the model",
-    internalName: "Dixon-Coles bivariate Poisson, time-weighted MLE",
+    internalName: "Dixon-Coles bivariate Poisson, time-weighted MLE (goals only, picks from 15 matches)",
+    sport: "football",
+    sportLabel: "Football",
+    // Retired: owns nothing, so every new pick is goals-v2's. Its record stays.
+    pickTypes: [],
+    status: "retired",
+    blurb:
+      "Our first model: time-weighted attack and defence ratings fitted on goals alone. " +
+      "Replaced in October 2026; every pick it published is still graded here.",
+  },
+  "goals-v2": {
+    id: "goals-v2",
+    brandName: "BetriX Strike 2",
+    publicLabel: "the model",
+    internalName:
+      "Dixon-Coles bivariate Poisson on a goals + shots-on-target response, promoted-club prior, 200-match publishing bar",
     sport: "football",
     sportLabel: "Football",
     pickTypes: ["1x2", "dc", "btts", "ou", "cs", "ah"],
     status: "live",
     blurb:
-      "Fits time-weighted attack and defence ratings on completed results in each " +
-      "competition, then expands them into a full scoreline distribution that every " +
-      "market is read off.",
+      "Rates every club on the chances it creates and concedes as well as its goals, " +
+      "and only stands a pick on a competition with 200 or more completed matches behind it.",
   },
   "result-v1": {
     id: "result-v1",
@@ -124,7 +140,10 @@ const MODELS: Record<ModelId, ModelDescriptor> = {
 };
 
 /** The model currently producing predictions. */
-export const ACTIVE_MODEL_ID: ModelId = "goals-v1";
+export const ACTIVE_MODEL_ID: ModelId = "goals-v2";
+
+/** Rows stored before predictions_log carried a model_id (0012) were all goals-v1's. */
+export const LEGACY_MODEL_ID: ModelId = "goals-v1";
 
 export function activeModel(): ModelDescriptor {
   return MODELS[ACTIVE_MODEL_ID];
@@ -134,10 +153,12 @@ export function modelById(id: ModelId): ModelDescriptor {
   return MODELS[id];
 }
 
-/** Every model, live first, for the track record's performance section. */
+const STATUS_ORDER: Record<ModelStatus, number> = { live: 0, retired: 1, development: 2 };
+
+/** Every model, live first, then retired, then the roadmap. */
 export function allModels(): ModelDescriptor[] {
   return Object.values(MODELS).sort((a, b) => {
-    if (a.status !== b.status) return a.status === "live" ? -1 : 1;
+    if (a.status !== b.status) return STATUS_ORDER[a.status] - STATUS_ORDER[b.status];
     return a.brandName.localeCompare(b.brandName);
   });
 }

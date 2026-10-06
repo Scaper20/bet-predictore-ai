@@ -40,7 +40,8 @@ const MARKET_LABELS: Record<string, string> = {
 };
 
 export function ScalableModelPerformance({ rows }: { rows: ModelPerformanceRow[] }) {
-  const live = rows.filter((r) => r.model.status === "live");
+  // Retired models keep their record on show, after the live one.
+  const live = rows.filter((r) => r.model.status === "live" || r.model.status === "retired");
   const roadmap = rows.filter((r) => r.model.status === "development");
 
   return (
@@ -91,9 +92,13 @@ function LiveModelCard({ row }: { row: ModelPerformanceRow }) {
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="text-base font-bold text-ink">{model.brandName}</h3>
-            <Badge tone="brand" className="text-[10px] uppercase">
-              Live
-            </Badge>
+            {model.status === "live" ? (
+              <Badge tone="brand" className="text-[10px] uppercase">
+                Live
+              </Badge>
+            ) : (
+              <Badge className="text-[10px] uppercase">Retired</Badge>
+            )}
           </div>
           <p className="mt-1 text-xs leading-relaxed text-ink-muted">{model.blurb}</p>
         </div>

@@ -137,3 +137,11 @@ def test_errors_never_carry_the_api_key():
     url = "https://www.thesportsdb.com/api/v1/json/2804633024/lookuptable.php?l=4334&s=2026-2027"
     assert "2804633024" not in str(SourceError("thesportsdb", f"HTTP 404 for {url}", 404))
     assert redact("https://x.org/odds?apiKey=abc123&regions=uk") == "https://x.org/odds?apiKey=***&regions=uk"
+
+
+def test_division_csv_reads_shots_on_target_when_present():
+    csv = "Div,Date,HomeTeam,AwayTeam,FTHG,FTAG,HST,AST\nE0,15/08/2025,Liverpool,Bournemouth,4,2,9,3\nE0,16/08/2025,Leeds,Everton,1,0,,\n"
+    a, b = parse_division_csv(csv, "premier-league")
+    assert (a.home_shots_on_target, a.away_shots_on_target) == (9, 3)
+    # A blank column stays unknown, never zero shots.
+    assert (b.home_shots_on_target, b.away_shots_on_target) == (None, None)

@@ -449,14 +449,21 @@ describe("data sufficiency gate", () => {
     expect(s.publishable).toBe(false);
   });
 
+  it("withholds the pick under the 200-match bar, where picks stopped matching their claims", () => {
+    const s = assessSufficiency(120, 10, 10);
+    expect(s.level).toBe("insufficient");
+    expect(s.publishable).toBe(false);
+    expect(s.reason).toContain("120");
+  });
+
   it("publishes with a caveat on a thin but usable sample", () => {
-    const s = assessSufficiency(40, 8, 8);
+    const s = assessSufficiency(300, 8, 8);
     expect(s.level).toBe("limited");
     expect(s.publishable).toBe(true);
   });
 
   it("publishes cleanly on a full sample", () => {
-    const s = assessSufficiency(300, 20, 18);
+    const s = assessSufficiency(600, 20, 18);
     expect(s.level).toBe("good");
     expect(s.publishable).toBe(true);
   });
@@ -519,5 +526,37 @@ describe("reported goal rates", () => {
     }
     const fit = fitLeague(rows);
     expect(fit.baseRate).toBeCloseTo(fit.observedGoalRate, 2);
+  });
+});
+
+describe("goals-v2 fit options", () => {
+  const DAY = 86_400_000;
+  const base = Date.now() - 300 * DAY;
+  const teams = ["A", "B", "C", "D"];
+  // Every match ends 1-1, but A dominates shots on target.
+  const rows = Array.from({ length: 48 }, (_, k) => {
+    const h = teams[k % 4];
+    const a = teams[(k + 1 + Math.floor(k / 4)) % 4] === h ? teams[(k + 2) % 4] : teams[(k + 1 + Math.floor(k / 4)) % 4];
+    return {
+      homeId: h, awayId: a, homeName: h, awayName: a, homeGoals: 1, awayGoals: 1, date: base + k * DAY, leagueId: "t",
+      homeShotsOnTarget: h === "A" ? 9 : 3, awayShotsOnTarget: a === "A" ? 9 : 3,
+    };
+  });
+
+  it("ignores shots when shotWeight is 0 and reads them when it is not", () => {
+    const goalsOnly = fitLeague(rows, { shotWeight: 0, newcomerPrior: 0 });
+    const withShots = fitLeague(rows, { shotWeight: 0.5, newcomerPrior: 0 });
+    expect(Math.abs(goalsOnly.ratings.get("a")!.attack)).toBeLessThan(0.05);
+    expect(withShots.ratings.get("a")!.attack).toBeGreaterThan(0.1);
+  });
+
+  it("starts a club that joins the sample late below league average", () => {
+    const late = [...rows, ...[0, 1, 2].map((i) => ({
+      homeId: "N", awayId: "B", homeName: "N", awayName: "B", homeGoals: 1, awayGoals: 1,
+      date: base + (260 + i) * DAY, leagueId: "t",
+    }))];
+    const off = fitLeague(late, { newcomerPrior: 0, shotWeight: 0 }).ratings.get("n")!;
+    const on = fitLeague(late, { newcomerPrior: 0.3, shotWeight: 0 }).ratings.get("n")!;
+    expect(on.attack + on.defence).toBeLessThan(off.attack + off.defence);
   });
 });

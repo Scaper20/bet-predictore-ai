@@ -41,7 +41,7 @@ export async function archivedResults(leagueCode: string): Promise<ResultRow[]> 
 
     const { data, error } = await supabase
       .from("historical_results")
-      .select("kickoff, home_name, away_name, home_goals, away_goals")
+      .select("kickoff, home_name, away_name, home_goals, away_goals, home_shots_on_target, away_shots_on_target")
       .eq("league_code", leagueCode)
       .order("kickoff", { ascending: false })
       .limit(MAX_ROWS);
@@ -64,6 +64,9 @@ export async function archivedResults(leagueCode: string): Promise<ResultRow[]> 
       awayGoals: r.away_goals as number,
       date: Date.parse(r.kickoff as string),
       leagueId: leagueCode,
+      // Null where the source had none; the fit uses goals alone for those rows.
+      homeShotsOnTarget: (r.home_shots_on_target as number | null) ?? undefined,
+      awayShotsOnTarget: (r.away_shots_on_target as number | null) ?? undefined,
     }));
   });
 }
@@ -119,6 +122,8 @@ export async function storeResults(rows: ArchiveRow[], source: string): Promise<
         away_name: r.awayName,
         home_goals: r.homeGoals,
         away_goals: r.awayGoals,
+        home_shots_on_target: r.homeShotsOnTarget ?? null,
+        away_shots_on_target: r.awayShotsOnTarget ?? null,
         source,
       });
     }

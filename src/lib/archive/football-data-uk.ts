@@ -31,6 +31,9 @@ export interface ArchiveRow {
   awayName: string;
   homeGoals: number;
   awayGoals: number;
+  /** Shots on target, where the file records them (per-division files only). */
+  homeShotsOnTarget?: number;
+  awayShotsOnTarget?: number;
 }
 
 /** Splits a CSV line, honouring the quoted fields the referee column uses. */
@@ -92,13 +95,22 @@ export function parseDivisionCsv(body: string, leagueCode: string): ArchiveRow[]
   const iHg = at("FTHG");
   const iAg = at("FTAG");
   if (iDate < 0 || iHome < 0 || iAway < 0 || iHg < 0 || iAg < 0) return [];
+  const iHst = at("HST");
+  const iAst = at("AST");
 
   const rows: ArchiveRow[] = [];
   for (const line of lines.slice(1)) {
     const f = splitCsvLine(line);
     const row = toRow(leagueCode, f[iDate], iTime >= 0 ? f[iTime] : undefined,
       f[iHome], f[iAway], f[iHg], f[iAg]);
-    if (row) rows.push(row);
+    if (!row) continue;
+    const hst = iHst >= 0 ? f[iHst]?.trim() : "";
+    const ast = iAst >= 0 ? f[iAst]?.trim() : "";
+    if (hst && ast && /^\d+$/.test(hst) && /^\d+$/.test(ast)) {
+      row.homeShotsOnTarget = Number(hst);
+      row.awayShotsOnTarget = Number(ast);
+    }
+    rows.push(row);
   }
   return rows;
 }

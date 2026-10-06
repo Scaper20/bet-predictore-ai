@@ -6,11 +6,11 @@ import type { Match, ResultRow } from "@/lib/types";
 const DAY = 86_400_000;
 const NAMES = ["Alpha", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot", "Golf", "Hotel"];
 
-/** Two double round-robins where strength runs down the list and scores vary. */
+/** Four double round-robins (224 matches, over the publishing bar); strength runs down the list. */
 function season(): ResultRow[] {
   const rows: ResultRow[] = [];
   let d = Date.now() - 400 * DAY;
-  for (let rep = 0; rep < 2; rep++) {
+  for (let rep = 0; rep < 4; rep++) {
     for (let i = 0; i < NAMES.length; i++) {
       for (let j = 0; j < NAMES.length; j++) {
         if (i === j) continue;
