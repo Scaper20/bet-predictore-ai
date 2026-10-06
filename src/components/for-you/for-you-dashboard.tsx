@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { AccaSuggestion, ForYouFeedPayload, PersonalizedPick } from "@/lib/for-you";
-import { Badge, ButtonLink, Button, EmptyState, SectionHeading } from "@/components/ui/primitives";
+import { Badge, ButtonLink, Button, EmptyState, LiveDot, SectionHeading } from "@/components/ui/primitives";
 import { Container } from "@/components/ui/container";
 import { useSlip } from "@/lib/slip";
 import { kickoffDay, kickoffTime, percent } from "@/lib/format";
@@ -12,6 +12,9 @@ import { Crest } from "@/components/ui/crest";
 import { isStrong } from "@/lib/model/tiers";
 import { StrongBadge } from "@/components/ui/strong-badge";
 import { CommentThread, LoveButton, useSocialCounts } from "@/components/for-you/pick-social";
+import { useLivePicks } from "@/components/for-you/use-live-picks";
+import { isStaleInPlay } from "@/lib/match-status";
+import type { LegScore } from "@/lib/slip-tracker";
 
 /**
  * The personalised dashboard.
@@ -28,6 +31,8 @@ import { CommentThread, LoveButton, useSocialCounts } from "@/components/for-you
  */
 export function ForYouDashboard({ feed }: { feed: ForYouFeedPayload }) {
   const { add } = useSlip();
+  const allPicks = [...feed.inYourLeagues.slice(0, 6), ...(feed.bestBet ? [feed.bestBet] : []), ...feed.quickPicks];
+  const live = useLivePicks(allPicks);
   const social = useSocialCounts([
     ...feed.inYourLeagues.slice(0, 6).map((p) => p.id),
     ...(feed.bestBet ? [feed.bestBet.id] : []),
@@ -166,6 +171,7 @@ export function ForYouDashboard({ feed }: { feed: ForYouFeedPayload }) {
                     onAdd={() => addPick(pick)}
                     social={social}
                     signedIn={feed.signedIn}
+                    live={live[pick.id]}
                   />
                 ))}
                 {feed.inYourLeagues.length > 6 && (
@@ -208,6 +214,7 @@ export function ForYouDashboard({ feed }: { feed: ForYouFeedPayload }) {
                   featured
                   social={social}
                   signedIn={feed.signedIn}
+                  live={live[feed.bestBet.id]}
                 />
               </div>
             )}
@@ -219,6 +226,7 @@ export function ForYouDashboard({ feed }: { feed: ForYouFeedPayload }) {
                 onAdd={() => addPick(pick)}
                 social={social}
                 signedIn={feed.signedIn}
+                live={live[pick.id]}
               />
             ))}
           </div>
@@ -298,6 +306,7 @@ function PickRow({
   featured = false,
   social,
   signedIn,
+  live,
 }: {
   pick: PersonalizedPick;
   added: boolean;
@@ -306,9 +315,22 @@ function PickRow({
   featured?: boolean;
   social: Social;
   signedIn: boolean;
+  live?: LegScore;
 }) {
   const [open, setOpen] = useState(false);
   const count = social.counts[pick.id];
+  // Fresh poll first, then what the page was rendered with.
+  const state: LegScore = live ?? {
+    status: pick.status,
+    minute: pick.minute ?? null,
+    home: pick.score?.home ?? null,
+    away: pick.score?.away ?? null,
+  };
+  // A feed stuck on "live" long after kickoff reads as full time (src/lib/match-status.ts).
+  const stale = isStaleInPlay(state.status, pick.kickoff);
+  const inPlay = !stale && (state.status === "live" || state.status === "halftime");
+  const over = state.status === "finished" || stale;
+  const showScore = (inPlay || over) && state.home !== null && state.away !== null;
 
   return (
     <article
@@ -328,9 +350,18 @@ function PickRow({
           <span aria-hidden>{pick.league.flag}</span>
           <span className="truncate">{pick.league.shortName}</span>
           <span aria-hidden>·</span>
-          <span className="shrink-0">
-            {kickoffDay(pick.kickoff)} {kickoffTime(pick.kickoff)}
-          </span>
+          {inPlay ? (
+            <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-rose/12 px-2 py-0.5 text-[11px] font-bold text-rose">
+              <LiveDot />
+              {state.status === "halftime" ? "HT" : state.minute ? `LIVE ${state.minute}'` : "LIVE"}
+            </span>
+          ) : over ? (
+            <span className="shrink-0 rounded-full bg-surface-3 px-2 py-0.5 text-[11px] font-bold text-ink-muted">FT</span>
+          ) : (
+            <span className="shrink-0">
+              {kickoffDay(pick.kickoff)} {kickoffTime(pick.kickoff)}
+            </span>
+          )}
           <svg
             viewBox="0 0 20 20"
             className={`ml-auto size-4 shrink-0 text-ink-dim transition-transform ${open ? "rotate-180" : ""}`}
@@ -346,11 +377,13 @@ function PickRow({
         <div className={`mt-2.5 space-y-1.5 font-semibold ${featured ? "text-base" : "text-sm"}`}>
           <p className="flex min-w-0 items-center gap-2.5">
             <Crest src={pick.homeCrest} name={pick.homeTeam} size={22} />
-            <span className="truncate">{pick.homeTeam}</span>
+            <span className="min-w-0 flex-1 truncate">{pick.homeTeam}</span>
+            {showScore && <span className={`tnum shrink-0 font-bold ${inPlay ? "text-rose" : ""}`}>{state.home}</span>}
           </p>
           <p className="flex min-w-0 items-center gap-2.5">
             <Crest src={pick.awayCrest} name={pick.awayTeam} size={22} />
-            <span className="truncate">{pick.awayTeam}</span>
+            <span className="min-w-0 flex-1 truncate">{pick.awayTeam}</span>
+            {showScore && <span className={`tnum shrink-0 font-bold ${inPlay ? "text-rose" : ""}`}>{state.away}</span>}
           </p>
         </div>
 
