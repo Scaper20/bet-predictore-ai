@@ -49,6 +49,9 @@ export interface PersonalizedPick {
   league: { code: string | null; name: string; shortName: string; flag?: string };
   kickoff: string;
   status: Match["status"];
+  /** In-play minute and score at render time; For You polls for fresher ones. */
+  minute?: number | null;
+  score?: { home: number | null; away: number | null };
   market: string;
   group: string;
   label: string;
@@ -156,6 +159,8 @@ export function toPersonalizedPick(
     },
     kickoff: match.kickoff,
     status: match.status,
+    minute: match.minute ?? null,
+    score: match.score,
     market: pick.market,
     group: pick.group,
     label: pick.label,
