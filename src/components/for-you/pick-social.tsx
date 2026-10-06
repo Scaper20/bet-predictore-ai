@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export interface SocialCount {
   loves: number;
@@ -95,6 +95,8 @@ interface Comment {
   body: string;
   createdAt: string;
   mine: boolean;
+  /** The top-level comment this replies to; null for a top-level comment. */
+  parentId: string | null;
 }
 
 function ago(iso: string): string {
@@ -120,6 +122,15 @@ export function CommentThread({
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [replyTo, setReplyTo] = useState<{ id: string; author: string } | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  function startReply(c: Comment) {
+    setReplyTo({ id: c.id, author: c.author });
+    // A reply to a reply joins the thread; naming them keeps it clear who is answered.
+    if (c.parentId) setDraft(`@${c.author} `);
+    requestAnimationFrame(() => inputRef.current?.focus());
+  }
 
   const fetchComments = useCallback(
     () =>
@@ -149,10 +160,11 @@ export function CommentThread({
     const res = await fetch("/api/social/comments", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ matchId, body }),
+      body: JSON.stringify({ matchId, body, parentId: replyTo?.id }),
     }).catch(() => null);
     if (res?.ok) {
       setDraft("");
+      setReplyTo(null);
       onCountChange(1);
       await load();
     } else {
@@ -163,8 +175,10 @@ export function CommentThread({
   }
 
   async function remove(id: string) {
-    setComments((c) => c?.filter((x) => x.id !== id) ?? null);
-    onCountChange(-1);
+    // Deleting a comment takes its replies with it (0043, on delete cascade).
+    const gone = (comments ?? []).filter((x) => x.id === id || x.parentId === id).length;
+    setComments((c) => c?.filter((x) => x.id !== id && x.parentId !== id) ?? null);
+    onCountChange(-gone);
     await fetch(`/api/social/comments?id=${encodeURIComponent(id)}`, { method: "DELETE" }).catch(() => null);
   }
 
@@ -175,26 +189,25 @@ export function CommentThread({
       ) : comments.length === 0 ? (
         <p className="text-xs text-ink-dim">No comments yet. Start it off.</p>
       ) : (
-        <ul className="max-h-64 space-y-2.5 overflow-y-auto">
-          {comments.map((c) => (
-            <li key={c.id} className="flex gap-2.5 text-sm">
-              <span className="grid size-7 shrink-0 place-items-center rounded-full bg-surface-3 text-[11px] font-bold text-ink-muted" aria-hidden>
-                {c.author.slice(0, 1).toUpperCase()}
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="text-xs">
-                  <span className="font-semibold text-ink">{c.author}</span>
-                  <span className="ml-1.5 text-ink-dim">{ago(c.createdAt)}</span>
-                  {c.mine && (
-                    <button type="button" onClick={() => remove(c.id)} className="ml-2 text-ink-dim hover:text-rose">
-                      Delete
-                    </button>
-                  )}
-                </p>
-                <p className="mt-0.5 whitespace-pre-wrap break-words text-ink-muted">{c.body}</p>
-              </div>
-            </li>
-          ))}
+        <ul className="max-h-80 space-y-3 overflow-y-auto">
+          {comments
+            .filter((c) => !c.parentId)
+            .map((c) => (
+              <li key={c.id} className="space-y-2.5">
+                <CommentRow comment={c} canReply={signedIn} onReply={startReply} onDelete={remove} />
+                {comments.some((r) => r.parentId === c.id) && (
+                  <ul className="ml-9 space-y-2.5 border-l border-line pl-3">
+                    {comments
+                      .filter((r) => r.parentId === c.id)
+                      .map((r) => (
+                        <li key={r.id}>
+                          <CommentRow comment={r} canReply={signedIn} onReply={startReply} onDelete={remove} small />
+                        </li>
+                      ))}
+                  </ul>
+                )}
+              </li>
+            ))}
         </ul>
       )}
 
@@ -204,22 +217,42 @@ export function CommentThread({
             e.preventDefault();
             void post();
           }}
-          className="flex gap-2"
+          className="space-y-1.5"
         >
-          <input
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            maxLength={500}
-            placeholder="Add a comment…"
-            className="w-full rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm outline-none focus:border-brand/50"
-          />
-          <button
-            type="submit"
-            disabled={sending || !draft.trim()}
-            className="shrink-0 rounded-lg bg-brand px-3.5 py-2 text-xs font-semibold text-brand-ink disabled:opacity-50"
-          >
-            Post
-          </button>
+          {replyTo && (
+            <p className="flex items-center justify-between gap-2 text-[11px] text-ink-dim">
+              <span>
+                Replying to <span className="font-semibold text-ink-muted">{replyTo.author}</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setReplyTo(null);
+                  setDraft("");
+                }}
+                className="hover:text-ink"
+              >
+                Cancel
+              </button>
+            </p>
+          )}
+          <div className="flex gap-2">
+            <input
+              ref={inputRef}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              maxLength={500}
+              placeholder={replyTo ? `Reply to ${replyTo.author}…` : "Add a comment…"}
+              className="w-full rounded-lg border border-line bg-surface-2 px-3 py-2 text-sm outline-none focus:border-brand/50"
+            />
+            <button
+              type="submit"
+              disabled={sending || !draft.trim()}
+              className="shrink-0 rounded-lg bg-brand px-3.5 py-2 text-xs font-semibold text-brand-ink disabled:opacity-50"
+            >
+              {replyTo ? "Reply" : "Post"}
+            </button>
+          </div>
         </form>
       ) : (
         <p className="text-xs text-ink-muted">
@@ -230,6 +263,50 @@ export function CommentThread({
         </p>
       )}
       {error && <p className="text-xs text-rose">{error}</p>}
+    </div>
+  );
+}
+
+function CommentRow({
+  comment: c,
+  canReply,
+  onReply,
+  onDelete,
+  small = false,
+}: {
+  comment: Comment;
+  canReply: boolean;
+  onReply: (c: Comment) => void;
+  onDelete: (id: string) => void;
+  small?: boolean;
+}) {
+  return (
+    <div className="flex gap-2.5 text-sm">
+      <span
+        className={`grid shrink-0 place-items-center rounded-full bg-surface-3 font-bold text-ink-muted ${small ? "size-6 text-[10px]" : "size-7 text-[11px]"}`}
+        aria-hidden
+      >
+        {c.author.slice(0, 1).toUpperCase()}
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-xs">
+          <span className="font-semibold text-ink">{c.author}</span>
+          <span className="ml-1.5 text-ink-dim">{ago(c.createdAt)}</span>
+        </p>
+        <p className="mt-0.5 whitespace-pre-wrap break-words text-ink-muted">{c.body}</p>
+        <div className="mt-1 flex gap-3 text-[11px] font-semibold text-ink-dim">
+          {canReply && (
+            <button type="button" onClick={() => onReply(c)} className="hover:text-brand">
+              Reply
+            </button>
+          )}
+          {c.mine && (
+            <button type="button" onClick={() => onDelete(c.id)} className="hover:text-rose">
+              Delete
+            </button>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
