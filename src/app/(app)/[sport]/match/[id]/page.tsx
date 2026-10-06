@@ -30,7 +30,7 @@ import { DepthGate } from "@/components/entitlements/depth-gate";
 import { JsonLd } from "@/components/seo/json-ld";
 import { matchDetail } from "@/lib/service";
 import { SITE_URL as SITE } from "@/lib/site-url";
-import { kickoffDay, kickoffTime, odds, percent, relativeDay, statusLabel, isLive } from "@/lib/format";
+import { kickoffDay, kickoffTime, percent, relativeDay, statusLabel, isLive } from "@/lib/format";
 import type { Match } from "@/lib/types";
 import type { Prediction } from "@/lib/model/predict";
 import { containerClass } from "@/components/ui/container";
@@ -307,18 +307,14 @@ function Overview({
                 <AnimatedNumber value={pick.probability * 100} decimals={1} suffix="%" className="font-display text-3xl font-extrabold text-brand sm:text-4xl" />
               </div>
             </div>
-            <p className="mt-3 text-sm leading-relaxed text-ink-muted">
-              Worth taking at <span className="tnum font-semibold text-ink">{odds(pick.fairOdds)}</span> or longer. Below that
-              price it loses money however often it lands.
-            </p>
             {prediction.sufficiency.level === "limited" && (
-              <p className="mt-2 text-xs text-amber">Built on a thin history ({prediction.model.matchesUsed} games). Treat it as a guide.</p>
+              <p className="mt-2 text-xs text-amber">Thin data · treat as a guide</p>
             )}
           </section>
         ) : (
           <section className="card p-5">
             <p className="text-sm font-semibold text-amber">No pick for this game</p>
-            <p className="mt-1 text-xs leading-relaxed text-ink-dim">{prediction.sufficiency.reason}</p>
+            <p className="mt-1 text-xs text-ink-dim">Not enough history to publish one yet.</p>
           </section>
         )}
 
@@ -348,8 +344,7 @@ function Overview({
         <AddToSlip prediction={prediction} />
         <AskAboutMatch label={label} />
         <p className="px-1 text-[11px] leading-relaxed text-ink-dim">
-          Probabilities are estimates from a statistical model, not facts. Prices shown are break-even, with no
-          bookmaker margin. 18+, bet responsibly.{" "}
+          Model estimates, not facts. 18+, bet responsibly.{" "}
           <Link href={sportPath("trackRecord")} className="text-ink-muted underline-offset-2 hover:underline">See our record</Link>
         </p>
       </aside>
@@ -389,14 +384,14 @@ function Markets({ prediction, matchId }: { prediction: Prediction; matchId: str
       {/* The only numbers here a bookmaker produced; streamed, because two
           metered providers sit behind it. DepthGate is a conversion wall:
           both providers are fetched a competition at a time and cached. */}
-      <DepthGate reason="See the price you are actually being offered">
+      <DepthGate reason="Is the bookie's price worth it?">
         <Suspense fallback={<PricesPanelSkeleton />}>
           <PricesPanel prediction={prediction} />
         </Suspense>
       </DepthGate>
       {/* Every market beyond 1X2 comes off the same scoreline distribution,
           so depth is one decision, not five. */}
-      <DepthGate reason="See every market on this match">
+      <DepthGate reason="Unlock every market on this match">
         <GoalsPanel prediction={prediction} />
         <div className="grid gap-5 sm:grid-cols-2">
           <BttsPanel prediction={prediction} />

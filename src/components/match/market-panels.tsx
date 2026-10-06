@@ -2,7 +2,7 @@ import type { Match } from "@/lib/types";
 import type { Prediction } from "@/lib/model/predict";
 import { GOAL_LINES, type AsianHandicapLine } from "@/lib/model/poisson";
 import { ProbabilityBar } from "@/components/ui/primitives";
-import { odds, percent } from "@/lib/format";
+import { percent } from "@/lib/format";
 
 export function OutcomePanel({ prediction }: { prediction: Prediction }) {
   const { markets: m, match } = prediction;
@@ -23,7 +23,6 @@ export function OutcomePanel({ prediction }: { prediction: Prediction }) {
                 {r.label}
               </span>
               <span className="flex shrink-0 items-baseline gap-3">
-                <span className="tnum text-xs text-ink-dim">{odds(1 / r.value)}</span>
                 <span className="tnum text-sm font-bold">{percent(r.value, 1)}</span>
               </span>
             </div>
@@ -31,10 +30,6 @@ export function OutcomePanel({ prediction }: { prediction: Prediction }) {
           </div>
         ))}
       </div>
-      <Footnote>
-        Prices shown are break-even: what a selection is worth with no bookmaker margin
-        attached, and so the least a price has to beat to be worth taking.
-      </Footnote>
     </Panel>
   );
 }
@@ -108,7 +103,6 @@ export function DoubleChancePanel({ prediction }: { prediction: Prediction }) {
                 {r.label}
               </span>
               <span className="flex shrink-0 items-baseline gap-3">
-                <span className="tnum text-xs text-ink-dim">{odds(1 / r.value)}</span>
                 <span className="tnum text-sm font-bold">{percent(r.value)}</span>
               </span>
             </div>
@@ -144,10 +138,6 @@ export function CorrectScorePanel({ prediction }: { prediction: Prediction }) {
           </li>
         ))}
       </ol>
-      <Footnote>
-        Correct score is a long shot by nature — even the likeliest scoreline here is well under
-        evens.
-      </Footnote>
     </Panel>
   );
 }
@@ -176,11 +166,7 @@ export function AsianHandicapPanel({
           </div>
         ))}
       </div>
-      <Footnote>
-        Line is applied to {match.home.shortName}. A negative line means they must win by more
-        than that margin to cover; a positive line gives them a head start. Whole lines (0, ±1) can
-        push — your stake is refunded if the match lands exactly on the line.
-      </Footnote>
+      <Footnote>Line applies to {match.home.shortName}. Whole lines can push (stake refunded).</Footnote>
     </Panel>
   );
 }
@@ -303,10 +289,6 @@ export function H2HPanel({ prediction }: { prediction: Prediction }) {
           </li>
         ))}
       </ul>
-      <Footnote>
-        Head-to-head is context, not evidence. Squads turn over, and five meetings is far too
-        small a sample to move a probability on its own — the model treats it that way.
-      </Footnote>
     </Panel>
   );
 }

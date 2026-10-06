@@ -6,7 +6,7 @@ import type { AccaSuggestion, ForYouFeedPayload, PersonalizedPick } from "@/lib/
 import { Badge, ButtonLink, Button, EmptyState, SectionHeading } from "@/components/ui/primitives";
 import { Container } from "@/components/ui/container";
 import { useSlip } from "@/lib/slip";
-import { kickoffDay, kickoffTime, odds, percent } from "@/lib/format";
+import { kickoffDay, kickoffTime, percent } from "@/lib/format";
 import { sportPath } from "@/lib/routes";
 
 /**
@@ -17,8 +17,8 @@ import { sportPath } from "@/lib/routes";
  * bookmaker price and no expected value — the previous version manufactured
  * both, and floored the EV at +8% so every pick appeared to carry an edge.
  *
- * The honest surface is: what the model thinks the probability is, the price
- * that would make that a break-even bet, and how much history is behind it.
+ * The surface is what the model thinks the probability is. The break-even
+ * price and sample size stay internal (October 2026: users asked for less).
  * A user who wants a real EV enters their own bookmaker's price on the slip,
  * which is what slip-view.tsx was built for.
  */
@@ -184,7 +184,6 @@ export function ForYouDashboard({ feed }: { feed: ForYouFeedPayload }) {
           <SectionHeading
             eyebrow="Across every competition"
             title="Today's stand-outs"
-            description="Not filtered to your leagues — these are the strongest reads on the whole slate, wherever they happen to be."
           />
 
           <div className="mt-6 grid gap-4 lg:grid-cols-3">
@@ -216,7 +215,7 @@ export function ForYouDashboard({ feed }: { feed: ForYouFeedPayload }) {
         <SectionHeading
           eyebrow="Settled record"
           title="How these leagues have actually graded"
-          description="Every headline pick is logged before kickoff and graded against the final score. Last 30 days, win rate excluding pushes."
+          description="Last 30 days."
         />
 
         <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -323,20 +322,8 @@ function PickRow({
           <p className="text-[11px] uppercase tracking-wider text-ink-muted">Probability</p>
           <p className="tnum text-sm font-semibold">{percent(pick.probability, 1)}</p>
         </div>
-        <div>
-          {/* Not a price anyone is offering — the price at which this bet
-              would break even. Named accordingly. */}
-          <p className="text-[11px] uppercase tracking-wider text-ink-muted">Break-even</p>
-          <p className="tnum text-sm font-semibold">{odds(pick.fairOdds)}</p>
-        </div>
       </div>
 
-      {!compact && (
-        <p className="mt-3 text-xs leading-relaxed text-ink-muted">
-          Fitted on {pick.matchesUsed} completed {pick.league.shortName} matches ·{" "}
-          {pick.dataQuality}% data quality
-        </p>
-      )}
 
       <div className="mt-4 flex flex-wrap gap-2">
         <Button
@@ -410,7 +397,7 @@ function AccaCard({
               </p>
             </div>
             <span className="tnum shrink-0 rounded border border-line bg-surface-2 px-2 py-0.5 font-mono font-semibold">
-              {odds(leg.fairOdds)}
+              {percent(leg.probability)}
             </span>
           </li>
         ))}
@@ -425,20 +412,8 @@ function AccaCard({
             {percent(acca.combinedProbability, 1)}
           </p>
         </div>
-        <div className="text-right">
-          <p className="text-[11px] uppercase tracking-wider text-ink-muted">Break-even</p>
-          <p className="tnum font-mono text-sm font-semibold">{odds(acca.combinedFairOdds)}</p>
-        </div>
       </div>
 
-      {/* The multiplication assumes the legs are independent. They often
-          aren't — two fixtures in one competition on one weekend move
-          together — so the real probability is usually a little different. */}
-      <p className="text-[11px] leading-relaxed text-ink-muted">
-        Legs are multiplied as if independent. Matches in the same competition often aren&apos;t,
-        so treat this as an estimate. Break-even is the price a bookmaker would have to beat for
-        this to be worth taking — not a price on offer anywhere.
-      </p>
 
       <Button
         onClick={() => onAdd(acca)}

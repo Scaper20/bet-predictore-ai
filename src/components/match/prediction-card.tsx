@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Prediction } from "@/lib/model/predict";
-import { kickoffTime, odds, percent, relativeDay } from "@/lib/format";
+import { kickoffTime, percent, relativeDay } from "@/lib/format";
 import { Crest } from "@/components/ui/crest";
 import { SplitBar } from "@/components/stats/split-bar";
 import { Morph, morphName } from "@/components/motion/morph";
@@ -16,7 +16,7 @@ import { matchPath } from "@/lib/routes";
  * probability.
  */
 export function PredictionCard({ prediction, morph = true }: { prediction: Prediction; morph?: boolean }) {
-  const { match, markets, topPick, sufficiency, model } = prediction;
+  const { match, markets, topPick, sufficiency } = prediction;
   const publishable = sufficiency.publishable && topPick;
 
   return (
@@ -52,12 +52,11 @@ export function PredictionCard({ prediction, morph = true }: { prediction: Predi
             </div>
             <div className="shrink-0 text-right">
               <p className="tnum text-[15px] font-bold text-brand">{percent(topPick.probability)}</p>
-              <p className="tnum text-[11px] text-ink-dim">worth it at {odds(topPick.fairOdds)}+</p>
             </div>
           </div>
         ) : (
-          <p className="text-xs leading-relaxed text-ink-dim">
-            <span className="font-semibold text-amber">No pick.</span> {sufficiency.reason}
+          <p className="text-xs text-ink-dim">
+            <span className="font-semibold text-amber">No pick</span> · not enough history yet
           </p>
         )}
         <div className="mt-3 flex flex-wrap gap-1.5">
@@ -66,7 +65,7 @@ export function PredictionCard({ prediction, morph = true }: { prediction: Predi
           <Chip label="GG" value={percent(markets.bttsYes)} hot={markets.bttsYes >= 0.6} />
         </div>
         {publishable && sufficiency.level === "limited" && (
-          <p className="mt-2.5 text-[11px] leading-relaxed text-amber">Thin history ({model.matchesUsed} games). Treat as a guide.</p>
+          <p className="mt-2.5 text-[11px] text-amber">Thin data · treat as a guide</p>
         )}
       </div>
     </Link>

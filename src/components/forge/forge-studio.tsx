@@ -621,8 +621,8 @@ function ResultPanel({
         <p className="mt-4 text-xs leading-relaxed text-ink-dim">
           {t.picks} {t.picks === 1 ? "pick" : "picks"} across {slip.legs.length} {slip.legs.length === 1 ? "game" : "games"}.{" "}
           {t.priced > 0
-            ? `SportyBet odds as of ${pricedTime} on ${t.priced === slip.legs.length ? "every game" : `${t.priced} of them; the rest at the model's fair odds`}. Odds change before kick-off.`
-            : "Priced at the model's fair odds; your bookmaker's will differ."}
+            ? `SportyBet odds as of ${pricedTime}${t.priced === slip.legs.length ? "" : ` on ${t.priced} of ${slip.legs.length} games`}. Odds change before kick-off.`
+            : "Estimated odds; your bookmaker's will differ."}
           {off && ` Closest the card allows to the ${target.toFixed(2)} you asked for.`}
         </p>
         {error && <p className="mt-2 text-xs text-rose">{error.message}</p>}

@@ -103,7 +103,7 @@ export default async function TrackRecordPage({ params }: PageProps<"/[sport]/tr
           <EmptyState
             icon="○"
             title="Not available yet"
-            description="The Track Record page needs Supabase configured to store settlement history. Check back soon."
+            description="Check back soon."
           />
         </div>
       </>
@@ -120,7 +120,7 @@ export default async function TrackRecordPage({ params }: PageProps<"/[sport]/tr
           <EmptyState
             icon="○"
             title="No settled picks yet"
-            description="Every headline pick shown across the site is logged automatically and graded once its match finishes. The first results will land here within a day or two."
+            description="First results land within a day or two."
           />
           <ScalableModelPerformance rows={modelRows(breakdown)} />
         </div>
@@ -133,7 +133,7 @@ export default async function TrackRecordPage({ params }: PageProps<"/[sport]/tr
       <PageHeader
         eyebrow="Track Record"
         title="Every published pick, graded"
-        description="The single headline pick shown for each fixture, logged before kickoff and graded automatically against the final score. Nothing here is curated after the fact."
+        description="Every pick, logged before kickoff and graded after."
       />
 
       <div className={`${containerClass()} space-y-10 py-7 sm:py-10`}>

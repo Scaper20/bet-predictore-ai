@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { DocPage, DocCard, Example } from "@/components/guides/doc-page";
+import { DocPage, DocCard } from "@/components/guides/doc-page";
 import { scoreMatrix } from "@/lib/model/poisson";
 import { sportPath } from "@/lib/routes";
 
@@ -28,7 +28,7 @@ export default function HowItWorksPage() {
             Every published pick is logged before kick-off and marked won or lost after the final whistle.
           </DocCard>
           <DocCard title="New to betting terms?" href="/guides" cta="Read the guides">
-            What 1X2, GG, double chance and break-even odds mean, with examples.
+            What 1X2, GG and double chance mean, with examples.
           </DocCard>
         </>
       }
@@ -126,32 +126,12 @@ export default function HowItWorksPage() {
           ),
         },
         {
-          id: "break-even",
-          title: "5. The price a pick needs",
-          body: (
-            <>
-              <p>
-                Next to every pick is a <strong className="text-ink">break-even price</strong>: the odds at which the
-                bet neither makes nor loses money over time. It is simply 1 divided by the probability.
-              </p>
-              <Example>
-                We give a home win a 62.5% chance. Break-even is 1 ÷ 0.625 = <strong>1.60</strong>. If your bookmaker
-                offers 1.75, the bet is worth taking; at 1.50 it loses money over time, however often it lands.
-              </Example>
-              <p>
-                That is the question that matters: not &ldquo;will this land?&rdquo; but &ldquo;is the price long
-                enough?&rdquo;. Match pages show live bookmaker prices next to ours where we have them.
-              </p>
-            </>
-          ),
-        },
-        {
           id: "honesty",
-          title: "6. Keeping ourselves honest",
+          title: "5. Keeping ourselves honest",
           body: (
             <>
               <p>
-                Every headline pick is written to a log before kick-off with its probability and price, and graded
+                Every headline pick is written to a log before kick-off with its probability, and graded
                 automatically against the final score. Nothing is edited or deleted afterwards. The{" "}
                 <Link href={sportPath("trackRecord")} className="font-semibold text-brand hover:underline">track record</Link>{" "}
                 shows all of it, wins and losses, by league and by market.

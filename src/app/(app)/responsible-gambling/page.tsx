@@ -47,7 +47,7 @@ export default function ResponsibleGamblingPage() {
       <PageHeader
         eyebrow="Take care"
         title="Responsible gambling"
-        description="This site exists to make betting better informed. It should never make it heavier."
+        description="Bet informed. Never heavier."
       />
 
       <article className="mx-auto max-w-3xl space-y-10 px-4 py-8 sm:py-12 sm:px-6 lg:px-8">

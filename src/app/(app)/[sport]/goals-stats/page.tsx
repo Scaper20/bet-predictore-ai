@@ -48,7 +48,7 @@ export default async function GoalsStatsPage({ searchParams }: { searchParams: P
       <PageHeader
         eyebrow="Goals stats"
         title={`${def.name} goals`}
-        description={`Over/under and GG rates for every club over its last ${WINDOW} league games. Tap a column to sort; greener cells are higher.`}
+        description={`Goal rates over the last ${WINDOW} league games.`}
       />
       <div className={`${containerClass()} space-y-6 py-7 sm:py-10`}>
         <Suspense fallback={<div className="h-11" />}>

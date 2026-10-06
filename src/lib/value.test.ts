@@ -50,7 +50,9 @@ describe("assessValue", () => {
     expect(v.rating).toBe("no-bet");
     expect(v.edge).toBeCloseTo(-0.04);
     expect(v.breakEven).toBeCloseTo(1.25);
-    expect(v.reason).toContain("1.25");
+    // The break-even price is internal: the reason names the offer, never the threshold.
+    expect(v.reason).toContain("1.20");
+    expect(v.reason).not.toContain("1.25");
   });
 
   it("does not dress a sliver of edge up as value", () => {

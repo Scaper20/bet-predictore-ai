@@ -63,7 +63,7 @@ export default async function ResultsPage({ searchParams }: { searchParams: Prom
       <PageHeader
         eyebrow="Results"
         title={def ? `${def.name} results` : "Results"}
-        description="Every final score, day by day, and how each of our published picks did."
+        description="Final scores and how our picks did."
       />
       <div className={`${containerClass()} space-y-6 py-7 sm:py-10`}>
         <Suspense fallback={<div className="h-10" />}>

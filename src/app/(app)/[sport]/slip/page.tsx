@@ -19,7 +19,7 @@ export default function SlipPage() {
       <PageHeader
         eyebrow="Selections"
         title="Selection builder"
-        description="Combine selections and see what the accumulator is really worth. Your slip is stored on this device only — nothing is sent anywhere."
+        description="Build an accumulator and see its real chance."
         actions={
           <>
             <ForgeLink />

@@ -100,7 +100,7 @@ export default async function PredictionsPage({
       <PageHeader
         eyebrow="Predictions"
         title={def ? `${def.name} predictions` : "Predictions"}
-        description="Every game we can rate over the next few days. The bar shows who the model favours; the pick is the one selection it would stand on."
+        description="Every game we can rate in the next few days."
       />
 
       <div className={`${containerClass()} space-y-7 py-7 sm:py-10`}>
@@ -116,7 +116,7 @@ export default async function PredictionsPage({
           <EmptyState
             icon="🎯"
             title="No fixtures to model right now"
-            description="Predictions appear as soon as the feeds carry upcoming matches. Nothing is invented to fill the page."
+            description="Check back when the next fixtures are out."
             action={<ButtonLink href={sportPath("fixtures")} variant="secondary">Browse fixtures</ButtonLink>}
           />
         ) : (

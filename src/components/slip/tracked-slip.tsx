@@ -43,10 +43,6 @@ function pct(p: number): string {
   return `${Number((p * 100).toFixed(1))}%`;
 }
 
-function fairOdds(p: number): string {
-  return p > 0 ? (1 / p).toFixed(2) : "—";
-}
-
 const NUMBER_WORDS = ["Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten"];
 
 function kickoffLabel(iso: string): string {
@@ -370,7 +366,7 @@ export function TrackedSlipCard({ view }: { view: SlipView }) {
         <Segments view={view} />
       </div>
 
-      <div className="mt-5 grid grid-cols-3 gap-2 sm:gap-3">
+      <div className="mt-5 grid grid-cols-2 gap-2 sm:gap-3">
         <Stat label={first.label} value={first.value} />
         <Stat
           label={
@@ -382,7 +378,6 @@ export function TrackedSlipCard({ view }: { view: SlipView }) {
           value={pct(view.combined)}
           accent
         />
-        <Stat label="Fair odds" value={fairOdds(view.combined)} />
       </div>
 
       <div className="mt-4 space-y-3">

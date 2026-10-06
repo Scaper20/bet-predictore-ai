@@ -101,7 +101,6 @@ function TodaysPicks({ previews }: { previews: Awaited<ReturnType<typeof predict
         <SectionHeading
           eyebrow="Live from the model"
           title="What the numbers say right now"
-          description="Pulled from the current slate the moment you loaded this page."
         />
         <ButtonLink href={sportPath("predictions")} variant="secondary" className="shrink-0">
           See all predictions
@@ -113,7 +112,7 @@ function TodaysPicks({ previews }: { previews: Awaited<ReturnType<typeof predict
           <EmptyState
             icon="⚽"
             title="No fixtures with enough history right now"
-            description="Predictions appear here whenever the feeds carry upcoming matches in a competition with enough completed results behind it. Nothing is fabricated to fill the space."
+            description="Check back when the next fixtures are out."
             action={<ButtonLink href={sportPath("fixtures")} variant="secondary">Browse all fixtures</ButtonLink>}
           />
         </div>

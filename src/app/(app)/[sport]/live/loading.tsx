@@ -17,7 +17,7 @@ export default function Loading() {
       <PageHeader
         eyebrow="Live"
         title="Live scores"
-        description="Every match in play across the competitions we track, grouped by league. Scores and the clock come straight from the feed and refresh automatically."
+        description="Every match in play, updating live."
       />
       <div className={`${containerClass()} space-y-5 py-7 sm:py-10`}>
         <div className="card space-y-4 p-4 sm:p-5">

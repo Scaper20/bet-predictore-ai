@@ -81,7 +81,7 @@ export default async function BillingPage({ searchParams }: PageProps<"/account/
           <SectionHeading
             eyebrow="Subscription"
             title="Manage your plan"
-            description="Update your card or cancel anytime — you'll be redirected to Paystack's secure page."
+            description="Update your card or cancel any time."
           />
           <div className="card mt-4 p-5 sm:p-7">
             <ManageSubscriptionButton />

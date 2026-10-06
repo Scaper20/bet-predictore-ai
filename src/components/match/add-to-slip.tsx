@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { Prediction } from "@/lib/model/predict";
 import { useSlip } from "@/lib/slip";
 import { Button } from "@/components/ui/primitives";
-import { odds, percent } from "@/lib/format";
+import { percent } from "@/lib/format";
 
 /** Pick a selection from this fixture and drop it on the slip. */
 export function AddToSlip({ prediction }: { prediction: Prediction }) {
@@ -45,7 +45,7 @@ export function AddToSlip({ prediction }: { prediction: Prediction }) {
         >
           {options.map((p) => (
             <option key={p.market} value={p.market}>
-              {p.label} — {percent(p.probability)} (needs {odds(p.fairOdds)}+)
+              {p.label} — {percent(p.probability)}
             </option>
           ))}
         </select>

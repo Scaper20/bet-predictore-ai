@@ -18,7 +18,7 @@ export default function TrackedSlipsPage() {
       <PageHeader
         eyebrow="Selections"
         title="My slips"
-        description="Every slip you've tracked, followed leg by leg from kickoff to the final whistle. Saved on this device only."
+        description="Your slips, followed leg by leg."
         actions={
           <ButtonLink href={sportPath("slip")} variant="secondary" className="px-4 py-2 text-xs">
             Selection builder

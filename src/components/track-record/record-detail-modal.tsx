@@ -1,7 +1,7 @@
 "use client";
 
 import { Badge, Button } from "@/components/ui/primitives";
-import { kickoffDay, kickoffTime, odds, percent } from "@/lib/format";
+import { kickoffDay, kickoffTime, percent } from "@/lib/format";
 import { isModelId, modelById, LEGACY_MODEL_ID } from "@/lib/model/registry";
 import { useOverlay } from "@/components/ui/use-overlay";
 
@@ -126,9 +126,6 @@ export function RecordDetailModal({
             </Tile>
             <Tile label="Model probability" mono>
               {percent(match.probability, 1)}
-            </Tile>
-            <Tile label="Break-even" mono>
-              {odds(match.fair_odds)}
             </Tile>
           </div>
 

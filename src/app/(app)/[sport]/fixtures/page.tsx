@@ -53,7 +53,7 @@ export default async function FixturesPage({
       <PageHeader
         eyebrow="Fixtures"
         title={def ? `${def.name} fixtures` : "Fixtures"}
-        description="Pick a day and every competition playing on it, kick-off times in West Africa Time. Tap a game for the model's read."
+        description="All times WAT. Tap a game for our read."
       />
 
       <div className={`${containerClass()} space-y-6 py-7 sm:py-10`}>
@@ -63,7 +63,7 @@ export default async function FixturesPage({
           <EmptyState
             icon="📅"
             title={def ? `No ${def.shortName} fixtures in the next ${window} days` : "No fixtures in this window"}
-            description="Nothing scheduled that the feeds can see. Try another competition — no placeholder fixtures are ever shown here."
+            description="Try another competition."
             action={<ButtonLink href={sportPath("fixtures")} variant="secondary">All competitions</ButtonLink>}
           />
         ) : (

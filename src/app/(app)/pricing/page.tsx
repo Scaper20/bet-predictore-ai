@@ -58,7 +58,7 @@ export default async function PricingPage({ searchParams }: PageProps<"/pricing"
       <PageHeader
         eyebrow="Pricing"
         title="Priced for Nigeria"
-        description="From a single matchday to a full season. Start free, upgrade when the numbers are earning their keep, cancel whenever."
+        description="Start free. Cancel any time."
       />
 
       <Container className="py-7 sm:py-10">

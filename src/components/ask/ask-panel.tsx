@@ -669,7 +669,6 @@ function PickCards({ picks }: { picks: AskPickCard[] }) {
   const combinedP = picks.reduce((p, c) => p * c.probability, 1);
   const combinedOdds = picks.reduce((o, c) => o * (c.price ?? c.fairOdds), 1);
   const allAdded = picks.every(onSlip);
-  const anyPrice = picks.some((c) => c.price !== null);
 
   return (
     <div className="space-y-2">
@@ -708,7 +707,6 @@ function PickCards({ picks }: { picks: AskPickCard[] }) {
           <p className="text-xs text-ink-muted">
             Together: odds <span className="tnum font-semibold text-ink">{combinedOdds.toFixed(2)}</span>, about{" "}
             <span className="tnum font-semibold text-ink">{pct(combinedP)}</span> chance.
-            {!anyPrice && " Fair odds shown."}
           </p>
           <button
             type="button"

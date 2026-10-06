@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { Tier } from "@/lib/entitlements";
 import { useEntitlement, meetsTier } from "@/components/entitlements/entitlement-provider";
 import { GatedPanelSkeleton } from "@/components/match/gated-panel-states";
+import { LockedPreview } from "@/components/entitlements/account-gate";
 
 /** The plan a lock sells. "pass" is the lowest paid rank, and is no longer
  * sold, so a lock that a pass would open now sells Pro. */
@@ -45,19 +46,17 @@ export function Gate({
 
 function UpsellTeaser({ requires }: { requires: Tier }) {
   return (
-    <div className="card flex flex-col items-center gap-3 border-dashed p-5 sm:p-7 text-center">
-      <span className="grid size-9 place-items-center rounded-full bg-surface-2 text-lg" aria-hidden>
-        🔒
+    <LockedPreview>
+      <span className="rounded-full bg-violet/15 px-2.5 py-0.5 text-[10.5px] font-bold uppercase tracking-[0.14em] text-violet">
+        {TIER_LABEL[requires]}
       </span>
-      <p className="text-sm text-ink-muted">
-        This is a <span className="font-semibold text-ink">{TIER_LABEL[requires]}</span> feature.
-      </p>
+      <p className="mt-2 font-display text-lg font-bold leading-snug text-ink">Get the full picture</p>
       <Link
         href={`/account/billing?plan=${TIER_PLAN[requires]}`}
-        className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-brand-ink transition-colors hover:bg-brand-strong"
+        className="glow-brand mt-4 inline-flex items-center gap-1.5 rounded-lg bg-brand px-5 py-2.5 text-sm font-bold text-brand-ink transition-colors hover:bg-brand-strong"
       >
-        Unlock {TIER_LABEL[requires]}
+        Unlock {TIER_LABEL[requires]} <span aria-hidden>→</span>
       </Link>
-    </div>
+    </LockedPreview>
   );
 }

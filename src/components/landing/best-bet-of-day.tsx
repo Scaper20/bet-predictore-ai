@@ -3,7 +3,7 @@ import type { Prediction } from "@/lib/model/predict";
 import { Crest } from "@/components/ui/crest";
 import { SplitBar } from "@/components/stats/split-bar";
 import { AnimatedNumber } from "@/components/motion/animated-number";
-import { kickoffTime, odds, relativeDay } from "@/lib/format";
+import { kickoffTime, relativeDay } from "@/lib/format";
 import { matchPath } from "@/lib/routes";
 
 /**
@@ -54,7 +54,6 @@ export function BestBetOfDay({ prediction }: { prediction: Prediction | null }) 
         </div>
         <div className="sm:mt-3">
           <AnimatedNumber value={topPick.probability * 100} decimals={1} suffix="%" className="font-display text-3xl font-extrabold text-brand" />
-          <p className="tnum text-[11px] text-ink-dim">worth it at {odds(topPick.fairOdds)}+</p>
         </div>
       </div>
     </Link>

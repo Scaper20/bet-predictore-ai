@@ -45,7 +45,6 @@ export async function PricesPanel({ prediction }: { prediction: Prediction }) {
   if (priced.length === 0) return null;
 
   const anyLocal = priced.some((r) => r.local !== null);
-  const anyConsensus = priced.some((r) => r.consensus !== null);
 
   return (
     <section className="card p-5 sm:p-7">
@@ -57,13 +56,7 @@ export async function PricesPanel({ prediction }: { prediction: Prediction }) {
           {anyLocal ? LOCAL_BOOK : "Market only"}
         </span>
       </div>
-      <p className="mb-5 text-xs leading-relaxed text-ink-dim">
-        {anyConsensus
-          ? `Live ${LOCAL_BOOK} prices, rated against what the rest of the market is offering on ` +
-            "the same selection right now."
-          : `Live ${LOCAL_BOOK} prices. No other book covers this competition, so these are ` +
-            "rated against the model's own break-even instead."}
-      </p>
+      <p className="mb-5 text-xs text-ink-dim">Live {LOCAL_BOOK} prices, rated for you.</p>
 
       <div className="space-y-3">
         {priced.map((row) => (
@@ -71,20 +64,6 @@ export async function PricesPanel({ prediction }: { prediction: Prediction }) {
         ))}
       </div>
 
-      <p className="mt-5 border-t border-line pt-4 text-[11px] leading-relaxed text-ink-dim">
-        {anyConsensus ? (
-          <>
-            Every bookmaker&apos;s price sits below fair value — that gap is how they make
-            money, and it is why these are rated against each other rather than against
-            zero. Prices move; check before you stake.
-          </>
-        ) : (
-          <>
-            Break-even is what the selection is worth with no margin attached. A price below
-            it loses money over time however often the bet lands.
-          </>
-        )}
-      </p>
     </section>
   );
 }
@@ -140,12 +119,7 @@ function PriceRow({ row }: { row: SelectionPricing }) {
               </span>
             )}
           </>
-        ) : (
-          <span>
-            Break-even{" "}
-            <span className="tnum font-semibold text-ink-muted">{odds(row.breakEven)}</span>
-          </span>
-        )}
+        ) : null}
       </div>
 
       {explain && <p className="mt-2 text-[11px] leading-relaxed text-ink-muted">{explain}</p>}
