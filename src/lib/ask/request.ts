@@ -10,7 +10,8 @@ export const ASK_GUEST_TOTAL = 2;
  * Fair-use ceilings for paid tiers, which the panel advertises as unlimited.
  * Each question is a metered Claude call (about ₦50-100 with its tool
  * rounds), so a ceiling is what keeps one heavy user from costing more than
- * their plan: Pass and Pro 30 a day, VIP 100.
+ * their plan: Pro 30 a day, VIP 100 (and a pass bought before passes
+ * were withdrawn, 30).
  */
 export const ASK_PAID_DAILY = 30;
 export const ASK_VIP_DAILY = 100;

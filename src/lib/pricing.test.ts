@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { cycleSaving, passOption, planById, PASS_OPTIONS } from "./pricing";
+import { cycleSaving, planById, PLANS, PLAN_MATRIX } from "./pricing";
+import { passLength } from "./paystack/pass-window";
 
 describe("plan pricing", () => {
   it("prices the new structure", () => {
     expect(planById("pro").price).toEqual({ monthly: 5000, quarterly: 13500, yearly: 48000 });
     expect(planById("vip").price).toEqual({ monthly: 12000, yearly: 115200 });
-    expect(PASS_OPTIONS.map((o) => o.price)).toEqual([500, 1000, 2000]);
   });
 
   it("computes what a longer cycle saves against monthly", () => {
@@ -15,12 +15,14 @@ describe("plan pricing", () => {
     expect(cycleSaving(planById("vip"), "quarterly")).toBeNull();
   });
 
-  it("keeps four Week passes dearer than a month of Pro", () => {
-    expect(4 * passOption("week").price).toBeGreaterThan(planById("pro").price.monthly!);
+  it("no longer sells or compares the pass", () => {
+    expect(PLANS.map((p) => p.id)).toEqual(["free", "pro", "vip"]);
+    for (const g of PLAN_MATRIX) for (const r of g.rows) expect(Object.keys(r.values)).toEqual(["free", "pro", "vip"]);
   });
 
-  it("falls back to the Weekend pass for an unknown length", () => {
-    expect(passOption("fortnight").id).toBe("weekend");
-    expect(passOption(undefined).id).toBe("weekend");
+  it("still reads the length of a pass bought before the change", () => {
+    expect(passLength("day")).toBe("day");
+    expect(passLength("fortnight")).toBe("weekend");
+    expect(passLength(undefined)).toBe("weekend");
   });
 });

@@ -80,7 +80,7 @@ export async function POST(request: Request) {
         {
           error: paid
             ? "You've hit today's fair-use limit for Forge. Try again tomorrow."
-            : `That's your ${FORGE_FREE_DAILY} free slips for today. A Pass or higher makes Forge unlimited.`,
+            : `That's your ${FORGE_FREE_DAILY} free slips for today. Pro makes Forge unlimited.`,
           code: "limit",
         },
         429,

@@ -106,7 +106,7 @@ export async function POST(request: Request) {
           code: "limit",
           message: paid
             ? "You've hit today's fair-use limit. Ask again tomorrow."
-            : `That's your ${ASK_FREE_DAILY} free questions for today. A Pass or higher makes it unlimited.`,
+            : `That's your ${ASK_FREE_DAILY} free questions for today. Pro makes it unlimited.`,
         },
         429,
       );

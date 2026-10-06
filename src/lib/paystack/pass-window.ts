@@ -1,4 +1,14 @@
-import type { PassLength } from "@/lib/pricing";
+/**
+ * Passes are no longer sold (withdrawn October 2026, folded into Pro). These
+ * rules stay so a checkout started before the change, and paid after it,
+ * still grants the pass that was bought.
+ */
+export type PassLength = "day" | "weekend" | "week";
+
+/** Old checkouts carry no length, or one this code no longer knows: Weekend. */
+export function passLength(id: string | undefined): PassLength {
+  return id === "day" || id === "week" ? id : "weekend";
+}
 
 /**
  * Weekend Pass expiry rule, confirmed by the owner: access runs Friday

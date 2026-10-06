@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Badge, Button } from "@/components/ui/primitives";
 import { naira } from "@/lib/format";
 import {
-  CYCLE_LABEL, PASS_OPTIONS, PLANS, cycleSaving, type BillingCycle, type PassLength,
+  CYCLE_LABEL, PLANS, cycleSaving, type BillingCycle, type PlanTier,
 } from "@/lib/pricing";
 import type { Tier } from "@/lib/entitlements";
 
@@ -28,18 +28,17 @@ export function BillingPlans({
     (c) => available.pro.includes(c) || available.vip.includes(c),
   );
   const [cycle, setCycle] = useState<BillingCycle>(cycles.includes(initialCycle) ? initialCycle : "monthly");
-  const [pass, setPass] = useState<PassLength>("day");
-  const [pending, setPending] = useState<Tier | null>(null);
+  const [pending, setPending] = useState<PlanTier | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function checkout(tier: Exclude<Tier, "free">, tierCycle: BillingCycle) {
+  async function checkout(tier: "pro" | "vip", tierCycle: BillingCycle) {
     setError(null);
     setPending(tier);
     try {
       const res = await fetch("/api/billing/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tier, cycle: tierCycle, pass }),
+        body: JSON.stringify({ tier, cycle: tierCycle }),
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body.error ?? "Checkout failed.");
@@ -75,7 +74,7 @@ export function BillingPlans({
 
       {error && <p className="mb-4 text-center text-sm text-rose">{error}</p>}
 
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-6 md:grid-cols-3">
         {PLANS.map((plan) => {
           const isCurrent = plan.id === currentTier;
           const recurring = plan.id === "pro" || plan.id === "vip";
@@ -87,8 +86,7 @@ export function BillingPlans({
               : "monthly"
             : "monthly";
           const unavailable = recurring && !available[plan.id as "pro" | "vip"].includes(tierCycle);
-          const passPick = PASS_OPTIONS.find((o) => o.id === pass)!;
-          const price = plan.id === "pass" ? passPick.price : recurring ? plan.price[tierCycle] : undefined;
+          const price = recurring ? plan.price[tierCycle] : undefined;
           const saving = recurring ? cycleSaving(plan, tierCycle) : null;
 
           return (
@@ -101,30 +99,11 @@ export function BillingPlans({
               <h3 className="text-base font-semibold">{plan.name}</h3>
               <p className="mt-1 text-xs text-ink-muted">{plan.description}</p>
 
-              {plan.id === "pass" && (
-                <div className="mt-4 grid grid-cols-3 gap-1 rounded-lg bg-surface-2 p-1" role="radiogroup" aria-label="Pass length">
-                  {PASS_OPTIONS.map((o) => (
-                    <button
-                      key={o.id}
-                      type="button"
-                      role="radio"
-                      aria-checked={pass === o.id}
-                      onClick={() => setPass(o.id)}
-                      className={`rounded-md py-2 text-xs font-medium transition-colors ${
-                        pass === o.id ? "bg-surface-3 text-ink" : "text-ink-muted hover:text-ink"
-                      }`}
-                    >
-                      {o.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-
               <div className="mt-4 flex items-baseline gap-1.5">
                 <span className="font-display text-2xl font-extrabold">{!price ? "Free" : naira(price)}</span>
                 {price ? (
                   <span className="text-xs text-ink-dim">
-                    {plan.id === "pass" ? passPick.window : CYCLE_LABEL[tierCycle].per}
+                    {CYCLE_LABEL[tierCycle].per}
                   </span>
                 ) : null}
               </div>
@@ -148,23 +127,17 @@ export function BillingPlans({
                   variant={plan.badge ? "primary" : "secondary"}
                   className="mt-5 w-full"
                   disabled={(isCurrent && recurring) || pending !== null || blocked || unavailable}
-                  onClick={() => checkout(plan.id as Exclude<Tier, "free">, tierCycle)}
+                  onClick={() => checkout(plan.id as "pro" | "vip", tierCycle)}
                 >
                   {isCurrent && recurring
                     ? "Current plan"
                     : blocked
-                      ? plan.id === "pass"
-                        ? "Included in your plan"
-                        : "Cancel current plan first"
+                      ? "Cancel current plan first"
                       : unavailable
                         ? "Not available yet"
                         : pending === plan.id
                           ? "Redirecting…"
-                          : plan.id === "pass"
-                            ? isCurrent
-                              ? `Add a ${passPick.label} pass`
-                              : `Get a ${passPick.label} pass`
-                            : `Get ${plan.name}`}
+                          : `Get ${plan.name}`}
                 </Button>
               )}
             </div>

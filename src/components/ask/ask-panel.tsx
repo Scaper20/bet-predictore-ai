@@ -475,7 +475,7 @@ function AskPanelInner({ page }: { page: { matchId: string; label: string } | nu
                   {remaining !== null ? `${remaining} of ${ASK_FREE_DAILY} free questions left today` : `Free: ${ASK_FREE_DAILY} questions a day`}
                   {" · "}
                   <Link href="/pricing" className="underline-offset-2 hover:text-ink hover:underline">
-                    Pass and up: unlimited
+                    Pro: unlimited
                   </Link>
                 </>
               )}
@@ -555,7 +555,7 @@ function GuestGate({ pathname }: { pathname: string }) {
             I already have an account
           </Link>
         </div>
-        <p className="mt-4 text-[11px] text-ink-dim">Takes a minute. Pass and up: unlimited questions.</p>
+        <p className="mt-4 text-[11px] text-ink-dim">Takes a minute. Pro: unlimited questions.</p>
       </div>
     </div>
   );

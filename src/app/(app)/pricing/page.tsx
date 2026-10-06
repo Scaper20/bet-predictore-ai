@@ -9,7 +9,7 @@ import { PlanMatrix } from "@/components/pricing/plan-matrix";
 import { PlanMatrixMobile } from "@/components/pricing/plan-matrix-mobile";
 import { IntervalToggle } from "@/components/pricing/interval-toggle";
 import { sportPath } from "@/lib/routes";
-import { cycleSaving, passOption, planById, type BillingCycle } from "@/lib/pricing";
+import { cycleSaving, planById, type BillingCycle } from "@/lib/pricing";
 import { naira } from "@/lib/format";
 
 export const metadata: Metadata = {
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
     "Plans from a single matchday to a full season, priced in Naira. Start free — no card, no subscription required.",
   openGraph: {
     title: "BetriX Pricing",
-    description: "From one matchday to a full season. Priced for Nigeria, cancel any time.",
+    description: "Priced for Nigeria, cancel any time.",
   },
 };
 
@@ -29,8 +29,8 @@ const FAQS = [
     a: "No. Live scores, fixtures, match results and the headline prediction for every fixture are free, and a free account unlocks the full set of markets on every match. Paid plans add value detection against the price you're offered, staking guidance and the enhanced breakdowns.",
   },
   {
-    q: "What is a pass?",
-    a: `One-off access to everything in Pro, with no subscription attached. A Day pass (${naira(passOption("day").price)}) lasts 24 hours from purchase, a Week pass (${naira(passOption("week").price)}) lasts 7 days, and a Weekend pass (${naira(passOption("weekend").price)}) runs to 23:59 West Africa Time on the following Monday, so a Friday purchase covers the whole weekend. Buying another while one is running never shortens it.`,
+    q: "What happened to passes?",
+    a: "Passes are no longer sold; everything they unlocked is now in Pro. A pass you already bought keeps working until it runs out.",
   },
   {
     q: "Can I cancel?",
@@ -160,9 +160,7 @@ export default async function PricingPage({ searchParams }: PageProps<"/pricing"
                 otherwise. Payments are processed by Paystack.
               </p>
               <p>
-                Passes are one-off access and do not renew: a Day pass lasts 24 hours, a Week
-                pass 7 days, and a Weekend pass ends at 23:59 West Africa Time on the Monday at
-                the end of the covered slate. Subscriptions renew
+                Subscriptions renew
                 automatically until cancelled, and cancelling ends future charges while leaving
                 access in place for the period already paid for.
               </p>

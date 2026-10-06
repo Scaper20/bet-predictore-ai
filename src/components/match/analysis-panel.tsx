@@ -3,8 +3,6 @@ import type { Analysis } from "@/lib/ai/analyst";
 import { Badge } from "@/components/ui/primitives";
 import { Gate } from "@/components/entitlements/gate";
 import { AnalysisRestClient } from "./analysis-rest-client";
-import { PASS_OPTIONS } from "@/lib/pricing";
-import { naira } from "@/lib/format";
 
 /**
  * When the analysis is enhanced (source: "claude"), everything past the
@@ -44,11 +42,9 @@ export function AnalysisPanel({ analysis, matchId }: { analysis: Analysis; match
             fallback={
               analysis.body.length > 1 || analysis.factors.length > 0 ? (
                 <p className="text-xs text-ink-dim">
-                  The rest of this enhanced breakdown comes with any{" "}
-                  <Link href="/account/billing?plan=pass" className="text-brand underline underline-offset-2">
-                    pass from {naira(PASS_OPTIONS[0].price)}
-                  </Link>{" "}
-                  or Pro.
+                  <Link href="/account/billing?plan=pro" className="text-brand underline underline-offset-2">
+                    Unlock the full breakdown with Pro
+                  </Link>
                 </p>
               ) : null
             }

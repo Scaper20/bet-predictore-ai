@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { containerClass } from "@/components/ui/container";
 import { Faq, type FaqGroup } from "@/components/guides/faq";
-import { passOption, planById } from "@/lib/pricing";
+import { planById } from "@/lib/pricing";
 import { ASK_FREE_DAILY, ASK_GUEST_TOTAL } from "@/lib/ask/request";
 import { FORGE_FREE_DAILY } from "@/lib/forge";
 import { naira } from "@/lib/format";
@@ -14,9 +14,6 @@ export const metadata: Metadata = {
   alternates: { canonical: "/help" },
 };
 
-const day = naira(passOption("day").price);
-const weekend = naira(passOption("weekend").price);
-const week = naira(passOption("week").price);
 const pro = naira(planById("pro").price.monthly ?? 0);
 const vip = naira(planById("vip").price.monthly ?? 0);
 
@@ -59,12 +56,12 @@ const GROUPS: FaqGroup[] = [
       {
         q: "What does each plan cost?",
         text: "price cost pass pro vip naira",
-        a: <A>Passes: Day {day}, Weekend {weekend}, Week {week}, all one-off with no subscription. Pro is {pro} a month (cheaper quarterly or yearly) and VIP {vip} a month. Everything is on the <L href="/pricing">pricing page</L>.</A>,
+        a: <A>Pro is {pro} a month (cheaper quarterly or yearly) and VIP {vip} a month. Everything is on the <L href="/pricing">pricing page</L>.</A>,
       },
       {
-        q: "What's the difference between a pass and Pro?",
-        text: "pass pro difference subscription",
-        a: <A>The same features. A pass covers a day, a weekend or a week and then ends; Pro renews each month (or quarter, or year) until you cancel. If you buy passes most weeks, Pro works out cheaper.</A>,
+        q: "What happened to passes?",
+        text: "pass day weekend week one-off",
+        a: <A>Passes are no longer sold; everything they unlocked is now in Pro. A pass you already bought keeps working until it runs out.</A>,
       },
       {
         q: "How do I pay?",
