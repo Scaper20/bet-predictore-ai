@@ -186,3 +186,36 @@ describe("web-push encryption", () => {
     expect(JSON.parse(plain.toString("utf8"))).toEqual(payload);
   });
 });
+
+describe("Strong pick alerts", () => {
+  const e = { matchId: "sdb:1", home: "Arsenal", away: "Leeds", label: "Under 3.5 Goals", probability: 0.757, kickoff: "2026-10-10T11:30:00Z" };
+
+  it("announces a kickoff with the pick and time in WAT", async () => {
+    const { strongKickoffPayload } = await import("./messages");
+    const p = strongKickoffPayload(e);
+    expect(p.body).toContain("Arsenal v Leeds at 12:30");
+    expect(p.body).toContain("Under 3.5 Goals");
+    expect(p.tag).toBe("kickoff-sdb:1");
+  });
+
+  it("reports losses as well as wins, and nothing for a push", async () => {
+    const { strongResultPayload } = await import("./messages");
+    expect(strongResultPayload({ ...e, result: "win", score: { home: 1, away: 0 } })?.title).toContain("won");
+    expect(strongResultPayload({ ...e, result: "lose", score: { home: 3, away: 2 } })?.body).toContain("Arsenal 3–2 Leeds");
+    expect(strongResultPayload({ ...e, result: "push" })).toBeNull();
+  });
+});
+
+describe("paid devices", () => {
+  it("counts running passes and paid-through subscriptions only", async () => {
+    const { paidUserIds } = await import("./plan");
+    const now = new Date("2026-10-07T12:00:00Z");
+    const ids = paidUserIds([
+      { user_id: "pro", tier: "pro", status: "active", current_period_end: "2026-11-01T00:00:00Z", pass_expires_at: null },
+      { user_id: "lapsed", tier: "pro", status: "cancelled", current_period_end: "2026-10-01T00:00:00Z", pass_expires_at: null },
+      { user_id: "pass", tier: "pass", status: "active", current_period_end: null, pass_expires_at: "2026-10-08T00:00:00Z" },
+      { user_id: "oldpass", tier: "pass", status: "active", current_period_end: null, pass_expires_at: "2026-10-01T00:00:00Z" },
+    ], now);
+    expect([...ids].sort()).toEqual(["pass", "pro"]);
+  });
+});
