@@ -105,10 +105,8 @@ export function assessValue(
       breakEven,
       rating: "no-bet",
       reason:
-        `At ${offeredPrice.toFixed(2)} this loses money however often it lands. ` +
-        (market
-          ? `The rest of the market makes it a ${breakEven.toFixed(2)} shot.`
-          : `It needs ${breakEven.toFixed(2)} just to break even.`),
+        `${offeredPrice.toFixed(2)} is too short for the chance it has` +
+        (market ? ", and other books pay more." : "."),
     };
   }
 
@@ -118,12 +116,7 @@ export function assessValue(
       breakEven,
       rating: "thin",
       reason:
-        `Barely above break-even at ${breakEven.toFixed(2)}. ` +
-        (market
-          ? "An edge that small is inside the spread between books, so it is a fair price " +
-            "rather than a good one."
-          : "An edge this small is inside the model's own margin of error, so treat it as a " +
-            "fair price rather than a good one."),
+        "A fair price, not a good one.",
     };
   }
 
@@ -132,11 +125,8 @@ export function assessValue(
     breakEven,
     rating: "value",
     reason:
-      `${offeredPrice.toFixed(2)} is longer than the ${breakEven.toFixed(2)} this needs. ` +
-      (market
-        ? "That gap is the rest of the market disagreeing with this price, which is the one " +
-          "kind of edge that does not depend on the model being right."
-        : "That gap is where a return comes from — if the model is right about the chance."),
+      `${offeredPrice.toFixed(2)} pays more than the chance it has` +
+      (market ? ", and more than other books." : "."),
   };
 }
 

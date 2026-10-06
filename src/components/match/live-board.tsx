@@ -106,7 +106,7 @@ export function LiveBoard({ initial }: { initial: Match[] }) {
       <EmptyState
         icon="⏱"
         title="No matches in play right now"
-        description="Nothing is kicking about at the moment. This board only ever shows genuinely live fixtures, so it stays empty rather than filling the space."
+        description="Nothing in play right now."
         action={<ButtonLink href={sportPath("fixtures")} variant="secondary">See upcoming fixtures</ButtonLink>}
       />
     );

@@ -450,10 +450,10 @@ function SettingsPanel({
                   key={m.id}
                   href="/pricing"
                   className="flex items-center gap-1.5 rounded-full border border-line px-3.5 py-2 text-sm text-ink-dim hover:text-ink-muted"
-                  title="Handicap lines are part of Pass and up"
+                  title="Handicap lines are part of Pro"
                 >
                   {m.label}
-                  <span className="rounded bg-violet/15 px-1.5 py-px text-[10px] font-semibold text-violet">Pass</span>
+                  <span className="rounded bg-violet/15 px-1.5 py-px text-[10px] font-semibold text-violet">Pro</span>
                 </Link>
               ) : (
                 <button
@@ -536,7 +536,7 @@ function AllowanceLine({ allowance, remaining }: { allowance: Allowance | null; 
         <>
           {" · "}
           <Link href={allowance.signedIn ? "/pricing" : "/account/sign-up?next=/football/forge"} className="hover:text-ink hover:underline">
-            {allowance.signedIn ? "Pass and up: unlimited" : `Sign up free for ${FORGE_FREE_DAILY} a day`}
+            {allowance.signedIn ? "Pro: unlimited" : `Sign up free for ${FORGE_FREE_DAILY} a day`}
           </Link>
         </>
       )}
@@ -621,8 +621,8 @@ function ResultPanel({
         <p className="mt-4 text-xs leading-relaxed text-ink-dim">
           {t.picks} {t.picks === 1 ? "pick" : "picks"} across {slip.legs.length} {slip.legs.length === 1 ? "game" : "games"}.{" "}
           {t.priced > 0
-            ? `SportyBet odds as of ${pricedTime} on ${t.priced === slip.legs.length ? "every game" : `${t.priced} of them; the rest at the model's fair odds`}. Odds change before kick-off.`
-            : "Priced at the model's fair odds; your bookmaker's will differ."}
+            ? `SportyBet odds as of ${pricedTime}${t.priced === slip.legs.length ? "" : ` on ${t.priced} of ${slip.legs.length} games`}. Odds change before kick-off.`
+            : "Estimated odds; your bookmaker's will differ."}
           {off && ` Closest the card allows to the ${target.toFixed(2)} you asked for.`}
         </p>
         {error && <p className="mt-2 text-xs text-rose">{error.message}</p>}

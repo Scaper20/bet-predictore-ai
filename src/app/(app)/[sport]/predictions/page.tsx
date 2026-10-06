@@ -14,6 +14,8 @@ import { groupByDay } from "@/lib/format";
 import { FixtureRow } from "@/components/match/fixture-row";
 import { containerClass } from "@/components/ui/container";
 import { sportPath } from "@/lib/routes";
+import { isStrong } from "@/lib/model/tiers";
+import Link from "next/link";
 
 /**
  * One title per league view. Without this every ?league= variant shared the
@@ -52,9 +54,10 @@ export const revalidate = 300;
 export default async function PredictionsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ league?: string }>;
+  searchParams: Promise<{ league?: string; tier?: string }>;
 }) {
-  const { league } = await searchParams;
+  const { league, tier } = await searchParams;
+  const strongOnly = tier === "strong";
   const def = league ? leagueByCode(league) : undefined;
 
   const feed = await upcomingFeed(5, def ? league : undefined).catch(() => null);
@@ -86,7 +89,7 @@ export default async function PredictionsPage({
   };
 
   const publishable = predictions
-    .filter((p) => p.sufficiency.publishable)
+    .filter((p) => p.sufficiency.publishable && (!strongOnly || isStrong(p.topPick)))
     .sort(def ? undefined : byFollowed);
   const withheld = predictions.filter((p) => !p.sufficiency.publishable);
 
@@ -100,7 +103,7 @@ export default async function PredictionsPage({
       <PageHeader
         eyebrow="Predictions"
         title={def ? `${def.name} predictions` : "Predictions"}
-        description="Every game we can rate over the next few days. The bar shows who the model favours; the pick is the one selection it would stand on."
+        description="Every game we can rate in the next few days."
       />
 
       <div className={`${containerClass()} space-y-7 py-7 sm:py-10`}>
@@ -108,19 +111,24 @@ export default async function PredictionsPage({
           <LeagueFilter />
         </Suspense>
 
+        <TierToggle strongOnly={strongOnly} league={def ? league : undefined} />
+
         {feed && <CoverageNotice coverage={feed.coverage} />}
 
-        {bestBet?.topPick && <BestBetOfDay prediction={bestBet} />}
+        {bestBet?.topPick && (!strongOnly || isStrong(bestBet.topPick)) && <BestBetOfDay prediction={bestBet} />}
 
         {predictions.length === 0 ? (
           <EmptyState
             icon="🎯"
             title="No fixtures to model right now"
-            description="Predictions appear as soon as the feeds carry upcoming matches. Nothing is invented to fill the page."
+            description="Check back when the next fixtures are out."
             action={<ButtonLink href={sportPath("fixtures")} variant="secondary">Browse fixtures</ButtonLink>}
           />
         ) : (
           <>
+            {strongOnly && days.length === 0 && (
+              <EmptyState icon="★" title="No Strong picks right now" description="Strong picks are our most confident. Some days there are none." />
+            )}
             {days.map((d) => (
               <section key={d.day} className="scroll-reveal">
                 <div className="mb-4 flex items-center gap-3">
@@ -138,7 +146,7 @@ export default async function PredictionsPage({
               </section>
             ))}
 
-            {withheld.length > 0 && (
+            {!strongOnly && withheld.length > 0 && (
               <details className="card group overflow-hidden">
                 <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-3.5 sm:px-5">
                   <Badge tone="amber">{withheld.length}</Badge>
@@ -163,5 +171,28 @@ export default async function PredictionsPage({
         )}
       </div>
     </>
+  );
+}
+
+/** All picks, or only the Strong ones (confidence 60+, src/lib/model/tiers.ts). */
+function TierToggle({ strongOnly, league }: { strongOnly: boolean; league?: string }) {
+  const href = (strong: boolean) => {
+    const q = new URLSearchParams();
+    if (league) q.set("league", league);
+    if (strong) q.set("tier", "strong");
+    const qs = q.toString();
+    return `${sportPath("predictions")}${qs ? `?${qs}` : ""}`;
+  };
+  const tab = (active: boolean) =>
+    `rounded-md px-3.5 py-1.5 text-xs font-semibold transition-colors ${active ? "bg-surface-3 text-ink" : "text-ink-muted hover:text-ink"}`;
+  return (
+    <nav aria-label="Which picks" className="inline-flex rounded-lg border border-line bg-surface-2 p-0.5">
+      <Link href={href(false)} className={tab(!strongOnly)} aria-current={!strongOnly ? "page" : undefined}>
+        All picks
+      </Link>
+      <Link href={href(true)} className={tab(strongOnly)} aria-current={strongOnly ? "page" : undefined}>
+        <span className="text-amber" aria-hidden>★</span> Strong picks
+      </Link>
+    </nav>
   );
 }

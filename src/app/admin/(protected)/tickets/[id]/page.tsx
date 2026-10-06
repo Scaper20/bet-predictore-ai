@@ -27,7 +27,7 @@ export default async function AdminTicketPage({ params }: { params: Promise<{ id
       <div>
         <h1 className="font-display text-2xl font-bold">{ticket.subject}</h1>
         <div className="mt-2 flex items-center gap-2 text-sm text-ink-muted">
-          <span>{profile?.email ?? "Unknown user"}</span>
+          <span>{profile?.email ?? (ticket.guest_email ? `${ticket.guest_email} (guest, not signed in)` : "Unknown user")}</span>
           <Badge tone={STATUS_TONE[ticket.status] ?? "neutral"}>{ticket.status}</Badge>
           {ticket.priority && <Badge tone="violet">VIP priority</Badge>}
         </div>

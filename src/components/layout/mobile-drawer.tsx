@@ -12,7 +12,7 @@ import { NavSearch } from "@/components/layout/nav-search";
 import { NavBadge } from "@/components/layout/mega-nav";
 import { runNavAction } from "@/components/layout/nav-actions";
 import { useLiveCount } from "@/components/layout/use-live-count";
-import { navFor, soonHref, type NavLink, type NavMenu } from "@/lib/nav";
+import { navFor, type NavLink, type NavMenu } from "@/lib/nav";
 import type { SportId } from "@/lib/sports";
 import type { Tier } from "@/lib/entitlements";
 
@@ -138,16 +138,6 @@ export function MobileDrawer({
             <span className="text-sm font-medium text-ink-muted">Theme</span>
             <ThemeToggle />
           </div>
-          <Link
-            href={soonHref("odds-format")}
-            onClick={onClose}
-            className="flex items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium text-ink-muted hover:bg-surface-2 hover:text-ink"
-          >
-            Odds format
-            <span className="flex items-center gap-2 text-ink-dim">
-              Decimal <NavBadge badge={{ text: "Soon", tone: "muted" }} />
-            </span>
-          </Link>
         </div>
       </div>
 
@@ -310,7 +300,6 @@ function ToolIcon({ label }: { label: string }) {
   const p = { viewBox: "0 0 24 24", className: "size-[18px]", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinejoin: "round" as const, strokeLinecap: "round" as const, "aria-hidden": true };
   if (label === "Forge") return <svg {...p}><path d="M13 3 5 14h6l-1 7 8-11h-6z" /></svg>;
   if (label === "Ask BetriX") return <svg {...p}><path d="M4 5h16v11H9l-5 4z" /></svg>;
-  if (label === "Slip Checker") return <svg {...p}><path d="M7 3h10v18l-2.5-1.5L12 21l-2.5-1.5L7 21z" /><path d="m9.5 10 2 2 3.5-4" /></svg>;
   return <svg {...p}><circle cx="12" cy="12" r="8" /><path d="M14.5 9.5c-.5-1-1.5-1.5-2.5-1.5-1.4 0-2.5.8-2.5 2s1.1 1.6 2.5 2 2.5.8 2.5 2-1.1 2-2.5 2c-1 0-2-.5-2.5-1.5M12 6.5v11" /></svg>;
 }
 

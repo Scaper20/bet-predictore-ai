@@ -17,6 +17,8 @@ interface TicketRow {
   priority: boolean | null;
   updated_at: string;
   profiles: { email: string | null } | { email: string | null }[] | null;
+  /** Signed-out visitor's address (0041); null for account tickets. */
+  guest_email?: string | null;
 }
 
 function isStatusFilter(v: string | undefined): v is StatusFilter {
@@ -34,7 +36,7 @@ export default async function AdminTicketsPage({
   const load = (withPriority: boolean) => {
     let q = supabaseAdmin()
       .from("support_tickets")
-      .select(`id, subject, status, ${withPriority ? "priority, " : ""}updated_at, profiles(email)`);
+      .select(`id, subject, status, ${withPriority ? "priority, " : ""}updated_at, guest_email, profiles(email)`);
     // VIP priority tickets first — that is the whole of the VIP promise.
     if (withPriority) q = q.order("priority", { ascending: false });
     q = q.order("status", { ascending: true }).order("updated_at", { ascending: false }).limit(100);
@@ -87,7 +89,7 @@ export default async function AdminTicketsPage({
                     </Badge>
                   </div>
                   <div className="mt-2 flex justify-between text-xs text-ink-muted">
-                    <span className="truncate">{profile?.email ?? "—"}</span>
+                    <span className="truncate">{profile?.email ?? (t.guest_email ? `${t.guest_email} (guest)` : "—")}</span>
                     <span className="shrink-0">
                       {new Date(t.updated_at).toLocaleString("en-NG", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
                     </span>
@@ -111,7 +113,7 @@ export default async function AdminTicketsPage({
                           {t.subject}
                         </Link>
                       </AdminTableCell>
-                      <AdminTableCell className="text-ink-muted">{profile?.email ?? "—"}</AdminTableCell>
+                      <AdminTableCell className="text-ink-muted">{profile?.email ?? (t.guest_email ? `${t.guest_email} (guest)` : "—")}</AdminTableCell>
                       <AdminTableCell>
                         <Badge tone={STATUS_TONE[t.status] ?? "neutral"}>{t.status}</Badge>
                       </AdminTableCell>

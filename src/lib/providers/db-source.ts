@@ -14,6 +14,7 @@
 import type { LeagueRef, Match, MatchStatus, ResultRow, StandingRow, Team } from "@/lib/types";
 import { leagueByCode, type LeagueDef } from "@/lib/leagues";
 import { cached } from "./cache";
+import { settleStale } from "@/lib/match-status";
 
 export interface MatchRow {
   id: string;
@@ -79,7 +80,7 @@ function leagueRef(code: string): LeagueRef {
 
 export function rowToMatch(row: MatchRow): Match {
   const id = publicMatchId(row);
-  return {
+  return settleStale({
     id,
     kickoff: new Date(row.kickoff).toISOString(),
     status: row.status,
@@ -92,7 +93,7 @@ export function rowToMatch(row: MatchRow): Match {
     venue: row.venue,
     round: row.round,
     source: id.startsWith("fd:") ? "football-data" : "thesportsdb",
-  };
+  });
 }
 
 async function client() {
@@ -112,7 +113,11 @@ async function matchesWhere(
 }
 
 export function dbLive(): Promise<Match[]> {
-  return cached("db:live", 15_000, () => matchesWhere((q) => q.in("status", ["live", "halftime"])));
+  return cached("db:live", 15_000, async () =>
+    (await matchesWhere((q) => q.in("status", ["live", "halftime"]))).filter(
+      (m) => m.status === "live" || m.status === "halftime",
+    ),
+  );
 }
 
 export function dbByDate(date: string): Promise<Match[]> {

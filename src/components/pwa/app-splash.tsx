@@ -1,0 +1,21 @@
+/**
+ * Splash screen for the installed app.
+ *
+ * Shown only in standalone display mode (opened from the home screen), and
+ * only on a cold start: it lives in the root layout, which client-side
+ * navigation never re-renders. Pure CSS, no JavaScript: the overlay draws
+ * with the first paint and fades itself out, so it can never get stuck or
+ * delay a visitor in a browser tab, where it is display:none.
+ */
+export function AppSplash() {
+  return (
+    <div className="app-splash" aria-hidden>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/icons/icon-192.png" alt="" width={88} height={88} className="app-splash-mark" />
+      <p className="app-splash-word">
+        Betri<span>X</span>
+      </p>
+      <span className="app-splash-bar" />
+    </div>
+  );
+}

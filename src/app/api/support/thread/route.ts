@@ -4,6 +4,7 @@ import { sendEmail } from "@/lib/email";
 import { newTicketNotificationEmail } from "@/lib/email-templates";
 import { getEntitlement, meets } from "@/lib/entitlements";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { guestSend, guestThread } from "@/lib/support-guest";
 
 export const dynamic = "force-dynamic";
 const NO_STORE = { "Cache-Control": "no-store" };
@@ -28,7 +29,8 @@ export async function GET() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ signedIn: false }, { headers: NO_STORE });
+  // Signed-out visitors can chat too; their conversation is found by cookie.
+  if (!user) return NextResponse.json(await guestThread(), { headers: NO_STORE });
 
   const { data: ticket } = await supabase
     .from("support_tickets")
@@ -55,11 +57,14 @@ export async function POST(request: Request) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Sign in first." }, { status: 401, headers: NO_STORE });
-
-  const { body } = (await request.json()) as { body?: string };
-  const message = (body ?? "").trim();
+  const { body, email } = (await request.json()) as { body?: string; email?: string };
+  const message = (body ?? "").trim().slice(0, 4000);
   if (!message) return NextResponse.json({ error: "Write a message first." }, { status: 400, headers: NO_STORE });
+
+  if (!user) {
+    const sent = await guestSend(message, email);
+    return NextResponse.json(sent.error ? { error: sent.error } : { ok: true }, { status: sent.status, headers: NO_STORE });
+  }
 
   const { count: recentCount } = await supabase
     .from("support_messages")

@@ -6,7 +6,7 @@ import type { Match } from "@/lib/types";
 import { REASON_LABEL, type FeaturedRow } from "@/lib/featured";
 import { Badge, ButtonLink, LiveDot, type Tone } from "@/components/ui/primitives";
 import { Crest } from "@/components/ui/crest";
-import { kickoffTime, odds, percent, relativeDay } from "@/lib/format";
+import { kickoffTime, percent, relativeDay } from "@/lib/format";
 import { sportPath } from "@/lib/routes";
 
 /**
@@ -194,9 +194,6 @@ export function FeaturedBoard({ rows }: { rows: FeaturedRow[] }) {
                   <p className="mt-2 flex items-baseline gap-1.5 text-[11px]">
                     <span className="text-ink-dim">Model pick</span>
                     <span className="truncate font-semibold text-brand">{row.pick.label}</span>
-                    <span className="tnum ml-auto shrink-0 text-ink-dim">
-                      needs {odds(row.pick.fairOdds)}+
-                    </span>
                   </p>
                 )}
               </Link>

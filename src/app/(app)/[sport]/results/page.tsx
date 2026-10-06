@@ -39,7 +39,7 @@ export default async function ResultsPage({ searchParams }: { searchParams: Prom
   const { start, end } = appDayBounds(now, -offset);
 
   const matches = await playedBetween(start, end, def?.code).catch(() => []);
-  const picks = await picksFor(matches.map((m) => m.id)).catch(() => new Map<string, LoggedPick>());
+  const picks = await picksFor(matches).catch(() => new Map<string, LoggedPick>());
   const groups = groupLiveMatches(matches).map((g) => ({
     ...g,
     matches: [...g.matches].sort((a, b) => Date.parse(a.kickoff) - Date.parse(b.kickoff)),
@@ -63,7 +63,7 @@ export default async function ResultsPage({ searchParams }: { searchParams: Prom
       <PageHeader
         eyebrow="Results"
         title={def ? `${def.name} results` : "Results"}
-        description="Every final score, day by day, and how each of our published picks did."
+        description="Final scores and how our picks did."
       />
       <div className={`${containerClass()} space-y-6 py-7 sm:py-10`}>
         <Suspense fallback={<div className="h-10" />}>

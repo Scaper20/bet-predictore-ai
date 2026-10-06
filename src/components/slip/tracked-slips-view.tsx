@@ -36,7 +36,7 @@ export function TrackedSlipsView() {
       <EmptyState
         icon="🧾"
         title="No slips tracked yet"
-        description="Build a slip from the selections you like, then tap “Track this slip”. It shows up here and follows every leg through kickoff, live play and the final whistle."
+        description="Build a slip, then tap “Track this slip”."
         action={
           <ButtonLink href={sportPath("slip")} variant="secondary">
             Go to the selection builder

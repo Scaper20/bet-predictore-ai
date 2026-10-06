@@ -79,14 +79,9 @@ export default function GuidesPage() {
           body: (
             <>
               <p>
-                A bet is good value when its odds are longer than the true chance deserves. Our{" "}
-                <strong className="text-ink">break-even price</strong> is the dividing line: 1 divided by our
-                probability.
+                A bet is good value when its odds are longer than the true chance deserves. Enter your
+                bookmaker&apos;s price on a slip and BetriX rates it for you.
               </p>
-              <Example>
-                We rate over 2.5 goals at 58%: break-even 1.72. At 1.85 it is value; at 1.60 it isn&apos;t, even though
-                it should land more often than not.
-              </Example>
               <p>
                 The best pick isn&apos;t the likeliest one, it&apos;s the one priced most generously. A sure-looking
                 bet at a poor price loses money over time.

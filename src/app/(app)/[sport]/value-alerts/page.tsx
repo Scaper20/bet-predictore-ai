@@ -32,7 +32,7 @@ export default async function ValueAlertsPage() {
       <PageHeader
         eyebrow="VIP"
         title="Value-shift alerts"
-        description="Prices that have moved above fair value. Most days there are few or none — that is the point. A bookmaker priced above fair is rare, and an alert that fired on everything would be worthless."
+        description="Prices that move in your favour."
       />
       <div className={`${containerClass()} space-y-6 py-7 sm:py-10`}>
         {vip ? <AlertsBody /> : <Upsell signedIn={entitlement.signedIn} />}
@@ -67,7 +67,7 @@ async function AlertsBody() {
         <EmptyState
           icon="📉"
           title="No value prices right now"
-          description="Every price we checked is at or below fair value. That is the normal state of a bookmaker's board. Check back later, or watch your inbox."
+          description="Nothing right now. We'll email you when there is."
         />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

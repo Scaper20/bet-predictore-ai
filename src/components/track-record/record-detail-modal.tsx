@@ -1,8 +1,8 @@
 "use client";
 
 import { Badge, Button } from "@/components/ui/primitives";
-import { kickoffDay, kickoffTime, odds, percent } from "@/lib/format";
-import { isModelId, modelById, ACTIVE_MODEL_ID } from "@/lib/model/registry";
+import { kickoffDay, kickoffTime, percent } from "@/lib/format";
+import { isModelId, modelById, LEGACY_MODEL_ID } from "@/lib/model/registry";
 import { useOverlay } from "@/components/ui/use-overlay";
 
 export interface TrackRecordMatch {
@@ -17,6 +17,8 @@ export interface TrackRecordMatch {
   probability: number;
   fair_odds: number;
   model_id: string | null;
+  /** 'strong' / 'standard', stamped before kickoff; null for rows before 0040. */
+  pick_tier?: string | null;
   result: "win" | "lose" | "push" | null;
   actual_home_goals: number | null;
   actual_away_goals: number | null;
@@ -49,7 +51,7 @@ export function RecordDetailModal({
 
   const tone = match.result === "win" ? "brand" : match.result === "lose" ? "rose" : "neutral";
   const family = match.market.split(":")[0];
-  const modelId = match.model_id && isModelId(match.model_id) ? match.model_id : ACTIVE_MODEL_ID;
+  const modelId = match.model_id && isModelId(match.model_id) ? match.model_id : LEGACY_MODEL_ID;
   const model = modelById(modelId);
 
   return (
@@ -126,9 +128,6 @@ export function RecordDetailModal({
             </Tile>
             <Tile label="Model probability" mono>
               {percent(match.probability, 1)}
-            </Tile>
-            <Tile label="Break-even" mono>
-              {odds(match.fair_odds)}
             </Tile>
           </div>
 

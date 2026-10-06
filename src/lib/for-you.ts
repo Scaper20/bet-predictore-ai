@@ -44,6 +44,8 @@ export interface PersonalizedPick {
   href: string;
   homeTeam: string;
   awayTeam: string;
+  homeCrest?: string;
+  awayCrest?: string;
   league: { code: string | null; name: string; shortName: string; flag?: string };
   kickoff: string;
   status: Match["status"];
@@ -143,6 +145,8 @@ export function toPersonalizedPick(
     id: match.id,
     href: `/${sport}/match/${encodeURIComponent(match.id)}`,
     homeTeam: match.home.name,
+    homeCrest: match.home.crest,
+    awayCrest: match.away.crest,
     awayTeam: match.away.name,
     league: {
       code: match.league.code ?? null,

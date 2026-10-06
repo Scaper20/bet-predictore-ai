@@ -60,7 +60,7 @@ export function Features() {
         <SectionHeading
           eyebrow="What you get"
           title="Everything you need to read a match properly"
-          description="Most tipster sites hand you a pick and ask you to trust them. This one hands you the numbers and the sample size behind them."
+          description="The numbers behind every pick."
         />
         <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {FEATURES.map((f) => (
@@ -144,7 +144,7 @@ export function Leagues() {
         <SectionHeading
           eyebrow="Coverage"
           title="The football that matters most in Nigeria"
-          description="Club leagues and Super Eagles football, ordered by how much they actually matter here — not by European convention."
+          description="The big leagues and Super Eagles football."
         />
         {(
           [

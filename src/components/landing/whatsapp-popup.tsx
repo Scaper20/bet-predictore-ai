@@ -12,7 +12,7 @@ const SNOOZE_DAYS = 1; // once per calendar visit-day, not once ever
 const SHOW_DELAY_MS = 6_000;
 const AUTO_DISMISS_MS = 8_000;
 
-/** Same defensive-localStorage shape as feedback-widget.tsx — private
+/** Same defensive-localStorage shape as the old feedback tab — private
  * browsing or a locked-down browser should degrade to "just don't show
  * it again this load," never throw. */
 function isSnoozed(): boolean {
@@ -33,7 +33,7 @@ function snooze() {
   }
 }
 
-// Same reasoning as feedback-widget.tsx: read a browser-only value without
+// Same reasoning as useSlip in src/lib/slip.ts: read a browser-only value without
 // a hydration mismatch by always rendering "not snoozed" on the server.
 function subscribe() {
   return () => {};
@@ -41,7 +41,7 @@ function subscribe() {
 const getServerSnapshot = () => false;
 
 /**
- * A timed popup, not a persistent widget like ChatWidget/FeedbackWidget —
+ * A timed popup, not a persistent widget like ChatWidget —
  * appears once per day, stays for a short window whether or not anyone
  * interacts with it, then closes itself. Renders nothing at all until
  * NEXT_PUBLIC_WHATSAPP_COMMUNITY_URL is set.

@@ -29,6 +29,7 @@ import * as af from "./api-football";
 import * as sdb from "./thesportsdb";
 import * as dbs from "./db-source";
 import { dataLayer, viaLayer } from "./data-layer";
+import { settleStale } from "@/lib/match-status";
 
 /** Lower index wins when the same fixture appears in several feeds. */
 const PRIORITY: ProviderId[] = ["football-data", "api-football", "thesportsdb"];
@@ -141,7 +142,8 @@ export function mergeMatches(groups: Match[][]): Match[] {
       byKey.set(key, enrich(winner, other));
     }
   }
-  return [...byKey.values()].sort(compareMatches);
+  // Last word on status: a feed that never sent full time cannot keep a game live.
+  return [...byKey.values()].map((m) => settleStale(m)).sort(compareMatches);
 }
 
 /** How far through its life a fixture is, as far as one feed knows. */

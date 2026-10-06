@@ -68,7 +68,7 @@ export default async function RatingsPage({ searchParams }: { searchParams: Prom
       <PageHeader
         eyebrow="Model ratings"
         title={national ? "National team ratings" : `${def?.name} ratings`}
-        description="How strong the model rates every side, on a scale of 1 to 10. Built from results alone: beat a strong team and you climb further than beating a weak one."
+        description="Every side rated 1 to 10."
       />
       <div className={`${containerClass()} space-y-6 py-7 sm:py-10`}>
         <Suspense fallback={<div className="h-11" />}>

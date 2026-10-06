@@ -12,17 +12,17 @@ import {
   providerHealth, hasFullCoverage,
 } from "@/lib/providers";
 import { cached } from "@/lib/providers/cache";
-import { buildPrediction, type Prediction } from "@/lib/model/predict";
+import { buildPrediction, type ModelOptions, type Prediction } from "@/lib/model/predict";
 import { after } from "next/server";
 import { archivedResults, storeResults } from "@/lib/archive/history-store";
-import { normaliseKey } from "@/lib/model/fit";
+import { fitLeague, normaliseKey, type LeagueFit } from "@/lib/model/fit";
 import { scoreMatrix, deriveLiveWinProbability } from "@/lib/model/poisson";
 import { writeAnalysis, aiEnabled, type Analysis } from "@/lib/ai/analyst";
 import { isLive } from "@/lib/format";
 import { internationalPool, leagueByCode } from "@/lib/leagues";
 import { sportOrDefault } from "@/lib/sports";
 import { selectFeatured, shortlist, type FeaturedMatch } from "@/lib/featured";
-import { canonicaliseRows, nameBook, nameScope } from "@/lib/teams/canonical";
+import { canonicaliseRows, looseKey, nameBook, nameScope, type NameBook } from "@/lib/teams/canonical";
 
 export interface FixtureFeed {
   matches: Match[];
@@ -72,11 +72,20 @@ export interface MatchDetail {
  * live path stays as the fallback for competitions not yet backfilled, and for
  * any deployment with no Supabase configured at all.
  */
-async function trainingRows(
-  match: Match,
-): Promise<{ rows: ResultRow[]; leagueName: string; curated: boolean }> {
+type Training = { rows: ResultRow[]; leagueName: string; curated: boolean; book?: NameBook };
+
+/**
+ * Training rows per competition, cached for half an hour. Assembling them
+ * (archive reads, the confederation pool for internationals, name linking)
+ * took up to three seconds per competition and ran on every request.
+ */
+async function trainingRows(match: Match): Promise<Training> {
   const code = match.league.code;
   if (!code) return getTrainingResults(match);
+  return cached(`training:${code}`, 30 * 60_000, () => assembleTraining(match, code));
+}
+
+async function assembleTraining(match: Match, code: string): Promise<Training> {
 
   const def = leagueByCode(code);
   const raw = def?.confederation ? await pooledArchive(def) : await archivedResults(code).catch(() => []);
@@ -84,13 +93,14 @@ async function trainingRows(
   // Forest"); the fixture uses the canonical name. Linked here, or a club
   // with years of history fits on none of it.
   const scope = def ? nameScope(def) : null;
-  const archived = scope ? canonicaliseRows(raw, await nameBook(scope)) : raw;
+  const book = scope ? await nameBook(scope) : undefined;
+  const archived = book ? canonicaliseRows(raw, book) : raw;
   // Deep enough to stand on its own; refreshed nightly (archive/refresh.ts).
   if (archived.length >= RICH_ARCHIVE) {
     const leagueName = def?.confederation
       ? `${match.league.name} (rated on all ${def.confederation === "global" ? "national-team" : `${def.confederation} and global`} internationals)`
       : match.league.name;
-    return { rows: archived, leagueName, curated: true };
+    return { rows: archived, leagueName, curated: true, book };
   }
 
   /*
@@ -108,8 +118,42 @@ async function trainingRows(
   }
   const merged = mergeResults(archived, live.rows);
   return merged.length > live.rows.length
-    ? { rows: merged, leagueName: live.leagueName, curated: true }
-    : live;
+    ? { rows: merged, leagueName: live.leagueName, curated: true, book }
+    : { ...live, book };
+}
+
+/**
+ * The fixture's clubs under the names the training rows use. The archive is
+ * canonicalised (canonicaliseRows); a fixture from a feed that spells a club
+ * its own way ("Norwich City FC" for "Norwich") has to be looked up the same
+ * way, or the model finds no history for a club with years of it.
+ */
+function modelOptions(match: Match, training: { rows: ResultRow[]; book?: NameBook }): ModelOptions {
+  const prefit = sharedFit(match, training.rows);
+  const book = training.book;
+  if (!book || book.canonical.size === 0) return { prefit };
+  const name = (n: string) => book.canonical.get(looseKey(n)) ?? n;
+  return { prefit, ratingNames: { home: name(match.home.name), away: name(match.away.name) } };
+}
+
+/**
+ * One fit per competition and training slice, shared by every fixture and
+ * request that uses it. Fitting was the main cost of a page of predictions:
+ * the fit ran once per FIXTURE, so a list of 18 games fitted 18 times.
+ * Keyed on the slice itself (size and newest result), so new results refit.
+ */
+const fits = new Map<string, { at: number; fit: LeagueFit }>();
+const FIT_TTL = 30 * 60_000;
+function sharedFit(match: Match, rows: ResultRow[]): LeagueFit {
+  let newest = 0;
+  for (const r of rows) if (r.date > newest) newest = r.date;
+  const key = `${match.league.code ?? `raw:${match.league.id}`}|${rows.length}|${newest}`;
+  const hit = fits.get(key);
+  if (hit && Date.now() - hit.at < FIT_TTL) return hit.fit;
+  const fit = fitLeague(rows);
+  if (fits.size > 200) fits.clear();
+  fits.set(key, { at: Date.now(), fit });
+  return fit;
 }
 
 /**
@@ -123,7 +167,9 @@ async function trainingRows(
 async function pooledArchive(def: NonNullable<ReturnType<typeof leagueByCode>>): Promise<ResultRow[]> {
   const pool = internationalPool(def);
   const parts = await Promise.all(pool.map((l) => archivedResults(l.code).catch(() => [] as ResultRow[])));
-  return parts.reduce((acc, rows) => mergeResults(acc, rows), [] as ResultRow[]);
+  // One pass over every part: merging pairwise re-keyed the growing pool on
+  // each step, tens of thousands of key computations per request.
+  return mergeResults(parts.flat(), []);
 }
 
 /** Archive depth past which the live feeds add nothing worth a request. */
@@ -162,7 +208,7 @@ export async function matchDetail(id: string): Promise<MatchDetail | null> {
   if (!match) return null;
 
   const [training, h2h] = await Promise.all([trainingRows(match), getH2H(match)]);
-  const prediction = buildPrediction(match, training.rows, h2h);
+  const prediction = buildPrediction(match, training.rows, h2h, modelOptions(match, training));
   const analysis = await writeAnalysis(prediction);
 
   return {
@@ -190,7 +236,7 @@ export async function matchPrediction(id: string): Promise<Prediction | null> {
     const match = await getMatch(id);
     if (!match) return null;
     const [training, h2h] = await Promise.all([trainingRows(match), getH2H(match)]);
-    return buildPrediction(match, training.rows, h2h);
+    return buildPrediction(match, training.rows, h2h, modelOptions(match, training));
   });
 }
 
@@ -243,7 +289,7 @@ export async function liveWinProbability(matchId: string): Promise<LiveProbabili
   if (!match || !isLive(match)) return null;
 
   const training = await trainingRows(match);
-  const prediction = buildPrediction(match, training.rows);
+  const prediction = buildPrediction(match, training.rows, [], modelOptions(match, training));
   const { home: lambda, away: mu } = prediction.markets.expectedGoals;
 
   const elapsedMinutes = elapsedMinutesFor(match);
@@ -268,6 +314,12 @@ export async function liveWinProbability(matchId: string): Promise<LiveProbabili
  */
 export async function predictBatch(matches: Match[], limit = 12): Promise<Prediction[]> {
   const slice = matches.slice(0, limit);
+  // The same slate is asked for by every visitor to a page; five minutes
+  // keeps picks steady while scores and new fixtures still come through.
+  return cached(`batch:${slice.map((m) => m.id).join(",")}`, 5 * 60_000, () => predictSlice(slice));
+}
+
+async function predictSlice(slice: Match[]): Promise<Prediction[]> {
   const byLeague = new Map<string, Match[]>();
   for (const m of slice) {
     const key = m.league.code ?? `raw:${m.league.id}`;
@@ -279,10 +331,10 @@ export async function predictBatch(matches: Match[], limit = 12): Promise<Predic
   const out: Prediction[] = [];
   await Promise.all(
     [...byLeague.values()].map(async (group) => {
-      // One training fetch per competition, reused across its fixtures.
+      // One training fetch and one fit per competition, reused across its fixtures.
       const training = await trainingRows(group[0]);
       for (const m of group) {
-        out.push(buildPrediction(m, training.rows));
+        out.push(buildPrediction(m, training.rows, [], modelOptions(m, training)));
       }
     }),
   );

@@ -1,5 +1,5 @@
 import { CLUB_LEAGUES, INTERNATIONAL_LEAGUES } from "@/lib/leagues";
-import { PASS_OPTIONS, PLANS } from "@/lib/pricing";
+import { PLANS } from "@/lib/pricing";
 import { SITE_URL as SITE } from "@/lib/site-url";
 import { sportPath } from "@/lib/routes";
 
@@ -19,14 +19,11 @@ const naira = (n: number) => `₦${n.toLocaleString("en-NG")}`;
 
 export function GET() {
   const plans = PLANS.map((p) => {
-    const prices =
-      p.id === "pass"
-        ? PASS_OPTIONS.map((o) => `${o.label} ${naira(o.price)}`)
-        : [
-            p.price.monthly && `${naira(p.price.monthly)}/month`,
-            p.price.quarterly && `${naira(p.price.quarterly)}/quarter`,
-            p.price.yearly && `${naira(p.price.yearly)}/year`,
-          ].filter(Boolean);
+    const prices = [
+      p.price.monthly && `${naira(p.price.monthly)}/month`,
+      p.price.quarterly && `${naira(p.price.quarterly)}/quarter`,
+      p.price.yearly && `${naira(p.price.yearly)}/year`,
+    ].filter(Boolean);
     return `- ${p.name} (${prices.length ? prices.join(", ") : "free"}): ${p.description}`;
   });
 
@@ -38,7 +35,8 @@ BetriX is an analytics product, not a bookmaker: it takes no bets and holds no f
 
 ## How the predictions work
 
-- Team attack and defence ratings, home advantage and a low-score correction are fitted by maximum likelihood on each competition's completed results, with recent matches weighted more heavily.
+- Team attack and defence ratings, home advantage and a low-score correction are fitted by maximum likelihood on each competition's completed results (goals blended with shots on target where recorded), with recent matches weighted more heavily.
+- A headline pick is published only when the competition has at least 200 completed matches in the data.
 - The two expected goal rates expand into a full scoreline distribution. 1X2, double chance, over/under, both teams to score, correct score and Asian handicap are all read off that one distribution, so they never contradict each other.
 - Picks are ranked by their edge over what that competition normally does, not by raw probability.
 - National teams are rated on every international in their confederation, and tournament finals are modelled at a neutral venue.

@@ -140,7 +140,7 @@ describe("digest selection", () => {
   it("quotes SportyBet's price when it has one, and never calls a pick value", () => {
     const msg = formatPicksMessage([pick({ bookPrice: 1.72 }), pick({ id: "m2", fairOdds: 1.55, bookPrice: null })]);
     expect(msg).toContain("@1.72 on SportyBet");
-    expect(msg).toContain("@1.55 (fair odds)");
+    expect(msg).toContain("@1.55 (est.)");
     expect(msg.toLowerCase()).not.toContain("value");
   });
 });

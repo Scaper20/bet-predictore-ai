@@ -62,15 +62,45 @@ export interface FitOptions {
   regularisation?: number;
   iterations?: number;
   learningRate?: number;
+  /**
+   * Where a club new to the competition is shrunk toward, in rating units
+   * below league average (applied to attack and defence alike). A club is
+   * "new" when its first match in the sample comes well after the sample
+   * starts — in a domestic league, a promoted side. The pull fades as the
+   * club plays: target = prior * k / (k + appearances), k = NEWCOMER_FADE.
+   * 0 keeps the old behaviour (newcomers start at league average).
+   */
+  newcomerPrior?: number;
+  /**
+   * Share of each team-match's scoring signal taken from shots on target
+   * instead of goals, where the row carries them: the fit's response becomes
+   * (1 - w) * goals + w * shotsOnTarget * conversion, conversion being the
+   * sample's goals per shot on target. Goals are a noisy count of chances
+   * taken; shots on target measure the chances themselves. 0 = goals only.
+   */
+  shotWeight?: number;
 }
 
+/** Appearances at which a newcomer's prior counts half as much as at zero. */
+const NEWCOMER_FADE = 10;
+/** A club first seen this long after the sample starts counts as new. */
+const NEWCOMER_GRACE_MS = 200 * 86_400_000;
+
+/*
+ * goals-v2 defaults, chosen walk-forward on 2024-25 across eight leagues and
+ * confirmed on held-out 2025-26 + 2026-27 (scripts/model-lab.ts): 1X2 log loss
+ * 1.0044 -> 1.0003, O/U 2.5 0.6805 -> 0.6790, headline hit 75.5% -> 76.1%,
+ * return at closing prices -4.55% -> -2.60%. goals-v1 was 180 / 0.02 / 0 / 0.
+ */
 const DEFAULTS: Required<FitOptions> = {
   halfLifeDays: 180,
   /** Per-observation L2 weight; shrinks thin samples toward league average. */
-  regularisation: 0.02,
+  regularisation: 0.01,
   iterations: 200,
   /** Damping on the Newton step — below 1 to keep early iterations stable. */
   learningRate: 0.8,
+  newcomerPrior: 0.2,
+  shotWeight: 0.5,
 };
 
 export function fitLeague(results: ResultRow[], opts: FitOptions = {}): LeagueFit {
@@ -107,6 +137,7 @@ export function fitLeague(results: ResultRow[], opts: FitOptions = {}): LeagueFi
     return i;
   };
 
+  const firstSeen: number[] = [];
   const now = Date.now();
   const decay = Math.log(2) / (cfg.halfLifeDays * 86_400_000);
 
@@ -115,17 +146,26 @@ export function fitLeague(results: ResultRow[], opts: FitOptions = {}): LeagueFi
   const X: number[] = [];
   const Y: number[] = [];
   const W: number[] = [];
+  const SH: (number | undefined)[] = [];
+  const SA: (number | undefined)[] = [];
 
   for (const r of rows) {
     const h = idFor(r.homeId, r.homeName);
     const a = idFor(r.awayId, r.awayName);
     const w = Math.exp(-decay * Math.max(0, now - r.date));
+    if (firstSeen[h] === undefined || r.date < firstSeen[h]) firstSeen[h] = r.date;
+    if (firstSeen[a] === undefined || r.date < firstSeen[a]) firstSeen[a] = r.date;
 
     H.push(h);
     A.push(a);
     X.push(r.homeGoals);
     Y.push(r.awayGoals);
     W.push(w);
+    const sh = r.homeShotsOnTarget;
+    const sa = r.awayShotsOnTarget;
+    const hasShots = Number.isFinite(sh) && Number.isFinite(sa) && (sh as number) >= 0 && (sa as number) >= 0;
+    SH.push(hasShots ? sh : undefined);
+    SA.push(hasShots ? sa : undefined);
 
     played[h]++;
     played[a]++;
@@ -137,6 +177,30 @@ export function fitLeague(results: ResultRow[], opts: FitOptions = {}): LeagueFi
 
   const n = names.length;
   const m = H.length;
+
+  // Response the ratings are fitted to: goals, blended with converted shots on
+  // target where present. X/Y stay the real goals (rho reads those).
+  const XR = X.slice();
+  const YR = Y.slice();
+  if (cfg.shotWeight > 0) {
+    let g = 0;
+    let sot = 0;
+    for (let k = 0; k < m; k++) {
+      if (SH[k] !== undefined && SA[k] !== undefined) {
+        g += X[k] + Y[k];
+        sot += (SH[k] as number) + (SA[k] as number);
+      }
+    }
+    const conversion = sot > 0 ? g / sot : 0;
+    if (conversion > 0) {
+      const w = cfg.shotWeight;
+      for (let k = 0; k < m; k++) {
+        if (SH[k] === undefined || SA[k] === undefined) continue;
+        XR[k] = (1 - w) * X[k] + w * (SH[k] as number) * conversion;
+        YR[k] = (1 - w) * Y[k] + w * (SA[k] as number) * conversion;
+      }
+    }
+  }
 
   if (n === 0 || m === 0) {
     return {
@@ -154,6 +218,19 @@ export function fitLeague(results: ResultRow[], opts: FitOptions = {}): LeagueFi
   const attack = new Float64Array(n);
   const defence = new Float64Array(n);
   let homeAdv = 0.25;
+
+  // Shrinkage targets: league average (0) for established clubs, below it for
+  // clubs that entered the sample late (promoted), fading with appearances.
+  let sampleStart = Number.POSITIVE_INFINITY;
+  for (const t of firstSeen) if (t !== undefined && t < sampleStart) sampleStart = t;
+  const target = new Float64Array(n);
+  if (cfg.newcomerPrior > 0) {
+    for (let i = 0; i < n; i++) {
+      if (firstSeen[i] - sampleStart > NEWCOMER_GRACE_MS) {
+        target[i] = -cfg.newcomerPrior * (NEWCOMER_FADE / (NEWCOMER_FADE + played[i]));
+      }
+    }
+  }
 
   let wSum = 0;
   let goalSum = 0;
@@ -204,8 +281,8 @@ export function fitLeague(results: ResultRow[], opts: FitOptions = {}): LeagueFi
       const lam = Math.exp(intercept + attack[h] - defence[a] + homeAdv);
       const mu = Math.exp(intercept + attack[a] - defence[h]);
 
-      const dx = X[k] - lam;
-      const dy = Y[k] - mu;
+      const dx = XR[k] - lam;
+      const dy = YR[k] - mu;
 
       // Score: d(ll)/d(attack_home) = w * (x - lambda), and symmetrically.
       gAttack[h] += w * dx;
@@ -224,19 +301,19 @@ export function fitLeague(results: ResultRow[], opts: FitOptions = {}): LeagueFi
       hHome += w * lam;
       hBase += w * (lam + mu);
 
-      ll += w * (X[k] * Math.log(Math.max(lam, 1e-12)) - lam);
-      ll += w * (Y[k] * Math.log(Math.max(mu, 1e-12)) - mu);
+      ll += w * (XR[k] * Math.log(Math.max(lam, 1e-12)) - lam);
+      ll += w * (YR[k] * Math.log(Math.max(mu, 1e-12)) - mu);
     }
 
     // L2 shrinkage toward league average, scaled by total weight so it keeps
     // the same strength whatever the sample size. Applied to the ratings only.
     const pen = cfg.regularisation * wSum;
     for (let i = 0; i < n; i++) {
-      gAttack[i] -= pen * attack[i];
-      gDefence[i] -= pen * defence[i];
+      gAttack[i] -= pen * (attack[i] - target[i]);
+      gDefence[i] -= pen * (defence[i] - target[i]);
       hAttack[i] += pen;
       hDefence[i] += pen;
-      ll -= 0.5 * pen * (attack[i] ** 2 + defence[i] ** 2);
+      ll -= 0.5 * pen * ((attack[i] - target[i]) ** 2 + (defence[i] - target[i]) ** 2);
     }
 
     // Diagonal Newton: step = gradient / curvature, damped for stability.
@@ -262,7 +339,10 @@ export function fitLeague(results: ResultRow[], opts: FitOptions = {}): LeagueFi
     recentre(attack);
     recentre(defence);
 
-    if (maxStep < 1e-10) break;
+    // Converged: by here no rating moves by more than 1e-7, which changes no
+    // probability at any displayed precision. Typically ~40 iterations of the
+    // 200 allowed, so this is most of the cost of a fit.
+    if (maxStep < 1e-7) break;
   }
 
   const rho = fitRho(H, A, X, Y, W, attack, defence, homeAdv, intercept);
@@ -346,8 +426,24 @@ function clamp(v: number, lo: number, hi: number): number {
   return Math.min(hi, Math.max(lo, v));
 }
 
+/**
+ * Memo for normaliseKey. The same few hundred club names are normalised
+ * thousands of times per page (form, insights and baselines all scan the
+ * training rows), and each call is a chain of regexes.
+ */
+const keyMemo = new Map<string, string>();
+
 /** Club names differ across feeds, so ratings are keyed on a normalised form. */
 export function normaliseKey(name: string): string {
+  const hit = keyMemo.get(name);
+  if (hit !== undefined) return hit;
+  const key = computeKey(name);
+  if (keyMemo.size > 50_000) keyMemo.clear();
+  keyMemo.set(name, key);
+  return key;
+}
+
+function computeKey(name: string): string {
   return name
     .toLowerCase()
     .normalize("NFD")

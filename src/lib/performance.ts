@@ -1,4 +1,4 @@
-import { ACTIVE_MODEL_ID, isModelId, type ModelId } from "@/lib/model/registry";
+import { isModelId, LEGACY_MODEL_ID, type ModelId } from "@/lib/model/registry";
 
 /**
  * Published performance: how settled picks are tallied, and when a rate is
@@ -30,6 +30,19 @@ export interface SettledRecord {
 
 export interface SettledBreakdown {
   overall: SettledRecord;
+  /**
+   * Strong picks only: rows stamped pick_tier = 'strong' when they were
+   * logged, before kickoff (0040_pick_tier.sql). Rows logged before tiers
+   * existed are never counted here.
+   */
+  strong: SettledRecord;
+  /**
+   * Per model, then per market family / league code. A model card reads only
+   * its own picks: with a retired model beside a live one, the shared
+   * aggregates would credit one with the other's results.
+   */
+  byModelMarket: Map<ModelId, Map<string, SettledRecord>>;
+  byModelLeague: Map<ModelId, Map<string, SettledRecord>>;
   /**
    * Keyed on the league CODE — the catalogue slug, not any provider's display
    * string. See the note on `SettledRow.league_code` for why that distinction
@@ -78,6 +91,8 @@ export interface SettledRow {
   market: string;
   model_id: string | null;
   result: "win" | "lose" | "push";
+  /** Set at logging time from 0040 on; null for earlier rows. */
+  pick_tier?: string | null;
 }
 
 /** True when a rate derived from this record is safe to show. */
@@ -102,6 +117,8 @@ export function summarise(rows: SettledRow[]): SettledBreakdown {
   const byLeague = new Map<string, SettledRow[]>();
   const byMarket = new Map<string, SettledRow[]>();
   const byModel = new Map<ModelId, SettledRow[]>();
+  const byModelMarket = new Map<ModelId, Map<string, SettledRow[]>>();
+  const byModelLeague = new Map<ModelId, Map<string, SettledRow[]>>();
   const uncatalogued: SettledRow[] = [];
 
   for (const row of rows) {
@@ -115,16 +132,27 @@ export function summarise(rows: SettledRow[]): SettledBreakdown {
 
     // Rows written before 0012 have no model_id; they are all goals-v1 by
     // definition, which is exactly what that migration's DEFAULT encodes.
-    const modelId = row.model_id && isModelId(row.model_id) ? row.model_id : ACTIVE_MODEL_ID;
+    const modelId = row.model_id && isModelId(row.model_id) ? row.model_id : LEGACY_MODEL_ID;
     push(byModel, modelId, row);
+    const mm = byModelMarket.get(modelId) ?? new Map<string, SettledRow[]>();
+    push(mm, row.market.split(":")[0], row);
+    byModelMarket.set(modelId, mm);
+    if (row.league_code) {
+      const ml = byModelLeague.get(modelId) ?? new Map<string, SettledRow[]>();
+      push(ml, row.league_code, row);
+      byModelLeague.set(modelId, ml);
+    }
   }
 
   return {
     overall: tally(rows),
+    strong: tally(rows.filter((r) => r.pick_tier === "strong")),
     byLeague: mapValues(byLeague),
     uncatalogued: tally(uncatalogued),
     byMarket: mapValues(byMarket),
     byModel: mapValues(byModel),
+    byModelMarket: new Map([...byModelMarket].map(([k, v]) => [k, mapValues(v)])),
+    byModelLeague: new Map([...byModelLeague].map(([k, v]) => [k, mapValues(v)])),
   };
 }
 

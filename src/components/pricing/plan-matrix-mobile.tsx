@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { Tier } from "@/lib/entitlements";
+import type { PlanTier as Tier } from "@/lib/pricing";
 import { PLANS, PLAN_MATRIX } from "@/lib/pricing";
 
 /**

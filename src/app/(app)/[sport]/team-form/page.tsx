@@ -59,7 +59,7 @@ export default async function TeamFormPage({ searchParams }: { searchParams: Pro
       <PageHeader
         eyebrow="Team form"
         title={`${def.name} form`}
-        description="Each club's last ten league games, newest on the left, ranked by points won. Home and away split out, because plenty of sides are two different teams."
+        description="Last ten league games, newest first."
       />
       <div className={`${containerClass()} space-y-6 py-7 sm:py-10`}>
         <Suspense fallback={<div className="h-11" />}>

@@ -47,7 +47,7 @@ export default async function H2HPage({ searchParams }: { searchParams: Promise<
       <PageHeader
         eyebrow="Head-to-head"
         title={ta && tb ? `${ta.name} v ${tb.name}` : "Head-to-head"}
-        description="Any two teams, every meeting in our records: who wins, how many goals, and the most recent results."
+        description="Any two teams, every meeting."
       />
       <div className={`${containerClass()} space-y-6 py-7 sm:py-10`}>
         <div className="card p-4 sm:p-5">

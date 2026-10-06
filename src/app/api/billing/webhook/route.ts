@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
 import crypto from "node:crypto";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { computePassExpiry } from "@/lib/paystack/pass-window";
+import { computePassExpiry, passLength } from "@/lib/paystack/pass-window";
 import { tierFromPlanCode } from "@/lib/paystack/plan-codes";
-import { passOption } from "@/lib/pricing";
 import { sendEmail } from "@/lib/email";
 import { receiptEmail, subscriptionCanceledEmail } from "@/lib/email-templates";
 import type { Tier } from "@/lib/entitlements";
@@ -109,7 +108,7 @@ export async function POST(request: Request) {
 
       if (metaUserId && metaTier === "pass") {
         // Old checkouts carry no pass length; they were all Weekend passes.
-        const length = passOption(asString(metadata?.pass) ?? "weekend").id;
+        const length = passLength(asString(metadata?.pass));
         const { data: current } = await admin
           .from("subscriptions")
           .select("tier, pass_expires_at")

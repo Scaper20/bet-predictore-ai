@@ -26,7 +26,7 @@ export default async function TrendsPage() {
       <PageHeader
         eyebrow="Trends"
         title="Streaks to know before kick-off"
-        description="Every team playing in the next three days, checked against its last ten games. When a run stands out, it's here in one line, with the game coming up."
+        description="Streaks for teams playing in the next three days."
       />
       <div className={`${containerClass()} space-y-7 py-7 sm:py-10`}>
         {slate && slate.total > 0 && (
@@ -41,7 +41,7 @@ export default async function TrendsPage() {
           <EmptyState
             icon="📈"
             title="No streaks to show yet"
-            description="Streaks appear when the next few days have games and the teams have enough recent results."
+            description="Check back closer to the next games."
             action={<ButtonLink href={sportPath("fixtures")} variant="secondary">Browse fixtures</ButtonLink>}
           />
         ) : (

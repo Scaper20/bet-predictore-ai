@@ -45,7 +45,7 @@ export default async function TablesPage({ searchParams }: { searchParams: Promi
       <PageHeader
         eyebrow="League tables"
         title={`${def.name} table`}
-        description="Standings that move while games are on: a club's row climbs or drops as goals go in, and settles when the official table updates."
+        description="Standings that move as goals go in."
       />
       <div className={`${containerClass()} space-y-6 py-7 sm:py-10`}>
         <Suspense fallback={<div className="h-11" />}>

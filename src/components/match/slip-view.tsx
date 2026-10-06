@@ -136,18 +136,14 @@ function useLivePrices(legs: SlipLeg[], applyFetchedOdds: (prices: Map<string, n
 /**
  * What one leg's price is worth, once the user has entered one.
  *
- * Renders nothing without a price. Break-even is the model's fair odds under a
- * name that says what to do with it: "fair price" reads as a fact about the
- * selection, and worse, as a reassurance that the deal is a fair one. A
- * threshold reads as a threshold.
+ * Renders a prompt without a price. The break-even threshold behind the
+ * verdict stays internal; the user sees the rating, not the arithmetic.
  */
 function LegVerdict({
   verdict,
-  breakEven,
   live,
 }: {
   verdict: ValueVerdict | null;
-  breakEven: number;
   live: LivePrice | undefined;
 }) {
   /*
@@ -182,8 +178,7 @@ function LegVerdict({
   if (!verdict) {
     return (
       <p className="mt-3 border-t border-line pt-3 text-[11px] text-ink-dim">
-        Enter your bookmaker&apos;s price to see whether it beats the{" "}
-        <span className="tnum font-semibold text-ink-muted">{odds(breakEven)}</span> this needs.
+        Enter your bookmaker&apos;s price to rate it.
       </p>
     );
   }
@@ -222,7 +217,7 @@ export function SlipView() {
       <EmptyState
         icon="🧾"
         title="No selections yet"
-        description="Add selections from any match page and this builds the true combined probability — plus what the combined pick is really worth against the price you have been offered."
+        description="Add selections from any match page."
         action={
           <div className="flex flex-wrap justify-center gap-2">
             <ButtonLink href={sportPath("forge")}>Let Forge build one</ButtonLink>
@@ -297,14 +292,10 @@ export function SlipView() {
               </button>
             </div>
 
-            <div className="mt-4 grid grid-cols-3 items-end gap-3">
+            <div className="mt-4 grid grid-cols-2 items-end gap-3">
               <div>
                 <p className="text-[10px] uppercase tracking-wider text-ink-dim">Model</p>
                 <p className="tnum mt-0.5 text-sm font-bold">{percent(l.probability)}</p>
-              </div>
-              <div>
-                <p className="text-[10px] uppercase tracking-wider text-ink-dim">Break-even</p>
-                <p className="tnum mt-0.5 text-sm font-bold">{odds(l.fairOdds)}</p>
               </div>
               <label className="block">
                 <span className="mb-1 block text-[10px] uppercase tracking-wider text-ink-dim">
@@ -319,7 +310,7 @@ export function SlipView() {
                 <input
                   type="text"
                   inputMode="decimal"
-                  placeholder={odds(l.fairOdds)}
+                  placeholder="e.g. 1.85"
                   value={l.bookmakerOdds ?? ""}
                   onChange={(e) => {
                     const n = Number.parseFloat(e.target.value.replace(",", "."));
@@ -332,7 +323,6 @@ export function SlipView() {
 
             <LegVerdict
               verdict={assessValue(l.probability, l.bookmakerOdds)}
-              breakEven={l.fairOdds}
               live={prices.get(legKey(l))}
             />
           </div>
@@ -362,10 +352,11 @@ export function SlipView() {
               </div>
             </div>
 
+            {usingRealOdds && (
             <dl className="grid grid-cols-2 gap-4 border-t border-line pt-4">
               <div>
                 <dt className="text-[10px] uppercase tracking-wider text-ink-dim">
-                  {usingRealOdds ? "Your combined price" : "Combined break-even"}
+                  Your combined price
                 </dt>
                 <dd className="tnum mt-0.5 text-lg font-bold">{odds(acc.decimalOdds)}</dd>
               </div>
@@ -383,6 +374,7 @@ export function SlipView() {
                 </dd>
               </div>
             </dl>
+            )}
 
             {fetchedAny && (
               <p className="text-[11px] leading-relaxed text-ink-dim">
@@ -399,13 +391,7 @@ export function SlipView() {
               </p>
             ) : !usingRealOdds ? (
               <p className="text-[11px] leading-relaxed text-ink-dim">
-                Priced at each leg&apos;s own break-even, so the expected return sits at zero by
-                construction — it cannot tell you anything yet.{" "}
-                {state === "unavailable"
-                  ? "Live prices are not available right now, so enter the prices your bookmaker is actually offering above."
-                  : "These selections are not listed on SportyBet, so enter the prices your bookmaker is actually offering above."}{" "}
-                Any leg priced below its break-even loses money over time however often it
-                lands, and that is the one thing worth knowing before you stake.
+                Enter your bookmaker&apos;s prices above to rate this slip.
               </p>
             ) : (
               worst &&
@@ -414,8 +400,7 @@ export function SlipView() {
                   <Badge tone="rose">Worst leg</Badge>
                   <p className="mt-2 text-[11px] leading-relaxed text-ink-muted">
                     <strong className="font-semibold text-ink">{worst.leg.label}</strong> on{" "}
-                    {worst.leg.fixture} is priced below its break-even. The combined figure above
-                    averages that away; the bet does not.
+                    {worst.leg.fixture} is priced too short.
                   </p>
                 </div>
               )

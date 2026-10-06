@@ -32,6 +32,11 @@ const STATUS: Record<string, string> = {
   CANC: "cancelled", ABD: "cancelled", ABANDONED: "cancelled",
 };
 
+const MAX_IN_PLAY_MS = 4 * 60 * 60 * 1000;
+function staleInPlay(status: string, kickoff: string): boolean {
+  return (status === "live" || status === "halftime") && Date.now() - Date.parse(kickoff) > MAX_IN_PLAY_MS;
+}
+
 function statusOf(raw: string | null | undefined): string | null {
   const s = (raw ?? "").trim().toUpperCase();
   if (STATUS[s]) return STATUS[s];
@@ -89,15 +94,19 @@ Deno.serve(async (req) => {
 
     const ids = events.map((e) => String(e.idEvent));
     const { data: known } = ids.length
-      ? await db.from("matches").select("id, source_ids, status").in("source_ids->>thesportsdb", ids)
-      : { data: [] as { id: string; source_ids: Record<string, string>; status: string }[] };
+      ? await db.from("matches").select("id, source_ids, status, kickoff").in("source_ids->>thesportsdb", ids)
+      : { data: [] as { id: string; source_ids: Record<string, string>; status: string; kickoff: string }[] };
     const byEvent = new Map((known ?? []).map((m) => [m.source_ids.thesportsdb, m]));
 
     let written = 0;
     for (const e of events) {
       const match = byEvent.get(String(e.idEvent));
-      const status = statusOf(e.strStatus ?? e.strProgress);
-      if (!match || !status) continue;
+      const reported = statusOf(e.strStatus ?? e.strProgress);
+      if (!match || !reported) continue;
+      // The feed sometimes never sends full time (Panama v New Zealand stayed
+      // "live" for days). Past MAX_IN_PLAY_MS a game is finished on its last
+      // score. Same cutoff as src/lib/match-status.ts.
+      const status = staleInPlay(reported, match.kickoff) ? "finished" : reported;
       const live = status === "live";
       const { error } = await db.from("matches").update({
         status,
@@ -112,7 +121,7 @@ Deno.serve(async (req) => {
 
     // Games still marked in play that dropped off the feed: ask for their final state.
     const { data: stale } = await db.from("matches")
-      .select("id, source_ids")
+      .select("id, source_ids, kickoff")
       .in("status", ["live", "halftime"])
       .lt("kickoff", new Date(Date.now() - 100 * 60_000).toISOString())
       .limit(10);
@@ -121,9 +130,18 @@ Deno.serve(async (req) => {
       const id = m.source_ids?.thesportsdb;
       if (!id || ids.includes(id)) continue;
       const res = await fetch(`https://www.thesportsdb.com/api/v1/json/${key}/lookupevent.php?id=${id}`);
-      if (!res.ok) continue;
-      const ev = (await res.json()).events?.[0];
-      const status = statusOf(ev?.strStatus);
+      const ev = res.ok ? (await res.json()).events?.[0] : undefined;
+      if (!ev) {
+        // Nothing back from the lookup either: past the cutoff, close it on
+        // the score already stored rather than leave it live forever.
+        if (staleInPlay("live", m.kickoff)) {
+          await db.from("matches").update({ status: "finished", minute: null, updated_at: new Date().toISOString() }).eq("id", m.id);
+          settled++;
+        }
+        continue;
+      }
+      const reported = statusOf(ev?.strStatus);
+      const status = reported && staleInPlay(reported, m.kickoff) ? "finished" : reported;
       if (status && status !== "live" && status !== "halftime") {
         await db.from("matches").update({
           status, minute: null, home_goals: num(ev.intHomeScore), away_goals: num(ev.intAwayScore),

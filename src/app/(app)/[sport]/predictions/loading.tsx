@@ -8,7 +8,7 @@ export default function Loading() {
       <PageHeader
         eyebrow="Predictions"
         title="Today's predictions"
-        description="Each fixture is modelled against its own competition's completed results. Where the history is too thin, no pick is published — that fixture is listed separately below."
+        description="Every game we can rate in the next few days."
       />
       <div className={`${containerClass()} space-y-6 py-7 sm:py-10`}>
         <div className="h-10" />

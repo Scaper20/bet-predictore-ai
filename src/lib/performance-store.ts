@@ -23,6 +23,7 @@ interface RawRow {
   market: string;
   model_id: string | null;
   result: "win" | "lose" | "push";
+  pick_tier?: string | null;
 }
 
 /**
@@ -41,6 +42,7 @@ function toSettledRow(row: RawRow): SettledRow {
     market: row.market,
     model_id: row.model_id,
     result: row.result,
+    pick_tier: row.pick_tier ?? null,
   };
 }
 
@@ -85,6 +87,13 @@ export async function settledRecords(
       if (cutoff) query = query.gte("kickoff", cutoff);
       return query;
     };
+
+    // pick_tier arrives in 0040; until it is applied, read without it and
+    // the Strong record simply starts empty.
+    const withTier = await run("league, league_code, market, model_id, result, pick_tier");
+    if (!withTier.error && withTier.data) {
+      return summarise((withTier.data as unknown as RawRow[]).map(toSettledRow));
+    }
 
     const withCode = await run("league, league_code, market, model_id, result");
     if (!withCode.error && withCode.data) {

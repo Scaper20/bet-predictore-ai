@@ -9,6 +9,7 @@ import {
   ScalableModelPerformance,
   type ModelPerformanceRow,
 } from "@/components/track-record/scalable-model-performance";
+import { TierRecords } from "@/components/track-record/tier-records";
 import { LeaguePerformance } from "@/components/track-record/league-performance";
 import type { TrackRecordMatch } from "@/components/track-record/record-detail-modal";
 import { settledRecords } from "@/lib/performance-store";
@@ -58,12 +59,13 @@ function modelRows(breakdown: Awaited<ReturnType<typeof settledRecords>>): Model
     // Market and league breakdowns are only meaningful for a model that has
     // actually published. Attributing the shared aggregates to a model with no
     // rows would recreate exactly the fiction this replaced.
-    if (model.status !== "live" || !isPublishable(record)) {
+    if (model.status === "development" || !isPublishable(record)) {
       return { model, record, topLeague: null, markets: [] };
     }
 
-    const markets = [...breakdown.byMarket.entries()]
-      .filter(([family, r]) => model.pickTypes.includes(family) && isPublishable(r))
+    // This model's own picks only (a retired model's record sits beside the live one).
+    const markets = [...(breakdown.byModelMarket.get(model.id) ?? new Map()).entries()]
+      .filter(([, r]) => isPublishable(r))
       .map(([family, r]) => ({ family, record: r }))
       .sort((a, b) => b.record.sample - a.record.sample);
 
@@ -71,7 +73,7 @@ function modelRows(breakdown: Awaited<ReturnType<typeof settledRecords>>): Model
     // catalogue too. Before 0013 this rendered best[0] directly, which was
     // whatever the answering provider called the competition — and in
     // practice rendered nothing, because the lookup never matched.
-    const best = [...breakdown.byLeague.entries()]
+    const best = [...(breakdown.byModelLeague.get(model.id) ?? new Map()).entries()]
       .filter(([, r]) => isPublishable(r))
       .sort((a, b) => (b[1].winRate ?? 0) - (a[1].winRate ?? 0))[0];
     const bestLeague = best ? leagueByCode(best[0]) : undefined;
@@ -102,7 +104,7 @@ export default async function TrackRecordPage({ params }: PageProps<"/[sport]/tr
           <EmptyState
             icon="○"
             title="Not available yet"
-            description="The Track Record page needs Supabase configured to store settlement history. Check back soon."
+            description="Check back soon."
           />
         </div>
       </>
@@ -119,7 +121,7 @@ export default async function TrackRecordPage({ params }: PageProps<"/[sport]/tr
           <EmptyState
             icon="○"
             title="No settled picks yet"
-            description="Every headline pick shown across the site is logged automatically and graded once its match finishes. The first results will land here within a day or two."
+            description="First results land within a day or two."
           />
           <ScalableModelPerformance rows={modelRows(breakdown)} />
         </div>
@@ -132,17 +134,17 @@ export default async function TrackRecordPage({ params }: PageProps<"/[sport]/tr
       <PageHeader
         eyebrow="Track Record"
         title="Every published pick, graded"
-        description="The single headline pick shown for each fixture, logged before kickoff and graded automatically against the final score. Nothing here is curated after the fact."
+        description="Every pick, logged before kickoff and graded after."
       />
 
       <div className={`${containerClass()} space-y-10 py-7 sm:py-10`}>
         {/*
-         * No separate overall-stats strip here. It used to duplicate the
-         * live model's own card in ScalableModelPerformance below — the same
-         * win rate, record and graded count, rendered twice on one page.
-         * With one model that is pure repetition; once a second model is
-         * live, "overall" stops being a single meaningful number anyway.
+         * Strong picks first, every pick beside it: the two tiers of the
+         * same log. The model card below breaks the full record down by
+         * market and league.
          */}
+        <TierRecords strong={breakdown.strong} overall={breakdown.overall} />
+
         <ScalableModelPerformance rows={modelRows(breakdown)} />
 
         {/*

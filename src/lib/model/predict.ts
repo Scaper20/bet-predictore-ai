@@ -14,7 +14,7 @@ import {
   deriveAsianHandicap, deriveMarkets, GOAL_LINES, outcomeEntropy, scoreMatrix,
   type AsianHandicapLine, type MarketProbabilities,
 } from "./poisson";
-import { expectedRates, fitLeague, normaliseKey, type LeagueFit, type TeamRating } from "./fit";
+import { expectedRates, fitLeague, normaliseKey, type FitOptions, type LeagueFit, type TeamRating } from "./fit";
 import { fairOdds } from "./odds";
 import { buildInsights, type Insight } from "./insights";
 
@@ -105,10 +105,19 @@ export interface Prediction {
   generatedAt: string;
 }
 
-/** Below this many league matches, a fit is not worth publishing a pick from. */
-export const MIN_PUBLISHABLE_MATCHES = 15;
-/** Below this, the fit works but deserves a visible caveat. */
-export const THIN_SAMPLE = 60;
+/**
+ * Below this many completed matches in the competition, no headline pick.
+ *
+ * Walk-forward, capping the training history at N matches (scripts/backtest.ts
+ * --trainCap): 40 -> 57.6% of picks landed against 71.7% claimed, 80 -> 66.3%,
+ * 120 -> 68.2%, 200 -> 71.0%, 380 -> 73.7%. The live record said the same
+ * thing: picks in competitions trained on the feeds' last 15-35 results landed
+ * 57% against 72% claimed, while the archived leagues landed 70%. goals-v1
+ * published from 15; goals-v2 from 200. Every catalogued league has more.
+ */
+export const MIN_PUBLISHABLE_MATCHES = 200;
+/** Below this, the pick stands but carries a visible caveat. */
+export const THIN_SAMPLE = 400;
 /** Appearances a club needs before its own rating carries real information. */
 export const MIN_TEAM_APPEARANCES = 3;
 
@@ -142,8 +151,8 @@ export function assessSufficiency(
     return {
       level: "insufficient",
       reason:
-        `Only ${matchesUsed} completed ${matchesUsed === 1 ? "match" : "matches"} available for this competition — ` +
-        "not enough history to model this fixture.",
+        `Only ${matchesUsed} completed ${matchesUsed === 1 ? "match" : "matches"} in our data for this competition — ` +
+        `we stand a pick on ${MIN_PUBLISHABLE_MATCHES} or more, so treat these numbers as a rough guide.`,
       publishable: false,
     };
   }
@@ -179,13 +188,35 @@ export function assessSufficiency(
   };
 }
 
+/**
+ * Knobs for experiments (scripts/model-lab.ts). The site always calls
+ * buildPrediction without them, so production runs the shipped defaults.
+ */
+export interface ModelOptions {
+  fit?: FitOptions;
+  /** A fit already computed on exactly `results`, so a backtest can reuse it per matchday. */
+  prefit?: LeagueFit;
+  totalsShrink?: number;
+  /**
+   * The clubs' canonical names, when the fixture spells them differently
+   * ("Norwich City FC" for "Norwich"). Ratings and form are looked up under
+   * these; the fixture keeps its own names for display.
+   */
+  ratingNames?: { home: string; away: string };
+  /** Overrides FAMILY_RELIABILITY entries when ranking the headline pick. */
+  familyReliability?: Record<string, number>;
+  /** Market ids barred from the headline, on top of headlineEligible's rules. */
+  excludeHeadline?: string[];
+}
+
 export function buildPrediction(
   match: Match,
   results: ResultRow[],
   h2hRows: ResultRow[] = [],
+  options: ModelOptions = {},
 ): Prediction {
   const league = match.league.code ? leagueByCode(match.league.code) ?? null : null;
-  const fitted = fitLeague(results);
+  const fitted = options.prefit ?? fitLeague(results, options.fit);
   /*
    * Tournament finals are played at neutral venues, so the fitted home
    * advantage (learned mostly from qualifiers, where it is very real) must not
@@ -195,17 +226,19 @@ export function buildPrediction(
    */
   const neutralVenue = Boolean(league?.neutralVenue);
   const fit = neutralVenue ? { ...fitted, homeAdvantage: 0 } : fitted;
-  const rates = expectedRates(fit, match.home.name, match.away.name);
+  const homeName = options.ratingNames?.home ?? match.home.name;
+  const awayName = options.ratingNames?.away ?? match.away.name;
+  const rates = expectedRates(fit, homeName, awayName);
   const { homeRating, awayRating } = rates;
-  const { lambda, mu } = calibrateTotals(rates.lambda, rates.mu, fit);
+  const { lambda, mu } = calibrateTotals(rates.lambda, rates.mu, fit, options.totalsShrink ?? TOTALS_SHRINK);
 
   const grid = scoreMatrix(lambda, mu, fit.rho);
   const markets = deriveMarkets(grid, lambda, mu);
   const asianHandicap = deriveAsianHandicap(grid);
 
   const form = {
-    home: teamForm(results, match.home.name),
-    away: teamForm(results, match.away.name),
+    home: teamForm(results, homeName),
+    away: teamForm(results, awayName),
   };
   const h2h = summariseH2H(h2hRows, match.home.name);
 
@@ -215,7 +248,7 @@ export function buildPrediction(
   // Ranked against what this competition actually does, not a pooled
   // European constant — see empiricalBaselines.
   const baselines = empiricalBaselines(results);
-  const picks = rankPicks(markets, asianHandicap, dataQuality, uncertainty, baselines);
+  const picks = rankPicks(markets, asianHandicap, dataQuality, uncertainty, baselines, options);
   const sufficiency = assessSufficiency(
     fit.matchesUsed,
     homeRating?.played ?? 0,
@@ -268,11 +301,11 @@ export function buildPrediction(
  */
 export const TOTALS_SHRINK = 0.8;
 
-function calibrateTotals(lambda: number, mu: number, fit: LeagueFit): { lambda: number; mu: number } {
+function calibrateTotals(lambda: number, mu: number, fit: LeagueFit, shrink: number): { lambda: number; mu: number } {
   if (fit.matchesUsed === 0) return { lambda, mu };
   const total = lambda + mu;
   const mean = 2 * fit.observedGoalRate;
-  const target = mean + TOTALS_SHRINK * (total - mean);
+  const target = mean + shrink * (total - mean);
   const scale = target / total;
   return { lambda: lambda * scale, mu: mu * scale };
 }
@@ -310,6 +343,7 @@ function rankPicks(
   dataQuality: number,
   uncertainty: number,
   baselines: Record<string, number>,
+  options: ModelOptions = {},
 ): Pick[] {
   const mk = (
     market: string,
@@ -359,7 +393,7 @@ function rankPicks(
    * competition normally does.
    */
   return picks
-    .map((p) => ({ p, score: pickScore(p, baselines) }))
+    .map((p) => ({ p, score: pickScore(p, baselines, options) }))
     .sort((a, b) => b.score - a.score)
     .map((x) => x.p);
 }
@@ -488,6 +522,9 @@ export const FAMILY_RELIABILITY: Record<string, number> = {
  */
 export const HEADLINE_MAX_PROBABILITY = 0.8;
 
+/** Specific selections barred from the headline; see headlineEligible. */
+export const HEADLINE_EXCLUDED: string[] = [];
+
 /**
  * Markets a headline pick may come from. Both teams to score, correct score
  * and the 0.5/4.5 goal lines are left out: BTTS landed 49% against a claimed
@@ -519,7 +556,7 @@ export function headlineEligible(p: Pick): boolean {
  * by 5-8 points in both, and the return improves too, so this is not simply
  * buying hits with shorter prices. Re-run with `npx tsx scripts/backtest.ts`.
  */
-function pickScore(p: Pick, baselines: Record<string, number>): number {
+function pickScore(p: Pick, baselines: Record<string, number>, options: ModelOptions = {}): number {
   // Handicap lines are constructed to sit near 50/50 by design (that's the
   // point of a handicap), so "edge over a baseline" isn't a meaningful
   // concept the way it is for 1X2/O-U — a line just shy of 50/50 isn't a
@@ -528,18 +565,20 @@ function pickScore(p: Pick, baselines: Record<string, number>): number {
   // directly rather than relying on ranking here.
   if (p.group === "Asian Handicap") return -100;
 
-  const value = valueScore(p, baselines);
+  const value = valueScore(p, baselines, options.familyReliability);
   // Ineligible selections keep their relative order, below every eligible one.
-  if (!headlineEligible(p)) return value - 10;
+  const barred = (options.excludeHeadline ?? HEADLINE_EXCLUDED).includes(p.market);
+  if (!headlineEligible(p) || barred) return value - 10;
   return p.probability + value / 0.6;
 }
 
 /** Edge over the competition's own base rate, discounted by family reliability. */
-function valueScore(p: Pick, baselines: Record<string, number>): number {
+function valueScore(p: Pick, baselines: Record<string, number>, reliabilityOverride?: Record<string, number>): number {
   const baseline = baselines[p.market] ?? (p.group === "Correct Score" ? 0.09 : 0.5);
   // Edge over baseline, discounted by how much of that family's edge has
   // historically survived, then weighted by how confidently the model holds it.
-  const reliability = FAMILY_RELIABILITY[p.market.split(":")[0]] ?? 1;
+  const family = p.market.split(":")[0];
+  const reliability = reliabilityOverride?.[family] ?? FAMILY_RELIABILITY[family] ?? 1;
   const edge = (p.probability - baseline) * reliability;
   // Very long shots are excluded from the headline pick however big the edge.
   if (p.probability < 0.35) return edge * 0.15;

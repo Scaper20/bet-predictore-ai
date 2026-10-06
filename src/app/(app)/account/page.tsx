@@ -175,7 +175,7 @@ export default async function AccountPage() {
         <SectionHeading
           eyebrow="Preferences"
           title="Your feed and your details"
-          description="Everything here shapes what you see first."
+          description="Shapes what you see first."
         />
         <div className="mt-6 grid gap-6 lg:grid-cols-[1.4fr_1fr] lg:items-start">
           <div className="card p-5 sm:p-7">
@@ -192,7 +192,7 @@ export default async function AccountPage() {
         <SectionHeading
           eyebrow="Notifications"
           title="On this device"
-          description="Set separately on each phone or computer you use BetriX on."
+          description="Set per device."
         />
         <div className="card mt-6 max-w-2xl p-5 sm:p-7">
           <NotificationControls showValueAlerts={isVip} />

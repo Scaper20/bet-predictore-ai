@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { StrongBadge } from "@/components/ui/strong-badge";
 import { Badge, Button } from "@/components/ui/primitives";
 import { kickoffDay, percent } from "@/lib/format";
 import { leagueByProviderName } from "@/lib/leagues";
@@ -35,6 +36,8 @@ export function TrackRecordInteractive({ rows }: { rows: TrackRecordMatch[] }) {
   const [selected, setSelected] = useState<TrackRecordMatch | null>(null);
   const [expanded, setExpanded] = useState(false);
   const [league, setLeague] = useState<string>(ALL);
+  const [strongOnly, setStrongOnly] = useState(false);
+  const anyStrong = rows.some((r) => r.pick_tier === "strong");
 
   const competitions = useMemo(() => {
     const counts = new Map<string, { label: string; n: number }>();
@@ -48,8 +51,11 @@ export function TrackRecordInteractive({ rows }: { rows: TrackRecordMatch[] }) {
   }, [rows]);
 
   const filtered = useMemo(
-    () => (league === ALL ? rows : rows.filter((r) => groupOf(r).key === league)),
-    [rows, league],
+    () =>
+      rows.filter(
+        (r) => (league === ALL || groupOf(r).key === league) && (!strongOnly || r.pick_tier === "strong"),
+      ),
+    [rows, league, strongOnly],
   );
 
   const visible = expanded ? filtered : filtered.slice(0, INITIAL_LIMIT);
@@ -71,6 +77,25 @@ export function TrackRecordInteractive({ rows }: { rows: TrackRecordMatch[] }) {
         {/* One control, not the two differently-labelled copies of the same
             toggle that used to bracket this list. */}
         <div className="flex flex-wrap items-center gap-2">
+          {anyStrong && (
+            <div className="inline-flex rounded-lg border border-line bg-surface-2 p-0.5 text-xs font-semibold" role="radiogroup" aria-label="Which picks">
+              {([false, true] as const).map((v) => (
+                <button
+                  key={String(v)}
+                  type="button"
+                  role="radio"
+                  aria-checked={strongOnly === v}
+                  onClick={() => {
+                    setStrongOnly(v);
+                    setExpanded(false);
+                  }}
+                  className={`min-h-8 rounded-md px-3 transition-colors ${strongOnly === v ? "bg-brand text-brand-ink" : "text-ink-muted hover:text-ink"}`}
+                >
+                  {v ? "Strong" : "All"}
+                </button>
+              ))}
+            </div>
+          )}
           {competitions.length > 1 && (
             <label className="flex items-center gap-2 text-xs text-ink-muted">
               <span className="sr-only">Filter by competition</span>
@@ -123,6 +148,7 @@ export function TrackRecordInteractive({ rows }: { rows: TrackRecordMatch[] }) {
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2 text-xs text-ink-muted">
+                    {row.pick_tier === "strong" && <StrongBadge />}
                     <span className="font-semibold text-brand">{row.league}</span>
                     <span aria-hidden>·</span>
                     <span>{kickoffDay(row.kickoff)}</span>
@@ -163,3 +189,4 @@ export function TrackRecordInteractive({ rows }: { rows: TrackRecordMatch[] }) {
     </section>
   );
 }
+

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { DocPage, DocCard, Example } from "@/components/guides/doc-page";
+import { DocPage, DocCard } from "@/components/guides/doc-page";
 import { scoreMatrix } from "@/lib/model/poisson";
 import { sportPath } from "@/lib/routes";
 
@@ -28,7 +28,7 @@ export default function HowItWorksPage() {
             Every published pick is logged before kick-off and marked won or lost after the final whistle.
           </DocCard>
           <DocCard title="New to betting terms?" href="/guides" cta="Read the guides">
-            What 1X2, GG, double chance and break-even odds mean, with examples.
+            What 1X2, GG and double chance mean, with examples.
           </DocCard>
         </>
       }
@@ -64,7 +64,8 @@ export default function HowItWorksPage() {
               <ul className="list-disc space-y-1.5 pl-5">
                 <li><strong className="text-ink">Recent games count more.</strong> A result loses half its weight every six months or so, because squads and form change.</li>
                 <li><strong className="text-ink">Home advantage is measured</strong> for each competition, not assumed, and switched off at neutral-venue tournaments.</li>
-                <li><strong className="text-ink">Small samples are pulled to the middle.</strong> A newly promoted side with three games doesn&apos;t get an extreme rating from one lucky win.</li>
+                <li><strong className="text-ink">Chances count, not just goals.</strong> Where the data records shots on target, half of each rating comes from the chances a team creates and allows, because goals alone are a noisy count of which chances went in.</li>
+                <li><strong className="text-ink">Small samples are pulled to the middle.</strong> A newly promoted side with three games doesn&apos;t get an extreme rating from one lucky win, and starts a little below average, where promoted sides usually are.</li>
                 <li><strong className="text-ink">National teams</strong> play too few games in one competition, so they are rated on every international in their confederation plus the World Cup and friendlies.</li>
               </ul>
             </>
@@ -96,13 +97,15 @@ export default function HowItWorksPage() {
             <>
               <p>We only publish a pick when the history behind it is deep enough:</p>
               <ul className="list-disc space-y-1.5 pl-5">
-                <li>at least <strong className="text-ink">15 finished games</strong> in the competition, and</li>
+                <li>at least <strong className="text-ink">200 finished games</strong> in the competition, and</li>
                 <li>at least <strong className="text-ink">3 games for each team</strong> in that sample.</li>
               </ul>
               <p>
                 Below that the game is still listed, marked &ldquo;not enough history&rdquo;, with no pick. When the
-                sample clears the bar but is still thin, the pick is labelled as a guide. We would rather show nothing
-                than a confident number built on a handful of games.
+                sample clears the bar but is under 400 games, the pick is labelled as a guide. We tested this: on 40
+                games of history, picks landed 58% of the time against the 72% they claimed; on 200 they landed 71%,
+                and on 400 they matched their claims. We would rather show nothing than a confident number built on a
+                handful of games.
               </p>
             </>
           ),
@@ -123,22 +126,17 @@ export default function HowItWorksPage() {
           ),
         },
         {
-          id: "break-even",
-          title: "5. The price a pick needs",
+          id: "strong",
+          title: "5. Strong picks",
           body: (
             <>
               <p>
-                Next to every pick is a <strong className="text-ink">break-even price</strong>: the odds at which the
-                bet neither makes nor loses money over time. It is simply 1 divided by the probability.
+                When the model is most sure of a pick (a high chance, plenty of history and a clear favourite), it is
+                marked <strong className="text-ink">★ Strong</strong>. That is decided before kick-off and never changed
+                after. Tested on two past seasons the model never saw, Strong picks were about one in six and landed
+                about 80% of the time, against about 76% for the rest.
               </p>
-              <Example>
-                We give a home win a 62.5% chance. Break-even is 1 ÷ 0.625 = <strong>1.60</strong>. If your bookmaker
-                offers 1.75, the bet is worth taking; at 1.50 it loses money over time, however often it lands.
-              </Example>
-              <p>
-                That is the question that matters: not &ldquo;will this land?&rdquo; but &ldquo;is the price long
-                enough?&rdquo;. Match pages show live bookmaker prices next to ours where we have them.
-              </p>
+              <p>Strong picks have their own record on the track record page, beside the record for every pick.</p>
             </>
           ),
         },
@@ -148,7 +146,7 @@ export default function HowItWorksPage() {
           body: (
             <>
               <p>
-                Every headline pick is written to a log before kick-off with its probability and price, and graded
+                Every headline pick is written to a log before kick-off with its probability, and graded
                 automatically against the final score. Nothing is edited or deleted afterwards. The{" "}
                 <Link href={sportPath("trackRecord")} className="font-semibold text-brand hover:underline">track record</Link>{" "}
                 shows all of it, wins and losses, by league and by market.

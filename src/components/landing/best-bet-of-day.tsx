@@ -3,8 +3,10 @@ import type { Prediction } from "@/lib/model/predict";
 import { Crest } from "@/components/ui/crest";
 import { SplitBar } from "@/components/stats/split-bar";
 import { AnimatedNumber } from "@/components/motion/animated-number";
-import { kickoffTime, odds, relativeDay } from "@/lib/format";
+import { kickoffTime, relativeDay } from "@/lib/format";
 import { matchPath } from "@/lib/routes";
+import { isStrong } from "@/lib/model/tiers";
+import { StrongBadge } from "@/components/ui/strong-badge";
 
 /**
  * The one deep pick given away free, no login. Headline numbers only — the
@@ -51,10 +53,10 @@ export function BestBetOfDay({ prediction }: { prediction: Prediction | null }) 
         <div>
           <p className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-ink-dim">Our pick</p>
           <p className="mt-1 text-base font-bold text-ink sm:text-lg">{topPick.label}</p>
+          {isStrong(topPick) && <StrongBadge className="mt-1.5" />}
         </div>
         <div className="sm:mt-3">
           <AnimatedNumber value={topPick.probability * 100} decimals={1} suffix="%" className="font-display text-3xl font-extrabold text-brand" />
-          <p className="tnum text-[11px] text-ink-dim">worth it at {odds(topPick.fairOdds)}+</p>
         </div>
       </div>
     </Link>

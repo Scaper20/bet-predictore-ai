@@ -43,7 +43,7 @@ export function Faq({ groups }: { groups: FaqGroup[] }) {
           type="search"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Search: payments, passes, predictions, Forge…"
+          placeholder="Search: payments, predictions, Forge…"
           className="w-full rounded-2xl border border-line bg-surface px-12 py-4 text-base text-ink outline-none transition-colors placeholder:text-ink-dim focus:border-brand/50"
         />
       </label>

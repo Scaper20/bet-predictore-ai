@@ -87,4 +87,7 @@ export interface ResultRow {
   /** Epoch ms — drives recency weighting in the fit. */
   date: number;
   leagueId: string;
+  /** Shots on target, where the source records them (football-data.co.uk). */
+  homeShotsOnTarget?: number;
+  awayShotsOnTarget?: number;
 }

@@ -282,7 +282,7 @@ function predictionSummary(p: Prediction, tier: AskTier) {
             avg_goals: odds2(p.h2h.avgGoals),
           }
         : null,
-    ...(tier === "free" ? { note: "Asian handicap lines are for Pass members and above." } : {}),
+    ...(tier === "free" ? { note: "Asian handicap lines are for Pro members." } : {}),
   };
 }
 

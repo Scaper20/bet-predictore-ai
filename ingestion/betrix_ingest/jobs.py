@@ -400,6 +400,7 @@ def job_backfill_football_data_uk(ctx: Context, seasons: int = 25, odds_seasons:
             results = [{
                 "league_code": lg.code, "kickoff": m.kickoff.isoformat(), "home_name": m.home, "away_name": m.away,
                 "home_goals": m.home_goals, "away_goals": m.away_goals, "source": "football-data-uk",
+                "home_shots_on_target": m.home_shots_on_target, "away_shots_on_target": m.away_shots_on_target,
             } for m in matches]
             r.rows_written += ctx.db.rpc("upsert_historical_results", {"p_rows": results}) or 0
             odds_from = datetime(current - odds_seasons + 1, 7, 1, tzinfo=timezone.utc)
