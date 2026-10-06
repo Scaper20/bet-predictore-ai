@@ -7,6 +7,8 @@ import { Morph, morphName } from "@/components/motion/morph";
 import { matchPath } from "@/lib/routes";
 import { isStrong } from "@/lib/model/tiers";
 import { StrongBadge } from "@/components/ui/strong-badge";
+import { LockedSelection, ProTag } from "@/components/entitlements/locked-pick";
+import type { ViewedPrediction } from "@/lib/access";
 
 /**
  * A fixture's read at a glance: each side's chance and the one selection
@@ -17,9 +19,12 @@ import { StrongBadge } from "@/components/ui/strong-badge";
  * is, and a second scale out of 100 next to a percentage read as a second
  * probability.
  */
-export function PredictionCard({ prediction, morph = true }: { prediction: Prediction; morph?: boolean }) {
+export function PredictionCard({ prediction, morph = true }: { prediction: Prediction | ViewedPrediction; morph?: boolean }) {
   const { match, markets, topPick, sufficiency } = prediction;
   const publishable = sufficiency.publishable && topPick;
+  // Free viewers get every match, but non-1X2 picks and markets arrive
+  // already locked from the server (lib/access.ts); the card only shows it.
+  const locked = "locked" in prediction ? prediction.locked : { pick: false, markets: false };
 
   return (
     // min-w-0: a grid item defaults to its min-content width, which let a
@@ -46,9 +51,17 @@ export function PredictionCard({ prediction, morph = true }: { prediction: Predi
                 <p className="flex items-center gap-2 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-ink-dim">
                   Our pick {isStrong(topPick) && <StrongBadge />}
                 </p>
-                <p className="mt-0.5 truncate text-[15px] font-semibold text-ink">{topPick.label}</p>
+                {locked.pick ? (
+                  <LockedSelection group={topPick.group} className="mt-0.5 text-[15px] font-semibold text-ink" />
+                ) : (
+                  <p className="mt-0.5 truncate text-[15px] font-semibold text-ink">{topPick.label}</p>
+                )}
               </div>
-              <p className="tnum shrink-0 text-[15px] font-bold text-brand">{percent(topPick.probability)}</p>
+              {locked.pick ? (
+                <ProTag />
+              ) : (
+                <p className="tnum shrink-0 text-[15px] font-bold text-brand">{percent(topPick.probability)}</p>
+              )}
             </div>
           ) : (
             <p className="text-xs text-ink-dim">
@@ -70,11 +83,17 @@ export function PredictionCard({ prediction, morph = true }: { prediction: Predi
         </summary>
         <div className="space-y-3 px-4 pb-4 sm:px-5">
           <SplitBar home={markets.home} draw={markets.draw} away={markets.away} />
-          <div className="flex flex-wrap gap-1.5">
-            <Chip label="xG" value={markets.expectedGoals.total.toFixed(1)} />
-            <Chip label="Over 2.5" value={percent(markets.over["2.5"])} hot={markets.over["2.5"] >= 0.6} />
-            <Chip label="GG" value={percent(markets.bttsYes)} hot={markets.bttsYes >= 0.6} />
-          </div>
+          {locked.markets ? (
+            <p className="flex items-center gap-2 text-[11px] text-ink-dim">
+              <ProTag /> Goals, both-teams-to-score and every other market
+            </p>
+          ) : (
+            <div className="flex flex-wrap gap-1.5">
+              <Chip label="xG" value={markets.expectedGoals.total.toFixed(1)} />
+              <Chip label="Over 2.5" value={percent(markets.over["2.5"])} hot={markets.over["2.5"] >= 0.6} />
+              <Chip label="GG" value={percent(markets.bttsYes)} hot={markets.bttsYes >= 0.6} />
+            </div>
+          )}
           {publishable && sufficiency.level === "limited" && (
             <p className="text-[11px] text-amber">Thin data · treat as a guide</p>
           )}

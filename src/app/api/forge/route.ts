@@ -4,7 +4,7 @@ import { getPreferences } from "@/lib/preferences";
 import { leagueByCode } from "@/lib/leagues";
 import { claimGuest, guestIdentity, guestUsed, refundGuest } from "@/lib/ask/guest";
 import { buildForgeSlip } from "@/lib/forge-feed";
-import { FORGE_FREE_DAILY, FORGE_GUEST_TOTAL, FORGE_PAID_DAILY, parseForgeRequest } from "@/lib/forge";
+import { FORGE_FREE_DAILY, FORGE_GUEST_TOTAL, FORGE_PAID_DAILY, marketsForPlan, parseForgeRequest } from "@/lib/forge";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -123,7 +123,9 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await buildForgeSlip(settings, state, { allowHandicap: paid, leagueCodes });
+    // Free plan: 1X2 only, enforced here whatever the request asks for.
+    const planSettings = { ...settings, markets: marketsForPlan(settings.markets, paid) };
+    const result = await buildForgeSlip(planSettings, state, { allowHandicap: paid, leagueCodes });
     if (result.legs.length === 0) {
       await refund();
       return json(

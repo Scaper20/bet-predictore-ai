@@ -5,6 +5,8 @@ import { Badge, LiveDot, ProbabilityBar } from "@/components/ui/primitives";
 import { isLive, kickoffTime, percent, relativeDay, statusLabel } from "@/lib/format";
 import { Crest } from "@/components/ui/crest";
 import { matchPath } from "@/lib/routes";
+import { isLockedPick } from "@/lib/access";
+import { ProTag } from "@/components/entitlements/locked-pick";
 
 /** Compact fixture row used on the live and fixtures lists. */
 export function MatchCard({ match, prediction }: { match: Match; prediction?: Prediction }) {
@@ -77,9 +79,8 @@ export function MatchCard({ match, prediction }: { match: Match; prediction?: Pr
             <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-dim">
               Model read
             </span>
-            {prediction.topPick && (
-              <Badge tone="brand">{prediction.topPick.label}</Badge>
-            )}
+            {prediction.topPick &&
+              (isLockedPick(prediction.topPick) ? <ProTag /> : <Badge tone="brand">{prediction.topPick.label}</Badge>)}
           </div>
           <div className="grid grid-cols-3 gap-2">
             {(() => {

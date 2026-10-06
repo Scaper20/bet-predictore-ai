@@ -5,6 +5,7 @@ import { aiEnabled } from "@/lib/ai/analyst";
 import { ASK_SYSTEM_PROMPT } from "@/lib/ask/prompt";
 import { ASK_TOOLS, runTool, toolStatus, type AskTier } from "@/lib/ask/tools";
 import { claimGuest, guestIdentity, guestUsed, refundGuest } from "@/lib/ask/guest";
+import { viewerForTier } from "@/lib/viewer";
 import {
   ASK_FREE_DAILY,
   ASK_GUEST_TOTAL,
@@ -86,6 +87,7 @@ export async function POST(request: Request) {
   const entitlement = await getEntitlement();
   const paid = meets(entitlement.tier, "pass");
   const tier: AskTier = paid ? "paid" : "free";
+  const viewer = await viewerForTier(entitlement.tier);
   const unavailable = { type: "error", code: "unavailable", message: "Ask BetriX isn't available right now. Try again shortly." } as const;
 
   let used: number;
@@ -226,6 +228,7 @@ export async function POST(request: Request) {
             toolUses.map(async (use): Promise<Anthropic.Beta.BetaToolResultBlockParam> => {
               const outcome = await runTool(use.name, use.input, {
                 tier,
+                viewer,
                 onPicks: (picks) => {
                   answered = true;
                   send({ type: "picks", picks });

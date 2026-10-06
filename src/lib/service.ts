@@ -23,6 +23,7 @@ import { internationalPool, leagueByCode } from "@/lib/leagues";
 import { sportOrDefault } from "@/lib/sports";
 import { selectFeatured, shortlist, type FeaturedMatch } from "@/lib/featured";
 import { canonicaliseRows, looseKey, nameBook, nameScope, type NameBook } from "@/lib/teams/canonical";
+import { isStrong } from "@/lib/model/tiers";
 
 export interface FixtureFeed {
   matches: Match[];
@@ -411,6 +412,25 @@ export async function bestBetOfDay(): Promise<Prediction | null> {
     );
     return ranked[0];
   });
+}
+
+/**
+ * The one Strong pick free viewers can see (src/lib/access.ts), by match id.
+ *
+ * The most confident Strong pick among games from the next two days that
+ * have not finished, chosen once and cached so every page, API and push
+ * agrees on which one it is. When its game ends the next one takes over.
+ */
+export async function freeStrongPickId(): Promise<string | null> {
+  return cached("free-strong-pick", 10 * 60_000, async () => {
+    const { matches } = await upcomingFeed(2);
+    const live = matches.filter((m) => m.status !== "finished" && m.status !== "cancelled" && m.status !== "postponed");
+    const predictions = await predictBatch(live, 30);
+    const strong = predictions
+      .filter((p) => p.sufficiency.publishable && p.topPick && isStrong(p.topPick))
+      .sort((a, b) => (b.topPick?.confidence ?? 0) - (a.topPick?.confidence ?? 0));
+    return strong[0]?.match.id ?? null;
+  }).catch(() => null);
 }
 
 /**

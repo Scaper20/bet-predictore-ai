@@ -16,6 +16,8 @@ import { containerClass } from "@/components/ui/container";
 import { sportPath } from "@/lib/routes";
 import { isStrong } from "@/lib/model/tiers";
 import Link from "next/link";
+import { getViewer } from "@/lib/viewer";
+import { viewPrediction } from "@/lib/access";
 
 /**
  * One title per league view. Without this every ?league= variant shared the
@@ -61,10 +63,17 @@ export default async function PredictionsPage({
   const def = league ? leagueByCode(league) : undefined;
 
   const feed = await upcomingFeed(5, def ? league : undefined).catch(() => null);
-  const predictions = feed ? await predictBatch(feed.matches, 18).catch(() => []) : [];
-  // Slate-wide, so only pinned on the unfiltered view — under a specific
-  // league filter it could point somewhere the visitor didn't ask to see.
-  const bestBet = def ? null : await bestBetOfDay().catch(() => null);
+  const [rawPredictions, rawBest, viewer] = await Promise.all([
+    feed ? predictBatch(feed.matches, 18).catch(() => []) : Promise.resolve([]),
+    // Slate-wide, so only pinned on the unfiltered view — under a specific
+    // league filter it could point somewhere the visitor didn't ask to see.
+    def ? Promise.resolve(null) : bestBetOfDay().catch(() => null),
+    getViewer(),
+  ]);
+  // Locked picks and markets are stripped here, on the server, for a free
+  // viewer (lib/access.ts): every match still shows.
+  const predictions = rawPredictions.map((p) => viewPrediction(p, viewer));
+  const bestBet = rawBest ? viewPrediction(rawBest, viewer) : null;
 
   /*
    * Followed competitions float to the top of the unfiltered view.
