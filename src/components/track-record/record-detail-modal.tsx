@@ -17,6 +17,8 @@ export interface TrackRecordMatch {
   probability: number;
   fair_odds: number;
   model_id: string | null;
+  /** 'strong' / 'standard', stamped before kickoff; null for rows before 0040. */
+  pick_tier?: string | null;
   result: "win" | "lose" | "push" | null;
   actual_home_goals: number | null;
   actual_away_goals: number | null;

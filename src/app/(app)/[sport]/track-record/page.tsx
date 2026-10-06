@@ -9,6 +9,7 @@ import {
   ScalableModelPerformance,
   type ModelPerformanceRow,
 } from "@/components/track-record/scalable-model-performance";
+import { TierRecords } from "@/components/track-record/tier-records";
 import { LeaguePerformance } from "@/components/track-record/league-performance";
 import type { TrackRecordMatch } from "@/components/track-record/record-detail-modal";
 import { settledRecords } from "@/lib/performance-store";
@@ -138,12 +139,12 @@ export default async function TrackRecordPage({ params }: PageProps<"/[sport]/tr
 
       <div className={`${containerClass()} space-y-10 py-7 sm:py-10`}>
         {/*
-         * No separate overall-stats strip here. It used to duplicate the
-         * live model's own card in ScalableModelPerformance below — the same
-         * win rate, record and graded count, rendered twice on one page.
-         * With one model that is pure repetition; once a second model is
-         * live, "overall" stops being a single meaningful number anyway.
+         * Strong picks first, every pick beside it: the two tiers of the
+         * same log. The model card below breaks the full record down by
+         * market and league.
          */}
+        <TierRecords strong={breakdown.strong} overall={breakdown.overall} />
+
         <ScalableModelPerformance rows={modelRows(breakdown)} />
 
         {/*

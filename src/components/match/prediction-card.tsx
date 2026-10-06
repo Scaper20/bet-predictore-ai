@@ -5,6 +5,8 @@ import { Crest } from "@/components/ui/crest";
 import { SplitBar } from "@/components/stats/split-bar";
 import { Morph, morphName } from "@/components/motion/morph";
 import { matchPath } from "@/lib/routes";
+import { isStrong } from "@/lib/model/tiers";
+import { StrongBadge } from "@/components/ui/strong-badge";
 
 /**
  * A fixture's read at a glance: each side's chance and the one selection
@@ -41,7 +43,9 @@ export function PredictionCard({ prediction, morph = true }: { prediction: Predi
           {publishable ? (
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-ink-dim">Our pick</p>
+                <p className="flex items-center gap-2 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-ink-dim">
+                  Our pick {isStrong(topPick) && <StrongBadge />}
+                </p>
                 <p className="mt-0.5 truncate text-[15px] font-semibold text-ink">{topPick.label}</p>
               </div>
               <p className="tnum shrink-0 text-[15px] font-bold text-brand">{percent(topPick.probability)}</p>

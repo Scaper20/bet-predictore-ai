@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { upcomingFeed, predictBatch } from "@/lib/service";
 import { runSettlementPass } from "@/lib/settlement-runner";
 import { modelIdForMarket } from "@/lib/model/router";
+import { pickTier } from "@/lib/model/tiers";
 import { refreshArchive } from "@/lib/archive/refresh";
 
 // Runs the football providers and Supabase's service-role client — both
@@ -47,7 +48,12 @@ export async function GET(request: Request) {
 }
 
 async function logUpcomingPicks(admin: ReturnType<typeof supabaseAdmin>): Promise<number> {
-  const { matches } = await upcomingFeed(2);
+  const { matches: feed } = await upcomingFeed(2);
+  // Only games that have not started. The upsert below overwrites by match
+  // id, so a game already under way must never be re-logged: its pick and
+  // tier are frozen at the last pre-kickoff run.
+  const now = Date.now();
+  const matches = feed.filter((m) => m.status === "scheduled" && Date.parse(m.kickoff) > now);
   if (matches.length === 0) return 0;
 
   const predictions = await predictBatch(matches, matches.length);
@@ -74,6 +80,10 @@ async function logUpcomingPicks(admin: ReturnType<typeof supabaseAdmin>): Promis
       // without this line changing. The column default only exists to
       // backfill rows written before 0012.
       model_id: modelIdForMarket(p.topPick!.market),
+      // Fixed before kickoff, like everything else on the row; the Strong
+      // record is only honest because nothing decides a tier after a result.
+      confidence: Math.round(p.topPick!.confidence),
+      pick_tier: pickTier(p.topPick!.confidence),
     }));
 
   if (rows.length === 0) return 0;

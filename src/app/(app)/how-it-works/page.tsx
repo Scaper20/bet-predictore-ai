@@ -126,8 +126,23 @@ export default function HowItWorksPage() {
           ),
         },
         {
+          id: "strong",
+          title: "5. Strong picks",
+          body: (
+            <>
+              <p>
+                When the model is most sure of a pick (a high chance, plenty of history and a clear favourite), it is
+                marked <strong className="text-ink">★ Strong</strong>. That is decided before kick-off and never changed
+                after. Tested on two past seasons the model never saw, Strong picks were about one in six and landed
+                about 80% of the time, against about 76% for the rest.
+              </p>
+              <p>Strong picks have their own record on the track record page, beside the record for every pick.</p>
+            </>
+          ),
+        },
+        {
           id: "honesty",
-          title: "5. Keeping ourselves honest",
+          title: "6. Keeping ourselves honest",
           body: (
             <>
               <p>

@@ -9,6 +9,8 @@ import { useSlip } from "@/lib/slip";
 import { kickoffDay, kickoffTime, percent } from "@/lib/format";
 import { sportPath } from "@/lib/routes";
 import { Crest } from "@/components/ui/crest";
+import { isStrong } from "@/lib/model/tiers";
+import { StrongBadge } from "@/components/ui/strong-badge";
 import { CommentThread, LoveButton, useSocialCounts } from "@/components/for-you/pick-social";
 
 /**
@@ -322,6 +324,7 @@ function PickRow({
       >
         <div className="flex items-center gap-2 text-xs text-ink-muted">
           {badge && <Badge tone="brand">{badge}</Badge>}
+          {isStrong(pick) && <StrongBadge />}
           <span aria-hidden>{pick.league.flag}</span>
           <span className="truncate">{pick.league.shortName}</span>
           <span aria-hidden>·</span>

@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Badge, ButtonLink, LiveDot } from "@/components/ui/primitives";
 import { Crest } from "@/components/ui/crest";
+import { isStrong } from "@/lib/model/tiers";
+import { StrongBadge } from "@/components/ui/strong-badge";
 import { matchPath, sportPath } from "@/lib/routes";
 import {
   BttsPanel, CorrectScorePanel, DoubleChancePanel, GoalsPanel,
@@ -300,7 +302,9 @@ function Overview({
 
         {pick && prediction.sufficiency.publishable ? (
           <section className="orbit-border card rounded-2xl p-5 sm:p-6">
-            <p className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-ink-dim">Our strongest read</p>
+            <p className="flex items-center gap-2 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-ink-dim">
+              Our pick {isStrong(pick) && <StrongBadge />}
+            </p>
             <div className="mt-2 flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
               <p className="font-display text-2xl font-bold text-ink sm:text-3xl">{pick.label}</p>
               <div className="text-right">

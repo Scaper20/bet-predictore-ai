@@ -95,6 +95,11 @@ const GROUPS: FaqGroup[] = [
         a: <A>The competition, or one of the teams, doesn&apos;t have enough finished games behind it to trust the numbers. We list the game but don&apos;t publish a pick rather than guess.</A>,
       },
       {
+        q: "What is a Strong pick?",
+        text: "strong pick star banker confident safest",
+        a: <A>Our most confident picks, about one game in six, marked ★ Strong before kick-off. In testing on past seasons they landed about 4 times in 5, against about 3 in 4 for all picks. They come at shorter odds, and they still lose sometimes. The <L href={sportPath("trackRecord")}>track record</L> shows the Strong record on its own, next to every pick.</A>,
+      },
+      {
         q: "How accurate are you?",
         text: "accuracy track record win rate",
         a: <A>Every pick is logged before kick-off and graded after. The <L href={sportPath("trackRecord")}>track record</L> shows all of it, by league and market, wins and losses alike.</A>,

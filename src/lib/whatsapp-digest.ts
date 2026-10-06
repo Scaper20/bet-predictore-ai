@@ -2,6 +2,7 @@ import { odds, percent, kickoffTime } from "@/lib/format";
 import { SITE_URL } from "@/lib/site-url";
 import type { PersonalizedPick } from "@/lib/for-you";
 import { headlineEligible, type Pick, type Prediction } from "@/lib/model/predict";
+import { isStrong } from "@/lib/model/tiers";
 
 /* ------------------------------------------------------------ Selection */
 
@@ -164,9 +165,9 @@ export function formatPicksMessage(picks: PersonalizedPick[]): string {
   const lines = shown.map((p) => {
     const q = quotedPrice(p);
     return (
-      `⚽ ${p.league.shortName}\n` +
+      `${isStrong(p) ? "⭐ STRONG PICK · " : "⚽ "}${p.league.shortName}\n` +
       `${p.homeTeam} vs ${p.awayTeam} — ${kickoffTime(p.kickoff)}\n` +
-      `*${p.label}* @${odds(q.price)}${q.source === "SportyBet" ? " on SportyBet" : " (fair odds)"}\n` +
+      `*${p.label}* @${odds(q.price)}${q.source === "SportyBet" ? " on SportyBet" : " (est.)"}\n` +
       `${percent(p.probability)} chance · based on ${p.matchesUsed} matches`
     );
   });
@@ -185,7 +186,7 @@ export function formatAccaMessage(acca: DigestAcca): string {
   );
   const headline = acca.combinedBookPrice
     ? `*${acca.label} acca — @${odds(acca.combinedBookPrice)} on SportyBet*`
-    : `*${acca.label} acca — @${odds(acca.combinedFairOdds)} fair odds*`;
+    : `*${acca.label} acca — @${odds(acca.combinedFairOdds)} (est.)*`;
   return [
     headline,
     ...legLines,

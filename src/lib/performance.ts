@@ -31,6 +31,12 @@ export interface SettledRecord {
 export interface SettledBreakdown {
   overall: SettledRecord;
   /**
+   * Strong picks only: rows stamped pick_tier = 'strong' when they were
+   * logged, before kickoff (0040_pick_tier.sql). Rows logged before tiers
+   * existed are never counted here.
+   */
+  strong: SettledRecord;
+  /**
    * Per model, then per market family / league code. A model card reads only
    * its own picks: with a retired model beside a live one, the shared
    * aggregates would credit one with the other's results.
@@ -85,6 +91,8 @@ export interface SettledRow {
   market: string;
   model_id: string | null;
   result: "win" | "lose" | "push";
+  /** Set at logging time from 0040 on; null for earlier rows. */
+  pick_tier?: string | null;
 }
 
 /** True when a rate derived from this record is safe to show. */
@@ -138,6 +146,7 @@ export function summarise(rows: SettledRow[]): SettledBreakdown {
 
   return {
     overall: tally(rows),
+    strong: tally(rows.filter((r) => r.pick_tier === "strong")),
     byLeague: mapValues(byLeague),
     uncatalogued: tally(uncatalogued),
     byMarket: mapValues(byMarket),
