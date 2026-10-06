@@ -325,6 +325,44 @@ export function picksFor(matches: Match[]): Promise<Map<string, LoggedPick>> {
   }).catch(() => new Map());
 }
 
+export interface DayPick {
+  matchId: string;
+  league: string;
+  kickoff: string;
+  home: string;
+  away: string;
+  label: string;
+  result: string | null;
+  score: { home: number | null; away: number | null };
+}
+
+/**
+ * Every pick we logged for games kicking off in this window, whether or not
+ * the game is one the results page lists. Picks in competitions outside the
+ * stored fixtures (USL, U21s) still count toward the day's record.
+ */
+export function picksBetween(start: Date, end: Date, league?: string): Promise<DayPick[]> {
+  return cached(`stats:daypicks:${start.toISOString()}:${league ?? "*"}`, 2 * 60_000, async () => {
+    const c = await client();
+    let q = c.from("predictions_log")
+      .select("match_id, league, league_code, kickoff, home_name, away_name, label, result, actual_home_goals, actual_away_goals")
+      .gte("kickoff", start.toISOString()).lt("kickoff", end.toISOString());
+    if (league) q = q.eq("league_code", league);
+    const { data, error } = await q.order("kickoff").limit(500);
+    if (error) throw error;
+    return (data ?? []).map((r) => ({
+      matchId: r.match_id as string,
+      league: r.league as string,
+      kickoff: r.kickoff as string,
+      home: r.home_name as string,
+      away: r.away_name as string,
+      label: r.label as string,
+      result: (r.result as string | null) ?? null,
+      score: { home: (r.actual_home_goals as number | null) ?? null, away: (r.actual_away_goals as number | null) ?? null },
+    }));
+  }).catch(() => []);
+}
+
 export function playedBetween(start: Date, end: Date, league?: string): Promise<Match[]> {
   return cached(`stats:played:${start.toISOString()}:${league ?? "*"}`, 2 * 60_000, async () => {
     const { MATCH_SELECT, rowToMatch } = await import("@/lib/providers/db-source");

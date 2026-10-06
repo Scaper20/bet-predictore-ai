@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Public_Sans, Big_Shoulders, JetBrains_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { SITE_URL as SITE } from "@/lib/site-url";
 import { JsonLd } from "@/components/seo/json-ld";
 import { ServiceWorkerRegister } from "@/components/pwa/service-worker-register";
@@ -150,6 +151,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <ServiceWorkerRegister />
         <MaintenanceWatcher />
         <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

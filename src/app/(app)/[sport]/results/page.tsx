@@ -11,7 +11,7 @@ import { ButtonLink, EmptyState } from "@/components/ui/primitives";
 import { APP_TIMEZONE, appDayBounds } from "@/lib/format";
 import { groupLiveMatches } from "@/lib/live-board";
 import { leagueByCode } from "@/lib/leagues";
-import { picksFor, playedBetween, type LoggedPick } from "@/lib/stats/queries";
+import { picksBetween, picksFor, playedBetween, type DayPick, type LoggedPick } from "@/lib/stats/queries";
 import { sportPath } from "@/lib/routes";
 
 export async function generateMetadata({ searchParams }: { searchParams: Promise<{ league?: string }> }): Promise<Metadata> {
@@ -39,7 +39,14 @@ export default async function ResultsPage({ searchParams }: { searchParams: Prom
   const { start, end } = appDayBounds(now, -offset);
 
   const matches = await playedBetween(start, end, def?.code).catch(() => []);
-  const picks = await picksFor(matches).catch(() => new Map<string, LoggedPick>());
+  const [picks, dayPicks] = await Promise.all([
+    picksFor(matches).catch(() => new Map<string, LoggedPick>()),
+    picksBetween(start, end, def?.code),
+  ]);
+  // Picks on games this page does not list (competitions outside the stored
+  // fixtures). They still count toward the day, and get their own card.
+  const shownIds = new Set([...picks.values()].map((p) => p.matchId));
+  const unlisted = dayPicks.filter((p) => !shownIds.has(p.matchId));
   const groups = groupLiveMatches(matches).map((g) => ({
     ...g,
     matches: [...g.matches].sort((a, b) => Date.parse(a.kickoff) - Date.parse(b.kickoff)),
@@ -47,7 +54,7 @@ export default async function ResultsPage({ searchParams }: { searchParams: Prom
 
   const finished = matches.filter((m) => m.status === "finished");
   const goals = finished.reduce((n, m) => n + (m.score.home ?? 0) + (m.score.away ?? 0), 0);
-  const graded = [...picks.values()].filter((p) => p.result === "win" || p.result === "lose");
+  const graded = [...[...picks.values()], ...unlisted].filter((p) => p.result === "win" || p.result === "lose");
   const won = graded.filter((p) => p.result === "win").length;
 
   const qs = (o: number) => {
@@ -95,14 +102,14 @@ export default async function ResultsPage({ searchParams }: { searchParams: Prom
           </div>
         </div>
 
-        {groups.length === 0 ? (
+        {groups.length === 0 && unlisted.length === 0 ? (
           <EmptyState
             icon="🏁"
             title="No results on this day"
             description={def ? `No ${def.shortName} games finished on this day.` : "No game in the competitions we cover finished on this day."}
             action={<ButtonLink href={sportPath("fixtures")} variant="secondary">See upcoming fixtures</ButtonLink>}
           />
-        ) : (
+        ) : groups.length === 0 ? null : (
           <div className="stagger gap-5 lg:columns-2 [&>*]:mb-5 [&>*]:break-inside-avoid">
             {groups.map((g, gi) => (
               <div key={g.key} style={{ ["--i" as string]: gi }}>
@@ -122,8 +129,39 @@ export default async function ResultsPage({ searchParams }: { searchParams: Prom
             ))}
           </div>
         )}
+
+        {unlisted.length > 0 && <OtherPicks picks={unlisted} />}
       </div>
     </>
+  );
+}
+
+/** Our picks on games outside the competitions listed above. */
+function OtherPicks({ picks }: { picks: DayPick[] }) {
+  return (
+    <section className="card overflow-hidden">
+      <h2 className="border-b border-line px-4 py-3 text-sm font-semibold sm:px-5">More of our picks</h2>
+      <ul className="divide-y divide-line">
+        {picks.map((p) => (
+          <li key={p.matchId} className="px-4 py-3 sm:px-5">
+            <div className="flex items-center justify-between gap-3 text-sm">
+              <span className="min-w-0 truncate">
+                <span className="font-semibold text-ink">{p.home}</span>
+                <span className="text-ink-dim"> v </span>
+                <span className="font-semibold text-ink">{p.away}</span>
+              </span>
+              {p.score.home !== null && p.score.away !== null && (
+                <span className="tnum shrink-0 font-bold">
+                  {p.score.home}–{p.score.away}
+                </span>
+              )}
+            </div>
+            <p className="mt-0.5 truncate text-[11px] text-ink-dim">{p.league}</p>
+            <PickLine pick={{ matchId: p.matchId, label: p.label, result: p.result }} />
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
