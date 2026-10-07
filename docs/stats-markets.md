@@ -1,8 +1,11 @@
 # Corners, cards, shots and more goal markets
 
-Status: model built and tested walk-forward (October 2026). Not on the site
-yet: the live database stores goals and shots on target only, so corners,
-cards and shots need new columns and a backfill first (see "To ship").
+Status: model built and tested walk-forward (October 2026). The database
+now stores corners, cards, shots and referees (0049), the archive job fills
+them nightly, and `src/lib/stat-markets-service.ts` computes every market
+for a fixture. Nothing is shown on the site yet; only the admin endpoint
+`/api/admin/stat-markets/[id]` returns them, for checking against real
+fixtures before release.
 
 ## What was built
 
@@ -115,6 +118,52 @@ Win either half is underconfident (72.6% claimed, 78.2% landed at 65%+):
 the halves are treated as independent and they are not quite. A calibration
 step would fix it before it is published.
 
+## The low-skill goal markets, researched (scripts/goal-shape-lab.ts)
+
+GG2+, goal ranges, exact total, odd/even, a goal in both halves and
+second-half BTTS depend on the SHAPE of the total-goals distribution rather
+than on who is stronger. Six versions were tested walk-forward, tuned on
+2019-22 and scored on 2022-27 (12,207 matches):
+
+| Market | Today's model | Shared-goal (bivariate) | Spread totals (NB) | Shrunk total | Market total | Market ceiling |
+|---|---|---|---|---|---|---|
+| GG2+ | 0.61% | 0.66% | 0.65% | 0.63% | 1.18% | 1.18% |
+| Multi-goal 1-3 | 0.81% | 0.77% | 0.77% | 0.70% | 1.27% | 1.28% |
+| Multi-goal 2-3 | 0.18% | 0.09% | 0.10% | 0.15% | 0.26% | 0.26% |
+| Exact total | 0.85% | 0.76% | 0.75% | 0.77% | 1.49% | 1.52% |
+| Odd total | 0.08% | 0.06% | 0.06% | 0.08% | 0.09% | 0.06% |
+| Goal in both halves | 0.82% | 0.82% | 0.82% | 0.73% | 1.63% | 1.63% |
+| BTTS 2nd half | 0.36% | 0.36% | 0.36% | 0.39% | 0.46% | 0.56% |
+| Over 2.5 (reference) | 1.37% | 1.32% | 1.30% | 1.21% | 2.69% | 2.69% |
+
+"Market total" sets the expected goals from the closing over/under 2.5
+price and keeps the model's split between the sides; "market ceiling"
+solves both expected goals from the closing 1X2 and over/under prices.
+
+What it says:
+
+- No change to the model's shape helps. Correlated scoring, a wider spread
+  of totals and a damped total all score the same or worse. The model's
+  shape is right; what it lacks is information.
+- The closing market roughly doubles every one of these markets, and
+  blending the model's total into the market's (any weight) adds nothing:
+  for totals, the market already knows what the model knows, plus team
+  news, line-ups and money.
+- Even with the market's full prices, the ceiling is 1-1.6% for most of
+  these and about 0.1% for odd/even. They are close to lotteries for
+  everyone, bookmakers included. Odd/even is pure noise.
+- The same is true of over/under 2.5, which is a headline market today:
+  1.4% from the model against 2.7% with the market's total.
+
+So: show these as probabilities, never as picks; and if a live over/under
+price is available, the expected TOTAL should come from it (the model keeps
+the split). Caveat: these are closing prices, the sharpest there are;
+prices taken earlier in the day carry less, so the gain on the site would
+be smaller than the table shows. Taking the total from the market also
+means an over/under "pick" can no longer disagree with the bookmaker on the
+total, which is the point of a value pick, so it is a choice between
+sharper probabilities and independent picks.
+
 ## Verdict
 
 - **Ship as Pro probabilities:** shots and shots on target (every market),
@@ -122,8 +171,9 @@ step would fix it before it is published.
   team cards, and the goal markets with 3%+ skill above.
 - **Show, never pick:** corner totals, GG2+, goal ranges, exact total,
   odd/even, goal in both halves, second-half BTTS. They are calibrated (an
-  honest probability) but barely better than the base rate, so a "pick" on
-  them would be the league average dressed up.
+  honest probability) but barely better than the base rate, and the
+  research below shows even the betting market barely beats it, so a
+  "pick" on them would be the league average dressed up.
 - **Not possible yet:** first-half / second-half corners, cards and shots.
   The source has no half-time counts, so there is nothing to fit or test a
   split on. A share guess (corners about 45% before the break, cards about
