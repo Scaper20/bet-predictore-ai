@@ -5,6 +5,10 @@
   ],
   "crons": [
     {
+      "path": "/api/cron/refresh-archive",
+      "schedule": "30 2 * * *"
+    },
+    {
       "path": "/api/cron/settle-predictions",
       "schedule": "0 3 * * *"
     },

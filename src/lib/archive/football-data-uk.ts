@@ -34,6 +34,15 @@ export interface ArchiveRow {
   /** Shots on target, where the file records them (per-division files only). */
   homeShotsOnTarget?: number;
   awayShotsOnTarget?: number;
+  /** Corners, cards (yellow + red, one each) and shots, per-division files only. */
+  homeCorners?: number;
+  awayCorners?: number;
+  homeCards?: number;
+  awayCards?: number;
+  homeShots?: number;
+  awayShots?: number;
+  /** Named in the English divisions' files. */
+  referee?: string;
 }
 
 /** Splits a CSV line, honouring the quoted fields the referee column uses. */
@@ -97,6 +106,13 @@ export function parseDivisionCsv(body: string, leagueCode: string): ArchiveRow[]
   if (iDate < 0 || iHome < 0 || iAway < 0 || iHg < 0 || iAg < 0) return [];
   const iHst = at("HST");
   const iAst = at("AST");
+  const col = (name: string) => at(name);
+  const stat = (f: string[], i: number) => {
+    const v = i >= 0 ? f[i]?.trim() : "";
+    return v && /^\d+$/.test(v) ? Number(v) : undefined;
+  };
+  const iHc = col("HC"), iAc = col("AC"), iHy = col("HY"), iAy = col("AY"), iHr = col("HR"), iAr = col("AR");
+  const iHs = col("HS"), iAs = col("AS"), iRef = col("Referee");
 
   const rows: ArchiveRow[] = [];
   for (const line of lines.slice(1)) {
@@ -110,6 +126,23 @@ export function parseDivisionCsv(body: string, leagueCode: string): ArchiveRow[]
       row.homeShotsOnTarget = Number(hst);
       row.awayShotsOnTarget = Number(ast);
     }
+    const hc = stat(f, iHc), ac = stat(f, iAc);
+    if (hc !== undefined && ac !== undefined) {
+      row.homeCorners = hc;
+      row.awayCorners = ac;
+    }
+    const hy = stat(f, iHy), ay = stat(f, iAy), hr = stat(f, iHr), ar = stat(f, iAr);
+    if (hy !== undefined && ay !== undefined && hr !== undefined && ar !== undefined) {
+      row.homeCards = hy + hr;
+      row.awayCards = ay + ar;
+    }
+    const hs = stat(f, iHs), as = stat(f, iAs);
+    if (hs !== undefined && as !== undefined) {
+      row.homeShots = hs;
+      row.awayShots = as;
+    }
+    const ref = iRef >= 0 ? f[iRef]?.trim() : "";
+    if (ref) row.referee = ref.slice(0, 60);
     rows.push(row);
   }
   return rows;

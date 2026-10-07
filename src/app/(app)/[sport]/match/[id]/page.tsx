@@ -26,6 +26,7 @@ import { LiveWinProbabilityPanel } from "@/components/match/live-win-probability
 import { Gate } from "@/components/entitlements/gate";
 import { DepthGate } from "@/components/entitlements/depth-gate";
 import { JsonLd } from "@/components/seo/json-ld";
+import { refereeFor } from "@/lib/archive/referees";
 import { freeViewer, matchDetail } from "@/lib/service";
 import { viewPrediction, type ViewedPrediction } from "@/lib/access";
 import { MatchAccessProvider, ProMarkets } from "@/components/match/match-access";
@@ -140,7 +141,11 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   // (lib/access.ts) and nothing locked reaches the HTML; MatchAccessProvider
   // fetches the viewer's own view and unlocks what their plan allows.
   const prediction = viewPrediction(detail.prediction, await freeViewer());
-  const ctx = await matchContext(match).catch((): MatchContext => ({ teamIds: { home: null, away: null }, home: null, away: null, table: null }));
+  const [ctx, referee] = await Promise.all([
+    matchContext(match).catch((): MatchContext => ({ teamIds: { home: null, away: null }, home: null, away: null, table: null })),
+    // Named for the English divisions about a week ahead (archive/referees.ts).
+    refereeFor(match).catch(() => null),
+  ]);
   const live = isLive(match);
   const label = `${match.home.name} v ${match.away.name}`;
 
@@ -243,7 +248,11 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
             <div className="mx-auto mt-6 max-w-xl sm:mt-8">
               <div className="mb-2 flex items-center justify-between text-[10.5px] font-semibold uppercase tracking-[0.12em] text-ink-dim">
                 <span>Model&apos;s read</span>
-                {match.venue && <span className="truncate pl-3 normal-case tracking-normal">{match.venue}</span>}
+                {(match.venue || referee) && (
+                  <span className="truncate pl-3 normal-case tracking-normal">
+                    {[match.venue, referee && `Referee: ${referee}`].filter(Boolean).join(" · ")}
+                  </span>
+                )}
               </div>
               <SplitBar home={prediction.markets.home} draw={prediction.markets.draw} away={prediction.markets.away} size="lg" />
             </div>

@@ -72,68 +72,93 @@ export async function archivedResults(leagueCode: string): Promise<ResultRow[]> 
 }
 
 /**
- * Adds completed matches to the archive, skipping any it already holds.
+ * Adds completed matches to the archive, and fills in statistics on ones it
+ * already holds.
  *
- * The natural key is an expression index (league, kickoff date, home, away),
- * which PostgREST cannot name as an upsert target, so duplicates are filtered
- * here against what is already stored in the same date range before inserting.
- * Returns how many rows were new. Never throws: a failed write only means the
- * archive grows a day later.
+ * Through upsert_historical_results (0049), keyed on (league, kickoff date,
+ * home, away): a new game is inserted; a stored one gets its score refreshed
+ * and any corners, cards, shots, shots on target or referee it was missing.
+ * A row without a statistic never erases one another source recorded.
+ * Returns how many rows were written. Never throws: a failed write only means
+ * the archive grows a day later.
  */
 export async function storeResults(rows: ArchiveRow[], source: string): Promise<number> {
   const admin = supabaseAdminOrNull();
   if (!admin || rows.length === 0) return 0;
 
-  const key = (league: string, kickoff: number, home: string, away: string) =>
-    `${league}|${new Date(kickoff).toISOString().slice(0, 10)}|${home}|${away}`;
+  const payload = rows.map((r) => ({
+    league_code: r.leagueCode,
+    kickoff: new Date(r.kickoff).toISOString(),
+    home_name: r.homeName,
+    away_name: r.awayName,
+    home_goals: r.homeGoals,
+    away_goals: r.awayGoals,
+    home_shots_on_target: r.homeShotsOnTarget ?? null,
+    away_shots_on_target: r.awayShotsOnTarget ?? null,
+    home_corners: r.homeCorners ?? null,
+    away_corners: r.awayCorners ?? null,
+    home_cards: r.homeCards ?? null,
+    away_cards: r.awayCards ?? null,
+    home_shots: r.homeShots ?? null,
+    away_shots: r.awayShots ?? null,
+    referee: r.referee ?? null,
+    source,
+  }));
 
-  let added = 0;
-  const byLeague = new Map<string, ArchiveRow[]>();
-  for (const r of rows) {
-    const list = byLeague.get(r.leagueCode) ?? [];
-    list.push(r);
-    byLeague.set(r.leagueCode, list);
+  let written = 0;
+  for (let i = 0; i < payload.length; i += 500) {
+    const { data, error } = await admin.rpc("upsert_historical_results", { p_rows: payload.slice(i, i + 500) });
+    if (error) console.error("archive upsert failed:", error.message);
+    else written += typeof data === "number" ? data : 0;
   }
+  return written;
+}
 
-  for (const [league, list] of byLeague) {
-    const from = Math.min(...list.map((r) => r.kickoff)) - 86_400_000;
-    const to = Math.max(...list.map((r) => r.kickoff)) + 86_400_000;
-    const { data: existing, error } = await admin
+/** One finished match's counts, for the corners/cards/shots model. */
+export interface StatRow {
+  date: number;
+  homeName: string;
+  awayName: string;
+  corners?: [number, number];
+  cards?: [number, number];
+  shots?: [number, number];
+  shotsOnTarget?: [number, number];
+  referee?: string;
+}
+
+/**
+ * The last ~1,000 days of a competition's results that carry statistics
+ * (football-data.co.uk divisions). Empty for competitions without them.
+ */
+export async function archivedStatRows(leagueCode: string): Promise<StatRow[]> {
+  return cached(`archive-stats:${leagueCode}`, 60 * 60_000, async () => {
+    const supabase = supabasePublic();
+    if (!supabase) return [];
+    const since = new Date(Date.now() - 1000 * 86_400_000).toISOString();
+    const { data, error } = await supabase
       .from("historical_results")
-      .select("kickoff, home_name, away_name")
-      .eq("league_code", league)
-      .gte("kickoff", new Date(from).toISOString())
-      .lte("kickoff", new Date(to).toISOString())
-      .limit(5000);
-    if (error) continue;
-
-    const seen = new Set(
-      (existing ?? []).map((e) => key(league, Date.parse(e.kickoff as string), e.home_name as string, e.away_name as string)),
-    );
-    const fresh: Record<string, unknown>[] = [];
-    for (const r of list) {
-      const k = key(league, r.kickoff, r.homeName, r.awayName);
-      if (seen.has(k)) continue;
-      seen.add(k);
-      fresh.push({
-        league_code: league,
-        kickoff: new Date(r.kickoff).toISOString(),
-        home_name: r.homeName,
-        away_name: r.awayName,
-        home_goals: r.homeGoals,
-        away_goals: r.awayGoals,
-        home_shots_on_target: r.homeShotsOnTarget ?? null,
-        away_shots_on_target: r.awayShotsOnTarget ?? null,
-        source,
-      });
-    }
-    for (let i = 0; i < fresh.length; i += 500) {
-      const { error: insertError } = await admin.from("historical_results").insert(fresh.slice(i, i + 500));
-      if (insertError) console.error(`archive insert ${league} failed:`, insertError.message);
-      else added += Math.min(500, fresh.length - i);
-    }
-  }
-  return added;
+      .select(
+        "kickoff, home_name, away_name, home_corners, away_corners, home_cards, away_cards, home_shots, away_shots, home_shots_on_target, away_shots_on_target, referee",
+      )
+      .eq("league_code", leagueCode)
+      .gte("kickoff", since)
+      .not("home_corners", "is", null)
+      .order("kickoff", { ascending: false })
+      .limit(MAX_ROWS * 2);
+    if (error || !data) return [];
+    const pair = (a: unknown, b: unknown): [number, number] | undefined =>
+      typeof a === "number" && typeof b === "number" ? [a, b] : undefined;
+    return data.map((r) => ({
+      date: Date.parse(r.kickoff as string),
+      homeName: r.home_name as string,
+      awayName: r.away_name as string,
+      corners: pair(r.home_corners, r.away_corners),
+      cards: pair(r.home_cards, r.away_cards),
+      shots: pair(r.home_shots, r.away_shots),
+      shotsOnTarget: pair(r.home_shots_on_target, r.away_shots_on_target),
+      referee: (r.referee as string | null) ?? undefined,
+    }));
+  });
 }
 
 function supabaseAdminOrNull() {
