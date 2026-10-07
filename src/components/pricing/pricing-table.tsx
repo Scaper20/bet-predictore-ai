@@ -42,7 +42,7 @@ export function PricingTable({
     <div className="grid gap-4 md:grid-cols-3 sm:gap-6">
       {ordered.map((plan) => {
         const current = currentTier === plan.id;
-        // A plan not sold on the chosen cycle (VIP quarterly) shows monthly.
+        // A plan not sold on the chosen cycle shows monthly.
         const cycle: BillingCycle = plan.price[interval] !== undefined ? interval : "monthly";
         const recurring = plan.price.monthly !== undefined;
         const saving = recurring ? cycleSaving(plan, cycle) : null;

@@ -5,14 +5,14 @@ import { passLength } from "./paystack/pass-window";
 describe("plan pricing", () => {
   it("prices the new structure", () => {
     expect(planById("pro").price).toEqual({ monthly: 5000, quarterly: 13500, yearly: 48000 });
-    expect(planById("vip").price).toEqual({ monthly: 12000, yearly: 115200 });
+    expect(planById("vip").price).toEqual({ monthly: 12000, quarterly: 32400, yearly: 115200 });
   });
 
   it("computes what a longer cycle saves against monthly", () => {
     expect(cycleSaving(planById("pro"), "quarterly")).toEqual({ amount: 1500, percent: 10 });
     expect(cycleSaving(planById("pro"), "yearly")).toEqual({ amount: 12000, percent: 20 });
     expect(cycleSaving(planById("vip"), "yearly")).toEqual({ amount: 28800, percent: 20 });
-    expect(cycleSaving(planById("vip"), "quarterly")).toBeNull();
+    expect(cycleSaving(planById("vip"), "quarterly")).toEqual({ amount: 3600, percent: 10 });
   });
 
   it("no longer sells or compares the pass", () => {

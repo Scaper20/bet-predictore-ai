@@ -15,6 +15,7 @@ const PLAN_ENV: Record<"pro" | "vip", Partial<Record<BillingCycle, string>>> = {
   },
   vip: {
     monthly: "PAYSTACK_VIP_MONTHLY_PLAN_CODE",
+    quarterly: "PAYSTACK_VIP_QUARTERLY_PLAN_CODE",
     yearly: "PAYSTACK_VIP_YEARLY_PLAN_CODE",
   },
 };
