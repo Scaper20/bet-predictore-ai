@@ -8,7 +8,10 @@ Strong picks or the track record.
 `src/lib/model/halves.ts`. Each side's full-match expected goals are split
 between the halves by the first-half goal share (44.3%, measured across eight
 leagues), tilted toward the stronger side (each team's share × (its rate /
-opponent's)^0.1). Each half is an independent Poisson grid. No new ratings.
+opponent's)^0.1). The second half is tilted the same way (since October
+2026; before, it got whatever the first half left, which made the
+second-half result too flat: see docs/stats-markets.md, win either half).
+Each half is an independent Poisson grid. No new ratings.
 
 ## Test
 `scripts/halves-lab.ts`: walk-forward over football-data.co.uk half-time

@@ -25,7 +25,7 @@
 import { buildPrediction } from "../src/lib/model/predict";
 import { fitLeague } from "../src/lib/model/fit";
 import { scoreMatrix, poissonPmf } from "../src/lib/model/poisson";
-import { halfGrids, SITE_FIRST_HALF_SHARE, SITE_HALF_TILT } from "../src/lib/model/halves";
+import { halfGrids, SITE_FIRST_HALF_SHARE, SITE_HALF_TILT, SITE_SECOND_HALF_TILT } from "../src/lib/model/halves";
 import { nbPmf } from "../src/lib/model/match-stats";
 import { deVig } from "../src/lib/model/backtest";
 import { csv, DIVISIONS, parse, toMatch, toResultRow, type Row } from "./lib/football-data-uk";
@@ -120,7 +120,7 @@ function fullProbs(g: Grid): Omit<Probs, "bothHalves" | "btts2h"> {
 }
 
 function halfProbs(lam: number, mu: number): { bothHalves: number; btts2h: number } {
-  const { first, second } = halfGrids(lam, mu, { home: SITE_FIRST_HALF_SHARE, away: SITE_FIRST_HALF_SHARE }, SITE_HALF_TILT);
+  const { first, second } = halfGrids(lam, mu, { home: SITE_FIRST_HALF_SHARE, away: SITE_FIRST_HALF_SHARE }, SITE_HALF_TILT, SITE_SECOND_HALF_TILT);
   const any = (g: Grid) => 1 - g[0][0];
   let b2 = 0;
   for (let x = 1; x < N; x++) for (let y = 1; y < N; y++) b2 += second[x][y];

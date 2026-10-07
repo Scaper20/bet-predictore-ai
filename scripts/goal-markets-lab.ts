@@ -13,7 +13,7 @@
 import { buildPrediction } from "../src/lib/model/predict";
 import { fitLeague } from "../src/lib/model/fit";
 import { scoreMatrix } from "../src/lib/model/poisson";
-import { halfGrids, SITE_FIRST_HALF_SHARE, SITE_HALF_TILT } from "../src/lib/model/halves";
+import { halfGrids, SITE_FIRST_HALF_SHARE, SITE_HALF_TILT, SITE_SECOND_HALF_TILT } from "../src/lib/model/halves";
 import { goalMarkets } from "../src/lib/model/goal-markets";
 import { csv, DIVISIONS, parse, toMatch, toResultRow, type Row } from "./lib/football-data-uk";
 
@@ -154,7 +154,7 @@ async function main() {
 
       const p = buildPrediction(toMatch(row, DIVISIONS[div]), prior, [], { prefit });
       const { home: lam, away: mu } = p.markets.expectedGoals;
-      const g = goalMarkets(scoreMatrix(lam, mu, p.model.rho), halfGrids(lam, mu, { home: SITE_FIRST_HALF_SHARE, away: SITE_FIRST_HALF_SHARE }, SITE_HALF_TILT));
+      const g = goalMarkets(scoreMatrix(lam, mu, p.model.rho), halfGrids(lam, mu, { home: SITE_FIRST_HALF_SHARE, away: SITE_FIRST_HALF_SHARE }, SITE_HALF_TILT, SITE_SECOND_HALF_TILT));
       const two = (q: number) => [q, 1 - q];
       const ht = (r: { home: number; away: number; push: number }) => two(r.home);
       const model: Record<string, number[]> = {

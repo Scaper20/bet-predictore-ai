@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { firstHalfShare, halfMarkets, DEFAULT_FIRST_HALF_SHARE } from "./halves";
+import { firstHalfShare, halfGrids, halfMarkets, DEFAULT_FIRST_HALF_SHARE } from "./halves";
 
 describe("half markets", () => {
   const m = halfMarkets(1.6, 1.1, { home: 0.44, away: 0.44 });
@@ -25,5 +25,23 @@ describe("half markets", () => {
     const s = firstHalfShare(many);
     expect(s.home).toBeCloseTo(0.5, 1);
     expect(s.away).toBeLessThan(0.1);
+  });
+});
+
+describe("second-half tilt", () => {
+  const home = (g: number[][]) => g.reduce((a, row, x) => a + row.reduce((b, p, y) => b + (x > y ? p : 0), 0), 0);
+  const share = { home: 0.443, away: 0.443 };
+
+  it("keeps the favourite's edge after the break instead of handing it back", () => {
+    const flat = halfGrids(2.0, 0.8, share, 0.1);
+    const tilted = halfGrids(2.0, 0.8, share, 0.1, 0.1);
+    expect(home(tilted.first)).toBeCloseTo(home(flat.first), 9);
+    expect(home(tilted.second)).toBeGreaterThan(home(flat.second));
+  });
+
+  it("changes nothing for evenly matched sides", () => {
+    const flat = halfGrids(1.3, 1.3, share, 0.1);
+    const tilted = halfGrids(1.3, 1.3, share, 0.1, 0.1);
+    expect(home(tilted.second)).toBeCloseTo(home(flat.second), 9);
   });
 });

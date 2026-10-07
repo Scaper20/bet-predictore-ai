@@ -20,6 +20,17 @@ import { scoreMatrix } from "@/lib/model/poisson";
 /** First-half goal share and tilt the site uses; measured across eight leagues (scripts/halves-lab.ts). */
 export const SITE_FIRST_HALF_SHARE = 0.443;
 export const SITE_HALF_TILT = 0.1;
+/**
+ * The same tilt applied again to the second half. Without it the second half
+ * got whatever the first half left, so the favourite's first-half edge came
+ * out of its second half, and the second-half result was too flat (54%
+ * claimed for the favourite, 63% landed). Walk-forward 2022-27 it took the
+ * second-half result from 3.3 to 1.1 points of calibration error and win
+ * either half from 2.7 to 1.1 (scripts/either-half-lab.ts). The halves'
+ * expected goals then add up to slightly more than the full match's for the
+ * stronger side; the full-time markets read the full-match grid, not these.
+ */
+export const SITE_SECOND_HALF_TILT = 0.1;
 
 /** Share of goals scored in the first half when a sample has none to measure. */
 export const DEFAULT_FIRST_HALF_SHARE = 0.44;
@@ -78,17 +89,29 @@ const RESULT = (x: number, y: number) => (x > y ? "H" : x === y ? "D" : "A");
  * is scaled by (its rate / the opponent's)^tilt. Walk-forward, favourites
  * led at half time more often than an even split predicts (54% → 64%).
  */
-/** The two halves' independent score grids, after the share and tilt. */
-export function halfGrids(lambda: number, mu: number, share: HalfShare, tilt = 0): { first: number[][]; second: number[][] } {
+/**
+ * The two halves' independent score grids, after the share and tilt.
+ * `secondTilt` tilts the second half's share the same way (0: the second
+ * half gets what the first leaves).
+ */
+export function halfGrids(
+  lambda: number, mu: number, share: HalfShare, tilt = 0, secondTilt = 0,
+): { first: number[][]; second: number[][] } {
   const ratio = mu > 0 && lambda > 0 ? lambda / mu : 1;
   const clamp = (x: number) => Math.min(0.75, Math.max(0.2, x));
   const sh = clamp(share.home * ratio ** tilt);
   const sa = clamp(share.away * ratio ** -tilt);
-  return { first: scoreMatrix(lambda * sh, mu * sa), second: scoreMatrix(lambda * (1 - sh), mu * (1 - sa)) };
+  const second = (s: number, r: number) => Math.min(0.8, Math.max(0.25, s * r));
+  return {
+    first: scoreMatrix(lambda * sh, mu * sa),
+    second: secondTilt === 0
+      ? scoreMatrix(lambda * (1 - sh), mu * (1 - sa))
+      : scoreMatrix(lambda * second(1 - share.home, ratio ** secondTilt), mu * second(1 - share.away, ratio ** -secondTilt)),
+  };
 }
 
-export function halfMarkets(lambda: number, mu: number, share: HalfShare, tilt = 0): HalfMarkets {
-  const { first, second } = halfGrids(lambda, mu, share, tilt);
+export function halfMarkets(lambda: number, mu: number, share: HalfShare, tilt = 0, secondTilt = 0): HalfMarkets {
+  const { first, second } = halfGrids(lambda, mu, share, tilt, secondTilt);
   const n = first.length;
 
   // Per-half total-goal distributions.

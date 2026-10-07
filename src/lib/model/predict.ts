@@ -17,7 +17,7 @@ import {
 import { expectedRates, fitLeague, normaliseKey, type FitOptions, type LeagueFit, type TeamRating } from "./fit";
 import { fairOdds } from "./odds";
 import { buildInsights, type Insight } from "./insights";
-import { halfMarkets, SITE_FIRST_HALF_SHARE, SITE_HALF_TILT } from "@/lib/model/halves";
+import { halfMarkets, SITE_FIRST_HALF_SHARE, SITE_HALF_TILT, SITE_SECOND_HALF_TILT } from "@/lib/model/halves";
 
 export interface FormEntry {
   opponent: string;
@@ -236,7 +236,7 @@ export function buildPrediction(
   const grid = scoreMatrix(lambda, mu, fit.rho);
   const markets = {
     ...deriveMarkets(grid, lambda, mu),
-    halves: halfMarkets(lambda, mu, { home: SITE_FIRST_HALF_SHARE, away: SITE_FIRST_HALF_SHARE }, SITE_HALF_TILT),
+    halves: halfMarkets(lambda, mu, { home: SITE_FIRST_HALF_SHARE, away: SITE_FIRST_HALF_SHARE }, SITE_HALF_TILT, SITE_SECOND_HALF_TILT),
   };
   const asianHandicap = deriveAsianHandicap(grid);
 
