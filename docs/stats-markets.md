@@ -7,8 +7,8 @@ for a fixture. Shipped on the match page's Markets tab (October 2026):
 corners, cards, shots, shots on target and the full-time goal extras with
 the other markets (free account), the half-by-half goal markets with the
 Pro half-time panel. Probabilities only; the low-skill ones carry a
-"close to a coin flip" note. Win either half stays hidden until its
-calibration is fixed.
+"close to a coin flip" note. Win either half was held back until its
+calibration was fixed (below) and is now shown.
 
 ## What was built
 
@@ -100,7 +100,7 @@ is far more predictable than how many there are.
 |---|---|---|
 | Home wins both halves | 9.0% | 1.3pt |
 | Euro handicap home -1 | 7.9% | 3-way |
-| Win either half (home / away) | 7.9% / 7.1% | 2.7 / 2.1pt |
+| Win either half (home / away) | 7.9% / 7.1% | 2.7 / 2.1pt (before the second-half fix) |
 | Home over 1.5 | 6.3% | 2.2pt |
 | Home win to nil | 6.1% | 1.7pt |
 | 1H handicap home -0.5 / +0.5 | 5.5% / 5.2% | 1.4 / 0.7pt |
@@ -117,9 +117,28 @@ is far more predictable than how many there are.
 | BTTS 2nd half | 0.4% | 0.5pt |
 | Odd total | 0.1% | 0.6pt |
 
-Win either half is underconfident (72.6% claimed, 78.2% landed at 65%+):
-the halves are treated as independent and they are not quite. A calibration
-step would fix it before it is published.
+Win either half was underconfident (72.6% claimed, 78.2% landed at 65%+).
+The cause was the second half, not independence between the halves
+(scripts/either-half-lab.ts, tuned 2019-22, scored 2022-27). The
+first-half tilt gives the stronger side a larger share of its goals before
+the break, and the second half got whatever was left, so the favourite's
+edge came out of its second half. Really, favourites win the second half
+more often than the first: 54% claimed, 63% landed.
+
+Fix: the second half gets the same tilt toward the stronger side
+(`SITE_SECOND_HALF_TILT` 0.1, the tuning set's best). Held out:
+
+| Market | Before | After |
+|---|---|---|
+| Win either half, home / away (ECE) | 2.7 / 2.1pt | 1.1 / 1.6pt |
+| Win either half, skill | 7.5% | 7.8% |
+| 2H result, home win (ECE) | 3.3pt | 1.1pt |
+| Win both halves, home (ECE) | 1.3pt | 1.1pt |
+
+HT/FT, second-half over 0.5/1.5 and highest-scoring half all scored
+slightly better and the half-time result is unchanged. A logistic
+recalibration on top of the fix fitted a slope of 0.99, so there is nothing
+left for one to correct.
 
 ## The low-skill goal markets, researched (scripts/goal-shape-lab.ts)
 

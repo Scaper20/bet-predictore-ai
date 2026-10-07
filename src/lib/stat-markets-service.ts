@@ -12,7 +12,7 @@ import {
 } from "@/lib/model/match-stats";
 import { goalMarkets, type GoalMarkets } from "@/lib/model/goal-markets";
 import { scoreMatrix } from "@/lib/model/poisson";
-import { halfGrids, SITE_FIRST_HALF_SHARE, SITE_HALF_TILT } from "@/lib/model/halves";
+import { halfGrids, SITE_FIRST_HALF_SHARE, SITE_HALF_TILT, SITE_SECOND_HALF_TILT } from "@/lib/model/halves";
 import type { Prediction } from "@/lib/model/predict";
 
 /**
@@ -67,7 +67,7 @@ export async function fixtureStatMarkets(match: Match, prediction: Prediction): 
   const { home: lam, away: mu } = prediction.markets.expectedGoals;
   const goals = goalMarkets(
     scoreMatrix(lam, mu, prediction.model.rho),
-    halfGrids(lam, mu, { home: SITE_FIRST_HALF_SHARE, away: SITE_FIRST_HALF_SHARE }, SITE_HALF_TILT),
+    halfGrids(lam, mu, { home: SITE_FIRST_HALF_SHARE, away: SITE_FIRST_HALF_SHARE }, SITE_HALF_TILT, SITE_SECOND_HALF_TILT),
   );
   const code = match.league.code;
   if (!code) return { referee: null, stats: {}, goals };

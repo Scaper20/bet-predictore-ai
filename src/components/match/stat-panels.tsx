@@ -3,7 +3,7 @@ import type { Prediction } from "@/lib/model/predict";
 import type { StatKind, StatMarkets } from "@/lib/model/match-stats";
 import { goalMarkets, type GoalMarkets } from "@/lib/model/goal-markets";
 import { scoreMatrix } from "@/lib/model/poisson";
-import { halfGrids, SITE_FIRST_HALF_SHARE, SITE_HALF_TILT } from "@/lib/model/halves";
+import { halfGrids, SITE_FIRST_HALF_SHARE, SITE_HALF_TILT, SITE_SECOND_HALF_TILT } from "@/lib/model/halves";
 import { ProbabilityBar } from "@/components/ui/primitives";
 import { percent } from "@/lib/format";
 
@@ -187,7 +187,7 @@ export function HalfExtrasPanel({ prediction }: { prediction: Prediction }) {
   const { home: lam, away: mu } = prediction.markets.expectedGoals;
   const g = goalMarkets(
     scoreMatrix(lam, mu, prediction.model.rho),
-    halfGrids(lam, mu, { home: SITE_FIRST_HALF_SHARE, away: SITE_FIRST_HALF_SHARE }, SITE_HALF_TILT),
+    halfGrids(lam, mu, { home: SITE_FIRST_HALF_SHARE, away: SITE_FIRST_HALF_SHARE }, SITE_HALF_TILT, SITE_SECOND_HALF_TILT),
   );
   const { match } = prediction;
   const ah = g.firstHalfHandicap;
@@ -201,6 +201,12 @@ export function HalfExtrasPanel({ prediction }: { prediction: Prediction }) {
         <Tile label="-1.5" value={percent(ah["-1.5"].home)} />
         <Tile label="-0.5" value={percent(ah["-0.5"].home)} />
         <Tile label="+0.5" value={percent(ah["+0.5"].home)} />
+      </div>
+
+      <Label>Win either half</Label>
+      <div className="grid grid-cols-2 gap-2">
+        <Tile label={match.home.shortName} value={percent(g.winEitherHalf.home)} />
+        <Tile label={match.away.shortName} value={percent(g.winEitherHalf.away)} />
       </div>
 
       <Label>Win both halves</Label>
