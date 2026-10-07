@@ -5,11 +5,12 @@ import { isStrong } from "@/lib/model/tiers";
 /**
  * What a free viewer may see (October 2026).
  *
- * Every match stays visible. On the free plan only the match-result (1X2)
- * market and 1X2 picks are open; every other market and pick is locked to
- * Pro, shown blurred with an upgrade prompt. Of the Strong picks, exactly
- * one is open to free viewers: `freeStrongId`, chosen once for everyone
- * (service.ts freeStrongPickId) so every page agrees which one it is.
+ * Every match stays visible. On the free plan the match-result (1X2) market
+ * and 1X2 picks are open, and so is the headline pick, whatever its market,
+ * of today's six free picks (free-picks.ts: one Strong, two hot games, three
+ * more), chosen once a day for everyone so every page agrees. Every other
+ * market and pick is locked to Pro, shown blurred with an upgrade prompt.
+ * The only Strong pick open to free viewers is the free set's.
  *
  * Pure, so the rule is tested once and every surface (pages, APIs, Ask
  * BetriX, Forge, push) applies the same one. Redaction happens on the
@@ -29,11 +30,13 @@ export function isFreeMarket(market: string): boolean {
 export interface Viewer {
   /** Pro, VIP, or a pass still running. */
   paid: boolean;
-  /** The one Strong pick open to free viewers right now, by match id. */
+  /** The one Strong pick open to free viewers today, by match id. */
   freeStrongId: string | null;
+  /** Match ids of today's free picks, the Strong one included. */
+  freeIds: readonly string[];
 }
 
-export const PAID_VIEWER: Viewer = { paid: true, freeStrongId: null };
+export const PAID_VIEWER: Viewer = { paid: true, freeStrongId: null, freeIds: [] };
 
 export function isPaidTier(tier: string): boolean {
   return tier === "pass" || tier === "pro" || tier === "vip";
@@ -47,7 +50,8 @@ export function isLockedPick(pick: { market: string } | null | undefined): boole
 /** Can this viewer see this match's headline pick? */
 export function pickVisible(pick: Pick | null | undefined, matchId: string, viewer: Viewer): boolean {
   if (!pick || viewer.paid) return true;
-  if (isStrong(pick)) return matchId === viewer.freeStrongId;
+  if (matchId === viewer.freeStrongId || viewer.freeIds.includes(matchId)) return true;
+  if (isStrong(pick)) return false;
   return isFreeMarket(pick.market);
 }
 
@@ -90,17 +94,17 @@ export interface ViewedPrediction extends Prediction {
 /**
  * The prediction this viewer is allowed to receive: for a free viewer, the
  * 1X2 split and 1X2 picks only, and the headline pick locked unless it is
- * open to them.
+ * open to them (a 1X2 pick, or one of today's free picks).
  */
 export function viewPrediction(p: Prediction, viewer: Viewer): ViewedPrediction {
   if (viewer.paid) return { ...p, locked: { pick: false, markets: false } };
   const pickOpen = pickVisible(p.topPick, p.match.id, viewer);
-  const freeStrong = p.match.id === viewer.freeStrongId && p.topPick && isStrong(p.topPick);
+  const freePick = p.match.id === viewer.freeStrongId || viewer.freeIds.includes(p.match.id);
   return {
     ...p,
     markets: lockMarkets(p.markets),
     asianHandicap: [],
-    picks: p.picks.filter((x) => isFreeMarket(x.market) || (freeStrong && x.market === p.topPick?.market)),
+    picks: p.picks.filter((x) => isFreeMarket(x.market) || (freePick && x.market === p.topPick?.market)),
     topPick: p.topPick ? (pickOpen ? p.topPick : lockPick(p.topPick)) : null,
     locked: { pick: !pickOpen, markets: true },
   };

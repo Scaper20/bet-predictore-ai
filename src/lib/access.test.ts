@@ -5,8 +5,8 @@ import type { Pick, Prediction } from "@/lib/model/predict";
 const pick = (market: string, confidence: number): Pick => ({
   market, label: "X", group: market.startsWith("1x2") ? "Match Result" : "Goals", probability: 0.7, fairOdds: 1.43, confidence,
 });
-const free: Viewer = { paid: false, freeStrongId: "m-strong" };
-const paid: Viewer = { paid: true, freeStrongId: null };
+const free: Viewer = { paid: false, freeStrongId: "m-strong", freeIds: ["m-strong", "m-hot"] };
+const paid: Viewer = { paid: true, freeStrongId: null, freeIds: [] };
 
 describe("free-tier access", () => {
   it("opens only the 1X2 market", () => {
@@ -21,6 +21,11 @@ describe("free-tier access", () => {
     expect(pickVisible(pick("1x2:home", 70), "m1", free)).toBe(false);
     expect(pickVisible(pick("ou:under:3.5", 70), "m-strong", free)).toBe(true);
     expect(pickVisible(pick("ou:under:3.5", 70), "m1", paid)).toBe(true);
+  });
+
+  it("opens any market on today's free picks", () => {
+    expect(pickVisible(pick("ou:over:2.5", 55), "m-hot", free)).toBe(true);
+    expect(pickVisible(pick("btts:yes", 55), "m-other", free)).toBe(false);
   });
 
   it("strips locked numbers before they leave the server", () => {

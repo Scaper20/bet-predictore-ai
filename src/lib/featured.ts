@@ -31,7 +31,10 @@ export type FeaturedReasonCode =
   | "tension"
   | "marquee"
   | "imminent"
-  | "featured";
+  | "featured"
+  | "free-strong"
+  | "free-hot"
+  | "free";
 
 export const REASON_LABEL: Record<FeaturedReasonCode, string> = {
   live: "Live now",
@@ -40,6 +43,9 @@ export const REASON_LABEL: Record<FeaturedReasonCode, string> = {
   marquee: "Biggest match",
   imminent: "Kicks off soon",
   featured: "Worth a look",
+  "free-strong": "Free Strong pick",
+  "free-hot": "Hot game · free",
+  free: "Free pick",
 };
 
 export interface FeaturedMatch {

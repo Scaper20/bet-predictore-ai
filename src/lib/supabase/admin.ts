@@ -49,7 +49,16 @@ const secretKey = process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_SERVIC
  * visitor's request ever reaches a write. No session is being acted on at
  * all, on anyone's behalf; it's the same category of "no user owns this
  * row" reasoning that lets the daily cron do the same writes unauthenticated
- * (behind CRON_SECRET instead of a request-shape argument).
+ * (behind CRON_SECRET instead of a request-shape argument). Choosing and
+ * storing the day's free picks (service.ts freePicksToday,
+ * `free_daily_picks`) is the same: a system-owned row, nothing from the
+ * request.
+ *
+ * A fourth: the daily allowance and push-subscription functions (0044),
+ * which are callable by the service role only so a browser cannot reach them
+ * through the public API. The routes that call them (api/ask, api/forge,
+ * api/push/*) pass the user id from the session they just verified with
+ * getUser(), never one from the request.
  */
 export function supabaseAdmin() {
   if (!url || !secretKey) {

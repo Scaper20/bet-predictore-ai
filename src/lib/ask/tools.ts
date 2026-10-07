@@ -23,7 +23,7 @@ export type AskTier = "free" | "paid";
 
 export interface ToolContext {
   tier: AskTier;
-  /** What this user may see (lib/access.ts): free users get 1X2 only, plus one Strong pick. */
+  /** What this user may see (lib/access.ts): free users get 1X2, plus today's six free picks. */
   viewer: Viewer;
   /** Called by show_picks with the cards to render. */
   onPicks: (cards: AskPickCard[]) => void;
@@ -171,7 +171,8 @@ function visiblePicks(p: Prediction, ctx: ToolContext): Pick[] {
 }
 
 const PRO_NOTE =
-  "This user is on the free plan: only the match result (1X2) market is open to them. Goals, both teams to score, " +
+  "This user is on the free plan: the match result (1X2) market is open to them, and so is the headline pick on " +
+  "today's six free picks. Other goals, both teams to score, " +
   "double chance, correct score and Asian handicap are Pro. Do not estimate or hint at those numbers; say they are " +
   "part of Pro and offer the 1X2 view.";
 

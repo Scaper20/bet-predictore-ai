@@ -26,7 +26,7 @@ import { LiveWinProbabilityPanel } from "@/components/match/live-win-probability
 import { Gate } from "@/components/entitlements/gate";
 import { DepthGate } from "@/components/entitlements/depth-gate";
 import { JsonLd } from "@/components/seo/json-ld";
-import { freeStrongPickId, matchDetail } from "@/lib/service";
+import { freeViewer, matchDetail } from "@/lib/service";
 import { viewPrediction, type ViewedPrediction } from "@/lib/access";
 import { FactsUnlock, MatchAccessProvider, PickUnlock, ProMarkets } from "@/components/match/match-access";
 import { LockedSelection, ProTag } from "@/components/entitlements/locked-pick";
@@ -140,7 +140,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   // This page is cached and shared, so it is rendered with the free view
   // (lib/access.ts) and nothing locked reaches the HTML; MatchAccessProvider
   // fetches the viewer's own view and unlocks what their plan allows.
-  const prediction = viewPrediction(detail.prediction, { paid: false, freeStrongId: await freeStrongPickId() });
+  const prediction = viewPrediction(detail.prediction, await freeViewer());
   const ctx = await matchContext(match).catch((): MatchContext => ({ teamIds: { home: null, away: null }, home: null, away: null, table: null }));
   const live = isLive(match);
   const label = `${match.home.name} v ${match.away.name}`;

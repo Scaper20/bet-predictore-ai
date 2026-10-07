@@ -29,8 +29,8 @@ export async function GET(
     const entitlement = await getEntitlement();
     // A pass still running counts as paid; it was all of Pro for a window.
     const hasPass = meets(entitlement.tier, "pass");
-    // Free viewers get the 1X2 market and 1X2 picks only, plus the one open
-    // Strong pick; everything else is stripped here (lib/access.ts).
+    // Free viewers get the 1X2 market and 1X2 picks, plus the headline pick
+    // of today's free picks; everything else is stripped here (lib/access.ts).
     const viewer = await viewerForTier(entitlement.tier);
     const viewed = viewPrediction(detail.prediction, viewer);
 

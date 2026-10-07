@@ -30,7 +30,7 @@ const GROUPS: FaqGroup[] = [
       {
         q: "Is BetriX free?",
         text: "Live scores fixtures results tables predictions free account markets",
-        a: <A>Yes. Live scores, fixtures, results, league tables, team stats and the match-result (1X2) read for every game are free, with one Strong pick a day, {FORGE_FREE_DAILY} Forge slips a day (1X2 only) and {ASK_FREE_DAILY} Ask BetriX questions a day. Pro adds every other market (over/under, GG/NG, double chance, correct score, Asian handicap), every pick, the full written breakdowns and more.</A>,
+        a: <A>Yes. Live scores, fixtures, results, league tables, team stats and the match-result (1X2) read for every game are free, with 6 free picks a day (a Strong pick, two hot games and three more), {FORGE_FREE_DAILY} Forge slips a day (1X2 only) and {ASK_FREE_DAILY} Ask BetriX questions a day. Pro adds every other market (over/under, GG/NG, double chance, correct score, Asian handicap), every pick, the full written breakdowns and more.</A>,
       },
       {
         q: "Do I need an account?",

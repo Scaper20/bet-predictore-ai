@@ -4,7 +4,7 @@ import { todaysQualifyingPicks } from "@/lib/whatsapp-digest-feed";
 import { dailyPayload } from "@/lib/push/messages";
 import { pushConfigured, sendPushBatch, summarise } from "@/lib/push/send";
 import { loadPaidUserIds, loadSubscriptions, recordOutcome, yesterdayRecord } from "@/lib/push/store";
-import { freeStrongPickId } from "@/lib/service";
+import { freeViewer } from "@/lib/service";
 import { pickVisible } from "@/lib/access";
 import type { Pick } from "@/lib/model/predict";
 
@@ -47,12 +47,11 @@ export async function GET(request: Request) {
 
   // The same plan line as the site (lib/access.ts): a free device is told
   // only about picks a free viewer can see.
-  const [paid, freeStrongId] = await Promise.all([
+  const [paid, free] = await Promise.all([
     loadPaidUserIds(admin, [...new Set(devices.map((d) => d.userId).filter((x): x is string => Boolean(x)))]),
-    freeStrongPickId(),
+    freeViewer(),
   ]);
-  const freeViewer = { paid: false, freeStrongId };
-  const freePicks = picks.filter((p) => pickVisible(p as unknown as Pick, p.id, freeViewer));
+  const freePicks = picks.filter((p) => pickVisible(p as unknown as Pick, p.id, free));
 
   const items = devices.flatMap((d) => {
     const isPaid = d.userId !== null && paid.has(d.userId);

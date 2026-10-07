@@ -31,6 +31,9 @@ const REASON_TONE: Record<FeaturedRow["reason"], Tone> = {
   marquee: "violet",
   imminent: "amber",
   featured: "neutral",
+  "free-strong": "brand",
+  "free-hot": "rose",
+  free: "cyan",
 };
 
 /** The only fields polling is allowed to move. */
@@ -146,7 +149,7 @@ export function FeaturedBoard({ rows }: { rows: FeaturedRow[] }) {
               >
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                   <Badge tone={REASON_TONE[row.reason]} className="shrink-0">
-                    {row.reason === "live" && <LiveDot />}
+                    {(row.status === "live" || row.status === "halftime") && <LiveDot />}
                     {REASON_LABEL[row.reason]}
                   </Badge>
                   <span className="min-w-0 truncate text-[11px] font-medium text-ink-dim">

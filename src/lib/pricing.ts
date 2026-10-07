@@ -49,11 +49,11 @@ export const PLANS: PlanDefinition[] = [
   {
     id: "free",
     name: "Free",
-    description: "Every match, the 1X2 read and a Strong pick a day.",
+    description: "Every match, the 1X2 read and 6 free picks a day.",
     features: [
       "Every match, live scores and fixtures 14 days ahead",
       "Match result (1X2) probabilities and 1X2 picks",
-      "One Strong pick every day",
+      "6 free picks a day: a Strong pick, 2 hot games and 3 more",
       "Forge: 5 slips a day, 1X2 only",
       "Ask BetriX: 3 questions a day",
       "For You feed with likes and comments",
@@ -148,7 +148,7 @@ export const PLAN_MATRIX: MatrixGroup[] = [
         label: "Over/under, GG/NG, double chance, correct score",
         values: { free: false, pro: true, vip: true },
       },
-      { label: "Picks in every market", values: { free: false, pro: true, vip: true } },
+      { label: "Picks in every market", values: { free: "6 a day", pro: true, vip: true } },
       { label: "Asian handicap", values: { free: false, pro: true, vip: true } },
       { label: "Half-time and second-half markets", values: { free: false, pro: true, vip: true } },
     ],
