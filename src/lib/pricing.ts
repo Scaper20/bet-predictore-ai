@@ -54,7 +54,7 @@ export const PLANS: PlanDefinition[] = [
       "Every match, live scores and fixtures 14 days ahead",
       "Match result (1X2) probabilities and 1X2 picks",
       "6 free picks a day: a Strong pick, 2 hot games and 3 more",
-      "Forge: 5 slips a day, 1X2 only",
+      "Forge: 5 slips a day, 1X2 and double chance",
       "Ask BetriX: 3 questions a day",
       "For You feed with likes and comments",
     ],
@@ -156,7 +156,7 @@ export const PLAN_MATRIX: MatrixGroup[] = [
   {
     group: "Tools",
     rows: [
-      { label: "Forge slip builder", values: { free: "5 a day, 1X2", pro: "100 a day", vip: "100 a day" } },
+      { label: "Forge slip builder", values: { free: "5 a day, 1X2 + DC", pro: "100 a day", vip: "100 a day" } },
       { label: "Ask BetriX", values: { free: "3 a day", pro: "30 a day", vip: "100 a day" } },
       { label: "Selection builder and slip tracking", values: { free: true, pro: true, vip: true } },
       { label: "Shareable slip image", values: { free: false, pro: true, vip: true } },

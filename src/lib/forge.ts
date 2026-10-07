@@ -18,10 +18,10 @@ export type ForgeRisk = "safe" | "balanced" | "risky";
 export type ForgeMarket = "result" | "double_chance" | "goals" | "btts" | "handicap";
 export type ForgeWhen = Extract<KickoffWindow, "today" | "tonight" | "tomorrow" | "weekend" | "next_3_days">;
 
-/** Free plan: 1X2 only (lib/access.ts); every other market is Pro. */
+/** Free plan: 1X2 and double chance; every other market is Pro. */
 export const FORGE_MARKETS: { id: ForgeMarket; label: string; paid?: boolean }[] = [
   { id: "result", label: "1X2" },
-  { id: "double_chance", label: "Double chance", paid: true },
+  { id: "double_chance", label: "Double chance" },
   { id: "goals", label: "Over/Under", paid: true },
   { id: "btts", label: "GG/NG", paid: true },
   { id: "handicap", label: "Handicap", paid: true },

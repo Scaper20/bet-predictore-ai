@@ -123,7 +123,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    // Free plan: 1X2 only, enforced here whatever the request asks for.
+    // Free plan: 1X2 and double chance only, enforced here whatever the request asks for.
     const planSettings = { ...settings, markets: marketsForPlan(settings.markets, paid) };
     const result = await buildForgeSlip(planSettings, state, { allowHandicap: paid, leagueCodes });
     if (result.legs.length === 0) {
