@@ -4,19 +4,18 @@ import { stature } from "@/lib/featured";
 import { isFreeMarket } from "@/lib/access";
 
 /**
- * Today's free picks: the matches whose headline pick a free viewer sees in
- * full, whatever its market.
+ * Today's featured set: one Strong pick (the most confident), two hot games
+ * (the ones people most want to bet on) and three more of the model's best
+ * reads. It leads the home page board and grid, and it is what Ask BetriX
+ * opens in full on the free plan (access.ts toolView). Every pick is free on
+ * the site itself.
  *
- * One Strong pick (the most confident), two hot games (the ones people most
- * want to bet on) and three more of the model's best reads. Chosen once a
- * day for everyone and stored (0046_free_daily_picks.sql), so every page,
- * every server and every visitor agrees, and a free pick stays open after
- * kickoff and through its result.
+ * Chosen once a day for everyone and stored (0046_free_daily_picks.sql), so
+ * every page and every server agrees, and the set stays put through the
+ * day's results.
  *
- * Only the Strong slot carries a Strong pick: the other five are drawn from
- * standard picks so free viewers get exactly one Strong pick a day. Matches
- * whose pick is already open on the free plan (a 1X2 pick) are skipped while
- * there are enough others, so each slot opens something new.
+ * Only the Strong slot carries a Strong pick. Matches whose pick is 1X2 are
+ * skipped while there are enough others, since Ask BetriX opens 1X2 anyway.
  */
 
 export const HOT_SLOTS = 2;

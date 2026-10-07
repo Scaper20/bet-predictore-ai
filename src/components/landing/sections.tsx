@@ -281,8 +281,8 @@ export function FinalCta() {
             <span className="text-gradient-brand">Start reading the numbers.</span>
           </h2>
           <p className="mx-auto mt-5 max-w-xl text-base text-ink-muted">
-            Free to start: every match, the 1X2 read and 6 free picks a day. Go Pro for every
-            market and every pick.
+            Every pick on every match is free. Go Pro for the full breakdowns, half-time markets,
+            Asian handicap and more from Forge and Ask BetriX.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             <ButtonLink href={sportPath("predictions")}>Open today&apos;s predictions</ButtonLink>

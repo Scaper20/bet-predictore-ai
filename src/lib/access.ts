@@ -3,18 +3,22 @@ import type { MarketProbabilities } from "@/lib/model/poisson";
 import { isStrong } from "@/lib/model/tiers";
 
 /**
- * What a free viewer may see (October 2026).
+ * What each viewer may see.
  *
- * Every match stays visible. On the free plan the match-result (1X2) market
- * and 1X2 picks are open, and so is the headline pick, whatever its market,
- * of today's six free picks (free-picks.ts: one Strong, two hot games, three
- * more), chosen once a day for everyone so every page agrees. Every other
- * market and pick is locked to Pro, shown blurred with an upgrade prompt.
- * The only Strong pick open to free viewers is the free set's.
+ * The site (October 2026, second pass): every pick and every market on every
+ * match is open to everyone. Picks are not a paid feature: gating them drove
+ * people away. Pro adds the extras that were Pro before the experiment:
+ * Asian handicap lines and the half-time / second-half markets
+ * (`viewPrediction`).
  *
- * Pure, so the rule is tested once and every surface (pages, APIs, Ask
- * BetriX, Forge, push) applies the same one. Redaction happens on the
- * server: a locked value never reaches a free viewer's browser.
+ * Ask BetriX keeps the stricter tool view it had during the experiment
+ * (`toolView`): on the free plan its answers cover the match result market
+ * and today's free picks; Pro opens the rest. Forge keeps its own market rule
+ * (forge.ts marketsForPlan).
+ *
+ * Pure, so the rules are tested once and every surface applies the same one.
+ * Redaction happens on the server: a locked value never reaches a free
+ * viewer's browser.
  */
 
 export const FREE_MARKET_FAMILIES: ReadonlySet<string> = new Set(["1x2"]);
@@ -92,11 +96,21 @@ export interface ViewedPrediction extends Prediction {
 }
 
 /**
- * The prediction this viewer is allowed to receive: for a free viewer, the
- * 1X2 split and 1X2 picks only, and the headline pick locked unless it is
- * open to them (a 1X2 pick, or one of today's free picks).
+ * The site's view: everything for everyone, except the Pro extras (Asian
+ * handicap and the half-by-half markets), stripped for a free viewer.
  */
 export function viewPrediction(p: Prediction, viewer: Viewer): ViewedPrediction {
+  if (viewer.paid) return { ...p, locked: { pick: false, markets: false } };
+  const { halves: _halves, ...markets } = p.markets;
+  void _halves;
+  return { ...p, markets, asianHandicap: [], locked: { pick: false, markets: false } };
+}
+
+/**
+ * Ask BetriX's view for a free account: the 1X2 split and 1X2 picks, and the
+ * headline pick only when it is 1X2 or one of today's free picks.
+ */
+export function toolView(p: Prediction, viewer: Viewer): ViewedPrediction {
   if (viewer.paid) return { ...p, locked: { pick: false, markets: false } };
   const pickOpen = pickVisible(p.topPick, p.match.id, viewer);
   const freePick = p.match.id === viewer.freeStrongId || viewer.freeIds.includes(p.match.id);

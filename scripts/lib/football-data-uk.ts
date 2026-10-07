@@ -50,6 +50,20 @@ export interface Row {
   /** Half-time score, where the file records it. */
   htHome?: number;
   htAway?: number;
+  /** Full-match counts, home then away, where the file records them. */
+  stats?: MatchStats;
+  /** Referee, where the file names one (the English divisions). */
+  referee?: string;
+}
+
+/** Full-match counts from the file: shots, shots on target, corners, fouls, cards. */
+export interface MatchStats {
+  shots: [number, number];
+  shotsOnTarget: [number, number];
+  corners: [number, number];
+  fouls?: [number, number];
+  yellows: [number, number];
+  reds: [number, number];
 }
 
 export async function csv(season: string, div: string): Promise<string> {
@@ -102,6 +116,11 @@ export function parse(body: string, div: string): Row[] {
   const iHst = at("HST");
   const iAst = at("AST");
   const iHth = at("HTHG");
+  const iRef = at("Referee");
+  const statCol = (name: string) => at(name);
+  const iHs = statCol("HS"), iAs = statCol("AS"), iHc = statCol("HC"), iAc = statCol("AC");
+  const iHf = statCol("HF"), iAf = statCol("AF"), iHy = statCol("HY"), iAy = statCol("AY");
+  const iHr = statCol("HR"), iAr = statCol("AR");
   const iHta = at("HTAG");
 
   const rows: Row[] = [];
@@ -131,7 +150,21 @@ export function parse(body: string, div: string): Row[] {
     const ast = num(iAst);
     const hth = num(iHth);
     const hta = num(iHta);
+    const pair = (i: number, j: number): [number, number] | undefined => {
+      if (i < 0 || j < 0 || f[i]?.trim() === "" || f[j]?.trim() === "") return undefined;
+      const x = Number(f[i]), y = Number(f[j]);
+      return Number.isFinite(x) && Number.isFinite(y) ? [x, y] : undefined;
+    };
+    const shots = pair(iHs, iAs), sot = pair(iHst, iAst), corners = pair(iHc, iAc);
+    const yellows = pair(iHy, iAy), reds = pair(iHr, iAr);
+    const stats: MatchStats | undefined =
+      shots && sot && corners && yellows && reds
+        ? { shots, shotsOnTarget: sot, corners, fouls: pair(iHf, iAf), yellows, reds }
+        : undefined;
+    const referee = iRef >= 0 ? f[iRef]?.trim() || undefined : undefined;
     rows.push({
+      stats,
+      referee,
       htHome: Number.isFinite(hth) && f[iHth]?.trim() !== "" ? hth : undefined,
       htAway: Number.isFinite(hta) && f[iHta]?.trim() !== "" ? hta : undefined,
       div,

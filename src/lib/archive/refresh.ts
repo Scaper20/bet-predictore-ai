@@ -15,10 +15,14 @@ import { storeResults } from "@/lib/archive/history-store";
  * Free, keyless and idempotent: storeResults skips what is already stored, so
  * a rerun or a double cron fire costs a few downloads and writes nothing.
  */
-export async function refreshArchive(now = new Date()): Promise<{ fetched: number; added: number }> {
-  const season = currentSeasonCode(now);
-  const jobs = LEAGUES.filter((l) => l.archive?.footballDataUk || l.archive?.footballDataUkCountry).map(
-    async (league): Promise<ArchiveRow[]> => {
+export async function refreshArchive(
+  now = new Date(),
+  /** Extra past seasons to (re)load, e.g. ["2425", "2526"], to backfill new columns. */
+  backfill: string[] = [],
+): Promise<{ fetched: number; added: number }> {
+  const seasons = [...new Set([currentSeasonCode(now), ...backfill])];
+  const jobs = LEAGUES.filter((l) => l.archive?.footballDataUk || l.archive?.footballDataUkCountry).flatMap(
+    (league) => (league.archive?.footballDataUk ? seasons : [seasons[0]]).map(async (season): Promise<ArchiveRow[]> => {
       const div = league.archive?.footballDataUk;
       if (div) {
         const body = await download(`https://www.football-data.co.uk/mmz4281/${season}/${div}.csv`);
@@ -30,7 +34,7 @@ export async function refreshArchive(now = new Date()): Promise<{ fetched: numbe
       // The country files hold every season; only the last few months are new.
       const cutoff = now.getTime() - 120 * 86_400_000;
       return parseCountryCsv(body, league.code, country.league).filter((r) => r.kickoff >= cutoff);
-    },
+    }),
   );
 
   const rows = (await Promise.all(jobs)).flat();

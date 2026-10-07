@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
-import { supabaseServer, supabaseConfigured } from "@/lib/supabase/server";
+import { supabaseConfigured } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
+import { socialIdentity } from "@/lib/social/identity";
 
 export const dynamic = "force-dynamic";
 const NO_STORE = { "Cache-Control": "no-store" };
@@ -13,8 +15,12 @@ export async function GET(request: Request) {
     .slice(0, 40);
   if (!supabaseConfigured || ids.length === 0) return NextResponse.json({ counts: {} }, { headers: NO_STORE });
 
-  const supabase = await supabaseServer();
-  const { data, error } = await supabase.rpc("pick_social_counts", { p_match_ids: ids });
+  const who = await socialIdentity(request, false);
+  const { data, error } = await supabaseAdmin().rpc("pick_social_counts", {
+    p_match_ids: ids,
+    p_user: who.userId,
+    p_guest: who.guestKey,
+  });
   if (error) return NextResponse.json({ counts: {} }, { headers: NO_STORE });
 
   const counts: Record<string, { loves: number; comments: number; loved: boolean }> = {};

@@ -7,7 +7,7 @@ import { Crest } from "@/components/ui/crest";
 import { isStrong } from "@/lib/model/tiers";
 import { StrongBadge } from "@/components/ui/strong-badge";
 import { matchPath, sportPath } from "@/lib/routes";
-import { H2HPanel, OutcomePanel } from "@/components/match/market-panels";
+import { BttsPanel, CorrectScorePanel, DoubleChancePanel, GoalsPanel, H2HPanel, OutcomePanel } from "@/components/match/market-panels";
 import { AddToSlip } from "@/components/match/add-to-slip";
 import { MatchTabs, type MatchTab } from "@/components/match/match-tabs";
 import { MatchStats } from "@/components/match/match-stats";
@@ -26,10 +26,10 @@ import { LiveWinProbabilityPanel } from "@/components/match/live-win-probability
 import { Gate } from "@/components/entitlements/gate";
 import { DepthGate } from "@/components/entitlements/depth-gate";
 import { JsonLd } from "@/components/seo/json-ld";
+import { refereeFor } from "@/lib/archive/referees";
 import { freeViewer, matchDetail } from "@/lib/service";
 import { viewPrediction, type ViewedPrediction } from "@/lib/access";
-import { FactsUnlock, MatchAccessProvider, PickUnlock, ProMarkets } from "@/components/match/match-access";
-import { LockedSelection, ProTag } from "@/components/entitlements/locked-pick";
+import { MatchAccessProvider, ProMarkets } from "@/components/match/match-access";
 import { SITE_URL as SITE } from "@/lib/site-url";
 import { kickoffDay, kickoffTime, percent, relativeDay, statusLabel, isLive } from "@/lib/format";
 import type { Match } from "@/lib/types";
@@ -141,7 +141,11 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   // (lib/access.ts) and nothing locked reaches the HTML; MatchAccessProvider
   // fetches the viewer's own view and unlocks what their plan allows.
   const prediction = viewPrediction(detail.prediction, await freeViewer());
-  const ctx = await matchContext(match).catch((): MatchContext => ({ teamIds: { home: null, away: null }, home: null, away: null, table: null }));
+  const [ctx, referee] = await Promise.all([
+    matchContext(match).catch((): MatchContext => ({ teamIds: { home: null, away: null }, home: null, away: null, table: null })),
+    // Named for the English divisions about a week ahead (archive/referees.ts).
+    refereeFor(match).catch(() => null),
+  ]);
   const live = isLive(match);
   const label = `${match.home.name} v ${match.away.name}`;
 
@@ -244,7 +248,11 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
             <div className="mx-auto mt-6 max-w-xl sm:mt-8">
               <div className="mb-2 flex items-center justify-between text-[10.5px] font-semibold uppercase tracking-[0.12em] text-ink-dim">
                 <span>Model&apos;s read</span>
-                {match.venue && <span className="truncate pl-3 normal-case tracking-normal">{match.venue}</span>}
+                {(match.venue || referee) && (
+                  <span className="truncate pl-3 normal-case tracking-normal">
+                    {[match.venue, referee && `Referee: ${referee}`].filter(Boolean).join(" · ")}
+                  </span>
+                )}
               </div>
               <SplitBar home={prediction.markets.home} draw={prediction.markets.draw} away={prediction.markets.away} size="lg" />
             </div>
@@ -308,24 +316,12 @@ function Overview({
             <p className="flex items-center gap-2 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-ink-dim">
               Our pick {isStrong(pick) && <StrongBadge />}
             </p>
-            {prediction.locked.pick ? (
-              <PickUnlock>
-                <div className="mt-2 flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
-                  <LockedSelection group={pick.group} className="font-display text-2xl font-bold text-ink sm:text-3xl" />
-                  <ProTag />
-                </div>
-                <ButtonLink href="/account/billing?plan=pro" className="mt-4 px-4 py-2 text-sm">
-                  Unlock this pick with Pro →
-                </ButtonLink>
-              </PickUnlock>
-            ) : (
-              <div className="mt-2 flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
-                <p className="font-display text-2xl font-bold text-ink sm:text-3xl">{pick.label}</p>
-                <div className="text-right">
-                  <AnimatedNumber value={pick.probability * 100} decimals={1} suffix="%" className="font-display text-3xl font-extrabold text-brand sm:text-4xl" />
-                </div>
+            <div className="mt-2 flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+              <p className="font-display text-2xl font-bold text-ink sm:text-3xl">{pick.label}</p>
+              <div className="text-right">
+                <AnimatedNumber value={pick.probability * 100} decimals={1} suffix="%" className="font-display text-3xl font-extrabold text-brand sm:text-4xl" />
               </div>
-            )}
+            </div>
             {prediction.sufficiency.level === "limited" && (
               <p className="mt-2 text-xs text-amber">Thin data · treat as a guide</p>
             )}
@@ -337,8 +333,11 @@ function Overview({
           </section>
         )}
 
-        {/* Goals facts are Pro: locked in the shared HTML, opened for a paid viewer. */}
-        <FactsUnlock />
+        <div className="stagger grid grid-cols-3 gap-3">
+          <Fact index={0} label="xG" value={`${prediction.markets.expectedGoals.home.toFixed(1)} – ${prediction.markets.expectedGoals.away.toFixed(1)}`} />
+          <Fact index={1} label="Over 2.5" value={percent(prediction.markets.over["2.5"])} hot={prediction.markets.over["2.5"] >= 0.6} />
+          <Fact index={2} label="Both score" value={percent(prediction.markets.bttsYes)} hot={prediction.markets.bttsYes >= 0.6} />
+        </div>
 
         {(homeForm.length > 0 || awayForm.length > 0) && (
           <section className="card p-5">
@@ -364,6 +363,15 @@ function Overview({
           <Link href={sportPath("trackRecord")} className="text-ink-muted underline-offset-2 hover:underline">See our record</Link>
         </p>
       </aside>
+    </div>
+  );
+}
+
+function Fact({ label, value, hot = false, index }: { label: string; value: string; hot?: boolean; index: number }) {
+  return (
+    <div style={{ ["--i" as string]: index }} className={`rounded-xl border px-3 py-3 text-center ${hot ? "border-brand/25 bg-brand/[0.06]" : "border-line bg-surface"}`}>
+      <p className="truncate text-[10px] font-medium uppercase tracking-wider text-ink-dim">{label}</p>
+      <p className={`tnum mt-1 font-display text-lg font-bold sm:text-xl ${hot ? "text-brand" : "text-ink"}`}>{value}</p>
     </div>
   );
 }
@@ -396,9 +404,17 @@ function Markets({ prediction }: { prediction: Prediction }) {
           <PricesPanel prediction={prediction} />
         </Suspense>
       </DepthGate>
-      {/* Every market beyond 1X2 is Pro (lib/access.ts), fetched after the
-          plan check so none of it is in the shared HTML. */}
-      {/* Asian handicap sits inside ProMarkets: one Pro wall, not two. */}
+      {/* Every market beyond 1X2 comes off the same scoreline distribution,
+          so depth is one decision, not five: a free account opens it. */}
+      <DepthGate reason="Unlock every market on this match">
+        <GoalsPanel prediction={prediction} />
+        <div className="grid gap-5 sm:grid-cols-2">
+          <BttsPanel prediction={prediction} />
+          <DoubleChancePanel prediction={prediction} />
+        </div>
+        <CorrectScorePanel prediction={prediction} />
+      </DepthGate>
+      {/* Pro: half-time markets and Asian handicap, fetched after the plan check. */}
       <ProMarkets />
     </div>
   );
