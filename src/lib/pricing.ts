@@ -36,7 +36,7 @@ export type BillingCycle = "monthly" | "quarterly" | "yearly";
 
 export const CYCLE_LABEL: Record<BillingCycle, { name: string; per: string }> = {
   monthly: { name: "Monthly", per: "per month" },
-  quarterly: { name: "Quarterly", per: "per quarter" },
+  quarterly: { name: "3 months", per: "for 3 months" },
   yearly: { name: "Yearly", per: "per year" },
 };
 
@@ -75,7 +75,7 @@ export const PLANS: PlanDefinition[] = [
       "Forge with every market, 100 slips a day",
       "Ask BetriX: 30 questions a day",
       "Full match breakdown, value against your price and staking guidance",
-      "Pay monthly, quarterly (save 10%) or yearly (save 20%)",
+      "Pay monthly, every 3 months (save 10%) or yearly (save 20%)",
     ],
     price: { monthly: 5000, quarterly: 13500, yearly: 48000 },
     cadence: "per month",
@@ -93,7 +93,7 @@ export const PLANS: PlanDefinition[] = [
       "Value-shift alerts: SportyBet prices that move above fair value, live and by email",
       "Ask BetriX: 100 questions a day",
       "Priority support: your messages go to the front of the queue",
-      "Pay monthly, quarterly (save 10%) or yearly (save 20%)",
+      "Pay monthly, every 3 months (save 10%) or yearly (save 20%)",
     ],
     price: { monthly: 12000, quarterly: 32400, yearly: 115200 },
     cadence: "per month",
