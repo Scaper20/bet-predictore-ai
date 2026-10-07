@@ -3,7 +3,6 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { BatchResult, PushTarget } from "@/lib/push/send";
 import type { DayRecord } from "@/lib/push/messages";
-import { paidUserIds } from "@/lib/push/plan";
 import { appDayBounds } from "@/lib/format";
 import { DEFAULT_SPORT } from "@/lib/sports";
 
@@ -83,19 +82,6 @@ export async function recordOutcome(admin: SupabaseClient, result: BatchResult):
   for (const [id, reason] of Object.entries(result.errors ?? {})) {
     await admin.from("push_subscriptions").update({ last_error: reason, last_error_at: now }).eq("id", id);
   }
-}
-
-export async function loadPaidUserIds(admin: SupabaseClient, userIds: string[]): Promise<Set<string>> {
-  if (userIds.length === 0) return new Set();
-  const rows: Parameters<typeof paidUserIds>[0] = [];
-  for (let i = 0; i < userIds.length; i += ID_CHUNK) {
-    const { data } = await admin
-      .from("subscriptions")
-      .select("user_id, tier, status, current_period_end, pass_expires_at")
-      .in("user_id", userIds.slice(i, i + ID_CHUNK));
-    rows.push(...((data ?? []) as Parameters<typeof paidUserIds>[0]));
-  }
-  return paidUserIds(rows);
 }
 
 /**

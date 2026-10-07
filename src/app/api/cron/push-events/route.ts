@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { freeStrongPickId } from "@/lib/service";
 import { strongKickoffPayload, strongResultPayload, type PushPayload, type StrongPickEvent } from "@/lib/push/messages";
 import { pushConfigured, sendPushBatch, summarise } from "@/lib/push/send";
-import { loadPaidUserIds, loadSubscriptions, recordOutcome, type StoredSubscription } from "@/lib/push/store";
+import { loadSubscriptions, recordOutcome } from "@/lib/push/store";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -22,9 +21,7 @@ const RESULT_WINDOW_MS = 3 * 3_600_000;
  * Vercel's Hobby crons run once a day, too seldom for this. Each event is
  * sent once: push_events_sent holds its key.
  *
- * Follows the plan line (lib/access.ts): a device signed in to a paid plan
- * hears about every Strong pick; any other device only about today's free
- * one, the same single Strong pick free viewers see on the site.
+ * Every subscribed device hears about every Strong pick: picks are free.
  */
 export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET;
@@ -84,17 +81,12 @@ export async function GET(request: Request) {
   const todo = events.filter((e) => fresh.has(e.key));
   if (todo.length === 0) return NextResponse.json({ events: events.length, sent: 0, note: "already sent" });
 
-  const [devices, freeStrongId] = await Promise.all([loadSubscriptions(admin, { daily: true }), freeStrongPickId()]);
-  const paid = await loadPaidUserIds(
-    admin,
-    [...new Set(devices.map((d) => d.userId).filter((x): x is string => Boolean(x)))],
-  );
-  const canHear = (d: StoredSubscription, e: StrongPickEvent) =>
-    (d.userId !== null && paid.has(d.userId)) || e.matchId === freeStrongId;
+  // Every pick is free (lib/access.ts), so every subscribed device hears every Strong pick.
+  const devices = await loadSubscriptions(admin, { daily: true });
 
   const items = todo.flatMap((t) =>
     devices
-      .filter((d) => (t.topic === "picks" ? d.picks : d.results) && canHear(d, t.event))
+      .filter((d) => (t.topic === "picks" ? d.picks : d.results))
       .map((d) => ({ id: d.id, target: d, payload: t.payload })),
   );
 

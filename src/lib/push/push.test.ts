@@ -205,17 +205,3 @@ describe("Strong pick alerts", () => {
     expect(strongResultPayload({ ...e, result: "push" })).toBeNull();
   });
 });
-
-describe("paid devices", () => {
-  it("counts running passes and paid-through subscriptions only", async () => {
-    const { paidUserIds } = await import("./plan");
-    const now = new Date("2026-10-07T12:00:00Z");
-    const ids = paidUserIds([
-      { user_id: "pro", tier: "pro", status: "active", current_period_end: "2026-11-01T00:00:00Z", pass_expires_at: null },
-      { user_id: "lapsed", tier: "pro", status: "cancelled", current_period_end: "2026-10-01T00:00:00Z", pass_expires_at: null },
-      { user_id: "pass", tier: "pass", status: "active", current_period_end: null, pass_expires_at: "2026-10-08T00:00:00Z" },
-      { user_id: "oldpass", tier: "pass", status: "active", current_period_end: null, pass_expires_at: "2026-10-01T00:00:00Z" },
-    ], now);
-    expect([...ids].sort()).toEqual(["pass", "pro"]);
-  });
-});

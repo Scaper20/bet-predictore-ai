@@ -61,9 +61,9 @@ export default async function HomePage() {
   const liveMatches = live?.matches ?? [];
   const upcomingMatches = upcoming?.matches ?? [];
 
-  // The board leads with today's free picks still to play (the Strong one,
+  // The board leads with today's featured set still to play (the Strong one,
   // the hot games, then the rest), topped up from featured.ts's ranking. The
-  // grid below shows all six free picks, finished ones included, so a
+  // grid below shows all six, finished ones included, so a
   // visitor can see how they did.
   const openFree = freePicks.filter(({ prediction: p }) => !FINISHED.has(p.match.status));
   const boardFree = openFree.slice(0, BOARD_SLOTS);
@@ -127,9 +127,9 @@ function TodaysPicks({ previews, free }: { previews: Awaited<ReturnType<typeof p
     <section className={`${containerClass()} py-12 sm:py-20 lg:py-24`}>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <SectionHeading
-          eyebrow={free ? "Free today" : "Live from the model"}
-          title={free ? "Today's free picks" : "What the numbers say right now"}
-          description={free ? "A Strong pick, two hot games and three more of the model's best reads, open to everyone." : undefined}
+          eyebrow={free ? "Today" : "Live from the model"}
+          title={free ? "Hot games and top picks" : "What the numbers say right now"}
+          description={free ? "The day's Strong pick, the two games everyone is talking about and three more of the model's best reads." : undefined}
         />
         <ButtonLink href={sportPath("predictions")} variant="secondary" className="shrink-0">
           See all predictions

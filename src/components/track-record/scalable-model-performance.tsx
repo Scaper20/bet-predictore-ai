@@ -40,9 +40,9 @@ const MARKET_LABELS: Record<string, string> = {
 };
 
 export function ScalableModelPerformance({ rows }: { rows: ModelPerformanceRow[] }) {
-  // Retired models keep their record on show, after the live one.
+  // Retired models keep their record on show, after the live one. Models
+  // still in development are not shown at all.
   const live = rows.filter((r) => r.model.status === "live" || r.model.status === "retired");
-  const roadmap = rows.filter((r) => r.model.status === "development");
 
   return (
     <section className="space-y-6">
@@ -60,24 +60,6 @@ export function ScalableModelPerformance({ rows }: { rows: ModelPerformanceRow[]
         ))}
       </div>
 
-      {roadmap.length > 0 && (
-        <div className="space-y-3 pt-2">
-          <div>
-            <h3 className="text-sm font-semibold">What we&apos;re building</h3>
-            <p className="mt-1 text-xs text-ink-muted">
-              Specialised models for particular sports and particular kinds of pick. These
-              haven&apos;t published anything yet, so they have no record to show — and we
-              won&apos;t invent one.
-            </p>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {roadmap.map(({ model }) => (
-              <RoadmapModelCard key={model.id} model={model} />
-            ))}
-          </div>
-        </div>
-      )}
     </section>
   );
 }
@@ -101,6 +83,11 @@ function LiveModelCard({ row }: { row: ModelPerformanceRow }) {
             )}
           </div>
           <p className="mt-1 text-xs leading-relaxed text-ink-muted">{model.blurb}</p>
+          {model.servedFrom && (
+            <p className="mt-1.5 text-[11px] text-ink-dim">
+              {model.status === "live" ? "Live since" : "Retired"} {model.servedFrom}
+            </p>
+          )}
         </div>
       </div>
 
@@ -166,23 +153,6 @@ function LiveModelCard({ row }: { row: ModelPerformanceRow }) {
           there is nothing worth quoting until it reaches {MIN_PUBLISHABLE_SAMPLE}.
         </p>
       )}
-    </div>
-  );
-}
-
-function RoadmapModelCard({ model }: { model: ModelDescriptor }) {
-  return (
-    <div className="rounded-xl border border-dashed border-line bg-surface-1/40 p-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <h4 className="text-sm font-semibold text-ink-muted">{model.brandName}</h4>
-        <Badge tone="neutral" className="text-[10px] uppercase">
-          In development
-        </Badge>
-      </div>
-      <p className="mt-1 text-[11px] font-medium uppercase tracking-wider text-ink-dim">
-        {model.sportLabel}
-      </p>
-      <p className="mt-2 text-xs leading-relaxed text-ink-muted">{model.blurb}</p>
     </div>
   );
 }

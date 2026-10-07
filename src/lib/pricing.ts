@@ -49,11 +49,12 @@ export const PLANS: PlanDefinition[] = [
   {
     id: "free",
     name: "Free",
-    description: "Every match, the 1X2 read and 6 free picks a day.",
+    description: "Every pick on every match, free.",
     features: [
       "Every match, live scores and fixtures 14 days ahead",
-      "Match result (1X2) probabilities and 1X2 picks",
-      "6 free picks a day: a Strong pick, 2 hot games and 3 more",
+      "Every pick and every Strong pick",
+      "Every market: 1X2, over/under, GG/NG, double chance, correct score",
+      "Strong pick alerts at kick-off and full time",
       "Forge: 5 slips a day, 1X2 and double chance",
       "Ask BetriX: 3 questions a day",
       "For You feed with likes and comments",
@@ -66,12 +67,11 @@ export const PLANS: PlanDefinition[] = [
   {
     id: "pro",
     name: "Pro",
-    description: "Every market and every pick, on every match.",
+    description: "The full breakdown, the extra markets and the tools.",
     features: [
       "Everything in Free",
-      "Every market: over/under, GG/NG, double chance, correct score, Asian handicap",
-      "Every pick and every Strong pick",
-      "Strong pick alerts at kick-off and full time",
+      "Asian handicap lines",
+      "Half-time and second-half markets",
       "Forge with every market, 100 slips a day",
       "Ask BetriX: 30 questions a day",
       "Full match breakdown, value against your price and staking guidance",
@@ -143,13 +143,12 @@ export const PLAN_MATRIX: MatrixGroup[] = [
   {
     group: "Picks and markets",
     rows: [
-      { label: "Match result (1X2) and 1X2 picks", values: { free: true, pro: true, vip: true } },
-      { label: "Strong picks", values: { free: "1 a day", pro: "All", vip: "All" } },
+      { label: "Every pick and every Strong pick", values: { free: true, pro: true, vip: true } },
+      { label: "Match result (1X2)", values: { free: true, pro: true, vip: true } },
       {
         label: "Over/under, GG/NG, double chance, correct score",
-        values: { free: false, pro: true, vip: true },
+        values: { free: true, pro: true, vip: true },
       },
-      { label: "Picks in every market", values: { free: "6 a day", pro: true, vip: true } },
       { label: "Asian handicap", values: { free: false, pro: true, vip: true } },
       { label: "Half-time and second-half markets", values: { free: false, pro: true, vip: true } },
     ],
@@ -176,7 +175,7 @@ export const PLAN_MATRIX: MatrixGroup[] = [
     group: "Alerts and support",
     rows: [
       { label: "Morning picks notification", values: { free: true, pro: true, vip: true } },
-      { label: "Strong pick alerts, kick-off and result", values: { free: "Free pick", pro: true, vip: true } },
+      { label: "Strong pick alerts, kick-off and result", values: { free: true, pro: true, vip: true } },
       { label: "Value-shift alerts, live and by email", values: { free: false, pro: false, vip: true } },
       { label: "Priority support", values: { free: false, pro: false, vip: true } },
     ],

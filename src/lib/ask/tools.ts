@@ -11,7 +11,7 @@ import { kickoffDay, kickoffTime } from "@/lib/format";
 import { windowFor, type KickoffWindow } from "@/lib/time-windows";
 import { isLive } from "@/lib/format";
 import type { AskPickCard } from "@/lib/ask/request";
-import { viewPrediction, type Viewer } from "@/lib/access";
+import { toolView, type Viewer } from "@/lib/access";
 
 /**
  * Ask BetriX's tools: the only way the assistant learns anything about a
@@ -167,7 +167,7 @@ const fixtureName = (m: Match) => `${m.home.name} v ${m.away.name}`;
  * same line as every other page, so asking it is not a way round the lock.
  */
 function visiblePicks(p: Prediction, ctx: ToolContext): Pick[] {
-  return ctx.tier === "paid" ? p.picks : viewPrediction(p, ctx.viewer).picks;
+  return ctx.tier === "paid" ? p.picks : toolView(p, ctx.viewer).picks;
 }
 
 const PRO_NOTE =
@@ -244,7 +244,7 @@ async function searchFixtures(input: Record<string, unknown>): Promise<ToolOutco
 function predictionSummary(p: Prediction, ctx: ToolContext) {
   const m = p.markets;
   const free = ctx.tier !== "paid";
-  const viewed = free ? viewPrediction(p, ctx.viewer) : null;
+  const viewed = free ? toolView(p, ctx.viewer) : null;
   const form = (side: "home" | "away") => {
     const f = p.form[side];
     return {

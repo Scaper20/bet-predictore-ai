@@ -67,6 +67,12 @@ export interface ModelDescriptor {
   status: ModelStatus;
   /** One plain sentence. Never a performance claim. */
   blurb: string;
+  /**
+   * When it took over (live) or handed over (retired), as shown on the track
+   * record. A pick belongs to whichever model published it before kickoff, so
+   * games played just after a switch can sit on the retired model's record.
+   */
+  servedFrom?: string;
 }
 
 const MODELS: Record<ModelId, ModelDescriptor> = {
@@ -83,6 +89,7 @@ const MODELS: Record<ModelId, ModelDescriptor> = {
     blurb:
       "Our first model: time-weighted attack and defence ratings fitted on goals alone. " +
       "Replaced in October 2026; every pick it published is still graded here.",
+    servedFrom: "6 Oct 2026, 07:38 WAT. Its last picks, published at 04:25 that morning, covered the games of 6 Oct and stay on its record.",
   },
   "goals-v2": {
     id: "goals-v2",
@@ -97,6 +104,7 @@ const MODELS: Record<ModelId, ModelDescriptor> = {
     blurb:
       "Rates every club on the chances it creates and concedes as well as its goals, " +
       "and only stands a pick on a competition with 200 or more completed matches behind it.",
+    servedFrom: "6 Oct 2026, 07:38 WAT",
   },
   "result-v1": {
     id: "result-v1",
