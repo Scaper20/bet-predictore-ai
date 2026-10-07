@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { supabaseServer, supabaseConfigured } from "@/lib/supabase/server";
+import { supabaseConfigured } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { isAllowedPushEndpoint } from "@/lib/push/subscription";
 import { readJson, rejectCrossSite } from "@/lib/push/request";
@@ -27,7 +27,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid endpoint" }, { status: 400 });
   }
 
-  const supabase = await supabaseServer();
+  const supabase = supabaseAdmin();
   const { data, error } = await supabase
     .rpc("push_claim_test", { p_endpoint: endpoint })
     .maybeSingle<{ p256dh: string; auth: string }>();
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
   });
   if (outcome === "failed" && reason) {
     // Kept on the row (0042) so a device that never hears from us shows why.
-    await supabaseAdmin()
+    await supabase
       .from("push_subscriptions")
       .update({ last_error: reason, last_error_at: new Date().toISOString() })
       .eq("endpoint", endpoint);

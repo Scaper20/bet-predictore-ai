@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseServer, supabaseConfigured } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { isAllowedPushEndpoint, parseSubscription, parseTopics, type PushTopics } from "@/lib/push/subscription";
 import { readJson, rejectCrossSite } from "@/lib/push/request";
 
@@ -15,10 +16,9 @@ export const dynamic = "force-dynamic";
  *
  * DELETE removes it.
  *
- * Works signed out. Both go through SECURITY DEFINER functions (0024) under
- * the caller's own session, so the account a row is tied to always comes
- * from the session cookie, never from the request body, and the service-role
- * key stays out of this route.
+ * Works signed out. Both go through service-role-only functions (0044): the
+ * account a row is tied to comes from the verified session cookie, never
+ * from the request body, and nothing here is callable from the browser.
  */
 export async function POST(request: Request) {
   const rejected = rejectCrossSite(request);
@@ -31,11 +31,14 @@ export async function POST(request: Request) {
   const topics = parseTopics(body?.topics);
 
   const supabase = await supabaseServer();
-  // Refreshes an expired session first, so the function sees the right user.
-  await supabase.auth.getUser();
+  // Refreshes an expired session first, so the row goes to the right user.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin()
     .rpc("push_sync", {
+      p_user: user?.id ?? null,
       p_endpoint: subscription.endpoint,
       p_p256dh: subscription.keys.p256dh,
       p_auth: subscription.keys.auth,
@@ -62,8 +65,7 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: "Invalid endpoint" }, { status: 400 });
   }
 
-  const supabase = await supabaseServer();
-  const { error } = await supabase.rpc("push_unsubscribe", { p_endpoint: endpoint });
+  const { error } = await supabaseAdmin().rpc("push_unsubscribe", { p_endpoint: endpoint });
   if (error) return NextResponse.json({ error: "Could not remove" }, { status: 500 });
   return NextResponse.json({ ok: true });
 }
