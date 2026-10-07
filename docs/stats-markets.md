@@ -3,9 +3,12 @@
 Status: model built and tested walk-forward (October 2026). The database
 now stores corners, cards, shots and referees (0049), the archive job fills
 them nightly, and `src/lib/stat-markets-service.ts` computes every market
-for a fixture. Nothing is shown on the site yet; only the admin endpoint
-`/api/admin/stat-markets/[id]` returns them, for checking against real
-fixtures before release.
+for a fixture. Shipped on the match page's Markets tab (October 2026):
+corners, cards, shots, shots on target and the full-time goal extras with
+the other markets (free account), the half-by-half goal markets with the
+Pro half-time panel. Probabilities only; the low-skill ones carry a
+"close to a coin flip" note. Win either half stays hidden until its
+calibration is fixed.
 
 ## What was built
 
