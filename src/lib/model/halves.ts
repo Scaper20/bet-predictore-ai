@@ -78,13 +78,17 @@ const RESULT = (x: number, y: number) => (x > y ? "H" : x === y ? "D" : "A");
  * is scaled by (its rate / the opponent's)^tilt. Walk-forward, favourites
  * led at half time more often than an even split predicts (54% → 64%).
  */
-export function halfMarkets(lambda: number, mu: number, share: HalfShare, tilt = 0): HalfMarkets {
+/** The two halves' independent score grids, after the share and tilt. */
+export function halfGrids(lambda: number, mu: number, share: HalfShare, tilt = 0): { first: number[][]; second: number[][] } {
   const ratio = mu > 0 && lambda > 0 ? lambda / mu : 1;
   const clamp = (x: number) => Math.min(0.75, Math.max(0.2, x));
   const sh = clamp(share.home * ratio ** tilt);
   const sa = clamp(share.away * ratio ** -tilt);
-  const first = scoreMatrix(lambda * sh, mu * sa);
-  const second = scoreMatrix(lambda * (1 - sh), mu * (1 - sa));
+  return { first: scoreMatrix(lambda * sh, mu * sa), second: scoreMatrix(lambda * (1 - sh), mu * (1 - sa)) };
+}
+
+export function halfMarkets(lambda: number, mu: number, share: HalfShare, tilt = 0): HalfMarkets {
+  const { first, second } = halfGrids(lambda, mu, share, tilt);
   const n = first.length;
 
   // Per-half total-goal distributions.
