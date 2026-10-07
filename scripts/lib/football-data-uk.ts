@@ -47,6 +47,9 @@ export interface Row {
   ast?: number;
   /** Closing over/under 2.5 prices, market average. */
   closeOu?: { over: number; under: number };
+  /** Half-time score, where the file records it. */
+  htHome?: number;
+  htAway?: number;
 }
 
 export async function csv(season: string, div: string): Promise<string> {
@@ -98,6 +101,8 @@ export function parse(body: string, div: string): Row[] {
   const iCu = at("AvgC<2.5");
   const iHst = at("HST");
   const iAst = at("AST");
+  const iHth = at("HTHG");
+  const iHta = at("HTAG");
 
   const rows: Row[] = [];
   for (const line of lines.slice(1)) {
@@ -124,7 +129,11 @@ export function parse(body: string, div: string): Row[] {
 
     const hst = num(iHst);
     const ast = num(iAst);
+    const hth = num(iHth);
+    const hta = num(iHta);
     rows.push({
+      htHome: Number.isFinite(hth) && f[iHth]?.trim() !== "" ? hth : undefined,
+      htAway: Number.isFinite(hta) && f[iHta]?.trim() !== "" ? hta : undefined,
       div,
       hst: Number.isFinite(hst) ? hst : undefined,
       ast: Number.isFinite(ast) ? ast : undefined,

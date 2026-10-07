@@ -48,7 +48,23 @@ export interface SendOptions {
 /** "gone" means the subscription is dead for good and should be deleted. */
 export type SendOutcome = "sent" | "gone" | "failed";
 
-export async function sendPush(target: PushTarget, payload: PushPayload, opts: SendOptions): Promise<SendOutcome> {
+/**
+ * Why the last send to a device failed, as the push service said it
+ * ("403 BadJwtToken"). Recorded on the row (0042) so a failure is visible
+ * instead of silent: before this, a device that never got a notification
+ * looked exactly like one nobody had tried.
+ */
+export function failureReason(err: unknown): string {
+  if (err instanceof WebPushError) return `${err.statusCode} ${String(err.body ?? "").slice(0, 160)}`.trim();
+  return err instanceof Error ? err.message.slice(0, 200) : "unknown error";
+}
+
+export async function sendPush(
+  target: PushTarget,
+  payload: PushPayload,
+  opts: SendOptions,
+  onFail?: (reason: string) => void,
+): Promise<SendOutcome> {
   ensureVapid();
   try {
     await webpush.sendNotification(
@@ -63,6 +79,7 @@ export async function sendPush(target: PushTarget, payload: PushPayload, opts: S
     // request or keys at fault, and treating that as "gone" would delete
     // every subscriber in one run.
     if (err instanceof WebPushError && (err.statusCode === 404 || err.statusCode === 410)) return "gone";
+    onFail?.(failureReason(err));
     return "failed";
   }
 }
@@ -76,6 +93,8 @@ export interface BatchResult {
   /** Row ids whose subscription is dead. */
   gone: string[];
   failed: number;
+  /** Row id → what the push service said, for the failed ones. */
+  errors: Record<string, string>;
 }
 
 /**
@@ -87,10 +106,12 @@ export async function sendPushBatch(
   items: { id: string; target: PushTarget; payload: PushPayload }[],
   opts: SendOptions,
 ): Promise<BatchResult> {
-  const result: BatchResult = { sent: [], gone: [], failed: 0 };
+  const result: BatchResult = { sent: [], gone: [], failed: 0, errors: {} };
   for (let i = 0; i < items.length; i += CONCURRENCY) {
     const chunk = items.slice(i, i + CONCURRENCY);
-    const outcomes = await Promise.all(chunk.map(({ target, payload }) => sendPush(target, payload, opts)));
+    const outcomes = await Promise.all(
+      chunk.map(({ id, target, payload }) => sendPush(target, payload, opts, (reason) => (result.errors[id] = reason))),
+    );
     outcomes.forEach((outcome, j) => {
       const { id } = chunk[j];
       if (outcome === "sent") result.sent.push(id);

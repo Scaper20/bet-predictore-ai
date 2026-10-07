@@ -7,10 +7,12 @@ import { BestBetOfDay } from "@/components/landing/best-bet-of-day";
 import { MatchCard } from "@/components/match/match-card";
 import { SectionHeading, ButtonLink, EmptyState } from "@/components/ui/primitives";
 import { Container, containerClass } from "@/components/ui/container";
-import { liveFeed, upcomingFeed, predictBatch, bestBetOfDay, featuredFeed } from "@/lib/service";
+import { liveFeed, upcomingFeed, predictBatch, bestBetOfDay, featuredFeed, freePickPredictions, freeViewer } from "@/lib/service";
+import { viewPrediction } from "@/lib/access";
 import { FeaturedBoard } from "@/components/landing/featured-board";
 import { WhatsAppPromo } from "@/components/landing/whatsapp-promo";
-import { toFeaturedRow } from "@/lib/featured";
+import { toFeaturedRow, type FeaturedReasonCode } from "@/lib/featured";
+import type { FreeSlot } from "@/lib/free-picks";
 import { matchPath, sportPath } from "@/lib/routes";
 
 /*
@@ -21,6 +23,10 @@ import { matchPath, sportPath } from "@/lib/routes";
 export const revalidate = 60;
 
 export const metadata: Metadata = { alternates: { canonical: "/" } };
+
+const BOARD_SLOTS = 4;
+const FINISHED = new Set(["finished", "cancelled", "postponed"]);
+const SLOT_REASON: Record<FreeSlot, FeaturedReasonCode> = { strong: "free-strong", hot: "free-hot", normal: "free" };
 
 /*
  * The FAQ as structured data. Google no longer shows FAQ rich results for
@@ -40,22 +46,44 @@ const FAQ_JSON_LD = {
 
 export default async function HomePage() {
   // Never let a provider outage take down the marketing page.
-  const [live, upcoming, featured, bestBet] = await Promise.all([
+  const [live, upcoming, featured, rawBest, viewer, freePicks] = await Promise.all([
     liveFeed().catch(() => null),
     upcomingFeed(3).catch(() => null),
-    featuredFeed(4).catch(() => []),
+    featuredFeed(BOARD_SLOTS).catch(() => []),
     bestBetOfDay().catch(() => null),
+    freeViewer(),
+    freePickPredictions(),
   ]);
+  // Cached and shared by every visitor, so this page always shows the free
+  // view (lib/access.ts); signed-in Pro users get full picks everywhere else.
+  const bestBet = rawBest ? viewPrediction(rawBest, viewer) : null;
 
   const liveMatches = live?.matches ?? [];
   const upcomingMatches = upcoming?.matches ?? [];
 
-  // The board is curated by featured.ts; the grid below it is simply the next
-  // few publishable fixtures, which is a different job and reads differently.
-  const rows = featured.map((f) => toFeaturedRow(f, matchPath(f.prediction.match.id)));
+  // The board leads with today's free picks still to play (the Strong one,
+  // the hot games, then the rest), topped up from featured.ts's ranking. The
+  // grid below shows all six free picks, finished ones included, so a
+  // visitor can see how they did.
+  const openFree = freePicks.filter(({ prediction: p }) => !FINISHED.has(p.match.status));
+  const boardFree = openFree.slice(0, BOARD_SLOTS);
+  const onBoard = new Set(boardFree.map((f) => f.prediction.match.id));
+  const rows = [
+    ...boardFree.map(({ prediction, slot }) =>
+      toFeaturedRow({ prediction: viewPrediction(prediction, viewer), score: 1, reason: SLOT_REASON[slot] }, matchPath(prediction.match.id)),
+    ),
+    ...featured
+      .filter((f) => !onBoard.has(f.prediction.match.id))
+      .slice(0, BOARD_SLOTS - boardFree.length)
+      .map((f) => toFeaturedRow({ ...f, prediction: viewPrediction(f.prediction, viewer) }, matchPath(f.prediction.match.id))),
+  ];
 
-  const previewSource = upcomingMatches.length > 0 ? upcomingMatches : liveMatches;
-  const previews = await predictBatch(previewSource.slice(0, 6), 6).catch(() => []);
+  let previews = freePicks.map(({ prediction }) => viewPrediction(prediction, viewer));
+  const freeGrid = previews.length > 0;
+  if (!freeGrid) {
+    const previewSource = upcomingMatches.length > 0 ? upcomingMatches : liveMatches;
+    previews = (await predictBatch(previewSource.slice(0, 6), 6).catch(() => [])).map((p) => viewPrediction(p, viewer));
+  }
 
   return (
     <>
@@ -80,7 +108,7 @@ export default async function HomePage() {
           <BestBetOfDay prediction={bestBet} />
         </Container>
       )}
-      <TodaysPicks previews={previews} />
+      <TodaysPicks previews={previews} free={freeGrid} />
       <WhatsAppPromo />
       <Features />
       <HowItWorks />
@@ -92,15 +120,16 @@ export default async function HomePage() {
   );
 }
 
-function TodaysPicks({ previews }: { previews: Awaited<ReturnType<typeof predictBatch>> }) {
+function TodaysPicks({ previews, free }: { previews: Awaited<ReturnType<typeof predictBatch>>; free: boolean }) {
   const usable = previews.filter((p) => p.sufficiency.publishable).slice(0, 6);
 
   return (
     <section className={`${containerClass()} py-12 sm:py-20 lg:py-24`}>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <SectionHeading
-          eyebrow="Live from the model"
-          title="What the numbers say right now"
+          eyebrow={free ? "Free today" : "Live from the model"}
+          title={free ? "Today's free picks" : "What the numbers say right now"}
+          description={free ? "A Strong pick, two hot games and three more of the model's best reads, open to everyone." : undefined}
         />
         <ButtonLink href={sportPath("predictions")} variant="secondary" className="shrink-0">
           See all predictions

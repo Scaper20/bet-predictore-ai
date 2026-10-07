@@ -18,13 +18,21 @@ export type ForgeRisk = "safe" | "balanced" | "risky";
 export type ForgeMarket = "result" | "double_chance" | "goals" | "btts" | "handicap";
 export type ForgeWhen = Extract<KickoffWindow, "today" | "tonight" | "tomorrow" | "weekend" | "next_3_days">;
 
+/** Free plan: 1X2 and double chance; every other market is Pro. */
 export const FORGE_MARKETS: { id: ForgeMarket; label: string; paid?: boolean }[] = [
   { id: "result", label: "1X2" },
   { id: "double_chance", label: "Double chance" },
-  { id: "goals", label: "Over/Under" },
-  { id: "btts", label: "GG/NG" },
+  { id: "goals", label: "Over/Under", paid: true },
+  { id: "btts", label: "GG/NG", paid: true },
   { id: "handicap", label: "Handicap", paid: true },
 ];
+
+/** The markets a settings object may use on this plan; never empty. */
+export function marketsForPlan(markets: ForgeMarket[], paid: boolean): ForgeMarket[] {
+  if (paid) return markets;
+  const open = markets.filter((m) => !FORGE_MARKETS.find((x) => x.id === m)?.paid);
+  return open.length ? open : ["result"];
+}
 
 export const FORGE_WHEN: { id: ForgeWhen; label: string }[] = [
   { id: "today", label: "Today" },

@@ -5,10 +5,15 @@ import type { Prediction } from "@/lib/model/predict";
 import { useSlip } from "@/lib/slip";
 import { Button } from "@/components/ui/primitives";
 import { percent } from "@/lib/format";
+import { useMatchAccess } from "@/components/match/match-access";
 
 /** Pick a selection from this fixture and drop it on the slip. */
-export function AddToSlip({ prediction }: { prediction: Prediction }) {
+export function AddToSlip({ prediction: shared }: { prediction: Prediction }) {
   const { legs, add, remove } = useSlip();
+  // The page passes the free view (1X2 selections only); a paid viewer's own
+  // view, fetched after the plan check, adds every other market.
+  const access = useMatchAccess();
+  const prediction = access.prediction ?? shared;
   const { picks, match, sufficiency } = prediction;
 
   const existing = legs.find((l) => l.matchId === match.id);

@@ -25,10 +25,10 @@ export async function GET(request: Request) {
   } = await supabase.auth.getUser();
   const { data } = await supabase
     .from("pick_comments")
-    .select("id, user_id, author_name, body, created_at")
+    .select("id, user_id, author_name, body, created_at, parent_id")
     .eq("match_id", matchId)
     .order("created_at", { ascending: false })
-    .limit(50);
+    .limit(100);
 
   const comments = (data ?? []).reverse().map((c) => ({
     id: c.id as string,
@@ -36,6 +36,7 @@ export async function GET(request: Request) {
     body: c.body as string,
     createdAt: c.created_at as string,
     mine: !!user && c.user_id === user.id,
+    parentId: (c.parent_id as string | null) ?? null,
   }));
   return NextResponse.json({ comments, signedIn: !!user }, { headers: NO_STORE });
 }
@@ -47,7 +48,11 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Sign in to comment." }, { status: 401, headers: NO_STORE });
 
-  const { matchId, body } = (await request.json().catch(() => ({}))) as { matchId?: string; body?: string };
+  const { matchId, body, parentId } = (await request.json().catch(() => ({}))) as {
+    matchId?: string;
+    body?: string;
+    parentId?: string;
+  };
   const text = typeof body === "string" ? body.trim() : "";
   if (!validId(matchId) || text.length === 0 || text.length > MAX_BODY) {
     return NextResponse.json({ error: `Comments are 1 to ${MAX_BODY} characters.` }, { status: 400, headers: NO_STORE });
@@ -63,7 +68,24 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Slow down a little, then try again." }, { status: 429, headers: NO_STORE });
   }
 
-  const { error } = await supabase.from("pick_comments").insert({ match_id: matchId, user_id: user.id, body: text });
+  // Replies are one level deep: a reply to a reply joins its parent's thread,
+  // and the parent must be on the same pick.
+  let parent: string | null = null;
+  if (typeof parentId === "string" && parentId) {
+    const { data: target } = await supabase
+      .from("pick_comments")
+      .select("id, match_id, parent_id")
+      .eq("id", parentId)
+      .maybeSingle();
+    if (!target || target.match_id !== matchId) {
+      return NextResponse.json({ error: "That comment is gone." }, { status: 400, headers: NO_STORE });
+    }
+    parent = (target.parent_id as string | null) ?? (target.id as string);
+  }
+
+  const { error } = await supabase
+    .from("pick_comments")
+    .insert({ match_id: matchId, user_id: user.id, body: text, parent_id: parent });
   if (error) return NextResponse.json({ error: "Couldn't post that. Try again." }, { status: 500, headers: NO_STORE });
   return NextResponse.json({ ok: true }, { headers: NO_STORE });
 }

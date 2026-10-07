@@ -4,6 +4,8 @@ import { getPreferences } from "@/lib/preferences";
 import { getEntitlement, type Entitlement } from "@/lib/entitlements";
 import { leagueByCode, type LeagueDef } from "@/lib/leagues";
 import { upcomingFeed, predictBatch, bestBetOfDay, featuredFeed } from "@/lib/service";
+import { viewerForTier } from "@/lib/viewer";
+import { isLockedPick, viewPrediction } from "@/lib/access";
 import { supabaseServer } from "@/lib/supabase/server";
 import { settledRecords } from "@/lib/performance-store";
 import { EMPTY_RECORD, isPublishable } from "@/lib/performance";
@@ -116,15 +118,19 @@ export async function getForYouFeed(sport: SportId = DEFAULT_SPORT): Promise<For
     settledRecords({ sport, sinceDays: 30 }).catch(() => null),
   ]);
 
-  const predictions = scoped.length
-    ? await predictBatch(scoped, PREDICT_LIMIT).catch(() => [] as Prediction[])
-    : [];
+  const [predictions, viewer] = await Promise.all([
+    scoped.length ? predictBatch(scoped, PREDICT_LIMIT).catch(() => [] as Prediction[]) : Promise.resolve([] as Prediction[]),
+    viewerForTier(entitlement.tier),
+  ]);
+  // Free viewers: non-1X2 and Strong picks (but one) arrive locked, stripped
+  // here before the feed is sent to the browser (lib/access.ts).
+  const view = (p: Prediction) => toPersonalizedPick(viewPrediction(p, viewer), sport);
 
   const projected = predictions
     // The same publishable gate the predictions page applies — a fixture whose
     // competition has too little history produces no pick anywhere on the site.
     .filter((p) => p.sufficiency.publishable && p.topPick)
-    .map((p) => toPersonalizedPick(p, sport))
+    .map(view)
     .filter((p): p is PersonalizedPick => p !== null);
 
   // Belt and braces over the scoped fetch: if a provider ever returns a
@@ -132,10 +138,10 @@ export async function getForYouFeed(sport: SportId = DEFAULT_SPORT): Promise<For
   // personalised zone.
   const inYourLeagues = inFollowedLeagues(projected, followed);
 
-  const bestBet = bestBetPrediction ? toPersonalizedPick(bestBetPrediction, sport) : null;
+  const bestBet = bestBetPrediction ? view(bestBetPrediction) : null;
 
   const quickPicks = featured
-    .map((f) => toPersonalizedPick(f.prediction, sport))
+    .map((f) => view(f.prediction))
     .filter((p): p is PersonalizedPick => p !== null)
     // The pick of the day is shown in full above; no need to repeat it.
     .filter((p) => p.id !== bestBet?.id)
@@ -166,7 +172,8 @@ export async function getForYouFeed(sport: SportId = DEFAULT_SPORT): Promise<For
     followedLeagues,
     usingDefaults,
     inYourLeagues,
-    acca: buildAcca(inYourLeagues),
+    // Built from the picks this viewer can see, so a free multiple is usable.
+    acca: buildAcca(inYourLeagues.filter((p) => !isLockedPick(p))),
     leagueRecords,
     bestBet,
     quickPicks,

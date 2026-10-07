@@ -207,7 +207,7 @@ export default async function AccountPage() {
             <p className="mt-3 text-sm text-ink-muted">
               {paid
                 ? "Invoices, payment method and cancellation all live on the billing page."
-                : "Free covers live scores, fixtures and every market on every match. Paid plans add value detection and the enhanced breakdowns."}
+                : "Free covers every match, the 1X2 market and 6 free picks a day, a Strong pick among them. Pro adds every market, every pick and the full breakdowns."}
             </p>
           </div>
           <div className="flex flex-wrap gap-3">

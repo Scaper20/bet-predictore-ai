@@ -26,7 +26,7 @@ export const metadata: Metadata = {
 const FAQS = [
   {
     q: "Do I need to pay to use BetriX?",
-    a: "No. Live scores, fixtures, match results and the headline prediction for every fixture are free, and a free account unlocks the full set of markets on every match. Paid plans add value detection against the price you're offered, staking guidance and the enhanced breakdowns.",
+    a: "No. Every match, live scores, fixtures, results and the match-result (1X2) read are free, with 6 free picks a day: a Strong pick, two hot games and three more. Pro adds every other market and every pick, plus the full breakdowns, value against the price you're offered and staking guidance.",
   },
   {
     q: "What happened to passes?",

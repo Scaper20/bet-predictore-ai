@@ -11,6 +11,7 @@ import { kickoffDay, kickoffTime } from "@/lib/format";
 import { windowFor, type KickoffWindow } from "@/lib/time-windows";
 import { isLive } from "@/lib/format";
 import type { AskPickCard } from "@/lib/ask/request";
+import { viewPrediction, type Viewer } from "@/lib/access";
 
 /**
  * Ask BetriX's tools: the only way the assistant learns anything about a
@@ -22,6 +23,8 @@ export type AskTier = "free" | "paid";
 
 export interface ToolContext {
   tier: AskTier;
+  /** What this user may see (lib/access.ts): free users get 1X2, plus today's six free picks. */
+  viewer: Viewer;
   /** Called by show_picks with the cards to render. */
   onPicks: (cards: AskPickCard[]) => void;
 }
@@ -158,10 +161,20 @@ const odds2 = (o: number) => Math.round(o * 100) / 100;
 const wat = (iso: string) => `${kickoffDay(iso)}, ${kickoffTime(iso)} WAT`;
 const fixtureName = (m: Match) => `${m.home.name} v ${m.away.name}`;
 
-/** Asian handicap is a paid feature everywhere else on the site; the assistant keeps to the same line. */
-function visiblePicks(p: Prediction, tier: AskTier): Pick[] {
-  return tier === "paid" ? p.picks : p.picks.filter((pk) => pk.group !== "Asian Handicap");
+/**
+ * The selections this user may be told about. Free users: the 1X2 market,
+ * plus the one open Strong pick (lib/access.ts) — the assistant keeps to the
+ * same line as every other page, so asking it is not a way round the lock.
+ */
+function visiblePicks(p: Prediction, ctx: ToolContext): Pick[] {
+  return ctx.tier === "paid" ? p.picks : viewPrediction(p, ctx.viewer).picks;
 }
+
+const PRO_NOTE =
+  "This user is on the free plan: the match result (1X2) market is open to them, and so is the headline pick on " +
+  "today's six free picks. Other goals, both teams to score, " +
+  "double chance, correct score and Asian handicap are Pro. Do not estimate or hint at those numbers; say they are " +
+  "part of Pro and offer the 1X2 view.";
 
 async function slate(): Promise<Match[]> {
   return cached("ask:slate", 5 * 60_000, async () => (await upcomingFeed(7)).matches);
@@ -228,8 +241,10 @@ async function searchFixtures(input: Record<string, unknown>): Promise<ToolOutco
   };
 }
 
-function predictionSummary(p: Prediction, tier: AskTier) {
+function predictionSummary(p: Prediction, ctx: ToolContext) {
   const m = p.markets;
+  const free = ctx.tier !== "paid";
+  const viewed = free ? viewPrediction(p, ctx.viewer) : null;
   const form = (side: "home" | "away") => {
     const f = p.form[side];
     return {
@@ -257,21 +272,41 @@ function predictionSummary(p: Prediction, tier: AskTier) {
       data_quality: Math.round(p.model.dataQuality),
       neutral_venue: p.model.neutralVenue,
     },
-    expected_goals: { home: odds2(m.expectedGoals.home), away: odds2(m.expectedGoals.away) },
     result_pct: { home: pct(m.home), draw: pct(m.draw), away: pct(m.away) },
-    double_chance_pct: {
-      home_or_draw: pct(m.doubleChance.homeOrDraw),
-      away_or_draw: pct(m.doubleChance.awayOrDraw),
-      home_or_away: pct(m.doubleChance.homeOrAway),
-    },
-    over_pct: Object.fromEntries(Object.entries(m.over).map(([k, v]) => [k, pct(v)])),
-    btts_yes_pct: pct(m.bttsYes),
-    likely_scores: m.correctScore.slice(0, 3).map((s) => `${s.home}-${s.away} (${pct(s.probability)}%)`),
-    top_pick: p.topPick && p.sufficiency.publishable ? { market: p.topPick.market, label: p.topPick.label } : null,
-    selections: visiblePicks(p, tier)
+    ...(free
+      ? {}
+      : {
+          expected_goals: { home: odds2(m.expectedGoals.home), away: odds2(m.expectedGoals.away) },
+          double_chance_pct: {
+            home_or_draw: pct(m.doubleChance.homeOrDraw),
+            away_or_draw: pct(m.doubleChance.awayOrDraw),
+            home_or_away: pct(m.doubleChance.homeOrAway),
+          },
+          over_pct: Object.fromEntries(Object.entries(m.over).map(([k, v]) => [k, pct(v)])),
+          btts_yes_pct: pct(m.bttsYes),
+          likely_scores: m.correctScore.slice(0, 3).map((s) => `${s.home}-${s.away} (${pct(s.probability)}%)`),
+          ...(m.halves
+            ? {
+                // Probabilities only: half markets are never headline picks (model/halves.ts).
+                half_time_result_pct: { home: pct(m.halves.ht.home), draw: pct(m.halves.ht.draw), away: pct(m.halves.ht.away) },
+                first_half_over_pct: { "0.5": pct(m.halves.htOver["0.5"]), "1.5": pct(m.halves.htOver["1.5"]) },
+                second_half_over_pct: { "0.5": pct(m.halves.shOver["0.5"]), "1.5": pct(m.halves.shOver["1.5"]) },
+              }
+            : {}),
+        }),
+    top_pick:
+      p.topPick && p.sufficiency.publishable
+        ? viewed?.locked.pick
+          ? { locked: true, note: "This pick is Pro." }
+          : { market: p.topPick.market, label: p.topPick.label }
+        : null,
+    selections: visiblePicks(p, ctx)
       .slice(0, 14)
       .map((pk) => ({ market: pk.market, label: pk.label, pct: pct(pk.probability), fair_odds: odds2(pk.fairOdds) })),
-    form: { [p.match.home.name]: form("home"), [p.match.away.name]: form("away") },
+    form: free
+      ? { [p.match.home.name]: { last: form("home").last, points: form("home").points, of: form("home").of },
+          [p.match.away.name]: { last: form("away").last, points: form("away").points, of: form("away").of } }
+      : { [p.match.home.name]: form("home"), [p.match.away.name]: form("away") },
     head_to_head:
       p.h2h.meetings > 0
         ? {
@@ -282,7 +317,7 @@ function predictionSummary(p: Prediction, tier: AskTier) {
             avg_goals: odds2(p.h2h.avgGoals),
           }
         : null,
-    ...(tier === "free" ? { note: "Asian handicap lines are for Pro members." } : {}),
+    ...(free ? { note: PRO_NOTE } : {}),
   };
 }
 
@@ -291,7 +326,7 @@ async function getPrediction(input: Record<string, unknown>, ctx: ToolContext): 
   if (!id) return { content: "match_id is required.", isError: true };
   const p = await matchPrediction(id).catch(() => null);
   if (!p) return { content: `No fixture found for ${id}. Use search_fixtures to find the right id.`, isError: true };
-  return { content: JSON.stringify(predictionSummary(p, ctx.tier)) };
+  return { content: JSON.stringify(predictionSummary(p, ctx)) };
 }
 
 async function getPrices(input: Record<string, unknown>, ctx: ToolContext): Promise<ToolOutcome> {
@@ -301,7 +336,7 @@ async function getPrices(input: Record<string, unknown>, ctx: ToolContext): Prom
   const p = await matchPrediction(id).catch(() => null);
   if (!p) return { content: `No fixture found for ${id}.`, isError: true };
 
-  const picks = visiblePicks(p, ctx.tier).filter((pk) => markets.includes(pk.market));
+  const picks = visiblePicks(p, ctx).filter((pk) => markets.includes(pk.market));
   const unknown = markets.filter((mk) => !picks.some((pk) => pk.market === mk));
   const priced = await priceSelections(p.match, picks).catch(() => []);
   return {
@@ -357,7 +392,7 @@ async function topPicks(input: Record<string, unknown>, ctx: ToolContext): Promi
   const best = predictions
     .filter((p) => p.sufficiency.publishable)
     .flatMap((p) => {
-      const pick = visiblePicks(p, ctx.tier)
+      const pick = visiblePicks(p, ctx)
         .filter((pk) => groups.has(pk.group) && pk.fairOdds >= minOdds && pk.fairOdds <= maxOdds)
         .sort((a, b) => b.probability - a.probability)[0];
       return pick ? [{ p, pick }] : [];
@@ -410,7 +445,7 @@ async function showPicks(input: Record<string, unknown>, ctx: ToolContext): Prom
   const thin: string[] = [];
   for (const { id, market } of wanted) {
     const p = await matchPrediction(id).catch(() => null);
-    const pick = p ? visiblePicks(p, ctx.tier).find((pk) => pk.market === market) : undefined;
+    const pick = p ? visiblePicks(p, ctx).find((pk) => pk.market === market) : undefined;
     if (!p || !pick) {
       missing.push(`${id} ${market}`);
       continue;

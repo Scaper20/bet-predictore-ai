@@ -7,6 +7,8 @@ import { kickoffTime, relativeDay } from "@/lib/format";
 import { matchPath } from "@/lib/routes";
 import { isStrong } from "@/lib/model/tiers";
 import { StrongBadge } from "@/components/ui/strong-badge";
+import { LockedSelection, ProTag } from "@/components/entitlements/locked-pick";
+import type { ViewedPrediction } from "@/lib/access";
 
 /**
  * The one deep pick given away free, no login. Headline numbers only — the
@@ -14,9 +16,10 @@ import { StrongBadge } from "@/components/ui/strong-badge";
  * reads as a hook, not the whole paid experience. Its border slowly orbits
  * (.orbit-border) so it reads as the day's headline without shouting.
  */
-export function BestBetOfDay({ prediction }: { prediction: Prediction | null }) {
+export function BestBetOfDay({ prediction }: { prediction: Prediction | ViewedPrediction | null }) {
   if (!prediction?.topPick) return null;
   const { match, topPick, markets } = prediction;
+  const locked = "locked" in prediction && prediction.locked.pick;
 
   return (
     <Link
@@ -52,11 +55,19 @@ export function BestBetOfDay({ prediction }: { prediction: Prediction | null }) 
       <div className="flex items-end justify-between gap-6 rounded-xl border border-brand/20 bg-brand/[0.06] px-5 py-4 sm:block sm:min-w-52 sm:text-right">
         <div>
           <p className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-ink-dim">Our pick</p>
-          <p className="mt-1 text-base font-bold text-ink sm:text-lg">{topPick.label}</p>
+          {locked ? (
+            <LockedSelection group={topPick.group} className="mt-1 text-base font-bold text-ink sm:text-lg" />
+          ) : (
+            <p className="mt-1 text-base font-bold text-ink sm:text-lg">{topPick.label}</p>
+          )}
           {isStrong(topPick) && <StrongBadge className="mt-1.5" />}
         </div>
         <div className="sm:mt-3">
-          <AnimatedNumber value={topPick.probability * 100} decimals={1} suffix="%" className="font-display text-3xl font-extrabold text-brand" />
+          {locked ? (
+            <ProTag />
+          ) : (
+            <AnimatedNumber value={topPick.probability * 100} decimals={1} suffix="%" className="font-display text-3xl font-extrabold text-brand" />
+          )}
         </div>
       </div>
     </Link>

@@ -3,7 +3,10 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { todaysQualifyingPicks } from "@/lib/whatsapp-digest-feed";
 import { dailyPayload } from "@/lib/push/messages";
 import { pushConfigured, sendPushBatch, summarise } from "@/lib/push/send";
-import { loadSubscriptions, recordOutcome, yesterdayRecord } from "@/lib/push/store";
+import { loadPaidUserIds, loadSubscriptions, recordOutcome, yesterdayRecord } from "@/lib/push/store";
+import { freeViewer } from "@/lib/service";
+import { pickVisible } from "@/lib/access";
+import type { Pick } from "@/lib/model/predict";
 
 // Same posture as the other crons: Node-only (service-role client, web-push),
 // and CRON_SECRET is required because this reaches every subscriber.
@@ -42,8 +45,17 @@ export async function GET(request: Request) {
     loadSubscriptions(admin, { daily: true }),
   ]);
 
+  // The same plan line as the site (lib/access.ts): a free device is told
+  // only about picks a free viewer can see.
+  const [paid, free] = await Promise.all([
+    loadPaidUserIds(admin, [...new Set(devices.map((d) => d.userId).filter((x): x is string => Boolean(x)))]),
+    freeViewer(),
+  ]);
+  const freePicks = picks.filter((p) => pickVisible(p as unknown as Pick, p.id, free));
+
   const items = devices.flatMap((d) => {
-    const payload = dailyPayload({ picks, record, topics: d });
+    const isPaid = d.userId !== null && paid.has(d.userId);
+    const payload = dailyPayload({ picks: isPaid ? picks : freePicks, record, topics: d });
     return payload ? [{ id: d.id, target: d, payload }] : [];
   });
 

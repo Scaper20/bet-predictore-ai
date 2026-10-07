@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { matchDetail } from "@/lib/service";
 import { getEntitlement, meets } from "@/lib/entitlements";
+import { viewerForTier } from "@/lib/viewer";
+import { viewPrediction } from "@/lib/access";
 
 export const dynamic = "force-dynamic";
 
@@ -25,21 +27,22 @@ export async function GET(
     // tier. Redact based on the caller's actual entitlement instead of
     // relying on the client-side <Gate> to just not render it.
     const entitlement = await getEntitlement();
-    // Since the pass became "all of Pro for a window", the full analysis is a
-    // pass-level feature too; Pro's difference is that it never runs out.
+    // A pass still running counts as paid; it was all of Pro for a window.
     const hasPass = meets(entitlement.tier, "pass");
+    // Free viewers get the 1X2 market and 1X2 picks, plus the headline pick
+    // of today's free picks; everything else is stripped here (lib/access.ts).
+    const viewer = await viewerForTier(entitlement.tier);
+    const viewed = viewPrediction(detail.prediction, viewer);
 
     const body = {
       ...detail,
       prediction: {
-        ...detail.prediction,
-        asianHandicap: hasPass ? detail.prediction.asianHandicap : [],
+        ...viewed,
+        asianHandicap: hasPass ? viewed.asianHandicap : [],
         // picks[] carries its own Asian-Handicap-derived entries (see
         // rankPicks() in model/predict.ts) — filtering asianHandicap alone
         // leaves the same data leaking out through this second list.
-        picks: hasPass
-          ? detail.prediction.picks
-          : detail.prediction.picks.filter((p) => p.group !== "Asian Handicap"),
+        picks: hasPass ? viewed.picks : viewed.picks.filter((p) => p.group !== "Asian Handicap"),
       },
       analysis: {
         ...detail.analysis,

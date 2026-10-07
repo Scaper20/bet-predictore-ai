@@ -41,15 +41,21 @@ export interface Entitlement {
    * network request or goes back to showing email only.
    */
   displayName: string | null;
+  /**
+   * auth.users id of whoever is signed in, null when logged out. Lets a
+   * route call the service-role usage functions (0044) for this user without
+   * a second getUser() round trip.
+   */
+  userId: string | null;
 }
 
 /** Signed in, but with no paid relationship — a different thing from ANON. */
-function signedInFree(email: string | null, displayName: string | null): Entitlement {
-  return { tier: "free", status: "none", signedIn: true, email, displayName };
+function signedInFree(userId: string, email: string | null, displayName: string | null): Entitlement {
+  return { tier: "free", status: "none", signedIn: true, email, displayName, userId };
 }
 
 /** Nobody is signed in. */
-const ANON: Entitlement = { tier: "free", status: "none", signedIn: false, email: null, displayName: null };
+const ANON: Entitlement = { tier: "free", status: "none", signedIn: false, email: null, displayName: null, userId: null };
 
 /**
  * Resolves the signed-in user's tier from `subscriptions`.
@@ -108,7 +114,7 @@ export async function getEntitlement(): Promise<Entitlement> {
   // reports the session honestly. Losing paid access to a transient database
   // error is the safe direction to fail; telling a signed-in user they have no
   // account is not — it would put "Create free account" in their header.
-  let signedIn = false;
+  let userId: string | null = null;
   let email: string | null = null;
   let displayName: string | null = null;
 
@@ -118,7 +124,7 @@ export async function getEntitlement(): Promise<Entitlement> {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) return ANON;
-    signedIn = true;
+    userId = user.id;
     email = user.email ?? null;
 
     const [{ data }, { data: profile }, gifts] = await Promise.all([
@@ -133,8 +139,8 @@ export async function getEntitlement(): Promise<Entitlement> {
     displayName = profile?.display_name ?? null;
 
     const resolved = effectiveEntitlement(resolveSubscriptionTier(data), bestGiftTier(gifts));
-    return { ...resolved, signedIn: true, email, displayName };
+    return { ...resolved, signedIn: true, email, displayName, userId: user.id };
   } catch {
-    return signedIn ? signedInFree(email, displayName) : ANON;
+    return userId ? signedInFree(userId, email, displayName) : ANON;
   }
 }

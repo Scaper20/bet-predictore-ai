@@ -13,6 +13,9 @@ import { isStrong } from "@/lib/model/tiers";
 import { StrongBadge } from "@/components/ui/strong-badge";
 import { CommentThread, LoveButton, useSocialCounts } from "@/components/for-you/pick-social";
 import { useLivePicks } from "@/components/for-you/use-live-picks";
+import { isLockedPick } from "@/lib/access";
+import { LockedSelection, ProTag } from "@/components/entitlements/locked-pick";
+import type { Pick } from "@/lib/model/predict";
 import { isStaleInPlay } from "@/lib/match-status";
 import type { LegScore } from "@/lib/slip-tracker";
 
@@ -319,6 +322,8 @@ function PickRow({
 }) {
   const [open, setOpen] = useState(false);
   const count = social.counts[pick.id];
+  // A Pro pick shown to a free viewer: its selection never left the server.
+  const locked = isLockedPick(pick);
   // Fresh poll first, then what the page was rendered with.
   const state: LegScore = live ?? {
     status: pick.status,
@@ -388,8 +393,17 @@ function PickRow({
         </div>
 
         <div className="mt-3 flex items-center justify-between gap-3 rounded-lg bg-surface-2/60 px-3 py-2">
-          <span className="min-w-0 truncate text-sm font-semibold text-brand">{pick.label}</span>
-          <span className="tnum shrink-0 text-sm font-bold">{percent(pick.probability, 1)}</span>
+          {locked ? (
+            <>
+              <LockedSelection group={pick.group as Pick["group"]} className="text-sm font-semibold text-brand" />
+              <ProTag />
+            </>
+          ) : (
+            <>
+              <span className="min-w-0 truncate text-sm font-semibold text-brand">{pick.label}</span>
+              <span className="tnum shrink-0 text-sm font-bold">{percent(pick.probability, 1)}</span>
+            </>
+          )}
         </div>
       </button>
 
@@ -411,13 +425,19 @@ function PickRow({
           </svg>
           <span className="tnum">{count?.comments ? count.comments : ""}</span>
         </button>
-        <Button
-          onClick={onAdd}
-          variant={added ? "secondary" : "primary"}
-          className="ml-auto px-3.5 py-1.5 text-xs"
-        >
-          {added ? "✓ On slip" : "+ Slip"}
-        </Button>
+        {locked ? (
+          <ButtonLink href="/account/billing?plan=pro" variant="secondary" className="ml-auto px-3.5 py-1.5 text-xs">
+            Unlock
+          </ButtonLink>
+        ) : (
+          <Button
+            onClick={onAdd}
+            variant={added ? "secondary" : "primary"}
+            className="ml-auto px-3.5 py-1.5 text-xs"
+          >
+            {added ? "✓ On slip" : "+ Slip"}
+          </Button>
+        )}
       </div>
 
       {open && (
@@ -545,8 +565,7 @@ function SignedOutBanner() {
           </h2>
           <p className="text-sm leading-relaxed text-ink-muted">
             This page is showing our default set. With a free account it shows only the leagues
-            you pick, keeps your selection slip across devices, and unlocks every market on the
-            match pages.
+            you pick and keeps your selection slip across devices.
           </p>
         </div>
 

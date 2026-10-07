@@ -1,10 +1,11 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { getEntitlement, meets } from "@/lib/entitlements";
-import { supabaseServer } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { aiEnabled } from "@/lib/ai/analyst";
 import { ASK_SYSTEM_PROMPT } from "@/lib/ask/prompt";
 import { ASK_TOOLS, runTool, toolStatus, type AskTier } from "@/lib/ask/tools";
 import { claimGuest, guestIdentity, guestUsed, refundGuest } from "@/lib/ask/guest";
+import { viewerForTier } from "@/lib/viewer";
 import {
   ASK_FREE_DAILY,
   ASK_GUEST_TOTAL,
@@ -36,9 +37,8 @@ export async function GET(request: Request) {
   const paid = meets(entitlement.tier, "pass");
   let used: number | null = null;
   let setCookie: string | null = null;
-  if (entitlement.signedIn) {
-    const supabase = await supabaseServer();
-    const { data } = await supabase.rpc("ask_used_today");
+  if (entitlement.userId) {
+    const { data } = await supabaseAdmin().rpc("ask_used_today", { p_user: entitlement.userId });
     used = typeof data === "number" ? data : null;
   } else {
     const guest = guestIdentity(request);
@@ -86,6 +86,7 @@ export async function POST(request: Request) {
   const entitlement = await getEntitlement();
   const paid = meets(entitlement.tier, "pass");
   const tier: AskTier = paid ? "paid" : "free";
+  const viewer = await viewerForTier(entitlement.tier);
   const unavailable = { type: "error", code: "unavailable", message: "Ask BetriX isn't available right now. Try again shortly." } as const;
 
   let used: number;
@@ -93,10 +94,11 @@ export async function POST(request: Request) {
   let refund: () => Promise<void>;
   let setCookie: string | null = null;
 
-  if (entitlement.signedIn) {
+  if (entitlement.userId) {
+    const userId = entitlement.userId;
     limit = meets(entitlement.tier, "vip") ? ASK_VIP_DAILY : paid ? ASK_PAID_DAILY : ASK_FREE_DAILY;
-    const supabase = await supabaseServer();
-    const { data: claim, error: claimError } = await supabase.rpc("ask_claim", { p_limit: limit });
+    const supabase = supabaseAdmin();
+    const { data: claim, error: claimError } = await supabase.rpc("ask_claim", { p_user: userId, p_limit: limit });
     const row = Array.isArray(claim) ? (claim[0] as { allowed: boolean; used: number } | undefined) : undefined;
     if (claimError || !row) return fail(unavailable, 503);
     if (!row.allowed) {
@@ -113,7 +115,7 @@ export async function POST(request: Request) {
     }
     used = row.used;
     refund = async () => {
-      await supabase.rpc("ask_refund").then(
+      await supabase.rpc("ask_refund", { p_user: userId }).then(
         () => undefined,
         () => undefined,
       );
@@ -226,6 +228,7 @@ export async function POST(request: Request) {
             toolUses.map(async (use): Promise<Anthropic.Beta.BetaToolResultBlockParam> => {
               const outcome = await runTool(use.name, use.input, {
                 tier,
+                viewer,
                 onPicks: (picks) => {
                   answered = true;
                   send({ type: "picks", picks });

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { supabaseServer, supabaseConfigured } from "@/lib/supabase/server";
+import { supabaseConfigured } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { isAllowedPushEndpoint } from "@/lib/push/subscription";
 import { readJson, rejectCrossSite } from "@/lib/push/request";
 import { pushConfigured, sendPush } from "@/lib/push/send";
@@ -26,7 +27,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid endpoint" }, { status: 400 });
   }
 
-  const supabase = await supabaseServer();
+  const supabase = supabaseAdmin();
   const { data, error } = await supabase
     .rpc("push_claim_test", { p_endpoint: endpoint })
     .maybeSingle<{ p256dh: string; auth: string }>();
@@ -37,7 +38,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Give it a minute before sending another." }, { status: 429 });
   }
 
-  const outcome = await sendPush({ endpoint, ...data }, TEST_PAYLOAD, { ttl: 300, topic: "test", urgency: "high" });
+  let reason: string | null = null;
+  const outcome = await sendPush({ endpoint, ...data }, TEST_PAYLOAD, { ttl: 300, topic: "test", urgency: "high" }, (r) => {
+    reason = r;
+  });
+  if (outcome === "failed" && reason) {
+    // Kept on the row (0042) so a device that never hears from us shows why.
+    await supabase
+      .from("push_subscriptions")
+      .update({ last_error: reason, last_error_at: new Date().toISOString() })
+      .eq("endpoint", endpoint);
+  }
   if (outcome === "gone") {
     await supabase.rpc("push_unsubscribe", { p_endpoint: endpoint });
     return NextResponse.json({ error: "This device's subscription has expired. Turn notifications off and on again." }, { status: 410 });

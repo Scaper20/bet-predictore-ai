@@ -8,6 +8,7 @@ import { Badge, ButtonLink, LiveDot, type Tone } from "@/components/ui/primitive
 import { Crest } from "@/components/ui/crest";
 import { kickoffTime, percent, relativeDay } from "@/lib/format";
 import { sportPath } from "@/lib/routes";
+import { LockIcon } from "@/components/entitlements/locked-pick";
 
 /**
  * The homepage board.
@@ -30,6 +31,9 @@ const REASON_TONE: Record<FeaturedRow["reason"], Tone> = {
   marquee: "violet",
   imminent: "amber",
   featured: "neutral",
+  "free-strong": "brand",
+  "free-hot": "rose",
+  free: "cyan",
 };
 
 /** The only fields polling is allowed to move. */
@@ -145,7 +149,7 @@ export function FeaturedBoard({ rows }: { rows: FeaturedRow[] }) {
               >
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                   <Badge tone={REASON_TONE[row.reason]} className="shrink-0">
-                    {row.reason === "live" && <LiveDot />}
+                    {(row.status === "live" || row.status === "halftime") && <LiveDot />}
                     {REASON_LABEL[row.reason]}
                   </Badge>
                   <span className="min-w-0 truncate text-[11px] font-medium text-ink-dim">
@@ -193,7 +197,13 @@ export function FeaturedBoard({ rows }: { rows: FeaturedRow[] }) {
                 {row.pick && (
                   <p className="mt-2 flex items-baseline gap-1.5 text-[11px]">
                     <span className="text-ink-dim">Model pick</span>
-                    <span className="truncate font-semibold text-brand">{row.pick.label}</span>
+                    {row.pick.locked ? (
+                      <span className="inline-flex items-center gap-1 font-semibold text-violet">
+                        <LockIcon className="size-3" /> Pro pick
+                      </span>
+                    ) : (
+                      <span className="truncate font-semibold text-brand">{row.pick.label}</span>
+                    )}
                   </p>
                 )}
               </Link>

@@ -101,7 +101,45 @@ export function valueAlertsPayload(alerts: AlertForPush[]): PushPayload | null {
 
 export const TEST_PAYLOAD: PushPayload = {
   title: "Notifications are on",
-  body: "This is how BetriX will reach you: today's picks each morning, and yesterday's results.",
+  body: "This is how BetriX will reach you: today's picks each morning, Strong picks before kick-off, and how they did.",
   url: sportPath("predictions"),
   tag: "test",
 };
+
+/** A Strong pick from the track record log, as the match-time alerts use it. */
+export interface StrongPickEvent {
+  matchId: string;
+  home: string;
+  away: string;
+  label: string;
+  probability: number;
+  kickoff: string;
+  result?: "win" | "lose" | "push" | null;
+  score?: { home: number | null; away: number | null };
+}
+
+const watTime = (iso: string) =>
+  new Date(iso).toLocaleTimeString("en-NG", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Africa/Lagos" });
+
+/** Shortly before a Strong pick kicks off. */
+export function strongKickoffPayload(e: StrongPickEvent): PushPayload {
+  return {
+    title: "⭐ Strong pick kicks off soon",
+    body: `${e.home} v ${e.away} at ${watTime(e.kickoff)}\n${e.label} · ${percent(e.probability)}`,
+    url: `/football/match/${encodeURIComponent(e.matchId)}`,
+    tag: `kickoff-${e.matchId}`,
+  };
+}
+
+/** After a Strong pick is graded. Losses are sent too: a record only reported on good days is an advert. */
+export function strongResultPayload(e: StrongPickEvent): PushPayload | null {
+  if (e.result !== "win" && e.result !== "lose") return null;
+  const score =
+    e.score && e.score.home !== null && e.score.away !== null ? ` ${e.score.home}–${e.score.away} ` : " v ";
+  return {
+    title: e.result === "win" ? "✅ Strong pick won" : "❌ Strong pick lost",
+    body: `${e.home}${score}${e.away}\n${e.label}`,
+    url: sportPath("trackRecord"),
+    tag: `result-${e.matchId}`,
+  };
+}

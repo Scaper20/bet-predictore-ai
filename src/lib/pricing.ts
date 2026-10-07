@@ -49,13 +49,14 @@ export const PLANS: PlanDefinition[] = [
   {
     id: "free",
     name: "Free",
-    description: "See the picks. Track the record.",
+    description: "Every match, the 1X2 read and 6 free picks a day.",
     features: [
-      "Live scores across every tracked league",
-      "Fixtures up to 14 days ahead",
-      "Full 1X2, over/under and BTTS probabilities",
-      "Model transparency: sample size and data quality",
-      "Selection builder with true combined probability",
+      "Every match, live scores and fixtures 14 days ahead",
+      "Match result (1X2) probabilities and 1X2 picks",
+      "6 free picks a day: a Strong pick, 2 hot games and 3 more",
+      "Forge: 5 slips a day, 1X2 and double chance",
+      "Ask BetriX: 3 questions a day",
+      "For You feed with likes and comments",
     ],
     price: {},
     cadence: "forever",
@@ -65,15 +66,15 @@ export const PLANS: PlanDefinition[] = [
   {
     id: "pro",
     name: "Pro",
-    description: "The full breakdown on every match.",
+    description: "Every market and every pick, on every match.",
     features: [
       "Everything in Free",
-      "Full match breakdown and key factors",
-      "Value against the price you're offered",
-      "Staking guidance, capped and sane",
-      "Asian handicap lines",
-      "Unlimited Ask BetriX and selection builder",
-      "Shareable slip image",
+      "Every market: over/under, GG/NG, double chance, correct score, Asian handicap",
+      "Every pick and every Strong pick",
+      "Strong pick alerts at kick-off and full time",
+      "Forge with every market, 100 slips a day",
+      "Ask BetriX: 30 questions a day",
+      "Full match breakdown, value against your price and staking guidance",
       "Pay monthly, quarterly (save 10%) or yearly (save 20%)",
     ],
     price: { monthly: 5000, quarterly: 13500, yearly: 48000 },
@@ -88,11 +89,13 @@ export const PLANS: PlanDefinition[] = [
     description: "Live edges, alerts and priority help.",
     features: [
       "Everything in Pro",
-      "Live in-play win-probability, updating as the match unfolds",
+      "Live in-play win probability, updating as the match unfolds",
       "Value-shift alerts: SportyBet prices that move above fair value, live and by email",
+      "Ask BetriX: 100 questions a day",
       "Priority support: your messages go to the front of the queue",
+      "Pay monthly, quarterly (save 10%) or yearly (save 20%)",
     ],
-    price: { monthly: 12000, yearly: 115200 },
+    price: { monthly: 12000, quarterly: 32400, yearly: 115200 },
     cadence: "per month",
     ctaLabel: "Go VIP",
     order: 3,
@@ -129,65 +132,52 @@ export interface MatrixGroup {
 
 export const PLAN_MATRIX: MatrixGroup[] = [
   {
-    group: "Coverage",
+    group: "Matches",
     rows: [
-      {
-        label: "Live scores, every tracked competition",
-        values: { free: true, pro: true, vip: true },
-      },
-      {
-        label: "Fixtures ahead",
-        values: { free: "14 days", pro: "14 days", vip: "14 days" },
-      },
-      {
-        label: "Settled track record",
-        values: { free: true, pro: true, vip: true },
-      },
+      { label: "Every match, live scores", values: { free: true, pro: true, vip: true } },
+      { label: "Fixtures ahead", values: { free: "14 days", pro: "14 days", vip: "14 days" } },
+      { label: "Settled track record", values: { free: true, pro: true, vip: true } },
+      { label: "For You feed, likes and comments", values: { free: true, pro: true, vip: true } },
     ],
   },
   {
-    group: "Markets",
+    group: "Picks and markets",
     rows: [
-      { label: "Match result (1X2)", values: { free: true, pro: true, vip: true } },
+      { label: "Match result (1X2) and 1X2 picks", values: { free: true, pro: true, vip: true } },
+      { label: "Strong picks", values: { free: "1 a day", pro: "All", vip: "All" } },
       {
-        label: "Over/under, both teams to score, double chance",
-        values: { free: true, pro: true, vip: true },
+        label: "Over/under, GG/NG, double chance, correct score",
+        values: { free: false, pro: true, vip: true },
       },
-      { label: "Correct score grid", values: { free: true, pro: true, vip: true } },
+      { label: "Picks in every market", values: { free: "6 a day", pro: true, vip: true } },
       { label: "Asian handicap", values: { free: false, pro: true, vip: true } },
-    ],
-  },
-  {
-    group: "Analysis",
-    rows: [
-      {
-        label: "Sample size and data quality",
-        values: { free: true, pro: true, vip: true },
-      },
-      {
-        label: "Value against the price you're offered",
-        values: { free: false, pro: true, vip: true },
-      },
-      { label: "Staking guidance", values: { free: false, pro: true, vip: true } },
-      {
-        label: "Full enhanced match breakdown",
-        values: { free: false, pro: true, vip: true },
-      },
-      {
-        label: "Live in-play win probability",
-        values: { free: false, pro: false, vip: true },
-      },
+      { label: "Half-time and second-half markets", values: { free: false, pro: true, vip: true } },
     ],
   },
   {
     group: "Tools",
     rows: [
-      { label: "Selection builder", values: { free: true, pro: true, vip: true } },
+      { label: "Forge slip builder", values: { free: "5 a day, 1X2 + DC", pro: "100 a day", vip: "100 a day" } },
+      { label: "Ask BetriX", values: { free: "3 a day", pro: "30 a day", vip: "100 a day" } },
+      { label: "Selection builder and slip tracking", values: { free: true, pro: true, vip: true } },
       { label: "Shareable slip image", values: { free: false, pro: true, vip: true } },
-      {
-        label: "Value-shift alerts, live and by email",
-        values: { free: false, pro: false, vip: true },
-      },
+    ],
+  },
+  {
+    group: "Analysis",
+    rows: [
+      { label: "Full match breakdown and key factors", values: { free: false, pro: true, vip: true } },
+      { label: "Value against the price you're offered", values: { free: false, pro: true, vip: true } },
+      { label: "Staking guidance", values: { free: false, pro: true, vip: true } },
+      { label: "Live in-play win probability", values: { free: false, pro: false, vip: true } },
+    ],
+  },
+  {
+    group: "Alerts and support",
+    rows: [
+      { label: "Morning picks notification", values: { free: true, pro: true, vip: true } },
+      { label: "Strong pick alerts, kick-off and result", values: { free: "Free pick", pro: true, vip: true } },
+      { label: "Value-shift alerts, live and by email", values: { free: false, pro: false, vip: true } },
       { label: "Priority support", values: { free: false, pro: false, vip: true } },
     ],
   },

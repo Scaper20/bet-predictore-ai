@@ -175,3 +175,13 @@ describe("helpers", () => {
     expect(r.state.seed).toBe(0);
   });
 });
+
+describe("Forge markets by plan", () => {
+  it("keeps free users on 1X2 whatever they ask for", async () => {
+    const { marketsForPlan } = await import("./forge");
+    expect(marketsForPlan(["result", "goals", "btts"], false)).toEqual(["result"]);
+    expect(marketsForPlan(["double_chance", "goals"], false)).toEqual(["double_chance"]);
+    expect(marketsForPlan(["goals"], false)).toEqual(["result"]);
+    expect(marketsForPlan(["goals", "btts"], true)).toEqual(["goals", "btts"]);
+  });
+});

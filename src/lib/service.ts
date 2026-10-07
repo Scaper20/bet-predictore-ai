@@ -23,6 +23,12 @@ import { internationalPool, leagueByCode } from "@/lib/leagues";
 import { sportOrDefault } from "@/lib/sports";
 import { selectFeatured, shortlist, type FeaturedMatch } from "@/lib/featured";
 import { canonicaliseRows, looseKey, nameBook, nameScope, type NameBook } from "@/lib/teams/canonical";
+import { APP_TIMEZONE } from "@/lib/format";
+import { supabaseAdmin } from "@/lib/supabase/admin";
+import type { Viewer } from "@/lib/access";
+import {
+  freeIds, freeSlot, selectFreePicks, HOT_SLOTS, NORMAL_SLOTS, type FreePicks, type FreeSlot,
+} from "@/lib/free-picks";
 
 export interface FixtureFeed {
   matches: Match[];
@@ -411,6 +417,102 @@ export async function bestBetOfDay(): Promise<Prediction | null> {
     );
     return ranked[0];
   });
+}
+
+/**
+ * Today's free picks (free-picks.ts), chosen once per Lagos day for everyone.
+ *
+ * The first request of the day picks them from the fixtures still to kick off
+ * today (tomorrow's too when today runs thin) and stores them in
+ * free_daily_picks (0046); the insert keeps whichever server got there first,
+ * so two picking at once still agree. Held in memory for five minutes.
+ */
+export async function freePicksToday(): Promise<FreePicks | null> {
+  const day = new Date().toLocaleDateString("en-CA", { timeZone: APP_TIMEZONE });
+  return cached(`free-picks:${day}`, 5 * 60_000, async () => {
+    const admin = tryAdmin();
+    const read = async () => {
+      if (!admin) return null;
+      const { data } = await admin.from("free_daily_picks").select("strong, hot, normal").eq("day", day).maybeSingle();
+      return data ? ({ day, strong: data.strong, hot: data.hot ?? [], normal: data.normal ?? [] } as FreePicks) : null;
+    };
+    const stored = await read().catch(() => null);
+    if (stored) return stored;
+
+    const chosen = await chooseFreePicks(day);
+    if (!admin) return chosen;
+    await admin
+      .from("free_daily_picks")
+      .upsert({ day, strong: chosen.strong, hot: chosen.hot, normal: chosen.normal }, { onConflict: "day", ignoreDuplicates: true })
+      .then(() => undefined, () => undefined);
+    return (await read().catch(() => null)) ?? chosen;
+  }).catch(() => null);
+}
+
+function tryAdmin() {
+  try {
+    return supabaseAdmin();
+  } catch {
+    return null;
+  }
+}
+
+async function chooseFreePicks(day: string): Promise<FreePicks> {
+  const { matches } = await upcomingFeed(2);
+  const now = Date.now();
+  // Lagos is UTC+1 all year.
+  const endOfDay = Date.parse(`${day}T23:59:59+01:00`);
+  const notStarted = matches.filter((m) => m.status === "scheduled" && Date.parse(m.kickoff) > now);
+  const today = notStarted.filter((m) => Date.parse(m.kickoff) <= endOfDay);
+
+  const candidates = async (list: Match[]) => (await predictBatch(list, 40)).filter((p) => p.sufficiency.publishable && p.topPick);
+  let predictions = await candidates(today);
+  if (predictions.length < 1 + HOT_SLOTS + NORMAL_SLOTS) predictions = await candidates(notStarted);
+
+  return selectFreePicks(day, predictions, await socialCounts(predictions.map((p) => p.match.id)));
+}
+
+/** Loves plus comments per match, for the hot-game score. */
+async function socialCounts(ids: string[]): Promise<Map<string, number>> {
+  const counts = new Map<string, number>();
+  const admin = tryAdmin();
+  if (!admin || ids.length === 0) return counts;
+  const [loves, comments] = await Promise.all([
+    admin.from("pick_loves").select("match_id").in("match_id", ids),
+    admin.from("pick_comments").select("match_id").in("match_id", ids),
+  ]);
+  for (const row of [...(loves.data ?? []), ...(comments.data ?? [])]) {
+    counts.set(row.match_id, (counts.get(row.match_id) ?? 0) + 1);
+  }
+  return counts;
+}
+
+/** The viewer every free visitor is: 1X2 plus today's free picks (access.ts). */
+export async function freeViewer(): Promise<Viewer> {
+  const set = await freePicksToday();
+  return { paid: false, freeStrongId: set?.strong ?? null, freeIds: freeIds(set) };
+}
+
+/** Today's free Strong pick, by match id. */
+export async function freeStrongPickId(): Promise<string | null> {
+  return (await freePicksToday())?.strong ?? null;
+}
+
+/** Predictions for today's free picks, Strong first, then hot, then the rest. */
+export async function freePickPredictions(): Promise<{ prediction: Prediction; slot: FreeSlot }[]> {
+  const set = await freePicksToday();
+  const ids = freeIds(set);
+  if (!set || ids.length === 0) return [];
+  return cached(`free-picks:predictions:${ids.join(",")}`, 5 * 60_000, async () => {
+    const found = (await Promise.all(ids.map((id) => getMatch(id).catch(() => null)))).filter((m): m is Match => m !== null);
+    const predictions = await predictBatch(found, found.length);
+    const byId = new Map(predictions.map((p) => [p.match.id, p]));
+    return ids.flatMap((id) => {
+      const prediction = byId.get(id);
+      const slot = freeSlot(set, id);
+      return prediction && slot ? [{ prediction, slot }] : [];
+    });
+  }).catch(() => []);
 }
 
 /**

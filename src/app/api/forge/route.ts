@@ -1,10 +1,10 @@
 import { getEntitlement, meets } from "@/lib/entitlements";
-import { supabaseServer } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getPreferences } from "@/lib/preferences";
 import { leagueByCode } from "@/lib/leagues";
 import { claimGuest, guestIdentity, guestUsed, refundGuest } from "@/lib/ask/guest";
 import { buildForgeSlip } from "@/lib/forge-feed";
-import { FORGE_FREE_DAILY, FORGE_GUEST_TOTAL, FORGE_PAID_DAILY, parseForgeRequest } from "@/lib/forge";
+import { FORGE_FREE_DAILY, FORGE_GUEST_TOTAL, FORGE_PAID_DAILY, marketsForPlan, parseForgeRequest } from "@/lib/forge";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -26,10 +26,9 @@ export async function GET(request: Request) {
   let setCookie: string | null = null;
   let myLeagues: { code: string; name: string }[] = [];
 
-  if (entitlement.signedIn) {
-    const supabase = await supabaseServer();
+  if (entitlement.userId) {
     const [{ data }, prefs] = await Promise.all([
-      supabase.rpc("feature_used_today", { p_feature: FEATURE }),
+      supabaseAdmin().rpc("feature_used_today", { p_user: entitlement.userId, p_feature: FEATURE }),
       getPreferences().catch(() => null),
     ]);
     used = typeof data === "number" ? data : null;
@@ -69,10 +68,11 @@ export async function POST(request: Request) {
   let setCookie: string | null = null;
   let leagueCodes: string[] | null = null;
 
-  if (entitlement.signedIn) {
-    const supabase = await supabaseServer();
+  if (entitlement.userId) {
+    const userId = entitlement.userId;
+    const supabase = supabaseAdmin();
     const cap = paid ? FORGE_PAID_DAILY : FORGE_FREE_DAILY;
-    const { data, error } = await supabase.rpc("feature_claim", { p_feature: FEATURE, p_limit: cap });
+    const { data, error } = await supabase.rpc("feature_claim", { p_user: userId, p_feature: FEATURE, p_limit: cap });
     const row = Array.isArray(data) ? (data[0] as { allowed: boolean; used: number } | undefined) : undefined;
     if (error || !row) return json(unavailable, 503);
     if (!row.allowed) {
@@ -89,7 +89,7 @@ export async function POST(request: Request) {
     used = row.used;
     limit = paid ? null : FORGE_FREE_DAILY;
     refund = async () => {
-      await supabase.rpc("feature_refund", { p_feature: FEATURE }).then(
+      await supabase.rpc("feature_refund", { p_user: userId, p_feature: FEATURE }).then(
         () => undefined,
         () => undefined,
       );
@@ -123,7 +123,9 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await buildForgeSlip(settings, state, { allowHandicap: paid, leagueCodes });
+    // Free plan: 1X2 and double chance only, enforced here whatever the request asks for.
+    const planSettings = { ...settings, markets: marketsForPlan(settings.markets, paid) };
+    const result = await buildForgeSlip(planSettings, state, { allowHandicap: paid, leagueCodes });
     if (result.legs.length === 0) {
       await refund();
       return json(

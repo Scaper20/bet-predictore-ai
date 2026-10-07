@@ -7,10 +7,7 @@ import { Crest } from "@/components/ui/crest";
 import { isStrong } from "@/lib/model/tiers";
 import { StrongBadge } from "@/components/ui/strong-badge";
 import { matchPath, sportPath } from "@/lib/routes";
-import {
-  BttsPanel, CorrectScorePanel, DoubleChancePanel, GoalsPanel,
-  H2HPanel, OutcomePanel,
-} from "@/components/match/market-panels";
+import { H2HPanel, OutcomePanel } from "@/components/match/market-panels";
 import { AddToSlip } from "@/components/match/add-to-slip";
 import { MatchTabs, type MatchTab } from "@/components/match/match-tabs";
 import { MatchStats } from "@/components/match/match-stats";
@@ -24,13 +21,15 @@ import type { Outcome } from "@/lib/stats/compute";
 import type { Analysis } from "@/lib/ai/analyst";
 import { AskAboutMatch, AskPageContext } from "@/components/ask/ask-page-context";
 import { PricesPanel, PricesPanelSkeleton } from "@/components/match/prices-panel";
-import { AsianHandicapClient } from "@/components/match/asian-handicap-client";
 import { AnalysisPanel } from "@/components/match/analysis-panel";
 import { LiveWinProbabilityPanel } from "@/components/match/live-win-probability-panel";
 import { Gate } from "@/components/entitlements/gate";
 import { DepthGate } from "@/components/entitlements/depth-gate";
 import { JsonLd } from "@/components/seo/json-ld";
-import { matchDetail } from "@/lib/service";
+import { freeViewer, matchDetail } from "@/lib/service";
+import { viewPrediction, type ViewedPrediction } from "@/lib/access";
+import { FactsUnlock, MatchAccessProvider, PickUnlock, ProMarkets } from "@/components/match/match-access";
+import { LockedSelection, ProTag } from "@/components/entitlements/locked-pick";
 import { SITE_URL as SITE } from "@/lib/site-url";
 import { kickoffDay, kickoffTime, percent, relativeDay, statusLabel, isLive } from "@/lib/format";
 import type { Match } from "@/lib/types";
@@ -64,8 +63,7 @@ function matchJsonLd(match: Match, prediction: Prediction) {
         sport: "Football",
         description:
           `${match.league.name}: ${match.home.name} vs ${match.away.name}. Model probabilities ` +
-          `${percent(m.home)} home win, ${percent(m.draw)} draw, ${percent(m.away)} away win; ` +
-          `${m.expectedGoals.total.toFixed(2)} expected goals.`,
+          `${percent(m.home)} home win, ${percent(m.draw)} draw, ${percent(m.away)} away win.`,
         homeTeam: { "@type": "SportsTeam", name: match.home.name },
         awayTeam: { "@type": "SportsTeam", name: match.away.name },
         competitor: [
@@ -127,7 +125,7 @@ export async function generateMetadata({
     description:
       `Model probabilities for ${match.home.name} vs ${match.away.name} in the ${match.league.name}: ` +
       `${percent(prediction.markets.home)} home, ${percent(prediction.markets.draw)} draw, ` +
-      `${percent(prediction.markets.away)} away, with ${prediction.markets.expectedGoals.total.toFixed(2)} expected goals.`,
+      `${percent(prediction.markets.away)} away.`,
     alternates: { canonical: matchPath(match.id) },
     openGraph: { title, type: "article" },
   };
@@ -138,14 +136,18 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   const detail = await matchDetail(decodeURIComponent(id)).catch(() => null);
   if (!detail) notFound();
 
-  const { match, prediction, analysis } = detail;
+  const { match, analysis } = detail;
+  // This page is cached and shared, so it is rendered with the free view
+  // (lib/access.ts) and nothing locked reaches the HTML; MatchAccessProvider
+  // fetches the viewer's own view and unlocks what their plan allows.
+  const prediction = viewPrediction(detail.prediction, await freeViewer());
   const ctx = await matchContext(match).catch((): MatchContext => ({ teamIds: { home: null, away: null }, home: null, away: null, table: null }));
   const live = isLive(match);
   const label = `${match.home.name} v ${match.away.name}`;
 
   const tabs: MatchTab[] = [
     { key: "overview", label: "Overview", panel: <Overview match={match} prediction={prediction} analysis={analysis} ctx={ctx} live={live} label={label} /> },
-    { key: "markets", label: "Markets", panel: <Markets prediction={prediction} matchId={match.id} /> },
+    { key: "markets", label: "Markets", panel: <Markets prediction={prediction} /> },
     { key: "stats", label: "Stats", panel: <MatchStats match={match} home={ctx.home} away={ctx.away} /> },
     ...(ctx.table
       ? [{
@@ -253,7 +255,9 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
       {/* ------------------------------------------------------------ Tabs */}
       <div className={`${containerClass()} pb-10 sm:pb-14`}>
         <div className="mx-auto max-w-5xl">
-          <MatchTabs tabs={tabs} />
+          <MatchAccessProvider matchId={match.id}>
+            <MatchTabs tabs={tabs} />
+          </MatchAccessProvider>
         </div>
       </div>
     </>
@@ -271,13 +275,12 @@ function Overview({
   label,
 }: {
   match: Match;
-  prediction: Prediction;
+  prediction: ViewedPrediction;
   analysis: Analysis;
   ctx: MatchContext;
   live: boolean;
   label: string;
 }) {
-  const m = prediction.markets;
   const pick = prediction.topPick;
   const homeForm: Outcome[] = ctx.home?.form.letters ?? prediction.form.home.entries.map((e) => e.result as Outcome);
   const awayForm: Outcome[] = ctx.away?.form.letters ?? prediction.form.away.entries.map((e) => e.result as Outcome);
@@ -305,12 +308,24 @@ function Overview({
             <p className="flex items-center gap-2 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-ink-dim">
               Our pick {isStrong(pick) && <StrongBadge />}
             </p>
-            <div className="mt-2 flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
-              <p className="font-display text-2xl font-bold text-ink sm:text-3xl">{pick.label}</p>
-              <div className="text-right">
-                <AnimatedNumber value={pick.probability * 100} decimals={1} suffix="%" className="font-display text-3xl font-extrabold text-brand sm:text-4xl" />
+            {prediction.locked.pick ? (
+              <PickUnlock>
+                <div className="mt-2 flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+                  <LockedSelection group={pick.group} className="font-display text-2xl font-bold text-ink sm:text-3xl" />
+                  <ProTag />
+                </div>
+                <ButtonLink href="/account/billing?plan=pro" className="mt-4 px-4 py-2 text-sm">
+                  Unlock this pick with Pro →
+                </ButtonLink>
+              </PickUnlock>
+            ) : (
+              <div className="mt-2 flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+                <p className="font-display text-2xl font-bold text-ink sm:text-3xl">{pick.label}</p>
+                <div className="text-right">
+                  <AnimatedNumber value={pick.probability * 100} decimals={1} suffix="%" className="font-display text-3xl font-extrabold text-brand sm:text-4xl" />
+                </div>
               </div>
-            </div>
+            )}
             {prediction.sufficiency.level === "limited" && (
               <p className="mt-2 text-xs text-amber">Thin data · treat as a guide</p>
             )}
@@ -322,11 +337,8 @@ function Overview({
           </section>
         )}
 
-        <div className="stagger grid grid-cols-3 gap-3">
-          <Fact index={0} label="xG" value={`${m.expectedGoals.home.toFixed(1)} – ${m.expectedGoals.away.toFixed(1)}`} />
-          <Fact index={1} label="Over 2.5" value={percent(m.over["2.5"])} hot={m.over["2.5"] >= 0.6} />
-          <Fact index={2} label="Both score" value={percent(m.bttsYes)} hot={m.bttsYes >= 0.6} />
-        </div>
+        {/* Goals facts are Pro: locked in the shared HTML, opened for a paid viewer. */}
+        <FactsUnlock />
 
         {(homeForm.length > 0 || awayForm.length > 0) && (
           <section className="card p-5">
@@ -356,15 +368,6 @@ function Overview({
   );
 }
 
-function Fact({ label, value, hot = false, index }: { label: string; value: string; hot?: boolean; index: number }) {
-  return (
-    <div style={{ ["--i" as string]: index }} className={`rounded-xl border px-3 py-3 text-center ${hot ? "border-brand/25 bg-brand/[0.06]" : "border-line bg-surface"}`}>
-      <p className="truncate text-[10px] font-medium uppercase tracking-wider text-ink-dim">{label}</p>
-      <p className={`tnum mt-1 font-display text-lg font-bold sm:text-xl ${hot ? "text-brand" : "text-ink"}`}>{value}</p>
-    </div>
-  );
-}
-
 function FormLine({ team, letters }: { team: Match["home"]; letters: Outcome[] }) {
   return (
     <div className="flex items-center justify-between gap-3">
@@ -379,7 +382,7 @@ function FormLine({ team, letters }: { team: Match["home"]; letters: Outcome[] }
 
 /* -------------------------------------------------------------- Markets */
 
-function Markets({ prediction, matchId }: { prediction: Prediction; matchId: string }) {
+function Markets({ prediction }: { prediction: Prediction }) {
   return (
     <div className="space-y-5">
       {/* Free and server-rendered: the 1X2 split is what search indexes and
@@ -393,19 +396,10 @@ function Markets({ prediction, matchId }: { prediction: Prediction; matchId: str
           <PricesPanel prediction={prediction} />
         </Suspense>
       </DepthGate>
-      {/* Every market beyond 1X2 comes off the same scoreline distribution,
-          so depth is one decision, not five. */}
-      <DepthGate reason="Unlock every market on this match">
-        <GoalsPanel prediction={prediction} />
-        <div className="grid gap-5 sm:grid-cols-2">
-          <BttsPanel prediction={prediction} />
-          <DoubleChancePanel prediction={prediction} />
-        </div>
-        <CorrectScorePanel prediction={prediction} />
-      </DepthGate>
-      <Gate requires="pass">
-        <AsianHandicapClient matchId={matchId} />
-      </Gate>
+      {/* Every market beyond 1X2 is Pro (lib/access.ts), fetched after the
+          plan check so none of it is in the shared HTML. */}
+      {/* Asian handicap sits inside ProMarkets: one Pro wall, not two. */}
+      <ProMarkets />
     </div>
   );
 }

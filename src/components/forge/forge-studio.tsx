@@ -450,7 +450,7 @@ function SettingsPanel({
                   key={m.id}
                   href="/pricing"
                   className="flex items-center gap-1.5 rounded-full border border-line px-3.5 py-2 text-sm text-ink-dim hover:text-ink-muted"
-                  title="Handicap lines are part of Pro"
+                  title={`${m.label} is part of Pro`}
                 >
                   {m.label}
                   <span className="rounded bg-violet/15 px-1.5 py-px text-[10px] font-semibold text-violet">Pro</span>
