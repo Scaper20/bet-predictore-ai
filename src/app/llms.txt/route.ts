@@ -21,7 +21,7 @@ export function GET() {
   const plans = PLANS.map((p) => {
     const prices = [
       p.price.monthly && `${naira(p.price.monthly)}/month`,
-      p.price.quarterly && `${naira(p.price.quarterly)}/quarter`,
+      p.price.quarterly && `${naira(p.price.quarterly)}/3 months`,
       p.price.yearly && `${naira(p.price.yearly)}/year`,
     ].filter(Boolean);
     return `- ${p.name} (${prices.length ? prices.join(", ") : "free"}): ${p.description}`;

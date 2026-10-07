@@ -56,7 +56,7 @@ const GROUPS: FaqGroup[] = [
       {
         q: "What does each plan cost?",
         text: "price cost pass pro vip naira",
-        a: <A>Pro is {pro} a month (cheaper quarterly or yearly) and VIP {vip} a month. Everything is on the <L href="/pricing">pricing page</L>.</A>,
+        a: <A>Pro is {pro} a month (cheaper if you pay for 3 months or a year) and VIP {vip} a month. Everything is on the <L href="/pricing">pricing page</L>.</A>,
       },
       {
         q: "What happened to passes?",
