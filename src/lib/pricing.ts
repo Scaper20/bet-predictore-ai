@@ -54,6 +54,7 @@ export const PLANS: PlanDefinition[] = [
       "Every match, live scores and fixtures 14 days ahead",
       "Every pick and every Strong pick",
       "Every market: 1X2, over/under, GG/NG, double chance, correct score",
+      "Corners, cards and shots markets, plus GG2+, goal ranges and more",
       "Strong pick alerts at kick-off and full time",
       "Forge: 5 slips a day, 1X2 and double chance",
       "Ask BetriX: 3 questions a day",
@@ -71,7 +72,7 @@ export const PLANS: PlanDefinition[] = [
     features: [
       "Everything in Free",
       "Asian handicap lines",
-      "Half-time and second-half markets",
+      "Half-time markets and half-by-half goals",
       "Forge with every market, 100 slips a day",
       "Ask BetriX: 30 questions a day",
       "Full match breakdown, value against your price and staking guidance",
@@ -149,8 +150,10 @@ export const PLAN_MATRIX: MatrixGroup[] = [
         label: "Over/under, GG/NG, double chance, correct score",
         values: { free: true, pro: true, vip: true },
       },
+      { label: "Corners, cards, shots and shots on target", values: { free: true, pro: true, vip: true } },
+      { label: "GG2+, goal ranges, win to nil, result combos", values: { free: true, pro: true, vip: true } },
       { label: "Asian handicap", values: { free: false, pro: true, vip: true } },
-      { label: "Half-time and second-half markets", values: { free: false, pro: true, vip: true } },
+      { label: "Half-time and half-by-half markets", values: { free: false, pro: true, vip: true } },
     ],
   },
   {

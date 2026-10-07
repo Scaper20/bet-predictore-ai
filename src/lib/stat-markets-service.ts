@@ -17,10 +17,9 @@ import type { Prediction } from "@/lib/model/predict";
 
 /**
  * Corners, cards, shots and shots on target for a fixture, plus the extra
- * goal markets. Built and tested (docs/stats-markets.md) but NOT shown on the
- * site yet: only the admin endpoint (api/admin/stat-markets) reads this, so
- * the numbers can be checked against real fixtures before anything is
- * published.
+ * goal markets (docs/stats-markets.md). Shown on the match page's Markets
+ * tab as probabilities, never picks; the admin endpoint
+ * (api/admin/stat-markets) returns the raw numbers for checking.
  */
 
 export interface FixtureStatMarkets {

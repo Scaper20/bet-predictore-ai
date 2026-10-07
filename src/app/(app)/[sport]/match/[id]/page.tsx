@@ -26,7 +26,8 @@ import { LiveWinProbabilityPanel } from "@/components/match/live-win-probability
 import { Gate } from "@/components/entitlements/gate";
 import { DepthGate } from "@/components/entitlements/depth-gate";
 import { JsonLd } from "@/components/seo/json-ld";
-import { refereeFor } from "@/lib/archive/referees";
+import { fixtureStatMarkets, type FixtureStatMarkets } from "@/lib/stat-markets-service";
+import { GoalExtrasPanel, StatPanel } from "@/components/match/stat-panels";
 import { freeViewer, matchDetail } from "@/lib/service";
 import { viewPrediction, type ViewedPrediction } from "@/lib/access";
 import { MatchAccessProvider, ProMarkets } from "@/components/match/match-access";
@@ -141,17 +142,19 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   // (lib/access.ts) and nothing locked reaches the HTML; MatchAccessProvider
   // fetches the viewer's own view and unlocks what their plan allows.
   const prediction = viewPrediction(detail.prediction, await freeViewer());
-  const [ctx, referee] = await Promise.all([
+  const [ctx, extra] = await Promise.all([
     matchContext(match).catch((): MatchContext => ({ teamIds: { home: null, away: null }, home: null, away: null, table: null })),
-    // Named for the English divisions about a week ahead (archive/referees.ts).
-    refereeFor(match).catch(() => null),
+    // Corners, cards, shots and more goal markets; the referee where one is
+    // named (the English divisions, about a week ahead).
+    fixtureStatMarkets(match, detail.prediction).catch(() => null),
   ]);
+  const referee = extra?.referee ?? null;
   const live = isLive(match);
   const label = `${match.home.name} v ${match.away.name}`;
 
   const tabs: MatchTab[] = [
     { key: "overview", label: "Overview", panel: <Overview match={match} prediction={prediction} analysis={analysis} ctx={ctx} live={live} label={label} /> },
-    { key: "markets", label: "Markets", panel: <Markets prediction={prediction} /> },
+    { key: "markets", label: "Markets", panel: <Markets prediction={prediction} extra={extra} /> },
     { key: "stats", label: "Stats", panel: <MatchStats match={match} home={ctx.home} away={ctx.away} /> },
     ...(ctx.table
       ? [{
@@ -390,7 +393,7 @@ function FormLine({ team, letters }: { team: Match["home"]; letters: Outcome[] }
 
 /* -------------------------------------------------------------- Markets */
 
-function Markets({ prediction }: { prediction: Prediction }) {
+function Markets({ prediction, extra }: { prediction: Prediction; extra: FixtureStatMarkets | null }) {
   return (
     <div className="space-y-5">
       {/* Free and server-rendered: the 1X2 split is what search indexes and
@@ -413,6 +416,12 @@ function Markets({ prediction }: { prediction: Prediction }) {
           <DoubleChancePanel prediction={prediction} />
         </div>
         <CorrectScorePanel prediction={prediction} />
+        {extra && <GoalExtrasPanel goals={extra.goals} match={prediction.match} />}
+        {extra &&
+          (["corners", "cards", "shots", "shotsOnTarget"] as const).map((kind) => {
+            const m = extra.stats[kind];
+            return m ? <StatPanel key={kind} kind={kind} markets={m} match={prediction.match} referee={extra.referee} /> : null;
+          })}
       </DepthGate>
       {/* Pro: half-time markets and Asian handicap, fetched after the plan check. */}
       <ProMarkets />
