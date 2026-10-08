@@ -12,9 +12,70 @@ import { DEFAULT_SPORT } from "./src/lib/sports";
  */
 const MOVED = ["live", "fixtures", "predictions", "trends", "track-record", "slip"];
 
+/**
+ * Content-Security-Policy: what the browser may load and talk to, so a
+ * script injected into a page (XSS) can't pull in attacker code or ship data
+ * to an attacker's server.
+ *
+ * Without nonces, deliberately. A nonce needs every page rendered per request
+ * (node_modules/next/dist/docs/01-app/02-guides/content-security-policy.md),
+ * and these pages are static. So `script-src` has to allow 'unsafe-inline' for
+ * Next's own bootstrap and the two small scripts in the root layout; the
+ * value is in the other directives, which are all locked down.
+ *
+ * - img-src allows any https host: Crest renders team logos from whichever
+ *   host the data provider returns, and those hosts change.
+ * - connect-src is this origin plus the Supabase project (REST and
+ *   realtime). Server-side calls to the data and payment APIs never pass
+ *   through the browser, so they aren't listed.
+ */
+function contentSecurityPolicy(): string {
+  const dev = process.env.NODE_ENV === "development";
+  const supabase = safeOrigin(process.env.NEXT_PUBLIC_SUPABASE_URL);
+  const connect = ["'self'"];
+  if (supabase) connect.push(supabase, supabase.replace(/^https:/, "wss:"));
+  if (dev) connect.push("ws://localhost:*", "https://va.vercel-scripts.com");
+
+  return [
+    "default-src 'self'",
+    `script-src 'self' 'unsafe-inline'${dev ? " 'unsafe-eval' https://va.vercel-scripts.com" : ""}`,
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob: https:",
+    "font-src 'self' data:",
+    `connect-src ${connect.join(" ")}`,
+    "worker-src 'self'",
+    "manifest-src 'self'",
+    "media-src 'self'",
+    "frame-src 'none'",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+    ...(dev ? [] : ["upgrade-insecure-requests"]),
+  ].join("; ");
+}
+
+function safeOrigin(value: string | undefined): string | null {
+  if (!value) return null;
+  try {
+    const { protocol, origin } = new URL(value);
+    return protocol === "https:" ? origin : null;
+  } catch {
+    return null;
+  }
+}
+
 const nextConfig: NextConfig = {
+  // "X-Powered-By: Next.js" tells a scanner which framework's exploits to try.
+  poweredByHeader: false,
+
   async headers() {
     const securityHeaders = [
+      { key: "Content-Security-Policy", value: contentSecurityPolicy() },
+      // Isolates this site's window from pages that open it; allow-popups
+      // keeps the OAuth and payment pop-ups working.
+      { key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" },
+      { key: "X-Permitted-Cross-Domain-Policies", value: "none" },
       // Defense in depth: same intent as robots.txt's disallow and the
       // admin layout's `robots: { index: false }` metadata, but an HTTP
       // header a search engine or crawler can't miss by skipping robots.txt

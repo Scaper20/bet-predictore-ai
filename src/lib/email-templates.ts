@@ -34,6 +34,20 @@ export function welcomeEmail(): { subject: string; html: string } {
   };
 }
 
+export function passwordResetEmail(opts: { url: string }): { subject: string; html: string } {
+  return {
+    subject: "Reset your BetriX password",
+    html: emailLayout(`
+      <p style="margin:0 0 12px;font-size:17px;font-weight:700;">Reset your password</p>
+      <p style="margin:0;">Someone asked to reset the password on your BetriX account. If that was you, choose a
+      new one below. The link works once and expires within the hour.</p>
+      ${button(opts.url, "Choose a new password")}
+      <p style="margin:24px 0 0;font-size:13px;color:#8d9db2;">Didn't ask for this? Ignore this email and your
+      password stays as it is. BetriX will never ask you for your password by email, phone or WhatsApp.</p>
+    `),
+  };
+}
+
 export function receiptEmail(opts: {
   tier?: Tier;
   amountKobo: number;

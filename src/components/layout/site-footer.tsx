@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Container } from "@/components/ui/container";
 import { sportPath } from "@/lib/routes";
+import { COMPANY } from "@/lib/company";
 import { FooterColumn } from "@/components/layout/footer-column";
 
 /*
@@ -38,6 +39,7 @@ const COLUMNS = [
   {
     title: "About",
     links: [
+      { href: "/about", label: "About BetriX" },
       { href: "/pricing", label: "Pricing" },
       { href: sportPath("trackRecord"), label: "Our Track Record" },
       { href: "/how-it-works", label: "How Our Picks Work" },
@@ -102,7 +104,9 @@ export function SiteFooter() {
           this audience actually needs to know.
         */}
         <div className="mt-6 flex flex-col gap-3 border-t border-line pt-6 sm:mt-8 sm:pt-8 text-xs text-ink-dim sm:flex-row sm:items-center sm:justify-between">
-          <p>© {new Date().getFullYear()} BetriX. Built for Nigeria, made for Africa.</p>
+          <p>
+            © {new Date().getFullYear()} {COMPANY.legalName}. Built for Nigeria, made for Africa.
+          </p>
           <p>Not affiliated with any bookmaker.</p>
         </div>
       </Container>

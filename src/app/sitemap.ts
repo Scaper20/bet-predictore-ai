@@ -35,6 +35,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE}${sportPath("teamForm")}`, lastModified: now, changeFrequency: "daily", priority: 0.6 },
     { url: `${SITE}${sportPath("goals")}`, lastModified: now, changeFrequency: "daily", priority: 0.6 },
     { url: `${SITE}${sportPath("ratings")}`, lastModified: now, changeFrequency: "daily", priority: 0.6 },
+    { url: `${SITE}/about`, lastModified: now, changeFrequency: "monthly", priority: 0.6 },
     { url: `${SITE}/how-it-works`, lastModified: now, changeFrequency: "monthly", priority: 0.5 },
     { url: `${SITE}/guides`, lastModified: now, changeFrequency: "monthly", priority: 0.5 },
     { url: `${SITE}/help`, lastModified: now, changeFrequency: "monthly", priority: 0.4 },

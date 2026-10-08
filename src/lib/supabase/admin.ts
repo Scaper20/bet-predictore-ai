@@ -59,6 +59,13 @@ const secretKey = process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_SERVIC
  * through the public API. The routes that call them (api/ask, api/forge,
  * api/push/*) pass the user id from the session they just verified with
  * getUser(), never one from the request.
+ *
+ * A fifth: requestPasswordReset (src/app/actions/password-reset.ts), which
+ * runs with no session at all — that is the point of a forgotten password.
+ * It looks up the account for the typed email and calls
+ * `auth.admin.generateLink()`, and the only thing it does with the result is
+ * email the link to that same address. Nothing about the account is returned
+ * to the caller, whose answer is the same whether or not the email exists.
  */
 export function supabaseAdmin() {
   if (!url || !secretKey) {
