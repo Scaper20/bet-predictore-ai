@@ -84,6 +84,15 @@ export function LoginForm({
           </div>
         </label>
 
+        <div className="-mt-1 text-right">
+          <Link
+            href="/account/forgot-password"
+            className="text-xs font-medium text-brand hover:underline underline-offset-2"
+          >
+            Forgot password?
+          </Link>
+        </div>
+
         <Button type="submit" disabled={pending} className="mt-2 w-full font-semibold">
           {pending ? (
             <>
