@@ -4,6 +4,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { SITE_URL as SITE } from "@/lib/site-url";
 import { JsonLd } from "@/components/seo/json-ld";
+import { COMPANY } from "@/lib/company";
 import { ServiceWorkerRegister } from "@/components/pwa/service-worker-register";
 import { MaintenanceWatcher } from "@/components/layout/maintenance-watcher";
 import { INSTALL_CAPTURE_SCRIPT } from "@/lib/pwa";
@@ -24,9 +25,14 @@ const ORG_JSON_LD = {
   "@graph": [
     {
       "@type": "Organization",
-      name: "BetriX",
+      "@id": `${SITE}/#organization`,
+      name: COMPANY.brand,
+      legalName: COMPANY.legalName,
       url: SITE,
       logo: `${SITE}/brand/icon-green.png`,
+      email: COMPANY.supportEmail,
+      address: { "@type": "PostalAddress", addressCountry: COMPANY.countryCode },
+      contactPoint: { "@type": "ContactPoint", contactType: "customer support", email: COMPANY.supportEmail },
     },
     {
       "@type": "WebSite",
