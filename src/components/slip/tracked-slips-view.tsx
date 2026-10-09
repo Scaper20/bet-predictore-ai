@@ -5,9 +5,9 @@ import { untrackSlip, useTrackedSlips } from "@/lib/tracked-slips";
 import { useSlipScores } from "@/components/slip/use-slip-scores";
 import { TrackedSlipCard, TrackedSlipRow, viewSlip, type SlipView } from "@/components/slip/tracked-slip";
 import { useOverlay } from "@/components/ui/use-overlay";
-import { Button, ButtonLink, EmptyState } from "@/components/ui/primitives";
+import { Button, EmptyState } from "@/components/ui/primitives";
 import { Skeleton } from "@/components/ui/skeleton";
-import { sportPath } from "@/lib/routes";
+import { openSlipSheet } from "@/components/layout/nav-actions";
 
 const noop = () => () => {};
 /** False on the server and during hydration, so the empty state doesn't flash before localStorage is read. */
@@ -38,9 +38,9 @@ export function TrackedSlipsView() {
         title="No slips tracked yet"
         description="Build a slip, then tap “Track this slip”."
         action={
-          <ButtonLink href={sportPath("slip")} variant="secondary">
-            Go to the selection builder
-          </ButtonLink>
+          <Button variant="secondary" onClick={openSlipSheet}>
+            Open your slip
+          </Button>
         }
       />
     );

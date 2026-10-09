@@ -18,12 +18,14 @@ const NotificationPrompt = dynamic(
   () => import("@/components/pwa/notification-prompt").then((m) => m.NotificationPrompt),
   { ssr: false },
 );
+const SlipSheet = dynamic(() => import("@/components/slip/slip-sheet").then((m) => m.SlipSheet), { ssr: false });
 const AskPanel = dynamic(() => import("@/components/ask/ask-panel").then((m) => m.AskPanel), { ssr: false });
 const ScrollToTop = dynamic(() => import("@/components/ui/scroll-to-top").then((m) => m.ScrollToTop), { ssr: false });
 
 export function DeferredWidgets() {
   return (
     <>
+      <SlipSheet />
       <ChatWidget />
       <WhatsAppPopup />
       <GiftPopup />

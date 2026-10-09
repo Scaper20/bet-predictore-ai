@@ -49,7 +49,7 @@ export const soonHref = (slug: string) => `/soon/${slug}`;
 
 /* ---------------------------------------------------------------- items */
 
-export type NavAction = "ask" | "install";
+export type NavAction = "ask" | "install" | "slip" | "support";
 
 export type Badge = { text: string; tone: "brand" | "amber" | "violet" | "rose" | "muted" };
 
@@ -176,7 +176,7 @@ export function navFor(sport: SportId): { tabs: NavTab[]; tools: NavLink[] } {
         title: "Build and check",
         links: [
           { label: "Forge", desc: "Build a slip from how you like to bet", href: p("forge"), badge: { text: "New", tone: "brand" } },
-          { label: "Selection builder", desc: "Your slip, priced against the model", href: p("slip") },
+          { label: "Your slip", desc: "Your selections and their combined chance", href: p("trackedSlips"), action: "slip" },
           { label: "My slips", desc: "Track your slips live", href: p("trackedSlips") },
         ],
       },
@@ -209,6 +209,7 @@ export function navFor(sport: SportId): { tabs: NavTab[]; tools: NavLink[] } {
         links: [
           { label: "Your account", href: "/account" },
           { label: "Help centre", desc: "Answers to common questions", href: "/help" },
+          { label: "Chat with support", desc: "Message Oma, our support team", href: "/help", action: "support" },
           { label: "Responsible gambling", desc: "Limits, breaks and support", href: "/responsible-gambling" },
         ],
       },

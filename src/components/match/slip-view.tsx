@@ -136,7 +136,13 @@ function useLivePrices(legs: SlipLeg[], applyFetchedOdds: (prices: Map<string, n
 /** A leg's SportyBet price, when the board had one. Prices typed into older versions of the slip are ignored. */
 const sportyPrice = (l: SlipLeg) => (l.oddsSource === "sportybet" && (l.bookmakerOdds ?? 0) > 1 ? l.bookmakerOdds : undefined);
 
-export function SlipView() {
+/**
+ * The slip's legs and their combined chance. "sheet" is the overlay layout
+ * (components/slip/slip-sheet.tsx): one column, no page-style card, and the
+ * clear button lives in the sheet's own header.
+ */
+export function SlipView({ variant = "page" }: { variant?: "page" | "sheet" }) {
+  const sheet = variant === "sheet";
   const { legs, remove, clear, applyFetchedOdds } = useSlip();
   const { prices, state } = useLivePrices(legs, applyFetchedOdds);
   const fetchedAny = useMemo(
@@ -145,6 +151,18 @@ export function SlipView() {
   );
 
   if (legs.length === 0) {
+    if (sheet) {
+      return (
+        <div className="px-1 py-10 text-center">
+          <p className="text-sm font-semibold">Your slip is empty</p>
+          <p className="mt-1 text-xs text-ink-dim">Tap + Slip on any pick to add it here.</p>
+          <div className="mt-5 flex justify-center gap-2">
+            <ButtonLink href={sportPath("predictions")} className="px-4 py-2 text-xs">Browse picks</ButtonLink>
+            <ButtonLink href={sportPath("forge")} variant="secondary" className="px-4 py-2 text-xs">Let Forge build one</ButtonLink>
+          </div>
+        </div>
+      );
+    }
     return (
       <EmptyState
         icon="🧾"
@@ -197,8 +215,8 @@ export function SlipView() {
      * a phone. Short fixture names hid it, which is why it survived: the bug
      * only appears when someone adds a leg with long club names.
      */
-    <div className="grid gap-5 lg:grid-cols-[1.5fr_1fr]">
-      <div className="min-w-0 space-y-3">
+    <div className={sheet ? "space-y-3" : "grid gap-5 lg:grid-cols-[1.5fr_1fr]"}>
+      <div className={`min-w-0 ${sheet ? "space-y-2" : "space-y-3"}`}>
         {legs.map((l) => {
           const live = prices.get(legKey(l));
           const rating = live?.rating && live.marketPrice !== null ? RATINGS[live.rating] : null;
@@ -236,23 +254,27 @@ export function SlipView() {
           );
         })}
 
-        <Button variant="secondary" onClick={clear} className="w-full py-2.5">
-          Clear slip
-        </Button>
+        {!sheet && (
+          <Button variant="secondary" onClick={clear} className="w-full py-2.5">
+            Clear slip
+          </Button>
+        )}
       </div>
 
-      <aside className="min-w-0 lg:sticky lg:top-[calc(var(--header-h)+1rem)] lg:self-start">
-        <div className="card p-5 sm:p-7">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-ink-muted">
-            Combined pick
-          </h2>
+      <aside className={sheet ? "min-w-0" : "min-w-0 lg:sticky lg:top-[calc(var(--header-h)+1rem)] lg:self-start"}>
+        <div className={sheet ? "rounded-xl border border-line bg-surface-2/50 p-4" : "card p-5 sm:p-7"}>
+          {!sheet && (
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-ink-muted">
+              Combined pick
+            </h2>
+          )}
 
-          <div className="mt-5 space-y-4">
+          <div className={`${sheet ? "" : "mt-5"} space-y-4`}>
             <div>
               <p className="text-[10px] uppercase tracking-wider text-ink-dim">
                 Chance all {legs.length} land
               </p>
-              <p className="tnum mt-1 font-display text-4xl font-extrabold text-brand">
+              <p className={`tnum mt-1 font-display font-extrabold text-brand ${sheet ? "text-3xl" : "text-4xl"}`}>
                 {percent(acc.probability, acc.probability < 0.1 ? 2 : 1)}
               </p>
               <div className="mt-3">

@@ -26,6 +26,7 @@ import { kickoffDay, kickoffTime } from "@/lib/format";
 import { sportPath } from "@/lib/routes";
 import { Spinner } from "@/components/ui/primitives";
 import { BuildProgress, useBuildProgress } from "@/components/forge/build-progress";
+import { openSlipSheet } from "@/components/layout/nav-actions";
 
 /* ------------------------------------------------------------------ state */
 
@@ -216,9 +217,9 @@ export function ForgeStudio() {
     setToast(
       <>
         {slip.legs.length} {slip.legs.length === 1 ? "game" : "games"} added to your slip.{" "}
-        <Link href={sportPath("slip")} className="font-semibold text-brand underline-offset-2 hover:underline">
+        <button type="button" onClick={openSlipSheet} className="font-semibold text-brand underline-offset-2 hover:underline">
           View slip
-        </Link>
+        </button>
       </>,
     );
   };
