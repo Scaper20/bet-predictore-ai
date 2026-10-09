@@ -12,6 +12,7 @@ import {
   type TrackedLeg,
 } from "@/lib/slip-tracker";
 import type { TrackedSlip } from "@/lib/tracked-slips";
+import { useTickingMinute } from "@/components/match/use-live-clock";
 
 /* ----------------------------------------------------------------- shared */
 
@@ -220,16 +221,19 @@ function LegBadge({ state }: { state: LegState }) {
   );
 }
 
-function legClock(leg: TrackedLeg, state: LegState): string {
+function LegClock({ leg, state }: { leg: TrackedLeg; state: LegState }) {
+  const live = state.kind === "live" ? state.score : null;
+  // A hook, so it runs for every leg; it only counts for one in play.
+  const minute = useTickingMinute(live?.minute, live?.status ?? "scheduled", live?.observedAt ?? Number.NaN);
   if (state.kind === "settled") {
     const { abandoned } = state.result;
-    return abandoned === "postponed" ? "Postponed" : abandoned === "cancelled" ? "Cancelled" : "Full time";
+    return <>{abandoned === "postponed" ? "Postponed" : abandoned === "cancelled" ? "Cancelled" : "Full time"}</>;
   }
-  if (state.kind === "live") {
-    if (state.score.status === "halftime") return "Half time";
-    return state.score.minute ? `${state.score.minute}′` : "Live";
+  if (live) {
+    if (live.status === "halftime") return <>Half time</>;
+    return <>{minute ? `${minute}′` : "Live"}</>;
   }
-  return kickoffLabel(leg.kickoff);
+  return <>{kickoffLabel(leg.kickoff)}</>;
 }
 
 function legGoals(state: LegState): [number | null, number | null] | null {
@@ -250,7 +254,7 @@ function LegCard({ leg, state }: { leg: TrackedLeg; state: LegState }) {
       <div className="flex items-start justify-between gap-3">
         <p className="flex min-w-0 gap-1.5 pt-0.5 font-mono text-[10.5px] uppercase tracking-wider text-ink-muted">
           <span className="min-w-0 truncate">{leg.league}</span>
-          <span className="shrink-0">· {legClock(leg, state)}</span>
+          <span className="shrink-0">· <LegClock leg={leg} state={state} /></span>
         </p>
         <LegBadge state={state} />
       </div>

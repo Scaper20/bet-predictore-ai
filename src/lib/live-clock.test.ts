@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MAX_DRIFT_MINUTES, rebase, steadyMinute, tickedMinute } from "./live-clock";
+import { MAX_DRIFT_MINUTES, rebase, stampAll, steadyMinute, tickedMinute } from "./live-clock";
 
 const at = Date.parse("2026-10-09T01:00:00Z");
 const later = (minutes: number, seconds = 0) => at + minutes * 60_000 + seconds * 1000;
@@ -72,5 +72,20 @@ describe("rebase", () => {
   it("carries the reading's other fields through", () => {
     const next = { ...first, observedAt: later(1), home: 2, away: 0 };
     expect(rebase(first, next)).toEqual({ ...next, observedAt: at });
+  });
+});
+
+describe("stampAll", () => {
+  const score = (minute: number) => ({ status: "live" as const, minute, home: 1, away: 0 });
+
+  it("stamps new games with the poll's time", () => {
+    expect(stampAll({}, { a: score(57) }, at)).toEqual({ a: { ...score(57), observedAt: at } });
+  });
+
+  it("keeps a game's first sighting while its minute repeats, restamps when it moves", () => {
+    const prev = { a: { ...score(57), observedAt: at }, b: { ...score(30), observedAt: at } };
+    const out = stampAll(prev, { a: score(57), b: score(31) }, later(1));
+    expect(out.a.observedAt).toBe(at);
+    expect(out.b.observedAt).toBe(later(1));
   });
 });

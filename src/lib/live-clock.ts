@@ -66,3 +66,23 @@ export interface Reading {
 export function rebase<T extends Reading>(prev: Reading | null | undefined, next: T): T {
   return prev && prev.status === next.status && prev.minute === next.minute ? { ...next, observedAt: prev.observedAt } : next;
 }
+
+/**
+ * A poll's answers by match id, each stamped with when its minute was first
+ * seen, given the answers already on screen. For the lookups that return a
+ * batch of games at once (/api/slip/status).
+ */
+export function stampAll<T extends { status: MatchStatus; minute?: number | null; observedAt?: number }>(
+  prev: Record<string, T>,
+  next: Record<string, T>,
+  at: number,
+): Record<string, T & { observedAt: number }> {
+  const out: Record<string, T & { observedAt: number }> = {};
+  for (const [id, n] of Object.entries(next)) {
+    const p = prev[id];
+    const before = p?.observedAt != null ? { status: p.status, minute: p.minute ?? null, observedAt: p.observedAt } : null;
+    const { observedAt } = rebase(before, { status: n.status, minute: n.minute ?? null, observedAt: at });
+    out[id] = { ...n, observedAt };
+  }
+  return out;
+}

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { legsToPoll, type LegScore } from "@/lib/slip-tracker";
 import { recordScores, type TrackedSlip } from "@/lib/tracked-slips";
+import { stampAll } from "@/lib/live-clock";
 
 /** About as often as the live board itself refreshes (/api/live is cached for 20s). */
 const POLL_MS = 30_000;
@@ -54,7 +55,8 @@ export function useSlipScores(slips: TrackedSlip[]): Record<string, LegScore> {
         const body = (await res.json()) as { matches?: Record<string, LegScore> };
         const matches = body.matches ?? {};
         if (cancelled) return;
-        setScores((prev) => ({ ...prev, ...matches }));
+        const at = Date.now();
+        setScores((prev) => ({ ...prev, ...stampAll(prev, matches, at) }));
         recordScores(matches);
       } catch {
         // Offline or aborted — the next tick tries again.

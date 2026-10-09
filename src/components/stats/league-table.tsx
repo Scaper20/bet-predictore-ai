@@ -8,6 +8,8 @@ import { Crest } from "@/components/ui/crest";
 import { LiveDot } from "@/components/ui/primitives";
 import { FormPips } from "@/components/stats/form-pips";
 import { matchPath } from "@/lib/routes";
+import { useTickingMinute } from "@/components/match/use-live-clock";
+import { rebase, type Reading } from "@/lib/live-clock";
 
 /**
  * A league table that moves while its games are on.
@@ -37,11 +39,16 @@ export function LeagueTable({
   const rowsRef = useRef(new Map<string, HTMLTableRowElement>());
   const lastTops = useRef(new Map<string, number>());
   const lastPos = useRef(new Map(initial.rows.map((r) => [r.team.id, r.position])));
+  // When each game's current minute was first seen, so the chips count on
+  // between polls (lib/live-clock.ts). Empty until the first poll.
+  const seen = useRef(new Map<string, Reading>());
+  const [seenAt, setSeenAt] = useState<Record<string, number>>({});
 
-  // Every 30s while a game is on; every few minutes otherwise, to notice kick-off.
+  // Every 30s while a game is on, starting straight away (the page may be a
+  // cached copy); every few minutes otherwise, to notice kick-off.
   useEffect(() => {
     let cancelled = false;
-    const timer = setInterval(async () => {
+    const poll = async () => {
       if (document.hidden) return;
       try {
         const res = await fetch(`/api/tables/${table.code}`, { cache: "no-store" });
@@ -54,12 +61,23 @@ export function LeagueTable({
           if (before && before !== r.position) changes[r.team.id] = r.position < before ? "up" : "down";
           lastPos.current.set(r.team.id, r.position);
         }
+        const at = Date.now();
+        const readings = new Map<string, Reading>();
+        for (const r of next.rows) {
+          if (!r.live || readings.has(r.live.matchId)) continue;
+          const status = r.live.halftime ? "halftime" : "live";
+          readings.set(r.live.matchId, rebase(seen.current.get(r.live.matchId), { status, minute: r.live.minute, observedAt: at }));
+        }
+        seen.current = readings;
+        setSeenAt(Object.fromEntries([...readings].map(([id, r]) => [id, r.observedAt])));
         setMoved(changes);
         setTable(next);
       } catch {
         // Keep the last good table.
       }
-    }, table.liveGames > 0 ? 30_000 : 180_000);
+    };
+    if (table.liveGames > 0) void poll();
+    const timer = setInterval(poll, table.liveGames > 0 ? 30_000 : 180_000);
     return () => {
       cancelled = true;
       clearInterval(timer);
@@ -116,6 +134,7 @@ export function LeagueTable({
               zone={zones ? (r.position <= 4 ? "top" : r.position > size - 3 ? "bottom" : null) : null}
               highlighted={hl.has(r.team.id)}
               moved={moved[r.team.id]}
+              liveSince={r.live ? seenAt[r.live.matchId] : undefined}
               compact={compact}
               form={form?.[r.team.id]}
               showForm={Boolean(form)}
@@ -148,6 +167,7 @@ function Row({
   zone,
   highlighted,
   moved,
+  liveSince,
   compact,
   form,
   showForm,
@@ -158,6 +178,8 @@ function Row({
   zone: "top" | "bottom" | null;
   highlighted: boolean;
   moved?: "up" | "down";
+  /** When the live game's minute was first seen (epoch ms). */
+  liveSince?: number;
   compact: boolean;
   form?: Outcome[];
   showForm: boolean;
@@ -195,7 +217,7 @@ function Row({
               title="In play — tap for the match"
             >
               <LiveDot />
-              {live.halftime ? "HT" : live.minute ? `${live.minute}′` : ""} {live.for}-{live.against}
+              <LiveMinute live={live} since={liveSince} /> {live.for}-{live.against}
             </Link>
           )}
         </span>
@@ -213,4 +235,9 @@ function Row({
       <td className="tnum py-2.5 pr-4 text-right font-display text-base font-bold sm:pr-5">{r.points}</td>
     </tr>
   );
+}
+
+function LiveMinute({ live, since }: { live: NonNullable<LiveStandingRow["live"]>; since?: number }) {
+  const minute = useTickingMinute(live.minute, live.halftime ? "halftime" : "live", since ?? Number.NaN);
+  return <>{live.halftime ? "HT" : minute ? `${minute}′` : ""}</>;
 }

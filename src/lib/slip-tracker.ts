@@ -29,6 +29,9 @@ export interface LegScore {
   minute?: number | null;
   home: number | null;
   away: number | null;
+  /** Set by the polling browser, never the API: when this minute was first
+   * seen (epoch ms), for the live clock to count on from (lib/live-clock.ts). */
+  observedAt?: number;
 }
 
 /** A finished leg, remembered on the device so it never has to be looked up again. */

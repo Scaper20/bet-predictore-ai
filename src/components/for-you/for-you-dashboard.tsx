@@ -18,6 +18,7 @@ import { LockedSelection, ProTag } from "@/components/entitlements/locked-pick";
 import type { Pick } from "@/lib/model/predict";
 import { isStaleInPlay } from "@/lib/match-status";
 import type { LegScore } from "@/lib/slip-tracker";
+import { useTickingMinute } from "@/components/match/use-live-clock";
 
 /**
  * The personalised dashboard.
@@ -336,6 +337,8 @@ function PickRow({
   const inPlay = !stale && (state.status === "live" || state.status === "halftime");
   const over = state.status === "finished" || stale;
   const showScore = (inPlay || over) && state.home !== null && state.away !== null;
+  // Counts on between polls; the server-rendered minute isn't stamped, so it waits for the first.
+  const minute = useTickingMinute(state.minute, state.status, live?.observedAt ?? Number.NaN);
 
   return (
     <article
@@ -358,7 +361,7 @@ function PickRow({
           {inPlay ? (
             <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-rose/12 px-2 py-0.5 text-[11px] font-bold text-rose">
               <LiveDot />
-              {state.status === "halftime" ? "HT" : state.minute ? `LIVE ${state.minute}'` : "LIVE"}
+              {state.status === "halftime" ? "HT" : minute ? `LIVE ${minute}'` : "LIVE"}
             </span>
           ) : over ? (
             <span className="shrink-0 rounded-full bg-surface-3 px-2 py-0.5 text-[11px] font-bold text-ink-muted">FT</span>
