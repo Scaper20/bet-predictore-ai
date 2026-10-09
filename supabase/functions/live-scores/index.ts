@@ -44,6 +44,10 @@ function statusOf(raw: string | null | undefined): string | null {
   return null; // "NS" and unknowns: leave the row as it is
 }
 
+/** Longest one TheSportsDB call may take; a stalled minute ends and the next run tries again. */
+const FETCH_TIMEOUT_MS = 10_000;
+const timeout = () => AbortSignal.timeout(FETCH_TIMEOUT_MS);
+
 const num = (v: string | null | undefined) => (v == null || v === "" ? null : Number.isFinite(Number(v)) ? Number(v) : null);
 
 Deno.serve(async (req) => {
@@ -80,10 +84,15 @@ Deno.serve(async (req) => {
   try {
     // v2 is where live scores live on a paid key; v1 stays as the fallback.
     let events: LiveEvent[] | null = null;
-    const v2 = await fetch("https://www.thesportsdb.com/api/v2/json/livescore/soccer", { headers: { "X-API-KEY": key } });
-    if (v2.ok) events = (await v2.json()).livescore ?? [];
+    // A v2 timeout falls through to v1 rather than failing the minute.
+    const v2 = await fetch("https://www.thesportsdb.com/api/v2/json/livescore/soccer", {
+      headers: { "X-API-KEY": key },
+      signal: timeout(),
+    }).catch(() => null);
+    const v2Body = v2?.ok ? await v2.json().catch(() => null) : null;
+    if (v2Body) events = v2Body.livescore ?? [];
     if (events === null) {
-      const v1 = await fetch(`https://www.thesportsdb.com/api/v1/json/${key}/livescore.php?s=Soccer`);
+      const v1 = await fetch(`https://www.thesportsdb.com/api/v1/json/${key}/livescore.php?s=Soccer`, { signal: timeout() });
       if (!v1.ok) throw new Error(`TheSportsDB livescore HTTP ${v1.status}`);
       events = (await v1.json()).livescore ?? [];
     }
@@ -129,8 +138,8 @@ Deno.serve(async (req) => {
     for (const m of stale ?? []) {
       const id = m.source_ids?.thesportsdb;
       if (!id || ids.includes(id)) continue;
-      const res = await fetch(`https://www.thesportsdb.com/api/v1/json/${key}/lookupevent.php?id=${id}`);
-      const ev = res.ok ? (await res.json()).events?.[0] : undefined;
+      const res = await fetch(`https://www.thesportsdb.com/api/v1/json/${key}/lookupevent.php?id=${id}`, { signal: timeout() }).catch(() => null);
+      const ev = res?.ok ? (await res.json().catch(() => null))?.events?.[0] : undefined;
       if (!ev) {
         // Nothing back from the lookup either: past the cutoff, close it on
         // the score already stored rather than leave it live forever.
