@@ -260,7 +260,14 @@ export async function POST(request: Request) {
         } else {
           send({ type: "done", used, limit });
         }
-      } catch {
+      } catch (err) {
+        // The user sees a generic line; the log says what actually failed
+        // (bad key, no credit, rate limit) without echoing anything secret.
+        if (err instanceof Anthropic.APIError) {
+          console.error("ask: anthropic error", err.status, err.type ?? err.name, err.message.slice(0, 300));
+        } else if (!request.signal.aborted) {
+          console.error("ask: failed", err instanceof Error ? err.message.slice(0, 300) : String(err));
+        }
         if (!answered) await refund();
         send({
           type: "error",
