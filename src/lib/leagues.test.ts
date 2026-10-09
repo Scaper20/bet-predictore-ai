@@ -36,7 +36,8 @@ describe("leagueByProviderName", () => {
   it("keeps competitions that merely share words apart", () => {
     // The bug a substring match would reintroduce: three different countries'
     // top divisions all containing "Primera Division".
-    expect(leagueByProviderName("Argentinian Primera Division")).toBeUndefined();
+    // Argentina is catalogued now: its name must reach Argentina, not Spain.
+    expect(leagueByProviderName("Argentinian Primera Division")?.code).toBe("argentina-liga-profesional");
     expect(leagueByProviderName("Chile Primera Division")).toBeUndefined();
     expect(leagueByProviderName("American USL Championship")).toBeUndefined();
   });

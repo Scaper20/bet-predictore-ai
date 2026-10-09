@@ -40,6 +40,42 @@
     "historyOwner": "matches"
   },
   {
+    "code": "europa-league",
+    "sport": "football",
+    "name": "UEFA Europa League",
+    "country": "Europe",
+    "international": false,
+    "ids": {
+      "theSportsDb": "4481",
+      "espn": "uefa.europa"
+    },
+    "archive": {
+      "openfootball": {
+        "repo": "champions-league",
+        "glob": "*/el.txt"
+      }
+    },
+    "historyOwner": "matches"
+  },
+  {
+    "code": "conference-league",
+    "sport": "football",
+    "name": "UEFA Conference League",
+    "country": "Europe",
+    "international": false,
+    "ids": {
+      "theSportsDb": "5071",
+      "espn": "uefa.europa.conf"
+    },
+    "archive": {
+      "openfootball": {
+        "repo": "champions-league",
+        "glob": "*/conf.txt"
+      }
+    },
+    "historyOwner": "matches"
+  },
+  {
     "code": "la-liga",
     "sport": "football",
     "name": "Spanish La Liga",
@@ -224,6 +260,195 @@
         "file": "BRA",
         "league": "Serie A"
       }
+    },
+    "historyOwner": "football-data-uk"
+  },
+  {
+    "code": "scottish-premiership",
+    "sport": "football",
+    "name": "Scottish Premiership",
+    "country": "Scotland",
+    "international": false,
+    "ids": {
+      "theSportsDb": "4330",
+      "espn": "sco.1"
+    },
+    "archive": {
+      "footballDataUk": "SC0"
+    },
+    "historyOwner": "football-data-uk"
+  },
+  {
+    "code": "super-lig",
+    "sport": "football",
+    "name": "Turkish Süper Lig",
+    "country": "Turkey",
+    "international": false,
+    "ids": {
+      "theSportsDb": "4339",
+      "espn": "tur.1"
+    },
+    "archive": {
+      "footballDataUk": "T1"
+    },
+    "historyOwner": "football-data-uk"
+  },
+  {
+    "code": "mls",
+    "sport": "football",
+    "name": "Major League Soccer",
+    "country": "United States",
+    "international": false,
+    "ids": {
+      "theSportsDb": "4346",
+      "espn": "usa.1"
+    },
+    "archive": {
+      "footballDataUkCountry": {
+        "file": "USA",
+        "league": "MLS"
+      }
+    },
+    "historyOwner": "football-data-uk"
+  },
+  {
+    "code": "belgian-pro-league",
+    "sport": "football",
+    "name": "Belgian Pro League",
+    "country": "Belgium",
+    "international": false,
+    "ids": {
+      "theSportsDb": "4338",
+      "espn": "bel.1"
+    },
+    "archive": {
+      "footballDataUk": "B1"
+    },
+    "historyOwner": "football-data-uk"
+  },
+  {
+    "code": "argentina-liga-profesional",
+    "sport": "football",
+    "name": "Argentine Liga Profesional",
+    "country": "Argentina",
+    "international": false,
+    "ids": {
+      "theSportsDb": "4406",
+      "espn": "arg.1"
+    },
+    "archive": {
+      "footballDataUkCountry": {
+        "file": "ARG",
+        "league": "Liga Profesional"
+      }
+    },
+    "historyOwner": "football-data-uk"
+  },
+  {
+    "code": "liga-mx",
+    "sport": "football",
+    "name": "Mexican Liga MX",
+    "country": "Mexico",
+    "international": false,
+    "ids": {
+      "theSportsDb": "4350",
+      "espn": "mex.1"
+    },
+    "archive": {
+      "footballDataUkCountry": {
+        "file": "MEX",
+        "league": "Liga MX"
+      }
+    },
+    "historyOwner": "football-data-uk"
+  },
+  {
+    "code": "greek-super-league",
+    "sport": "football",
+    "name": "Greek Super League",
+    "country": "Greece",
+    "international": false,
+    "ids": {
+      "theSportsDb": "4336",
+      "espn": "gre.1"
+    },
+    "archive": {
+      "footballDataUk": "G1"
+    },
+    "historyOwner": "football-data-uk"
+  },
+  {
+    "code": "league-one",
+    "sport": "football",
+    "name": "English League One",
+    "country": "England",
+    "international": false,
+    "ids": {
+      "theSportsDb": "4396",
+      "espn": "eng.3"
+    },
+    "archive": {
+      "footballDataUk": "E2"
+    },
+    "historyOwner": "football-data-uk"
+  },
+  {
+    "code": "bundesliga-2",
+    "sport": "football",
+    "name": "German 2. Bundesliga",
+    "country": "Germany",
+    "international": false,
+    "ids": {
+      "theSportsDb": "4399",
+      "espn": "ger.2"
+    },
+    "archive": {
+      "footballDataUk": "D2"
+    },
+    "historyOwner": "football-data-uk"
+  },
+  {
+    "code": "serie-b",
+    "sport": "football",
+    "name": "Italian Serie B",
+    "country": "Italy",
+    "international": false,
+    "ids": {
+      "theSportsDb": "4394",
+      "espn": "ita.2"
+    },
+    "archive": {
+      "footballDataUk": "I2"
+    },
+    "historyOwner": "football-data-uk"
+  },
+  {
+    "code": "la-liga-2",
+    "sport": "football",
+    "name": "Spanish La Liga 2",
+    "country": "Spain",
+    "international": false,
+    "ids": {
+      "theSportsDb": "4400",
+      "espn": "esp.2"
+    },
+    "archive": {
+      "footballDataUk": "SP2"
+    },
+    "historyOwner": "football-data-uk"
+  },
+  {
+    "code": "ligue-2",
+    "sport": "football",
+    "name": "French Ligue 2",
+    "country": "France",
+    "international": false,
+    "ids": {
+      "theSportsDb": "4401",
+      "espn": "fra.2"
+    },
+    "archive": {
+      "footballDataUk": "F2"
     },
     "historyOwner": "football-data-uk"
   },
