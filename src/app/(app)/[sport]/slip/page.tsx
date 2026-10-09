@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { PageHeader } from "@/components/ui/page-header";
 import { SlipView } from "@/components/match/slip-view";
-import { DownloadSlipImage } from "@/components/slip/download-slip-image";
 import { ForgeLink, MySlipsLink, TrackSlipButton } from "@/components/slip/track-slip";
 import { containerClass } from "@/components/ui/container";
 
@@ -9,8 +8,8 @@ export const metadata: Metadata = {
   alternates: { canonical: "/football/slip" },
   title: "Selection Builder",
   description:
-    "Combine your selections and see their true combined probability, the price each leg has " +
-    "to beat, and the expected return against the prices you've actually been offered.",
+    "Combine your selections and see their true combined probability, with SportyBet's " +
+    "current prices where it lists them.",
 };
 
 export default function SlipPage() {
@@ -29,9 +28,8 @@ export default function SlipPage() {
       />
       <div className={`${containerClass()} py-7 sm:py-10`}>
         <SlipView />
-        <div className="mt-5 grid gap-5 lg:grid-cols-2">
+        <div className="mt-5">
           <TrackSlipButton />
-          <DownloadSlipImage />
         </div>
       </div>
     </>

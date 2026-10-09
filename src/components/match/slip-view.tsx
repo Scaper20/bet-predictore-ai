@@ -7,7 +7,7 @@ import { accumulator } from "@/lib/model/odds";
 import { Badge, Button, ButtonLink, EmptyState, ProbabilityBar } from "@/components/ui/primitives";
 import { kickoffTime, odds, percent, relativeDay } from "@/lib/format";
 import { sportPath, matchPath } from "@/lib/routes";
-import { assessValue, worstLeg, type ValueVerdict } from "@/lib/value";
+import { worstLeg } from "@/lib/value";
 
 /** One selection's live prices, as /api/odds returns them. */
 interface LivePrice {
@@ -133,79 +133,11 @@ function useLivePrices(legs: SlipLeg[], applyFetchedOdds: (prices: Map<string, n
   } as const;
 }
 
-/**
- * What one leg's price is worth, once the user has entered one.
- *
- * Renders a prompt without a price. The break-even threshold behind the
- * verdict stays internal; the user sees the rating, not the arithmetic.
- */
-function LegVerdict({
-  verdict,
-  live,
-}: {
-  verdict: ValueVerdict | null;
-  live: LivePrice | undefined;
-}) {
-  /*
-   * Where the market has an opinion it outranks ours. Twenty-five books
-   * disagreeing about a price is a fact about the price; our model disagreeing
-   * with it is a claim that has to earn its place, and the backtest put the
-   * model roughly level with the market rather than ahead of it.
-   */
-  if (live?.rating && live.marketPrice !== null) {
-    const tone = RATINGS[live.rating];
-    return (
-      <div className="mt-3 border-t border-line pt-3">
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-          <Badge tone={tone.tone}>{tone.label}</Badge>
-          <span className="tnum text-[11px] text-ink-dim">
-            Market <span className="font-semibold text-ink-muted">{odds(live.marketPrice)}</span>
-            {live.best !== null && (
-              <>
-                {" · "}Best <span className="font-semibold text-ink-muted">{odds(live.best)}</span>
-              </>
-            )}
-            {live.books !== null && <> {" · "}{live.books} books</>}
-          </span>
-        </div>
-        {live.reason && (
-          <p className="mt-1.5 text-[11px] leading-relaxed text-ink-muted">{live.reason}</p>
-        )}
-      </div>
-    );
-  }
-
-  if (!verdict) {
-    return (
-      <p className="mt-3 border-t border-line pt-3 text-[11px] text-ink-dim">
-        Enter your bookmaker&apos;s price to rate it.
-      </p>
-    );
-  }
-
-  const tone =
-    verdict.rating === "no-bet"
-      ? { text: "text-rose", badge: "rose" as const, label: "Don't take it" }
-      : verdict.rating === "thin"
-        ? { text: "text-ink-muted", badge: "neutral" as const, label: "Thin" }
-        : { text: "text-brand", badge: "brand" as const, label: "Value" };
-
-  return (
-    <div className="mt-3 border-t border-line pt-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <Badge tone={tone.badge}>{tone.label}</Badge>
-        <span className={`tnum text-xs font-bold ${tone.text}`}>
-          {verdict.edge >= 0 ? "+" : ""}
-          {(verdict.edge * 100).toFixed(1)}% per ₦100
-        </span>
-      </div>
-      <p className="mt-1.5 text-[11px] leading-relaxed text-ink-muted">{verdict.reason}</p>
-    </div>
-  );
-}
+/** A leg's SportyBet price, when the board had one. Prices typed into older versions of the slip are ignored. */
+const sportyPrice = (l: SlipLeg) => (l.oddsSource === "sportybet" && (l.bookmakerOdds ?? 0) > 1 ? l.bookmakerOdds : undefined);
 
 export function SlipView() {
-  const { legs, remove, clear, setBookmakerOdds, applyFetchedOdds } = useSlip();
+  const { legs, remove, clear, applyFetchedOdds } = useSlip();
   const { prices, state } = useLivePrices(legs, applyFetchedOdds);
   const fetchedAny = useMemo(
     () => legs.some((l) => l.oddsSource === "sportybet"),
@@ -217,7 +149,7 @@ export function SlipView() {
       <EmptyState
         icon="🧾"
         title="No selections yet"
-        description="Add selections from any match page."
+        description="Tap + Slip on any pick to add it here."
         action={
           <div className="flex flex-wrap justify-center gap-2">
             <ButtonLink href={sportPath("forge")}>Let Forge build one</ButtonLink>
@@ -230,10 +162,10 @@ export function SlipView() {
 
   const priced = legs.map((l) => ({
     probability: l.probability,
-    decimalOdds: l.bookmakerOdds && l.bookmakerOdds > 1 ? l.bookmakerOdds : l.fairOdds,
+    decimalOdds: sportyPrice(l) ?? l.fairOdds,
   }));
   const acc = accumulator(priced);
-  const usingRealOdds = legs.some((l) => (l.bookmakerOdds ?? 0) > 1);
+  const usingRealOdds = legs.some((l) => sportyPrice(l) !== undefined);
 
   /*
    * The combined return averages the legs, and averages are how a bad price
@@ -243,7 +175,7 @@ export function SlipView() {
    */
   const worst = worstLeg(legs, (l) => ({
     probability: l.probability,
-    price: l.bookmakerOdds,
+    price: sportyPrice(l),
   }));
 
   // Legs from the same competition on the same day are not independent — a
@@ -267,66 +199,42 @@ export function SlipView() {
      */
     <div className="grid gap-5 lg:grid-cols-[1.5fr_1fr]">
       <div className="min-w-0 space-y-3">
-        {legs.map((l) => (
-          <div key={l.matchId} className="card p-4 sm:p-5">
-            <div className="flex flex-wrap items-start gap-3">
+        {legs.map((l) => {
+          const live = prices.get(legKey(l));
+          const rating = live?.rating && live.marketPrice !== null ? RATINGS[live.rating] : null;
+          return (
+            <div key={l.matchId} className="card flex items-center gap-3 px-4 py-3">
               <div className="min-w-0 flex-1">
-                <p className="text-xs text-ink-dim">
+                <p className="truncate text-[11px] text-ink-dim">
                   {l.league} · {relativeDay(l.kickoff)} {kickoffTime(l.kickoff)}
                 </p>
-                <Link
-                  href={matchPath(l.matchId)}
-                  className="mt-1 block truncate text-sm font-semibold hover:text-brand"
-                >
+                <Link href={matchPath(l.matchId)} className="mt-0.5 block truncate text-sm font-semibold hover:text-brand">
                   {l.fixture}
                 </Link>
-                <p className="mt-1.5 text-sm text-brand">{l.label}</p>
+                <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <span className="truncate text-sm text-brand">{l.label}</span>
+                  {sportyPrice(l) && (
+                    <span className="tnum rounded bg-surface-2 px-1.5 py-0.5 text-[11px] text-ink-muted">
+                      SportyBet <span className="font-semibold text-ink">{odds(sportyPrice(l)!)}</span>
+                    </span>
+                  )}
+                  {rating && <Badge tone={rating.tone}>{rating.label}</Badge>}
+                </div>
               </div>
+              <span className="tnum shrink-0 text-sm font-bold">{percent(l.probability)}</span>
               <button
                 type="button"
                 onClick={() => remove(l.matchId)}
-                className="shrink-0 rounded-lg px-2 py-1 text-xs text-ink-dim transition-colors hover:bg-surface-2 hover:text-rose"
+                className="-mr-1 grid size-8 shrink-0 place-items-center rounded-lg text-ink-dim transition-colors hover:bg-surface-2 hover:text-rose"
                 aria-label={`Remove ${l.fixture}`}
               >
-                Remove
+                <svg viewBox="0 0 20 20" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+                  <path d="m5 5 10 10M15 5 5 15" strokeLinecap="round" />
+                </svg>
               </button>
             </div>
-
-            <div className="mt-4 grid grid-cols-2 items-end gap-3">
-              <div>
-                <p className="text-[10px] uppercase tracking-wider text-ink-dim">Model</p>
-                <p className="tnum mt-0.5 text-sm font-bold">{percent(l.probability)}</p>
-              </div>
-              <label className="block">
-                <span className="mb-1 block text-[10px] uppercase tracking-wider text-ink-dim">
-                  {/*
-                    Naming the source is not decoration. A number the user
-                    typed and a number a bookmaker's board returned support
-                    different conclusions, and the field is editable precisely
-                    so a user whose own betslip disagrees can say so.
-                  */}
-                  {l.oddsSource === "sportybet" ? "SportyBet" : "Your price"}
-                </span>
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  placeholder="e.g. 1.85"
-                  value={l.bookmakerOdds ?? ""}
-                  onChange={(e) => {
-                    const n = Number.parseFloat(e.target.value.replace(",", "."));
-                    setBookmakerOdds(l.matchId, Number.isFinite(n) && n > 1 ? n : undefined);
-                  }}
-                  className="tnum w-full rounded-lg border border-line bg-surface-2 px-2.5 py-1.5 text-sm font-semibold outline-none transition-colors placeholder:text-ink-dim focus:border-brand/50"
-                />
-              </label>
-            </div>
-
-            <LegVerdict
-              verdict={assessValue(l.probability, l.bookmakerOdds)}
-              live={prices.get(legKey(l))}
-            />
-          </div>
-        ))}
+          );
+        })}
 
         <Button variant="secondary" onClick={clear} className="w-full py-2.5">
           Clear slip
@@ -356,7 +264,7 @@ export function SlipView() {
             <dl className="grid grid-cols-2 gap-4 border-t border-line pt-4">
               <div>
                 <dt className="text-[10px] uppercase tracking-wider text-ink-dim">
-                  Your combined price
+                  Combined price
                 </dt>
                 <dd className="tnum mt-0.5 text-lg font-bold">{odds(acc.decimalOdds)}</dd>
               </div>
@@ -377,10 +285,7 @@ export function SlipView() {
             )}
 
             {fetchedAny && (
-              <p className="text-[11px] leading-relaxed text-ink-dim">
-                Prices read from SportyBet just now. Edit any leg to use the price on your own
-                betslip instead — an edited leg is left alone from then on.
-              </p>
+              <p className="text-[11px] leading-relaxed text-ink-dim">Prices read from SportyBet just now.</p>
             )}
           </div>
 
@@ -389,11 +294,7 @@ export function SlipView() {
               <p className="text-[11px] leading-relaxed text-ink-dim">
                 Reading SportyBet&apos;s current prices for these selections…
               </p>
-            ) : !usingRealOdds ? (
-              <p className="text-[11px] leading-relaxed text-ink-dim">
-                Enter your bookmaker&apos;s prices above to rate this slip.
-              </p>
-            ) : (
+            ) : !usingRealOdds ? null : (
               worst &&
               worst.verdict.rating === "no-bet" && (
                 <div className="rounded-lg border border-rose/25 bg-rose/5 p-3">

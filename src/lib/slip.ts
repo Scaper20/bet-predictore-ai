@@ -154,16 +154,14 @@ export function useSlip() {
   /**
    * Fill in prices fetched from a bookmaker.
    *
-   * Deliberately never overwrites a price the user typed. Someone who has
-   * entered the number from their own betslip has told us what they are
-   * actually being offered, and replacing it with a board price -- which can
-   * differ by a tick, or be a stale cache entry -- would silently change the
-   * bet they are evaluating.
+   * Since October 2026 the slip has no price field (people weren't typing
+   * them), so a price typed into an older version of the slip is replaced by
+   * the board's like any other: it can no longer be seen or edited, and a
+   * hidden number shouldn't steer the slip's maths.
    */
   const applyFetchedOdds = useCallback((prices: Map<string, number>) => {
     let changed = false;
     legs = legs.map((l) => {
-      if (l.oddsSource === "user") return l;
       const price = prices.get(l.matchId);
       if (price === undefined || price === l.bookmakerOdds) return l;
       changed = true;

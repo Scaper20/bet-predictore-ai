@@ -115,7 +115,6 @@ export function navFor(sport: SportId): { tabs: NavTab[]; tools: NavLink[] } {
         links: [
           { label: "For You", desc: "Picks from your leagues and markets", href: p("forYou") },
           { label: "Today", desc: "Every game we rate today", href: p("predictions") },
-          { label: "Tomorrow & this weekend", desc: "What's coming, day by day", href: p("fixtures") },
           { label: "Value Alerts", desc: "When the bookie price beats ours", href: p("valueAlerts"), badge: { text: "VIP", tone: "amber" } },
         ],
       },
