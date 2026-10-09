@@ -9,11 +9,13 @@ import { isStrong } from "@/lib/model/tiers";
 import { StrongBadge } from "@/components/ui/strong-badge";
 import { LockedSelection, ProTag } from "@/components/entitlements/locked-pick";
 import type { ViewedPrediction } from "@/lib/access";
+import { PickAction } from "@/components/match/pick-action";
 
 /**
- * A fixture's read at a glance: each side's chance and the one selection
- * the model would stand on. The split bar and goals numbers fold away under
- * "More".
+ * A fixture's read at a glance: each side's chance, the one selection the
+ * model would stand on, and a button that puts it on the slip (the live
+ * score once the game is under way). The split bar and goals numbers fold
+ * away under "More".
  *
  * No confidence score: the split bar already says how one-sided the game
  * is, and a second scale out of 100 next to a percentage read as a second
@@ -39,14 +41,18 @@ export function PredictionCard({ prediction, morph = true }: { prediction: Predi
           </span>
         </div>
 
-        <div className="space-y-2.5 px-4 pt-4 sm:px-5">
+        <div className="space-y-2.5 px-4 pb-4 pt-4 sm:px-5">
           <TeamLine team={match.home} side="home" matchId={match.id} morph={morph} p={markets.home} lead={markets.home >= markets.away && markets.home >= markets.draw} />
           <TeamLine team={match.away} side="away" matchId={match.id} morph={morph} p={markets.away} lead={markets.away > markets.home && markets.away >= markets.draw} />
         </div>
+      </Link>
 
-        <div className="mt-4 border-t border-line bg-surface-2/40 px-4 py-3 sm:px-5">
-          {publishable ? (
-            <div className="flex items-center justify-between gap-3">
+      {/* The pick and the one action on it. Kept outside the card's link so
+          the slip button is its own control, not a tap that opens the match. */}
+      <div className="flex items-center gap-3 border-t border-line bg-surface-2/40 px-4 py-3 sm:px-5">
+        {publishable ? (
+          <>
+            <Link href={matchPath(match.id)} className="flex min-w-0 flex-1 items-center justify-between gap-3">
               <div className="min-w-0">
                 <p className="flex items-center gap-2 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-ink-dim">
                   Our pick {isStrong(topPick) && <StrongBadge />}
@@ -62,14 +68,18 @@ export function PredictionCard({ prediction, morph = true }: { prediction: Predi
               ) : (
                 <p className="tnum shrink-0 text-[15px] font-bold text-brand">{percent(topPick.probability)}</p>
               )}
-            </div>
-          ) : (
-            <p className="text-xs text-ink-dim">
+            </Link>
+            <PickAction match={match} pick={topPick} locked={locked.pick} />
+          </>
+        ) : (
+          <>
+            <p className="min-w-0 flex-1 text-xs text-ink-dim">
               <span className="font-semibold text-amber">No pick</span> · not enough history yet
             </p>
-          )}
-        </div>
-      </Link>
+            <PickAction match={match} pick={null} />
+          </>
+        )}
+      </div>
 
       {/* Collapsed by default: the card answers "who and what" on its own;
           the split and goals numbers are one tap away. A native <details>
