@@ -25,11 +25,11 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 120;
 
 /**
- * Claude Sonnet 5.5: half the per-token price of Opus 5.5 ($2 / $10 per
- * million), which roughly halves what each question costs (docs/pricing.md).
- * The work here is chat over numbers the tools compute, which Sonnet handles.
+ * Claude Haiku 5.5: the cheapest current model ($0.10 / $0.50 per million for
+ * prompts under 100K tokens), about a twentieth of Sonnet 5.5 per question
+ * (docs/pricing.md). The work here is chat over numbers the tools compute.
  */
-const MODEL = "claude-sonnet-5-5";
+const MODEL = "claude-haiku-5-5";
 /** Tool rounds per question before the assistant must answer with what it has. */
 const MAX_ROUNDS = 6;
 
@@ -174,9 +174,9 @@ export async function POST(request: Request) {
             {
               model: MODEL,
               max_tokens: 8000,
-              // Chat over numbers the tools already computed; medium (Sonnet
-              // 5.5's recommended start for multistep tool use) keeps the tool
-              // choices careful without slow, long turns.
+              // Chat over numbers the tools already computed; medium (Haiku
+              // 5.5's default, set explicitly) keeps the tool choices careful
+              // without slow, long turns.
               output_config: { effort: "medium" },
               // Tools + system are identical on every request, so they're cached;
               // the top-level breakpoint also caches the growing conversation
@@ -184,11 +184,9 @@ export async function POST(request: Request) {
               system: [{ type: "text", text: ASK_SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
               cache_control: { type: "ephemeral" },
               tools: ASK_TOOLS,
+              // No server-side refusal fallback on Haiku 5.5; a decline is
+              // answered below (stop_reason "refusal").
               messages,
-              // If a safety classifier declines, retry on the model the API picks
-              // rather than leaving the user with nothing.
-              betas: ["server-side-fallback-2026-07-01"],
-              fallbacks: "default",
             },
             { signal: request.signal },
           );
