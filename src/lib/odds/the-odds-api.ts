@@ -147,7 +147,7 @@ export async function fetchBoard(leagueCode: string, marketKey: string): Promise
         `?apiKey=${encodeURIComponent(key)}&regions=${REGIONS.join(",")}` +
         `&markets=${marketKey}&oddsFormat=decimal`;
 
-      const response = await fetch(url).catch(() => null);
+      const response = await fetch(url, { signal: AbortSignal.timeout(8_000) }).catch(() => null);
       if (!response) return [];
 
       // Read the meter even on a rejection: a 401 or a 429 still reports where
