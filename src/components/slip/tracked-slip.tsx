@@ -429,7 +429,7 @@ export function TrackedSlipRow({ view, onOpen }: { view: SlipView; onOpen: () =>
     <button
       type="button"
       onClick={onOpen}
-      className="card card-hover block w-full p-4 text-left sm:p-5"
+      className="card card-hover block w-full min-w-0 p-4 text-left sm:p-5"
       aria-label={`Open slip with ${n} ${n === 1 ? "selection" : "selections"}`}
     >
       <div className="flex items-center justify-between gap-3">
@@ -439,17 +439,21 @@ export function TrackedSlipRow({ view, onOpen }: { view: SlipView; onOpen: () =>
         <SlipStatusPill status={view.status} size="sm" />
       </div>
 
-      <ul className="mt-3 space-y-1.5">
+      <ul className="mt-3 space-y-2">
         {view.legs.slice(0, 3).map(({ leg, state }) => (
-          <li key={leg.matchId} className="flex items-center gap-2 text-sm">
-            <span className={`size-1.5 shrink-0 rounded-full ${SEGMENT[legTone(state)]}`} aria-hidden />
-            <span className="min-w-0 flex-1 truncate text-ink">{leg.fixture}</span>
-            <span
-              className={`max-w-[45%] shrink-0 truncate text-xs ${
-                state.kind === "settled" && state.result.grade === "lose" ? "text-ink-dim line-through" : "text-ink-muted"
-              }`}
-            >
-              {leg.label}
+          <li key={leg.matchId} className="flex min-w-0 items-start gap-2">
+            <span className={`mt-1.5 size-1.5 shrink-0 rounded-full ${SEGMENT[legTone(state)]}`} aria-hidden />
+            {/* Fixture over pick, each on its own line: side by side, two long
+                names left neither room on a phone. */}
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm text-ink">{leg.fixture}</span>
+              <span
+                className={`block truncate text-xs ${
+                  state.kind === "settled" && state.result.grade === "lose" ? "text-ink-dim line-through" : "text-ink-muted"
+                }`}
+              >
+                {leg.label}
+              </span>
             </span>
           </li>
         ))}

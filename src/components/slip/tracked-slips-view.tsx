@@ -88,7 +88,10 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   return (
     <section>
       <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-ink-muted">{title}</h2>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{children}</div>
+      {/* grid-cols-1 (minmax(0,1fr)), not the implicit auto column: an auto
+          track never shrinks below its longest unbroken line, so one long
+          fixture pushed every card, and the page, wider than a phone. */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">{children}</div>
     </section>
   );
 }

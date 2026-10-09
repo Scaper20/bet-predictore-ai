@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useSlip } from "@/lib/slip";
@@ -10,11 +10,13 @@ import { useAskState } from "@/lib/ask-store";
 import { useOverlay } from "@/components/ui/use-overlay";
 import { SlipView } from "@/components/match/slip-view";
 import { OPEN_SLIP_EVENT } from "@/components/layout/nav-actions";
+import { clampPoint, snapToEdge, type Bounds, type Point } from "@/components/slip/fab-position";
 
 /**
  * The slip, as an overlay over whatever page you're on, the way a bookmaker's
- * betslip works: a floating button with the count in the corner (where the
- * support chat used to be), and a sheet that slides up over the page. No page
+ * betslip works: a floating button, always there, with the count once the
+ * slip has something on it (it took the support chat's corner, and can be
+ * dragged to any edge), and a sheet that slides up over the page. No page
  * title or explainer; people know what a betslip is.
  *
  * Opens from the button, from OPEN_SLIP_EVENT (menus, Forge, My slips), and
@@ -51,30 +53,10 @@ export function SlipSheet() {
   }
 
   const count = legs.length;
-  // Forge has its own action bar in that corner on phones; Ask covers it while open.
-  const onForge = /\/forge\/?$/.test(pathname);
 
   return (
     <>
-      {count > 0 && !open && !askOpen && (
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          aria-label={`Open slip, ${count} ${count === 1 ? "selection" : "selections"}`}
-          className={`fixed right-5 z-50 grid size-14 place-items-center rounded-full bg-brand text-brand-ink shadow-lg glow-brand transition-transform hover:scale-105 lift-above-bottom-nav ${onForge ? "max-lg:hidden" : ""}`}
-        >
-          <svg viewBox="0 0 24 24" className="size-6" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M4 5h16v14l-3-2-2 2-2-2-2 2-2-2-3 2V5Z" />
-            <path strokeLinecap="round" d="M8.5 9.5h7M8.5 13h4" />
-          </svg>
-          <span
-            key={count}
-            className="tnum slip-pop absolute -right-1 -top-1 grid min-w-6 place-items-center rounded-full border-2 border-shell bg-ink px-1.5 text-[11px] font-bold leading-5 text-shell"
-          >
-            {count}
-          </span>
-        </button>
-      )}
+      {!open && !askOpen && <SlipFab count={count} onOpen={() => setOpen(true)} />}
 
       {open && (
         <div className="fixed inset-0 z-[60]" role="presentation">
@@ -164,5 +146,131 @@ function SheetFooter({ onDone }: { onDone: () => void }) {
         </button>
       )}
     </div>
+  );
+}
+
+const FAB_SIZE = 56;
+const FAB_MARGIN = 12;
+const FAB_KEY = "bx_slip_fab";
+
+/** The area the button may use: below the header, above the bottom bar. */
+function fabBounds(): Bounds {
+  const header = document.querySelector("[data-site-header]")?.getBoundingClientRect();
+  const nav = document.querySelector("[data-bottom-nav]")?.getBoundingClientRect();
+  const top = header ? Math.max(0, header.bottom) : 64;
+  // The bar is hidden on desktop (zero height); the viewport's bottom is the edge then.
+  const bottom = nav && nav.height > 0 ? nav.top : window.innerHeight;
+  return {
+    minX: FAB_MARGIN,
+    maxX: window.innerWidth - FAB_SIZE - FAB_MARGIN,
+    minY: top + FAB_MARGIN,
+    maxY: Math.max(top + FAB_MARGIN, bottom - FAB_SIZE - FAB_MARGIN),
+  };
+}
+
+function savedFab(): Point | null {
+  try {
+    const v = JSON.parse(window.localStorage.getItem(FAB_KEY) ?? "null");
+    return v && Number.isFinite(v.x) && Number.isFinite(v.y) ? v : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The floating slip button. Tap opens the slip; drag moves it, and on release
+ * it settles on the nearest edge of the space between header and bottom bar
+ * (fab-position.ts). Remembered on this device.
+ */
+function SlipFab({ count, onOpen }: { count: number; onOpen: () => void }) {
+  const [pos, setPos] = useState<Point | null>(null);
+  const [dragging, setDragging] = useState(false);
+  const drag = useRef<{ id: number; dx: number; dy: number; startX: number; startY: number; moved: boolean } | null>(null);
+  // Set when a drag ends, so the click the browser fires after it doesn't open the slip.
+  const justDragged = useRef(false);
+
+  const place = useCallback((p: Point | null) => {
+    const b = fabBounds();
+    setPos(p ? snapToEdge(p, b) : { x: b.maxX, y: b.maxY });
+  }, []);
+
+  useEffect(() => {
+    const t = window.setTimeout(() => place(savedFab()), 0);
+    const onResize = () => setPos((p) => (p ? snapToEdge(p, fabBounds()) : p));
+    window.addEventListener("resize", onResize);
+    return () => {
+      window.clearTimeout(t);
+      window.removeEventListener("resize", onResize);
+    };
+  }, [place]);
+
+  if (!pos) return null;
+
+  const onPointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
+    drag.current = { id: e.pointerId, dx: e.clientX - pos.x, dy: e.clientY - pos.y, startX: e.clientX, startY: e.clientY, moved: false };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+  const onPointerMove = (e: React.PointerEvent<HTMLButtonElement>) => {
+    const d = drag.current;
+    if (!d || d.id !== e.pointerId) return;
+    if (!d.moved && Math.hypot(e.clientX - d.startX, e.clientY - d.startY) < 6) return;
+    if (!d.moved) {
+      d.moved = true;
+      setDragging(true);
+    }
+    setPos(clampPoint({ x: e.clientX - d.dx, y: e.clientY - d.dy }, fabBounds()));
+  };
+  const onPointerUp = (e: React.PointerEvent<HTMLButtonElement>) => {
+    const d = drag.current;
+    drag.current = null;
+    if (!d || d.id !== e.pointerId) return;
+    if (!d.moved) return; // a tap: the click handler opens the slip
+    justDragged.current = true;
+    window.setTimeout(() => (justDragged.current = false), 0);
+    setDragging(false);
+    const snapped = snapToEdge(pos, fabBounds());
+    setPos(snapped);
+    try {
+      window.localStorage.setItem(FAB_KEY, JSON.stringify(snapped));
+    } catch {
+      // Storage blocked: it just won't be remembered.
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerUp}
+      onClick={(e) => {
+        // A drag ends with a click on most browsers; only a tap opens.
+        if (justDragged.current) {
+          e.preventDefault();
+          justDragged.current = false;
+          return;
+        }
+        onOpen();
+      }}
+      aria-label={count > 0 ? `Open slip, ${count} ${count === 1 ? "selection" : "selections"}` : "Open slip"}
+      style={{ left: pos.x, top: pos.y, touchAction: "none" }}
+      className={`fixed z-50 grid size-14 place-items-center rounded-full bg-brand text-brand-ink shadow-lg glow-brand select-none ${
+        dragging ? "scale-110 cursor-grabbing" : "transition-[left,top,transform] duration-200 ease-out hover:scale-105"
+      }`}
+    >
+      <svg viewBox="0 0 24 24" className="size-6" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4 5h16v14l-3-2-2 2-2-2-2 2-2-2-3 2V5Z" />
+        <path strokeLinecap="round" d="M8.5 9.5h7M8.5 13h4" />
+      </svg>
+      {count > 0 && (
+        <span
+          key={count}
+          className="tnum slip-pop absolute -right-1 -top-1 grid min-w-6 place-items-center rounded-full border-2 border-shell bg-ink px-1.5 text-[11px] font-bold leading-5 text-shell"
+        >
+          {count}
+        </span>
+      )}
+    </button>
   );
 }
