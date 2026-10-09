@@ -194,7 +194,7 @@ export function navFor(sport: SportId): { tabs: NavTab[]; tools: NavLink[] } {
   const more: NavMenu = {
     id: "more",
     label: "More",
-    match: [p("trackRecord"), "/responsible-gambling", "/how-it-works", "/guides", "/help"],
+    match: [p("trackRecord"), "/responsible-gambling", "/how-it-works", "/guides", "/help", "/about"],
     columns: [
       {
         title: "BetriX",
@@ -202,6 +202,7 @@ export function navFor(sport: SportId): { tabs: NavTab[]; tools: NavLink[] } {
           { label: "Track record", desc: "Every pick we've published, graded", href: p("trackRecord") },
           { label: "How our picks work", desc: "The model, in plain words", href: "/how-it-works" },
           { label: "Guides", desc: "Markets and staking, explained", href: "/guides" },
+          { label: "About BetriX", desc: "Who we are and what we do", href: "/about" },
         ],
       },
       {
