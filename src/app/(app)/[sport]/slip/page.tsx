@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { PageHeader } from "@/components/ui/page-header";
 import { SlipView } from "@/components/match/slip-view";
+import { BookSlipButton } from "@/components/slip/book-slip-button";
 import { DownloadSlipImage } from "@/components/slip/download-slip-image";
 import { ForgeLink, MySlipsLink, TrackSlipButton } from "@/components/slip/track-slip";
 import { containerClass } from "@/components/ui/container";
@@ -29,7 +30,8 @@ export default function SlipPage() {
       />
       <div className={`${containerClass()} py-7 sm:py-10`}>
         <SlipView />
-        <div className="mt-5 grid gap-5 lg:grid-cols-2">
+        <div className="mt-5 grid gap-5 lg:grid-cols-3">
+          <BookSlipButton />
           <TrackSlipButton />
           <DownloadSlipImage />
         </div>
