@@ -36,6 +36,8 @@ import { SITE_URL } from "@/lib/site-url";
 
 const SCOPE = "https://www.googleapis.com/auth/gmail.send email";
 const AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
+/** Longest a Google OAuth or Gmail call may take. */
+const GOOGLE_TIMEOUT_MS = 10_000;
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const USERINFO_URL = "https://www.googleapis.com/oauth2/v2/userinfo";
 const GMAIL_API = "https://gmail.googleapis.com/gmail/v1/users/me";
@@ -105,6 +107,7 @@ export async function exchangeCodeForConnection(
   if (!id || !secret) return null;
 
   const res = await fetch(TOKEN_URL, {
+    signal: AbortSignal.timeout(GOOGLE_TIMEOUT_MS),
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
@@ -144,6 +147,7 @@ export async function exchangeCodeForConnection(
  */
 async function fetchAccountEmail(accessToken: string): Promise<string | null> {
   const res = await fetch(USERINFO_URL, {
+    signal: AbortSignal.timeout(GOOGLE_TIMEOUT_MS),
     headers: { Authorization: `Bearer ${accessToken}` },
     cache: "no-store",
   }).catch(() => null);
@@ -159,6 +163,7 @@ async function refreshAccessToken(refreshToken: string): Promise<string | null> 
   if (!id || !secret) return null;
 
   const res = await fetch(TOKEN_URL, {
+    signal: AbortSignal.timeout(GOOGLE_TIMEOUT_MS),
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
@@ -249,6 +254,7 @@ export async function sendMailAs(
   ].join("\r\n");
 
   const res = await fetch(`${GMAIL_API}/messages/send`, {
+    signal: AbortSignal.timeout(GOOGLE_TIMEOUT_MS),
     method: "POST",
     headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
     body: JSON.stringify({ raw: base64UrlEncode(message) }),

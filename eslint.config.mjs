@@ -15,6 +15,8 @@ const eslintConfig = defineConfig([
     // Deno (Supabase Edge Functions) and Python: not part of the Next app.
     "supabase/functions/**",
     "ingestion/**",
+    // Launch-video projects (HyperFrames) with vendored, minified libraries.
+    "brag-output*/**",
   ]),
 
   /*
@@ -51,5 +53,14 @@ const eslintConfig = defineConfig([
     },
   },
 ]);
+
+// A leading underscore marks a parameter a signature requires but the body
+// doesn't use (server actions take (prevState, formData) whether or not they
+// read them).
+eslintConfig.push({
+  rules: {
+    "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
+  },
+});
 
 export default eslintConfig;

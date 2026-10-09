@@ -289,6 +289,7 @@ export function SlipView() {
             )}
           </div>
 
+          {(state === "loading" && !usingRealOdds) || (usingRealOdds && worst?.verdict.rating === "no-bet") || correlated || legs.length >= 5 ? (
           <div className="mt-5 space-y-3 border-t border-line pt-5">
             {state === "loading" && !usingRealOdds ? (
               <p className="text-[11px] leading-relaxed text-ink-dim">
@@ -329,6 +330,7 @@ export function SlipView() {
               </div>
             )}
           </div>
+          ) : null}
         </div>
       </aside>
     </div>

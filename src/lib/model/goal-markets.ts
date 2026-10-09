@@ -89,13 +89,21 @@ export function goalMarkets(full: number[][], halves: { first: number[][]; secon
         else e.away += p;
       }
       const btts = x > 0 && y > 0;
-      if (x > y) btts ? (rb.homeYes += p) : (rb.homeNo += p);
-      else if (x < y) btts ? (rb.awayYes += p) : (rb.awayNo += p);
-      else if (btts) rb.drawYes += p;
+      if (x > y) {
+        if (btts) rb.homeYes += p;
+        else rb.homeNo += p;
+      } else if (x < y) {
+        if (btts) rb.awayYes += p;
+        else rb.awayNo += p;
+      } else if (btts) rb.drawYes += p;
       const over = t > 2.5;
-      if (x > y) over ? (ro.homeOver += p) : (ro.homeUnder += p);
-      else if (x < y) over ? (ro.awayOver += p) : (ro.awayUnder += p);
-      else if (over) ro.drawOver += p;
+      if (x > y) {
+        if (over) ro.homeOver += p;
+        else ro.homeUnder += p;
+      } else if (x < y) {
+        if (over) ro.awayOver += p;
+        else ro.awayUnder += p;
+      } else if (over) ro.drawOver += p;
     }
   }
 

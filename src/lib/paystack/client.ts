@@ -17,6 +17,9 @@ async function paystackFetch<T>(path: string, init?: RequestInit): Promise<T> {
       ...init?.headers,
     },
     cache: "no-store",
+    // A stalled Paystack call would otherwise hold checkout (and the webhook
+    // handler's verification) until the function's time limit.
+    signal: init?.signal ?? AbortSignal.timeout(15_000),
   });
 
   const body = (await res.json()) as { status: boolean; message: string; data: T };

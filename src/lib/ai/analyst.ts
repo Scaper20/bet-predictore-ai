@@ -1,3 +1,5 @@
+import "server-only";
+
 /**
  * Natural-language match analysis.
  *
@@ -160,7 +162,10 @@ export async function writeAnalysis(p: Prediction): Promise<Analysis> {
       // server instance reuses yesterday's text instead of paying again.
       const stored = await readStoredAnalysis(key);
       if (stored) return stored;
-      const client = new Anthropic();
+      // The first viewer of a match waits on this call (the page renders after
+      // it), so it is bounded: past 20 seconds the page shows the model's own
+      // write-up instead, as it does on any failure.
+      const client = new Anthropic({ timeout: 20_000, maxRetries: 1 });
       const response = await client.messages.create({
         model: "claude-opus-5",
         max_tokens: 2000,

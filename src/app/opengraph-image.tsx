@@ -27,7 +27,7 @@ export default async function Image() {
           fontFamily: "sans-serif",
         }}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element -- next/og requires a plain <img>, not next/image */}
+        { }
         <img src={logoSrc} width={140} height={140} alt="" />
         <div style={{ display: "flex", marginTop: 32, fontSize: 84, fontWeight: 800, color: "#eef2f7" }}>
           Betri<span style={{ color: "#00f48e" }}>X</span>
