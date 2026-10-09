@@ -423,13 +423,14 @@ function rowSummary(view: SlipView): string {
   }
 }
 
-export function TrackedSlipRow({ view, onOpen }: { view: SlipView; onOpen: () => void }) {
+export function TrackedSlipRow({ view, onOpen, onShare }: { view: SlipView; onOpen: () => void; onShare?: () => void }) {
   const n = view.legs.length;
   return (
+    <article className="card card-hover min-w-0 overflow-hidden">
     <button
       type="button"
       onClick={onOpen}
-      className="card card-hover block w-full min-w-0 p-4 text-left sm:p-5"
+      className="block w-full min-w-0 p-4 pb-3 text-left sm:p-5 sm:pb-3"
       aria-label={`Open slip with ${n} ${n === 1 ? "selection" : "selections"}`}
     >
       <div className="flex items-center justify-between gap-3">
@@ -463,7 +464,25 @@ export function TrackedSlipRow({ view, onOpen }: { view: SlipView; onOpen: () =>
       <div className="mt-4">
         <Segments view={view} className="h-1" />
       </div>
-      <p className="mt-2.5 text-xs text-ink-dim">{rowSummary(view)}</p>
+    </button>
+      {/* Its own row, outside the card's tap area: a button can't sit inside another. */}
+      <div className="flex items-center justify-between gap-3 px-4 pb-4 sm:px-5">
+        <p className="min-w-0 truncate text-xs text-ink-dim">{rowSummary(view)}</p>
+        {onShare && <ShareButton onClick={onShare} />}
+      </div>
+    </article>
+  );
+}
+
+/** Opens the share overlay for a slip (components/slip/share-slip-sheet.tsx). */
+export function ShareButton({ onClick, className = "" }: { onClick: () => void; className?: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`shrink-0 rounded-full border border-brand/40 bg-brand/10 px-4 py-1.5 text-xs font-bold text-brand transition-colors hover:bg-brand/20 ${className}`}
+    >
+      Share
     </button>
   );
 }
