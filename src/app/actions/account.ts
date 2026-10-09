@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { markAuthChange } from "@/lib/auth-hint-server";
 import { revalidatePath } from "next/cache";
 import { supabaseServer, supabaseConfigured } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
@@ -146,6 +147,7 @@ export async function deleteAccount(
 export async function signOutAllDevices() {
   const supabase = await supabaseServer();
   await supabase.auth.signOut({ scope: "global" });
+  await markAuthChange(false);
   redirect("/");
 }
 

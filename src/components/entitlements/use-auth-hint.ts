@@ -16,20 +16,27 @@ import { useSyncExternalStore } from "react";
  * NEVER authorize on this. It is client-readable, trivially forgeable, and
  * says nothing about tier. Every real check is getEntitlement() server-side.
  *
- * The subscribe/snapshot pair is the same trick theme-toggle.tsx uses: nothing
- * mutates the cookie while this is mounted, so there is nothing to subscribe
- * to — useSyncExternalStore is here purely to read it hydration-safely, with
- * the server snapshot deliberately null so the markup matches.
+ * useSyncExternalStore reads it hydration-safely (the server snapshot is
+ * deliberately null so the markup matches) and re-reads it when the session
+ * changes: EntitlementProvider fires AUTH_HINT_EVENT when it sees the cookie
+ * flip after a sign-in or sign-out, so the header doesn't keep the old shape.
  */
-function subscribe() {
-  return () => {};
+export const AUTH_HINT_EVENT = "bx-auth-change";
+
+function subscribe(onChange: () => void) {
+  window.addEventListener(AUTH_HINT_EVENT, onChange);
+  return () => window.removeEventListener(AUTH_HINT_EVENT, onChange);
+}
+
+/** The raw cookie value, "1" or "0", or null when it isn't set. */
+export function readAuthHintCookie(): string | null {
+  if (typeof document === "undefined") return null;
+  return document.cookie.match(/(?:^|; )bx_auth=([01])/)?.[1] ?? null;
 }
 
 function readHint(): boolean | null {
-  if (typeof document === "undefined") return null;
-  const match = document.cookie.match(/(?:^|; )bx_auth=([01])/);
-  if (!match) return null;
-  return match[1] === "1";
+  const v = readAuthHintCookie();
+  return v === null ? null : v === "1";
 }
 
 /** True/false once known, null when there is no hint to go on. */
