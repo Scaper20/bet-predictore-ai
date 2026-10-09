@@ -115,7 +115,6 @@ export function navFor(sport: SportId): { tabs: NavTab[]; tools: NavLink[] } {
         links: [
           { label: "For You", desc: "Picks from your leagues and markets", href: p("forYou") },
           { label: "Today", desc: "Every game we rate today", href: p("predictions") },
-          { label: "Tomorrow & this weekend", desc: "What's coming, day by day", href: p("fixtures") },
           { label: "Value Alerts", desc: "When the bookie price beats ours", href: p("valueAlerts"), badge: { text: "VIP", tone: "amber" } },
         ],
       },
@@ -194,7 +193,7 @@ export function navFor(sport: SportId): { tabs: NavTab[]; tools: NavLink[] } {
   const more: NavMenu = {
     id: "more",
     label: "More",
-    match: [p("trackRecord"), "/responsible-gambling", "/how-it-works", "/guides", "/help"],
+    match: [p("trackRecord"), "/responsible-gambling", "/how-it-works", "/guides", "/help", "/about"],
     columns: [
       {
         title: "BetriX",
@@ -202,6 +201,7 @@ export function navFor(sport: SportId): { tabs: NavTab[]; tools: NavLink[] } {
           { label: "Track record", desc: "Every pick we've published, graded", href: p("trackRecord") },
           { label: "How our picks work", desc: "The model, in plain words", href: "/how-it-works" },
           { label: "Guides", desc: "Markets and staking, explained", href: "/guides" },
+          { label: "About BetriX", desc: "Who we are and what we do", href: "/about" },
         ],
       },
       {

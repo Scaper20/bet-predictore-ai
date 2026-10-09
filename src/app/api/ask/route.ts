@@ -17,8 +17,12 @@ import {
 } from "@/lib/ask/request";
 
 export const dynamic = "force-dynamic";
-/** A question can take a few tool rounds; leave room beyond the default. */
-export const maxDuration = 60;
+/**
+ * A question can take several tool rounds, each a full model turn. Time spent
+ * waiting on the model isn't billed as CPU, so a generous ceiling costs
+ * nothing and stops a long answer being cut off mid-stream.
+ */
+export const maxDuration = 120;
 
 /**
  * Claude Sonnet 5.5: half the per-token price of Opus 5.5 ($2 / $10 per

@@ -29,7 +29,7 @@ export default async function LivePage() {
       <div className={`${containerClass()} space-y-6 py-7 sm:py-10`}>
         {feed && <CoverageNotice coverage={feed.coverage} />}
         {feed ? (
-          <LiveBoard initial={feed.matches} />
+          <LiveBoard initial={feed.matches} initialAt={Date.parse(feed.updatedAt)} />
         ) : (
           <div className="card p-8 text-center">
             <p className="text-sm text-ink-muted">

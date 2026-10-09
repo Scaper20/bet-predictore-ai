@@ -9,11 +9,13 @@ import { isStrong } from "@/lib/model/tiers";
 import { StrongBadge } from "@/components/ui/strong-badge";
 import { LockedSelection, ProTag } from "@/components/entitlements/locked-pick";
 import type { ViewedPrediction } from "@/lib/access";
+import { PickAction } from "@/components/match/pick-action";
 
 /**
  * The one deep pick given away free, no login. Headline numbers only — the
  * full panel stack still lives behind the match page's normal gates, so this
- * reads as a hook, not the whole paid experience. Its border slowly orbits
+ * reads as a hook, not the whole paid experience. Always one of today's
+ * games (bestBetOfDay), with a slip button like every pick card. Its border slowly orbits
  * (.orbit-border) so it reads as the day's headline without shouting.
  */
 export function BestBetOfDay({ prediction }: { prediction: Prediction | ViewedPrediction | null }) {
@@ -22,11 +24,8 @@ export function BestBetOfDay({ prediction }: { prediction: Prediction | ViewedPr
   const locked = "locked" in prediction && prediction.locked.pick;
 
   return (
-    <Link
-      href={matchPath(match.id)}
-      className="orbit-border card card-hover group grid gap-5 overflow-hidden rounded-2xl p-5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-8 sm:p-7"
-    >
-      <div className="min-w-0">
+    <article className="orbit-border card card-hover group grid gap-5 overflow-hidden rounded-2xl p-5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-8 sm:p-7">
+      <Link href={matchPath(match.id)} className="block min-w-0">
         <div className="flex flex-wrap items-center gap-2">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-brand px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-[0.14em] text-brand-ink">
             <svg viewBox="0 0 16 16" className="size-3" fill="currentColor" aria-hidden>
@@ -50,10 +49,10 @@ export function BestBetOfDay({ prediction }: { prediction: Prediction | ViewedPr
         <div className="mt-4 max-w-md">
           <SplitBar home={markets.home} draw={markets.draw} away={markets.away} />
         </div>
-      </div>
+      </Link>
 
       <div className="flex items-end justify-between gap-6 rounded-xl border border-brand/20 bg-brand/[0.06] px-5 py-4 sm:block sm:min-w-52 sm:text-right">
-        <div>
+        <Link href={matchPath(match.id)} className="block">
           <p className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-ink-dim">Our pick</p>
           {locked ? (
             <LockedSelection group={topPick.group} className="mt-1 text-base font-bold text-ink sm:text-lg" />
@@ -61,15 +60,16 @@ export function BestBetOfDay({ prediction }: { prediction: Prediction | ViewedPr
             <p className="mt-1 text-base font-bold text-ink sm:text-lg">{topPick.label}</p>
           )}
           {isStrong(topPick) && <StrongBadge className="mt-1.5" />}
-        </div>
-        <div className="sm:mt-3">
+        </Link>
+        <div className="flex flex-col items-end gap-2 sm:mt-3">
           {locked ? (
             <ProTag />
           ) : (
             <AnimatedNumber value={topPick.probability * 100} decimals={1} suffix="%" className="font-display text-3xl font-extrabold text-brand" />
           )}
+          <PickAction match={match} pick={topPick} locked={locked} />
         </div>
       </div>
-    </Link>
+    </article>
   );
 }

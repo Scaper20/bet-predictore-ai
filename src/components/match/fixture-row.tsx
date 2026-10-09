@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import type { Match } from "@/lib/types";
 import { Crest } from "@/components/ui/crest";
@@ -5,6 +7,8 @@ import { LiveDot } from "@/components/ui/primitives";
 import { Morph, morphName } from "@/components/motion/morph";
 import { kickoffTime } from "@/lib/format";
 import { matchPath } from "@/lib/routes";
+import { useLiveReading } from "@/components/match/use-live-feed";
+import { useTickingMinute } from "@/components/match/use-live-clock";
 
 /**
  * One fixture or result as a scoreboard row, the Live board's layout: the
@@ -14,9 +18,13 @@ import { matchPath } from "@/lib/routes";
  * Crests carry a view-transition name, so tapping a row grows them into the
  * match page's header. Each match appears once per list, which the names
  * need.
+ *
+ * The lists are cached pages, so a game in play takes its score and minute
+ * from the shared live poll (use-live-feed.ts) once it answers, and its clock
+ * counts on between polls.
  */
 export function FixtureRow({
-  match,
+  match: fixture,
   note,
   footer,
   index = 0,
@@ -28,6 +36,10 @@ export function FixtureRow({
   footer?: React.ReactNode;
   index?: number;
 }) {
+  const reading = useLiveReading(fixture.id, fixture.status === "live" || fixture.status === "halftime");
+  const match: Match = reading
+    ? { ...fixture, status: reading.status, minute: reading.minute, score: { home: reading.home, away: reading.away } }
+    : fixture;
   const live = match.status === "live" || match.status === "halftime";
   const finished = match.status === "finished";
   const { home, away } = match.score;
@@ -40,7 +52,7 @@ export function FixtureRow({
       style={{ ["--i" as string]: index }}
       className="group grid grid-cols-[3.25rem_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-2/60 sm:px-5"
     >
-      <Clock match={match} />
+      <Clock match={match} since={reading?.observedAt} />
       <div className="min-w-0 space-y-1.5">
         <TeamLine team={match.home} matchId={match.id} side="home" strong={leader === "home"} dim={leader === "away"} />
         <TeamLine team={match.away} matchId={match.id} side="away" strong={leader === "away"} dim={leader === "home"} />
@@ -70,7 +82,9 @@ export function FixtureRow({
   );
 }
 
-function Clock({ match }: { match: Match }) {
+function Clock({ match, since }: { match: Match; since?: number }) {
+  // Counts only once the live poll has stamped the minute; until then, as rendered.
+  const minute = useTickingMinute(match.minute, match.status, since ?? Number.NaN);
   if (match.status === "halftime") {
     return (
       <span className="w-fit rounded-md border border-amber/30 bg-amber/10 px-1.5 py-0.5 font-mono text-[11px] font-bold text-amber">HT</span>
@@ -80,7 +94,7 @@ function Clock({ match }: { match: Match }) {
     return (
       <span className="flex items-center gap-1.5 font-mono text-xs font-bold text-rose">
         <LiveDot />
-        <span className="tnum">{match.minute ? `${match.minute}′` : "Live"}</span>
+        <span className="tnum">{minute ? `${minute}′` : "Live"}</span>
       </span>
     );
   }

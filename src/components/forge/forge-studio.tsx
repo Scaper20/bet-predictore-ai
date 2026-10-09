@@ -25,6 +25,7 @@ import { trackSlip } from "@/lib/tracked-slips";
 import { kickoffDay, kickoffTime } from "@/lib/format";
 import { sportPath } from "@/lib/routes";
 import { Spinner } from "@/components/ui/primitives";
+import { BuildProgress, useBuildProgress } from "@/components/forge/build-progress";
 
 /* ------------------------------------------------------------------ state */
 
@@ -83,6 +84,7 @@ export function ForgeStudio() {
   const [gated, setGated] = useState(false);
   const [view, setView] = useState<"settings" | "result">("settings");
   const [toast, setToast] = useState<ReactNode>(null);
+  const progress = useBuildProgress(busy);
 
   // Remembered settings and the last slip, restored after hydration.
   useEffect(() => {
@@ -258,6 +260,7 @@ export function ForgeStudio() {
             allowance={allowance}
             remaining={remaining}
             busy={busy}
+            progress={progress}
             onGenerate={() => void generate(false)}
           />
           {error && view === "settings" && <p className="mt-3 text-sm text-rose">{error.message}</p>}
@@ -270,6 +273,7 @@ export function ForgeStudio() {
               slip={slip}
               locked={locked}
               busy={busy}
+              progress={progress}
               error={error}
               remaining={remaining}
               allowance={allowance}
@@ -337,6 +341,7 @@ function SettingsPanel({
   allowance,
   remaining,
   busy,
+  progress,
   onGenerate,
 }: {
   settings: ForgeSettings;
@@ -344,6 +349,7 @@ function SettingsPanel({
   allowance: Allowance | null;
   remaining: number | null;
   busy: boolean;
+  progress: number | null;
   onGenerate: () => void;
 }) {
   const [oddsText, setOddsText] = useState(settings.targetOdds.toFixed(2));
@@ -514,10 +520,13 @@ function SettingsPanel({
           disabled={busy}
           className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand py-4 text-base font-bold text-brand-ink transition-colors hover:bg-brand-strong disabled:opacity-60"
         >
-          {busy && <Spinner className="size-4" />}
           {busy ? "Building your slip…" : "Generate slip"}
         </button>
-        <AllowanceLine allowance={allowance} remaining={remaining} />
+        {progress !== null ? (
+          <BuildProgress pct={progress} className="mt-3" />
+        ) : (
+          <AllowanceLine allowance={allowance} remaining={remaining} />
+        )}
       </div>
     </div>
   );
@@ -550,6 +559,7 @@ function ResultPanel({
   slip,
   locked,
   busy,
+  progress,
   error,
   remaining,
   allowance,
@@ -565,6 +575,7 @@ function ResultPanel({
   slip: Slip;
   locked: Set<string>;
   busy: boolean;
+  progress: number | null;
   error: { message: string; code?: string } | null;
   remaining: number | null;
   allowance: Allowance | null;
@@ -586,6 +597,7 @@ function ResultPanel({
 
   return (
     <div className="space-y-4 pb-28 lg:pb-0">
+      {progress !== null && <BuildProgress pct={progress} className="card px-4 py-3" />}
       {/* mobile: back to settings */}
       <div className="flex items-center justify-between gap-3 lg:hidden">
         <button type="button" onClick={onBack} className="flex items-center gap-1.5 text-sm font-medium text-ink-muted hover:text-ink">

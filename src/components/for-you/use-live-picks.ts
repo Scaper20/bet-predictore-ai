@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { LegScore } from "@/lib/slip-tracker";
+import { stampAll } from "@/lib/live-clock";
 
 const POLL_MS = 30_000;
 const TICK_MS = 60_000;
@@ -50,7 +51,8 @@ export function useLivePicks(picks: { id: string; kickoff: string; status: strin
         });
         if (!res.ok || cancelled) return;
         const body = (await res.json()) as { matches?: Record<string, LegScore> };
-        if (!cancelled) setScores((prev) => ({ ...prev, ...(body.matches ?? {}) }));
+        const at = Date.now();
+        if (!cancelled) setScores((prev) => ({ ...prev, ...stampAll(prev, body.matches ?? {}, at) }));
       } catch {
         // Offline; the next tick tries again.
       }

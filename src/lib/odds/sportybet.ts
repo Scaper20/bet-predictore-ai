@@ -62,6 +62,9 @@ export interface SportyBetEvent extends FixtureLike {
   markets: RawMarket[];
 }
 
+/** Longest a single parse.bot call may take, body included. */
+const FETCH_TIMEOUT_MS = 8_000;
+
 function configured(): string | null {
   return process.env.PARSEBOT_API_KEY?.trim() || null;
 }
@@ -102,8 +105,12 @@ export async function fetchUpcomingPage(
     const url =
       `${BASE}/get_upcoming_events?sport=football&page=${page}&page_size=${pageSize}` +
       (tournamentId ? `&tournament_id=${encodeURIComponent(tournamentId)}` : "");
+    // Bounded: a stalled parse.bot call used to hold every caller (they share
+    // this cached promise) until the function's 60-second limit, which is
+    // what took Forge down in October 2026.
     const response = await fetch(url, {
       headers: { "X-API-Key": key, "API-Snapshot-Version": SNAPSHOT_VERSION },
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     }).catch(() => null);
     if (!response?.ok) return [];
 

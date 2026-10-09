@@ -29,6 +29,9 @@ async function predictionsFor(when: ForgeWhen): Promise<Prediction[]> {
   });
 }
 
+/** How long a slip waits for SportyBet prices before going out without the missing ones. */
+const PRICE_BUDGET_MS = 12_000;
+
 export interface ForgeResponse extends ForgeResult {
   scanned: number;
   pricedAt: string;
@@ -61,17 +64,26 @@ export async function buildForgeSlip(
 
   // SportyBet prices for single picks. Combos stay at the model's fair odds:
   // a bookmaker prices a same-game combo its own way, and we won't guess it.
+  // Prices are a nicety on a slip the model has already built, so they get a
+  // fixed budget: a leg not priced by then shows without one, as an unlisted
+  // game does, rather than the whole request running into the 60-second limit.
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<null>((resolve) => {
+    timer = setTimeout(() => resolve(null), PRICE_BUDGET_MS);
+  });
   const price = async (leg: ForgeLeg): Promise<ForgeLeg> => {
     if (leg.market.startsWith(COMBO_PREFIX)) return leg;
     const p = byId.get(leg.matchId);
     const pick = p?.picks.find((pk) => pk.market === leg.market);
     if (!p || !pick) return leg;
-    const local = await priceSelections(p.match, [pick])
+    const lookup = priceSelections(p.match, [pick])
       .then((r) => r[0]?.local ?? null)
       .catch(() => null);
+    const local = await Promise.race([lookup, deadline]);
     return { ...leg, price: local };
   };
 
   const [legs, bench] = await Promise.all([Promise.all(result.legs.map(price)), Promise.all(result.bench.map(price))]);
+  clearTimeout(timer);
   return { legs, bench, dropped: result.dropped, scanned: pool.length, pricedAt: new Date().toISOString() };
 }

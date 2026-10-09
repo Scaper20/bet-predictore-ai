@@ -3,7 +3,7 @@ import { leagueByCode, type LeagueDef } from "@/lib/leagues";
 // these erase at compile time and never reach the test environment.
 import type { UserPreferences } from "@/lib/preferences";
 import type { Entitlement } from "@/lib/entitlements";
-import type { SettledRecord } from "@/lib/performance";
+
 import type { SportId } from "@/lib/sports";
 import type { Prediction } from "@/lib/model/predict";
 import type { Match } from "@/lib/types";
@@ -87,13 +87,6 @@ export interface AccaSuggestion {
   combinedFairOdds: number;
 }
 
-export interface LeagueRecordRow {
-  league: LeagueDef;
-  record: SettledRecord;
-  /** False when the sample is too thin to quote a rate — show a note instead. */
-  publishable: boolean;
-}
-
 export interface ForYouFeedPayload {
   userName: string | null;
   userEmail: string | null;
@@ -109,9 +102,6 @@ export interface ForYouFeedPayload {
   inYourLeagues: PersonalizedPick[];
   /** Null when fewer than ACCA_MIN_LEGS are available in those leagues. */
   acca: AccaSuggestion | null;
-  /** Settled record per followed league. Real, or flagged unpublishable. */
-  leagueRecords: LeagueRecordRow[];
-
   /** Slate-wide. Labelled as such in the UI — the brief's explicit carve-out. */
   bestBet: PersonalizedPick | null;
   quickPicks: PersonalizedPick[];

@@ -1,3 +1,5 @@
+import "server-only";
+
 /**
  * Natural-language match analysis.
  *
@@ -160,9 +162,15 @@ export async function writeAnalysis(p: Prediction): Promise<Analysis> {
       // server instance reuses yesterday's text instead of paying again.
       const stored = await readStoredAnalysis(key);
       if (stored) return stored;
-      const client = new Anthropic();
+      // The first viewer of a match waits on this call (the page renders after
+      // it), so it is bounded: past 20 seconds the page shows the model's own
+      // write-up instead, as it does on any failure.
+      const client = new Anthropic({ timeout: 20_000, maxRetries: 1 });
       const response = await client.messages.create({
-        model: "claude-opus-5",
+        // Sonnet 5.5 ($2 / $10 per million tokens) instead of Opus 5 ($5 /
+        // $25): a short write-up over numbers already computed, which Sonnet
+        // handles, at well under half the cost per match.
+        model: "claude-sonnet-5-5",
         max_tokens: 2000,
         // A short, well-specified writing task over numbers that are already
         // computed — low effort is the right spend here.

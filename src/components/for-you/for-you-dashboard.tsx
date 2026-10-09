@@ -18,6 +18,7 @@ import { LockedSelection, ProTag } from "@/components/entitlements/locked-pick";
 import type { Pick } from "@/lib/model/predict";
 import { isStaleInPlay } from "@/lib/match-status";
 import type { LegScore } from "@/lib/slip-tracker";
+import { useTickingMinute } from "@/components/match/use-live-clock";
 
 /**
  * The personalised dashboard.
@@ -96,7 +97,6 @@ export function ForYouDashboard({ feed }: { feed: ForYouFeedPayload }) {
   );
 
   const predictionsHref = sportPath("predictions", feed.sport);
-  const trackRecordHref = sportPath("trackRecord", feed.sport);
 
   return (
     <Container width="shell" className="space-y-10 pb-14 pt-6 sm:space-y-14 sm:pb-20 sm:pt-8">
@@ -236,58 +236,6 @@ export function ForYouDashboard({ feed }: { feed: ForYouFeedPayload }) {
         </section>
       )}
 
-      <section>
-        <SectionHeading
-          eyebrow="Settled record"
-          title="How these leagues have actually graded"
-          description="Last 30 days."
-        />
-
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {feed.leagueRecords.map(({ league, record, publishable }) => (
-            <div key={league.code} className="card p-5">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2 text-sm font-semibold">
-                  <span aria-hidden>{league.flag}</span>
-                  <span>{league.name}</span>
-                </div>
-                {publishable && (
-                  <Badge tone="neutral" className="text-[11px]">
-                    {record.sample} graded
-                  </Badge>
-                )}
-              </div>
-
-              {publishable ? (
-                <div className="mt-4 flex items-end justify-between gap-4">
-                  <div>
-                    <p className="text-xs text-ink-muted">Win rate</p>
-                    <p className="tnum font-display text-2xl font-extrabold">
-                      {percent(record.winRate ?? 0)}
-                    </p>
-                  </div>
-                  <p className="tnum text-xs text-ink-muted">
-                    {record.wins}W–{record.losses}L
-                    {record.pushes > 0 && `–${record.pushes}P`}
-                  </p>
-                </div>
-              ) : (
-                <p className="mt-4 text-xs leading-relaxed text-ink-muted">
-                  Not enough settled picks yet to quote a rate
-                  {record.sample > 0 ? ` (${record.sample} so far)` : ""}. We&apos;d rather show
-                  nothing than a percentage built on a handful of results.
-                </p>
-              )}
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-6">
-          <ButtonLink href={trackRecordHref} variant="secondary" className="px-4 py-2 text-sm">
-            See the full track record →
-          </ButtonLink>
-        </div>
-      </section>
     </Container>
   );
 }
@@ -336,6 +284,8 @@ function PickRow({
   const inPlay = !stale && (state.status === "live" || state.status === "halftime");
   const over = state.status === "finished" || stale;
   const showScore = (inPlay || over) && state.home !== null && state.away !== null;
+  // Counts on between polls; the server-rendered minute isn't stamped, so it waits for the first.
+  const minute = useTickingMinute(state.minute, state.status, live?.observedAt ?? Number.NaN);
 
   return (
     <article
@@ -358,7 +308,7 @@ function PickRow({
           {inPlay ? (
             <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-rose/12 px-2 py-0.5 text-[11px] font-bold text-rose">
               <LiveDot />
-              {state.status === "halftime" ? "HT" : state.minute ? `LIVE ${state.minute}'` : "LIVE"}
+              {state.status === "halftime" ? "HT" : minute ? `LIVE ${minute}'` : "LIVE"}
             </span>
           ) : over ? (
             <span className="shrink-0 rounded-full bg-surface-3 px-2 py-0.5 text-[11px] font-bold text-ink-muted">FT</span>

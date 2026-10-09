@@ -7,8 +7,6 @@ import { upcomingFeed, predictBatch, bestBetOfDay, featuredFeed } from "@/lib/se
 import { viewerForTier } from "@/lib/viewer";
 import { isLockedPick, viewPrediction } from "@/lib/access";
 import { supabaseServer } from "@/lib/supabase/server";
-import { settledRecords } from "@/lib/performance-store";
-import { EMPTY_RECORD, isPublishable } from "@/lib/performance";
 import { DEFAULT_SPORT, type SportId } from "@/lib/sports";
 import type { Prediction } from "@/lib/model/predict";
 import type { Match } from "@/lib/types";
@@ -17,7 +15,6 @@ import {
   inFollowedLeagues,
   toPersonalizedPick,
   type ForYouFeedPayload,
-  type LeagueRecordRow,
   type PersonalizedPick,
 } from "@/lib/for-you";
 
@@ -111,11 +108,10 @@ export async function getForYouFeed(sport: SportId = DEFAULT_SPORT): Promise<For
     .filter((l): l is LeagueDef => l !== undefined);
   const followed = new Set(followedLeagues.map((l) => l.code));
 
-  const [scoped, bestBetPrediction, featured, records] = await Promise.all([
+  const [scoped, bestBetPrediction, featured] = await Promise.all([
     fixturesInLeagues([...followed]).catch(() => [] as Match[]),
     bestBetOfDay().catch(() => null),
     featuredFeed(4).catch(() => []),
-    settledRecords({ sport, sinceDays: 30 }).catch(() => null),
   ]);
 
   const [predictions, viewer] = await Promise.all([
@@ -147,21 +143,6 @@ export async function getForYouFeed(sport: SportId = DEFAULT_SPORT): Promise<For
     .filter((p) => p.id !== bestBet?.id)
     .slice(0, 3);
 
-  const leagueRecords: LeagueRecordRow[] = followedLeagues.map((league) => {
-    // Keyed on the catalogue code. This used to look up league.name, which
-    // matched nothing at all: the log stores the provider's spelling
-    // ("Premier League", "Serie A", "Primera Division") while the catalogue
-    // holds ours ("English Premier League", "Italian Serie A", "Spanish La
-    // Liga"). Not one league overlapped, so this strip reported "not enough
-    // settled picks yet" for every user against 81 graded picks.
-    const record = records?.byLeague.get(league.code);
-    return {
-      league,
-      record: record ?? EMPTY_RECORD,
-      publishable: isPublishable(record),
-    };
-  });
-
   return {
     userName,
     userEmail: entitlement.email,
@@ -174,7 +155,6 @@ export async function getForYouFeed(sport: SportId = DEFAULT_SPORT): Promise<For
     inYourLeagues,
     // Built from the picks this viewer can see, so a free multiple is usable.
     acca: buildAcca(inYourLeagues.filter((p) => !isLockedPick(p))),
-    leagueRecords,
     bestBet,
     quickPicks,
     updatedAt: new Date().toISOString(),

@@ -23,7 +23,7 @@ import { internationalPool, leagueByCode } from "@/lib/leagues";
 import { sportOrDefault } from "@/lib/sports";
 import { selectFeatured, shortlist, type FeaturedMatch } from "@/lib/featured";
 import { canonicaliseRows, looseKey, nameBook, nameScope, type NameBook } from "@/lib/teams/canonical";
-import { APP_TIMEZONE } from "@/lib/format";
+import { APP_TIMEZONE, appDayBounds } from "@/lib/format";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import type { Viewer } from "@/lib/access";
 import {
@@ -405,18 +405,33 @@ export async function trends(days = 3): Promise<TrendSnapshot> {
  * paid gates. Cached slate-wide (not per-user, so this is a normal fit for
  * the shared provider cache, unlike entitlement reads).
  */
+/**
+ * The day's headline pick: always one of today's games (Lagos time), never
+ * tomorrow's. The strongest pick of the day wins; Strong is confidence 60+
+ * (model/tiers.ts), so ranking on confidence puts any Strong pick first and
+ * falls back to the best ordinary pick when the day has none. Games already
+ * under way still count, so the pick holds through the day instead of
+ * jumping to another game at kickoff. No games left today: no best bet.
+ */
 export async function bestBetOfDay(): Promise<Prediction | null> {
-  return cached("best-bet-of-day", 30 * 60_000, async () => {
+  const day = new Date().toLocaleDateString("en-CA", { timeZone: APP_TIMEZONE });
+  return cached(`best-bet-of-day:${day}`, 30 * 60_000, async () => {
+    const { start, end } = appDayBounds(new Date());
     const { matches } = await upcomingFeed(2);
-    const predictions = await predictBatch(matches, 30);
-    const candidates = predictions.filter((p) => p.sufficiency.publishable && p.topPick);
-    if (candidates.length === 0) return null;
-
-    const ranked = [...candidates].sort(
-      (a, b) => (b.topPick?.confidence ?? 0) - (a.topPick?.confidence ?? 0),
-    );
-    return ranked[0];
+    const today = matches.filter((m) => {
+      const t = Date.parse(m.kickoff);
+      return t >= start.getTime() && t < end.getTime();
+    });
+    const predictions = await predictBatch(today, 30);
+    return pickBestBet(predictions);
   });
+}
+
+/** Pure: the highest-confidence publishable pick, or null. */
+export function pickBestBet(predictions: Prediction[]): Prediction | null {
+  const candidates = predictions.filter((p) => p.sufficiency.publishable && p.topPick);
+  if (candidates.length === 0) return null;
+  return [...candidates].sort((a, b) => (b.topPick?.confidence ?? 0) - (a.topPick?.confidence ?? 0))[0];
 }
 
 /**

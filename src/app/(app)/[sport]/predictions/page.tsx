@@ -8,9 +8,7 @@ import { Badge, ButtonLink, EmptyState } from "@/components/ui/primitives";
 import { BestBetOfDay } from "@/components/landing/best-bet-of-day";
 import { predictBatch, upcomingFeed, bestBetOfDay } from "@/lib/service";
 import { getPreferences } from "@/lib/preferences";
-import type { Prediction } from "@/lib/model/predict";
 import { leagueByCode } from "@/lib/leagues";
-import { groupByDay } from "@/lib/format";
 import { FixtureRow } from "@/components/match/fixture-row";
 import { containerClass } from "@/components/ui/container";
 import { sportPath } from "@/lib/routes";
@@ -18,6 +16,9 @@ import { isStrong } from "@/lib/model/tiers";
 import Link from "next/link";
 import { getViewer } from "@/lib/viewer";
 import { viewPrediction } from "@/lib/access";
+import { pickSections } from "@/lib/pick-sections";
+import { LiveScoresProvider } from "@/components/match/pick-action";
+import { LiveDot } from "@/components/ui/primitives";
 
 /**
  * One title per league view. Without this every ?league= variant shared the
@@ -91,28 +92,20 @@ export default async function PredictionsPage({
    * page dynamic, which is what the comment in (app)/layout.tsx is about.
    */
   const preferences = await getPreferences();
-  const followed = new Set(preferences.leagues);
-  const byFollowed = (a: Prediction, b: Prediction) => {
-    const rank = (p: Prediction) => (followed.has(p.match.league.code ?? "") ? 0 : 1);
-    return rank(a) - rank(b);
-  };
+  const followed = new Set(def ? [] : preferences.leagues);
 
-  const publishable = predictions
-    .filter((p) => p.sufficiency.publishable && (!strongOnly || isStrong(p.topPick)))
-    .sort(def ? undefined : byFollowed);
+  const publishable = predictions.filter((p) => p.sufficiency.publishable && (!strongOnly || isStrong(p.topPick)));
   const withheld = predictions.filter((p) => !p.sufficiency.publishable);
 
-  const days = groupByDay(publishable.map((p) => p.match)).map((g) => ({
-    day: g.day,
-    predictions: g.matches.map((m) => publishable.find((p) => p.match.id === m.id)!).sort(def ? undefined : byFollowed),
-  }));
+  // Live first, then the rest of today, then tomorrow and on (lib/pick-sections.ts).
+  const sections = pickSections(publishable, { followed });
 
   return (
     <>
       <PageHeader
         eyebrow="Predictions"
-        title={def ? `${def.name} predictions` : "Predictions"}
-        description="Every game we can rate in the next few days."
+        title={def ? `${def.name} picks` : "Picks"}
+        description="Data insights from analyzed football matches."
       />
 
       <div className={`${containerClass()} space-y-7 py-7 sm:py-10`}>
@@ -124,60 +117,63 @@ export default async function PredictionsPage({
 
         {feed && <CoverageNotice coverage={feed.coverage} />}
 
-        {bestBet?.topPick && (!strongOnly || isStrong(bestBet.topPick)) && <BestBetOfDay prediction={bestBet} />}
+        <LiveScoresProvider matches={[...(bestBet ? [bestBet] : []), ...publishable].map((p) => ({ id: p.match.id, kickoff: p.match.kickoff, status: p.match.status }))}>
+          {bestBet?.topPick && (!strongOnly || isStrong(bestBet.topPick)) && <BestBetOfDay prediction={bestBet} />}
 
-        {predictions.length === 0 ? (
-          <EmptyState
-            icon="🎯"
-            title="No fixtures to model right now"
-            description="Check back when the next fixtures are out."
-            action={<ButtonLink href={sportPath("fixtures")} variant="secondary">Browse fixtures</ButtonLink>}
-          />
-        ) : (
-          <>
-            {strongOnly && days.length === 0 && (
-              <EmptyState icon="★" title="No Strong picks right now" description="Strong picks are our most confident. Some days there are none." />
-            )}
-            {days.map((d) => (
-              <section key={d.day} className="scroll-reveal">
-                <div className="mb-4 flex items-center gap-3">
-                  <h2 className="font-display text-xl font-bold">{d.day}</h2>
-                  <Badge tone="brand">{d.predictions.length}</Badge>
-                  <span className="h-px flex-1 bg-line" />
-                </div>
-                <div className="stagger grid gap-4 sm:grid-cols-2 sm:gap-5 xl:grid-cols-3">
-                  {d.predictions.map((p, i) => (
-                    <div key={p.match.id} className="min-w-0" style={{ ["--i" as string]: i }}>
-                      <PredictionCard prediction={p} morph={p.match.id !== bestBet?.match.id} />
-                    </div>
-                  ))}
-                </div>
-              </section>
-            ))}
+          {predictions.length === 0 ? (
+            <EmptyState
+              icon="🎯"
+              title="No fixtures to model right now"
+              description="Check back when the next fixtures are out."
+              action={<ButtonLink href={sportPath("fixtures")} variant="secondary">Browse fixtures</ButtonLink>}
+            />
+          ) : (
+            <>
+              {strongOnly && sections.length === 0 && (
+                <EmptyState icon="★" title="No Strong picks right now" description="Strong picks are our most confident. Some days there are none." />
+              )}
+              {sections.map((section) => (
+                <section key={section.key} className="scroll-reveal">
+                  <div className="mb-4 flex items-center gap-3">
+                    {section.live && <LiveDot />}
+                    <h2 className="font-display text-xl font-bold">{section.title}</h2>
+                    <Badge tone={section.live ? "rose" : "brand"}>{section.items.length}</Badge>
+                    <span className="h-px flex-1 bg-line" />
+                  </div>
+                  <div className="stagger grid gap-4 sm:grid-cols-2 sm:gap-5 xl:grid-cols-3">
+                    {section.items.map((p, i) => (
+                      <div key={p.match.id} className="min-w-0" style={{ ["--i" as string]: i }}>
+                        <PredictionCard prediction={p} morph={p.match.id !== bestBet?.match.id} />
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              ))}
 
-            {!strongOnly && withheld.length > 0 && (
-              <details className="card group overflow-hidden">
-                <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-3.5 sm:px-5">
-                  <Badge tone="amber">{withheld.length}</Badge>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-semibold text-ink">Not enough history to call</span>
-                    <span className="block text-xs text-ink-dim">Real fixtures in competitions too new to the model to stand a pick on.</span>
-                  </span>
-                  <svg viewBox="0 0 20 20" className="size-4 shrink-0 text-ink-dim transition-transform duration-300 group-open:rotate-180" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-                    <path d="m5 7.5 5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </summary>
-                <ul className="divide-y divide-line border-t border-line">
-                  {withheld.map((p) => (
-                    <li key={p.match.id}>
-                      <FixtureRow match={p.match} />
-                    </li>
-                  ))}
-                </ul>
-              </details>
-            )}
-          </>
-        )}
+              {!strongOnly && withheld.length > 0 && (
+                <details className="card group overflow-hidden">
+                  <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-3.5 sm:px-5">
+                    <Badge tone="amber">{withheld.length}</Badge>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-semibold text-ink">Not enough history to call</span>
+                      <span className="block text-xs text-ink-dim">Real fixtures in competitions too new to the model to stand a pick on.</span>
+                    </span>
+                    <svg viewBox="0 0 20 20" className="size-4 shrink-0 text-ink-dim transition-transform duration-300 group-open:rotate-180" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                      <path d="m5 7.5 5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </summary>
+                  <ul className="divide-y divide-line border-t border-line">
+                    {withheld.map((p) => (
+                      <li key={p.match.id}>
+                        <FixtureRow match={p.match} />
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+            </>
+          )}
+        </LiveScoresProvider>
       </div>
     </>
   );
