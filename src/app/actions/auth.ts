@@ -9,6 +9,7 @@ import { welcomeEmail } from "@/lib/email-templates";
 import { safeNext } from "@/lib/safe-redirect";
 import { POST_AUTH_DESTINATION } from "@/lib/routes";
 import { FIRST_TOUCH_COOKIE, type FirstTouch } from "@/lib/first-touch";
+import { markAuthChange } from "@/lib/auth-hint-server";
 
 export type AuthActionState = { error: string | null };
 
@@ -42,6 +43,8 @@ export async function signIn(_prev: AuthActionState, formData: FormData): Promis
   if (error) {
     return { error: error.message || "Incorrect email or password." };
   }
+
+  await markAuthChange(true);
 
   if (data?.user) {
     const prefs = await getPreferencesFor(supabase, data.user.id);
@@ -124,6 +127,7 @@ export async function signUp(_prev: AuthActionState, formData: FormData): Promis
   }
 
   void sendEmail({ to: email, ...welcomeEmail() });
+  await markAuthChange(true);
 
   // Straight into onboarding, carrying the original destination so whatever
   // they were trying to reach still happens once the questions are answered.
@@ -133,6 +137,7 @@ export async function signUp(_prev: AuthActionState, formData: FormData): Promis
 export async function signOut() {
   const supabase = await supabaseServer();
   await supabase.auth.signOut();
+  await markAuthChange(false);
   redirect("/");
 }
 
