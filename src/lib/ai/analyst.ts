@@ -148,11 +148,12 @@ export function writeDeterministicAnalysis(p: Prediction): Analysis {
  */
 export async function writeAnalysis(p: Prediction): Promise<Analysis> {
   const base = writeDeterministicAnalysis(p);
-  if (!aiEnabled()) return base;
+  if (!aiEnabled()) return shorten(base);
 
   // Predictions are stable between refreshes, so cache on the fixture and the
   // model's own read rather than paying for a call on every page view.
-  const key = `ai:${p.match.id}:${Math.round(p.markets.home * 1000)}:${Math.round(
+  // ai2: the short format; write-ups stored in the old long one are skipped.
+  const key = `ai2:${p.match.id}:${Math.round(p.markets.home * 1000)}:${Math.round(
     p.markets.expectedGoals.total * 100,
   )}`;
 
@@ -186,10 +187,12 @@ export async function writeAnalysis(p: Prediction): Promise<Analysis> {
           "- Never promise a result or imply an outcome is guaranteed.\n" +
           "- Write plainly. No hype, no emoji, no tipster cliches.\n" +
           "- Nigerian English is the register: direct and unfussy.\n\n" +
+          "- Keep it short: people skim this on a phone. Lead with the call, " +
+          "then the one or two numbers behind it.\n\n" +
           "Respond in exactly this format:\n" +
-          "HEADLINE: <one line, under 90 characters>\n" +
-          "BODY: <2-3 paragraphs separated by a blank line>\n" +
-          "FACTORS: <3-5 lines, each starting with '- '>",
+          "HEADLINE: <one line, under 70 characters>\n" +
+          "BODY: <one paragraph, 2-3 short sentences, at most 50 words>\n" +
+          "FACTORS: <exactly 3 lines, each starting with '- ', each under 60 characters>",
         messages: [
           {
             role: "user",
@@ -206,13 +209,22 @@ export async function writeAnalysis(p: Prediction): Promise<Analysis> {
 
       const parsed = parseAnalysis(text);
       // A malformed response is not worth showing; keep the reliable version.
-      if (!parsed) return base;
+      if (!parsed) return shorten(base);
       await storeAnalysis(key, p.match.id, parsed);
       return parsed;
     });
   } catch {
-    return base;
+    return shorten(base);
   }
+}
+
+/**
+ * What the page shows when Claude isn't used: the headline, the opening
+ * paragraph and three key numbers. The full deterministic write-up stays the
+ * brief handed to Claude; people don't read five paragraphs.
+ */
+function shorten(a: Analysis): Analysis {
+  return { ...a, body: a.body.slice(0, 1), factors: a.factors.slice(0, 3) };
 }
 
 async function readStoredAnalysis(key: string): Promise<Analysis | null> {
@@ -313,5 +325,6 @@ function parseAnalysis(text: string): Analysis | null {
     .filter(Boolean);
 
   if (body.length === 0) return null;
-  return { headline, body, factors, source: "claude" };
+  // Held to the short format even if the model runs long.
+  return { headline, body: body.slice(0, 1), factors: factors.slice(0, 3), source: "claude" };
 }
