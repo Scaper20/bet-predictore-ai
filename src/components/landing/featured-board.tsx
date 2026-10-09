@@ -9,6 +9,8 @@ import { Crest } from "@/components/ui/crest";
 import { kickoffTime, percent, relativeDay } from "@/lib/format";
 import { sportPath } from "@/lib/routes";
 import { LockIcon } from "@/components/entitlements/locked-pick";
+import { useTickingMinute } from "@/components/match/use-live-clock";
+import { rebase, type Reading } from "@/lib/live-clock";
 
 /**
  * The homepage board.
@@ -40,9 +42,15 @@ const REASON_TONE: Record<FeaturedRow["reason"], Tone> = {
 type LivePatch = Pick<FeaturedRow, "status" | "minute"> & {
   home: number | null;
   away: number | null;
+  /** When the feed produced this minute (epoch ms), for the clock to count on from. */
+  at: number;
 };
 
-export function FeaturedBoard({ rows }: { rows: FeaturedRow[] }) {
+const inPlay = (s: FeaturedRow["status"]) => s === "live" || s === "halftime";
+
+/** `renderedAt`: when the server read these rows (epoch ms). The page is cached,
+ * so that can be minutes before anyone sees them; live clocks count on from it. */
+export function FeaturedBoard({ rows, renderedAt }: { rows: FeaturedRow[]; renderedAt: number }) {
   // State holds ONLY the live patch, never a copy of `rows`. Copying the rows
   // in would mean an effect to re-sync them whenever the server sent a fresh
   // selection — which is both the setState-in-effect trap and a way to show
@@ -54,38 +62,50 @@ export function FeaturedBoard({ rows }: { rows: FeaturedRow[] }) {
 
   const board = rows.map((row) => {
     const patch = patches.get(row.id);
-    if (!patch) return row;
+    if (!patch) return { ...row, at: renderedAt };
     return {
       ...row,
       status: patch.status,
       minute: patch.minute,
       home: { ...row.home, score: patch.home },
       away: { ...row.away, score: patch.away },
+      at: patch.at,
     };
   });
+  const startsLive = rows.some((r) => inPlay(r.status));
 
   useEffect(() => {
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout>;
+    // When each game's current minute was first seen, across polls.
+    let seen = new Map<string, Reading>();
 
     const tick = async () => {
       try {
         const res = await fetch("/api/live", { cache: "no-store" });
         if (!res.ok) throw new Error(String(res.status));
-        const data: { matches: Match[] } = await res.json();
+        const data: { matches: Match[]; updatedAt?: string } = await res.json();
         if (cancelled) return;
+        // The response can sit in the CDN for a while; its own timestamp says
+        // how old its minutes are.
+        const at = Date.parse(data.updatedAt ?? "") || Date.now();
 
         // Only fixtures the live feed still carries get a patch; anything it
         // has dropped keeps whatever the server rendered rather than blanking.
         const next = new Map<string, LivePatch>();
+        const nextSeen = new Map<string, Reading>();
         for (const m of data.matches) {
+          const reading = rebase(seen.get(m.id), { status: m.status, minute: m.minute ?? null, observedAt: at });
+          nextSeen.set(m.id, reading);
           next.set(m.id, {
             status: m.status,
             minute: m.minute ?? null,
             home: m.score.home,
             away: m.score.away,
+            at: reading.observedAt,
           });
         }
+        seen = nextSeen;
         setPatches(next);
         setStale(false);
       } catch {
@@ -97,7 +117,8 @@ export function FeaturedBoard({ rows }: { rows: FeaturedRow[] }) {
       }
     };
 
-    timer = setTimeout(tick, 30_000);
+    // With a game on, straight away: the cached page's minute may be old.
+    timer = setTimeout(tick, startsLive ? 0 : 30_000);
     const onVisible = () => {
       if (!document.hidden) {
         clearTimeout(timer);
@@ -111,7 +132,7 @@ export function FeaturedBoard({ rows }: { rows: FeaturedRow[] }) {
       clearTimeout(timer);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, []);
+  }, [startsLive]);
 
   const anyLive = board.some((r) => r.status === "live" || r.status === "halftime");
 
@@ -157,9 +178,7 @@ export function FeaturedBoard({ rows }: { rows: FeaturedRow[] }) {
                   </span>
                   <span className="tnum ml-auto shrink-0 text-[11px] font-semibold text-ink-muted">
                     {row.status === "live" || row.status === "halftime" ? (
-                      <span className="text-rose">
-                        {row.status === "halftime" ? "HT" : row.minute ? `${row.minute}'` : "LIVE"}
-                      </span>
+                      <LiveClock status={row.status} minute={row.minute} at={row.at} />
                     ) : (
                       `${relativeDay(row.kickoff)} ${kickoffTime(row.kickoff)}`
                     )}
@@ -223,4 +242,9 @@ function TeamLine({ team }: { team: FeaturedRow["home"] }) {
       {team.score !== null && <span className="tnum text-sm font-bold">{team.score}</span>}
     </div>
   );
+}
+
+function LiveClock({ status, minute, at }: { status: FeaturedRow["status"]; minute: number | null; at: number }) {
+  const now = useTickingMinute(minute, status, at);
+  return <span className="text-rose">{status === "halftime" ? "HT" : now ? `${now}'` : "LIVE"}</span>;
 }

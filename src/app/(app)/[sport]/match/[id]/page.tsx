@@ -23,6 +23,7 @@ import { AskAboutMatch, AskPageContext } from "@/components/ask/ask-page-context
 import { PricesPanel, PricesPanelSkeleton } from "@/components/match/prices-panel";
 import { AnalysisPanel } from "@/components/match/analysis-panel";
 import { LiveWinProbabilityPanel } from "@/components/match/live-win-probability-panel";
+import { LiveMatchProvider, LiveProgress, LiveScore, LiveStatusBadge } from "@/components/match/live-scoreboard";
 import { Gate } from "@/components/entitlements/gate";
 import { DepthGate } from "@/components/entitlements/depth-gate";
 import { JsonLd } from "@/components/seo/json-ld";
@@ -32,11 +33,10 @@ import { freeViewer, matchDetail } from "@/lib/service";
 import { viewPrediction, type ViewedPrediction } from "@/lib/access";
 import { MatchAccessProvider, ProMarkets } from "@/components/match/match-access";
 import { SITE_URL as SITE } from "@/lib/site-url";
-import { kickoffDay, kickoffTime, percent, relativeDay, statusLabel, isLive } from "@/lib/format";
+import { kickoffDay, kickoffTime, percent, relativeDay, isLive } from "@/lib/format";
 import type { Match } from "@/lib/types";
 import type { Prediction } from "@/lib/model/predict";
 import { containerClass } from "@/components/ui/container";
-import { matchProgress } from "@/lib/live-board";
 
 /**
  * SportsEvent structured data — schema.org's real, documented vocabulary
@@ -96,6 +96,18 @@ function matchJsonLd(match: Match, prediction: Prediction) {
         ],
       },
     ],
+  };
+}
+
+/** What the scoreboard starts from, stamped with when this render read it: the
+ * cached page can be served minutes later, and the clock counts on from here. */
+function liveSnapshot(match: Match) {
+  return {
+    status: match.status,
+    minute: match.minute ?? null,
+    home: match.score.home,
+    away: match.score.away,
+    observedAt: Date.now(),
   };
 }
 
@@ -198,6 +210,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
       <h1 className="sr-only">
         {match.home.name} vs {match.away.name} prediction, {match.league.name}
       </h1>
+      <LiveMatchProvider matchId={match.id} initial={liveSnapshot(match)}>
       <header className="relative overflow-hidden border-b border-line bg-shell">
         <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_80%_at_50%_-10%,color-mix(in_oklab,var(--color-brand)_10%,transparent),transparent_70%)]" />
         <div className={`${containerClass()} relative py-5 sm:py-8`}>
@@ -210,7 +223,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
               </Link>
               <span className="ml-auto shrink-0">
                 {live ? (
-                  <Badge tone="live"><LiveDot />{statusLabel(match)}</Badge>
+                  <LiveStatusBadge />
                 ) : match.status === "finished" ? (
                   <Badge tone="neutral">Full time</Badge>
                 ) : match.status === "postponed" ? (
@@ -224,7 +237,9 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
             <div className="mt-5 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 sm:mt-7 sm:gap-8">
               <TeamBlock team={match.home} matchId={match.id} side="home" />
               <div className="text-center">
-                {live || match.status === "finished" ? (
+                {live ? (
+                  <LiveScore className="tnum font-display text-4xl font-extrabold leading-none sm:text-6xl" />
+                ) : match.status === "finished" ? (
                   <p className="tnum font-display text-4xl font-extrabold leading-none sm:text-6xl">
                     {match.score.home ?? 0}
                     <span className="mx-1.5 text-ink-dim sm:mx-3">-</span>
@@ -234,11 +249,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
                   <p className="tnum font-display text-3xl font-bold leading-none sm:text-5xl">{kickoffTime(match.kickoff)}</p>
                 )}
                 {live ? (
-                  <div className="mx-auto mt-2.5 w-16">
-                    <span className="block h-0.5 overflow-hidden rounded-full bg-line" aria-hidden>
-                      <span className="block h-full rounded-full bg-rose" style={{ width: `${Math.round(matchProgress(match) * 100)}%` }} />
-                    </span>
-                  </div>
+                  <LiveProgress />
                 ) : (
                   <p className="mt-2 text-[11px] text-ink-dim sm:text-xs">
                     {match.status === "finished" ? kickoffDay(match.kickoff) : `${kickoffDay(match.kickoff)} · WAT`}
@@ -262,6 +273,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
           </div>
         </div>
       </header>
+      </LiveMatchProvider>
 
       {/* ------------------------------------------------------------ Tabs */}
       <div className={`${containerClass()} pb-10 sm:pb-14`}>

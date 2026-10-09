@@ -44,6 +44,11 @@ const FAQ_JSON_LD = {
   })),
 };
 
+/** When this render ran. The page is cached, so this can be well before the visit. */
+function renderTime(): number {
+  return Date.now();
+}
+
 export default async function HomePage() {
   // Never let a provider outage take down the marketing page.
   const [live, upcoming, featured, rawBest, viewer, freePicks] = await Promise.all([
@@ -68,7 +73,7 @@ export default async function HomePage() {
   const openFree = freePicks.filter(({ prediction: p }) => !FINISHED.has(p.match.status));
   const boardFree = openFree.slice(0, BOARD_SLOTS);
   const onBoard = new Set(boardFree.map((f) => f.prediction.match.id));
-  const rows = [
+  const rowsFromPicks = [
     ...boardFree.map(({ prediction, slot }) =>
       toFeaturedRow({ prediction: viewPrediction(prediction, viewer), score: 1, reason: SLOT_REASON[slot] }, matchPath(prediction.match.id)),
     ),
@@ -77,6 +82,17 @@ export default async function HomePage() {
       .slice(0, BOARD_SLOTS - boardFree.length)
       .map((f) => toFeaturedRow({ ...f, prediction: viewPrediction(f.prediction, viewer) }, matchPath(f.prediction.match.id))),
   ];
+  // The rows come from predictions cached for minutes at a time, so their
+  // score and minute can be well behind; the live feed fetched above is
+  // seconds old, and its timestamp is what the board's clocks count on from.
+  const liveById = new Map(liveMatches.map((m) => [m.id, m]));
+  const rows = rowsFromPicks.map((r) => {
+    const m = liveById.get(r.id);
+    return m
+      ? { ...r, status: m.status, minute: m.minute ?? null, home: { ...r.home, score: m.score.home }, away: { ...r.away, score: m.score.away } }
+      : r;
+  });
+  const boardAt = live ? Date.parse(live.updatedAt) : renderTime();
 
   let previews = freePicks.map(({ prediction }) => viewPrediction(prediction, viewer));
   const freeGrid = previews.length > 0;
@@ -88,7 +104,7 @@ export default async function HomePage() {
   return (
     <>
       <JsonLd data={FAQ_JSON_LD} />
-      <Hero liveCount={liveMatches.length} board={<FeaturedBoard rows={rows} />} />
+      <Hero liveCount={liveMatches.length} board={<FeaturedBoard rows={rows} renderedAt={boardAt} />} />
 
       <Marquee
         items={[

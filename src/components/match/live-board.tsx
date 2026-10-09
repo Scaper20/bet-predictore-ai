@@ -1,15 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { Match } from "@/lib/types";
 import { Crest } from "@/components/ui/crest";
 import { Badge, EmptyState, ButtonLink, LiveDot } from "@/components/ui/primitives";
 import { matchPath, sportPath } from "@/lib/routes";
 import { groupLiveMatches, matchProgress, searchLiveGroups, type LiveGroup } from "@/lib/live-board";
+import { useTickingMinute } from "@/components/match/use-live-clock";
+import { rebase, type Reading } from "@/lib/live-clock";
 
 /** How long a row stays highlighted after a goal. */
 const GOAL_FLASH_MS = 90_000;
+
+/** When each game's minute on screen was first seen (epoch ms), by match id; the row clocks count on from it. */
+const SeenAt = createContext<ReadonlyMap<string, number>>(new Map());
+
+const readings = (matches: Match[], at: number, prev?: Map<string, Reading>) =>
+  new Map(matches.map((m) => [m.id, rebase(prev?.get(m.id), { status: m.status, minute: m.minute ?? null, observedAt: at })]));
 
 type GoalFlash = { side: "home" | "away"; at: number };
 
@@ -25,8 +33,11 @@ type GoalFlash = { side: "home" | "away"; at: number };
  * compact scoreboard rows, so a busy matchday reads as a handful of
  * leagues rather than one long wall of cards.
  */
-export function LiveBoard({ initial }: { initial: Match[] }) {
+export function LiveBoard({ initial, initialAt }: { initial: Match[]; initialAt: number }) {
   const [matches, setMatches] = useState(initial);
+  // The server's readings, made once; the poll carries them forward.
+  const [firstSeen] = useState(() => readings(initial, initialAt));
+  const [seenAt, setSeenAt] = useState<ReadonlyMap<string, number>>(() => new Map(initial.map((m) => [m.id, initialAt])));
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
   const [failing, setFailing] = useState(false);
   const [goals, setGoals] = useState<Record<string, GoalFlash>>({});
@@ -40,15 +51,20 @@ export function LiveBoard({ initial }: { initial: Match[] }) {
   useEffect(() => {
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout>;
+    let seen = firstSeen;
 
     const tick = async () => {
       try {
         const res = await fetch("/api/live", { cache: "no-store" });
         if (!res.ok) throw new Error(String(res.status));
-        const data: { matches: Match[] } = await res.json();
+        const data: { matches: Match[]; updatedAt?: string } = await res.json();
         if (cancelled) return;
 
         const now = Date.now();
+        // The response can sit in the CDN for a while; its own timestamp says
+        // how old its minutes are.
+        seen = readings(data.matches, Date.parse(data.updatedAt ?? "") || now, seen);
+        setSeenAt(new Map([...seen].map(([id, r]) => [id, r.observedAt])));
         const scored: Record<string, GoalFlash> = {};
         for (const m of data.matches) {
           const before = lastScores.current.get(m.id);
@@ -89,7 +105,7 @@ export function LiveBoard({ initial }: { initial: Match[] }) {
       clearTimeout(timer);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, []);
+  }, [firstSeen]);
 
   const groups = useMemo(() => groupLiveMatches(matches), [matches]);
   const trackedCount = useMemo(
@@ -123,6 +139,7 @@ export function LiveBoard({ initial }: { initial: Match[] }) {
     });
 
   return (
+    <SeenAt.Provider value={seenAt}>
     <div className="space-y-5">
       {/* ---------------------------------------------------------- toolbar */}
       <div className="card space-y-4 p-4 sm:p-5">
@@ -240,6 +257,7 @@ export function LiveBoard({ initial }: { initial: Match[] }) {
         </div>
       )}
     </div>
+    </SeenAt.Provider>
   );
 }
 
@@ -389,7 +407,9 @@ function LiveRow({ match, goal }: { match: Match; goal?: GoalFlash }) {
 
 function Clock({ match }: { match: Match }) {
   const halftime = match.status === "halftime";
-  const progress = matchProgress(match);
+  // NaN for a game not yet stamped: shown as reported, not counted on.
+  const minute = useTickingMinute(match.minute, match.status, useContext(SeenAt).get(match.id) ?? Number.NaN);
+  const progress = matchProgress({ ...match, minute });
   return (
     <div className="flex flex-col items-start gap-1.5">
       {halftime ? (
@@ -399,7 +419,7 @@ function Clock({ match }: { match: Match }) {
       ) : (
         <span className="flex items-center gap-1.5 font-mono text-xs font-bold text-rose">
           <LiveDot />
-          <span className="tnum">{match.minute ? `${match.minute}′` : "Live"}</span>
+          <span className="tnum">{minute ? `${minute}′` : "Live"}</span>
         </span>
       )}
       <span className="h-0.5 w-9 overflow-hidden rounded-full bg-line" aria-hidden>

@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Badge, LiveDot, ProbabilityBar } from "@/components/ui/primitives";
 import { percent } from "@/lib/format";
+import { useTickingMinute } from "@/components/match/use-live-clock";
+import { rebase, type Reading } from "@/lib/live-clock";
 
 interface LiveProbabilityPayload {
   home: number;
@@ -22,6 +24,8 @@ interface LiveProbabilityPayload {
  */
 export function LiveWinProbabilityPanel({ matchId }: { matchId: string }) {
   const [data, setData] = useState<LiveProbabilityPayload | null>(null);
+  // When `data` arrived, so its minute can count on until the next poll.
+  const [observedAt, setObservedAt] = useState(0);
   const [failing, setFailing] = useState(false);
   const [ended, setEnded] = useState(false);
   // A ref, not state: the recursive setTimeout below reads this from inside
@@ -33,6 +37,7 @@ export function LiveWinProbabilityPanel({ matchId }: { matchId: string }) {
   useEffect(() => {
     endedRef.current = false;
     let cancelled = false;
+    let last: Reading | null = null;
     let timer: ReturnType<typeof setTimeout>;
 
     const tick = async () => {
@@ -50,7 +55,9 @@ export function LiveWinProbabilityPanel({ matchId }: { matchId: string }) {
         if (!res.ok) throw new Error(String(res.status));
         const json: LiveProbabilityPayload = await res.json();
         if (!cancelled) {
+          last = rebase(last, { status: "live", minute: json.elapsedMinutes, observedAt: Date.now() });
           setData(json);
+          setObservedAt(last.observedAt);
           setFailing(false);
         }
       } catch {
@@ -78,6 +85,10 @@ export function LiveWinProbabilityPanel({ matchId }: { matchId: string }) {
       document.removeEventListener("visibilitychange", onVisible);
     };
   }, [matchId]);
+
+  // Above the early returns, as a hook must be. The payload has no status, but a
+  // halftime minute is 45 and the clock never runs past the end of a half.
+  const minute = useTickingMinute(data?.elapsedMinutes, "live", observedAt);
 
   if (ended && !data) return null;
   if (!data) {
@@ -113,7 +124,7 @@ export function LiveWinProbabilityPanel({ matchId }: { matchId: string }) {
         ) : (
           <Badge tone="live">
             <LiveDot />
-            {data.elapsedMinutes}&apos;
+            {minute ?? data.elapsedMinutes}&apos;
           </Badge>
         )}
       </div>
