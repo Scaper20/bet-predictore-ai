@@ -176,7 +176,6 @@ export function navFor(sport: SportId): { tabs: NavTab[]; tools: NavLink[] } {
         title: "Build and check",
         links: [
           { label: "Forge", desc: "Build a slip from how you like to bet", href: p("forge"), badge: { text: "New", tone: "brand" } },
-          { label: "Your slip", desc: "Your selections and their combined chance", href: p("trackedSlips"), action: "slip" },
           { label: "My slips", desc: "Track your slips live", href: p("trackedSlips") },
         ],
       },

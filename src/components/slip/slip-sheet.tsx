@@ -109,7 +109,7 @@ export function SlipSheet() {
 
 /** Track the slip, or jump to it in My slips once it's tracked. */
 function SheetFooter({ onDone }: { onDone: () => void }) {
-  const { legs } = useSlip();
+  const { legs, clear } = useSlip();
   const tracked = useTrackedSlips();
   const router = useRouter();
   const existing = isTracked(tracked, legs);
@@ -135,7 +135,9 @@ function SheetFooter({ onDone }: { onDone: () => void }) {
         <button
           type="button"
           onClick={() => {
+            // Tracked slips live in My slips; the builder empties for the next one.
             if (trackSlip(legs)) {
+              clear();
               onDone();
               router.push(sportPath("trackedSlips"));
             }

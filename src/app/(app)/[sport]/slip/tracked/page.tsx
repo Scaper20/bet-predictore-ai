@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { PageHeader } from "@/components/ui/page-header";
 import { TrackedSlipsView } from "@/components/slip/tracked-slips-view";
-import { OpenSlipButton } from "@/components/slip/open-slip-button";
 import { containerClass } from "@/components/ui/container";
 
 export const metadata: Metadata = {
@@ -18,9 +17,6 @@ export default function TrackedSlipsPage() {
         eyebrow="Selections"
         title="My slips"
         description="Your slips, followed leg by leg."
-        actions={
-          <OpenSlipButton className="px-4 py-2 text-xs" />
-        }
       />
       <div className={`${containerClass()} py-7 sm:py-10`}>
         <TrackedSlipsView />
