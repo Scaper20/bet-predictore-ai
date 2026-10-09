@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Badge, Button, Spinner } from "@/components/ui/primitives";
 import { useEntitlement, meetsTier } from "@/components/entitlements/entitlement-provider";
 import { useAskState } from "@/lib/ask-store";
+import { OPEN_SUPPORT_EVENT } from "@/components/layout/nav-actions";
 
 interface Message {
   id: string;
@@ -32,7 +33,9 @@ type ThreadState =
   | { status: "ready"; messages: Message[]; guest: boolean; guestEmail: string | null };
 
 /**
- * Floating support chat. Lazy — unlike EntitlementProvider (which must
+ * Support chat. It used to sit behind a floating bubble; that corner now
+ * belongs to the slip (components/slip/slip-sheet.tsx), so the chat opens
+ * from "Chat with support" in the menu (OPEN_SUPPORT_EVENT). Lazy — unlike EntitlementProvider (which must
  * resolve immediately because Gate needs the answer to render), nothing
  * else on the page depends on ticket state, so this only fetches on first
  * open, not on mount.
@@ -83,16 +86,25 @@ export function ChatWidget() {
     }
   };
 
-  function handleToggle() {
-    // Triggered from a click handler, not an effect — the very first open
-    // kicks off the initial fetch here rather than as a synchronous
-    // setState inside a useEffect body.
-    if (!open && thread.status === "idle") {
-      setThread({ status: "loading" });
-      void loadThread();
-    }
-    setOpen((v) => !v);
-  }
+  // Opened from the menu. Refs keep the listener current without
+  // re-subscribing on every render.
+  const threadRef = useRef(thread);
+  const loadRef = useRef(loadThread);
+  useEffect(() => {
+    threadRef.current = thread;
+    loadRef.current = loadThread;
+  });
+  useEffect(() => {
+    const onOpen = () => {
+      if (threadRef.current.status === "idle") {
+        setThread({ status: "loading" });
+        void loadRef.current();
+      }
+      setOpen(true);
+    };
+    window.addEventListener(OPEN_SUPPORT_EVENT, onOpen);
+    return () => window.removeEventListener(OPEN_SUPPORT_EVENT, onOpen);
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -158,6 +170,7 @@ export function ChatWidget() {
     }
   }
 
+  if (!open) return null;
   return (
     <div className={`fixed right-6 z-50 lift-above-bottom-nav ${askOpen ? "hidden" : ""}`}>
       {open && (
@@ -288,14 +301,6 @@ export function ChatWidget() {
         </div>
       )}
 
-      <button
-        type="button"
-        onClick={handleToggle}
-        aria-label={open ? "Close support chat" : "Open support chat"}
-        className="grid size-14 place-items-center rounded-full bg-brand text-brand-ink shadow-lg glow-brand transition-transform hover:scale-105"
-      >
-        <span className="text-2xl leading-none">{open ? "✕" : "💬"}</span>
-      </button>
     </div>
   );
 }

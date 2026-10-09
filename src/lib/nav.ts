@@ -49,7 +49,7 @@ export const soonHref = (slug: string) => `/soon/${slug}`;
 
 /* ---------------------------------------------------------------- items */
 
-export type NavAction = "ask" | "install";
+export type NavAction = "ask" | "install" | "slip" | "support";
 
 export type Badge = { text: string; tone: "brand" | "amber" | "violet" | "rose" | "muted" };
 
@@ -176,7 +176,6 @@ export function navFor(sport: SportId): { tabs: NavTab[]; tools: NavLink[] } {
         title: "Build and check",
         links: [
           { label: "Forge", desc: "Build a slip from how you like to bet", href: p("forge"), badge: { text: "New", tone: "brand" } },
-          { label: "Selection builder", desc: "Your slip, priced against the model", href: p("slip") },
           { label: "My slips", desc: "Track your slips live", href: p("trackedSlips") },
         ],
       },
@@ -209,6 +208,7 @@ export function navFor(sport: SportId): { tabs: NavTab[]; tools: NavLink[] } {
         links: [
           { label: "Your account", href: "/account" },
           { label: "Help centre", desc: "Answers to common questions", href: "/help" },
+          { label: "Chat with support", desc: "Message Oma, our support team", href: "/help", action: "support" },
           { label: "Responsible gambling", desc: "Limits, breaks and support", href: "/responsible-gambling" },
         ],
       },
@@ -260,5 +260,34 @@ export function allLinks(sport: SportId): NavLink[] {
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
+  });
+}
+
+/**
+ * The mobile menu's sections, from the desktop menus.
+ *
+ * Phones already reach For You and Picks from the bottom bar, so the
+ * Predictions section is dropped there; Matches leads, and Insights gets
+ * its own section instead of sitting under Matches. Value Alerts, the one
+ * Predictions link with no bottom-bar home, moves to Tools.
+ */
+export function mobileMenus(menus: NavMenu[]): NavMenu[] {
+  const predictions = menus.find((m) => m.id === "predictions");
+  const extra = predictions?.columns.flatMap((c) => c.links).filter((l) => l.label === "Value Alerts") ?? [];
+  return menus.flatMap((m): NavMenu[] => {
+    if (m.id === "predictions") return [];
+    if (m.id === "matches" && m.columns.length > 1) {
+      const [main, ...rest] = m.columns;
+      const insightLinks = rest.flatMap((c) => c.links);
+      return [
+        { ...m, columns: [main], match: main.links.map((l) => l.href) },
+        { ...m, id: "insights", label: "Insights", columns: rest, match: insightLinks.map((l) => l.href) },
+      ];
+    }
+    if (m.id === "tools" && extra.length) {
+      const [first, ...rest] = m.columns;
+      return [{ ...m, columns: [{ ...first, links: [...first.links, ...extra] }, ...rest], match: [...m.match, ...extra.map((l) => l.href)] }];
+    }
+    return [m];
   });
 }

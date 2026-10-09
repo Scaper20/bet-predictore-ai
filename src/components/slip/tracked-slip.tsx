@@ -423,13 +423,14 @@ function rowSummary(view: SlipView): string {
   }
 }
 
-export function TrackedSlipRow({ view, onOpen }: { view: SlipView; onOpen: () => void }) {
+export function TrackedSlipRow({ view, onOpen, onShare }: { view: SlipView; onOpen: () => void; onShare?: () => void }) {
   const n = view.legs.length;
   return (
+    <article className="card card-hover min-w-0 overflow-hidden">
     <button
       type="button"
       onClick={onOpen}
-      className="card card-hover block w-full p-4 text-left sm:p-5"
+      className="block w-full min-w-0 p-4 pb-3 text-left sm:p-5 sm:pb-3"
       aria-label={`Open slip with ${n} ${n === 1 ? "selection" : "selections"}`}
     >
       <div className="flex items-center justify-between gap-3">
@@ -439,17 +440,21 @@ export function TrackedSlipRow({ view, onOpen }: { view: SlipView; onOpen: () =>
         <SlipStatusPill status={view.status} size="sm" />
       </div>
 
-      <ul className="mt-3 space-y-1.5">
+      <ul className="mt-3 space-y-2">
         {view.legs.slice(0, 3).map(({ leg, state }) => (
-          <li key={leg.matchId} className="flex items-center gap-2 text-sm">
-            <span className={`size-1.5 shrink-0 rounded-full ${SEGMENT[legTone(state)]}`} aria-hidden />
-            <span className="min-w-0 flex-1 truncate text-ink">{leg.fixture}</span>
-            <span
-              className={`max-w-[45%] shrink-0 truncate text-xs ${
-                state.kind === "settled" && state.result.grade === "lose" ? "text-ink-dim line-through" : "text-ink-muted"
-              }`}
-            >
-              {leg.label}
+          <li key={leg.matchId} className="flex min-w-0 items-start gap-2">
+            <span className={`mt-1.5 size-1.5 shrink-0 rounded-full ${SEGMENT[legTone(state)]}`} aria-hidden />
+            {/* Fixture over pick, each on its own line: side by side, two long
+                names left neither room on a phone. */}
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm text-ink">{leg.fixture}</span>
+              <span
+                className={`block truncate text-xs ${
+                  state.kind === "settled" && state.result.grade === "lose" ? "text-ink-dim line-through" : "text-ink-muted"
+                }`}
+              >
+                {leg.label}
+              </span>
             </span>
           </li>
         ))}
@@ -459,7 +464,25 @@ export function TrackedSlipRow({ view, onOpen }: { view: SlipView; onOpen: () =>
       <div className="mt-4">
         <Segments view={view} className="h-1" />
       </div>
-      <p className="mt-2.5 text-xs text-ink-dim">{rowSummary(view)}</p>
+    </button>
+      {/* Its own row, outside the card's tap area: a button can't sit inside another. */}
+      <div className="flex items-center justify-between gap-3 px-4 pb-4 sm:px-5">
+        <p className="min-w-0 truncate text-xs text-ink-dim">{rowSummary(view)}</p>
+        {onShare && <ShareButton onClick={onShare} />}
+      </div>
+    </article>
+  );
+}
+
+/** Opens the share overlay for a slip (components/slip/share-slip-sheet.tsx). */
+export function ShareButton({ onClick, className = "" }: { onClick: () => void; className?: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`shrink-0 rounded-full border border-brand/40 bg-brand/10 px-4 py-1.5 text-xs font-bold text-brand transition-colors hover:bg-brand/20 ${className}`}
+    >
+      Share
     </button>
   );
 }

@@ -13,7 +13,7 @@ import { NavSearch } from "@/components/layout/nav-search";
 import { NavBadge } from "@/components/layout/mega-nav";
 import { runNavAction } from "@/components/layout/nav-actions";
 import { useLiveCount } from "@/components/layout/use-live-count";
-import { isActive, navFor, type NavLink, type NavMenu } from "@/lib/nav";
+import { isActive, mobileMenus, navFor, type NavLink, type NavMenu } from "@/lib/nav";
 import type { SportId } from "@/lib/sports";
 import type { Tier } from "@/lib/entitlements";
 
@@ -46,7 +46,7 @@ export function MobileDrawer({
   const pathname = usePathname();
   const live = useLiveCount();
   const { tabs, tools } = navFor(sport);
-  const menus = tabs.flatMap((t) => (t.kind === "menu" ? [t.menu] : []));
+  const menus = mobileMenus(tabs.flatMap((t) => (t.kind === "menu" ? [t.menu] : [])));
   const quick = tabs.flatMap((t) => (t.kind === "link" ? [t] : []));
 
   const [section, setSection] = useState(() => sectionFor(menus, pathname));

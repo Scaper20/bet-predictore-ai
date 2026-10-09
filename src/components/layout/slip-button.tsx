@@ -6,7 +6,11 @@ import { sportPath } from "@/lib/routes";
 import type { SportId } from "@/lib/sports";
 
 /**
- * The selection builder, demoted from a nav link to an icon with a count.
+ * My slips (the tracked slips page). The slip itself is the floating
+ * overlay (components/slip/slip-sheet.tsx); this icon keeps the slip count
+ * so the header still shows what's on it.
+ *
+ * Before October 2026 this opened the selection builder page.
  *
  * It was one of six equal-weight nav items, which is the wrong shape for it:
  * an empty slip is not a destination anyone wants, and a slip with three legs
@@ -25,10 +29,10 @@ export function SlipButton({ sport }: { sport: SportId }) {
 
   return (
     <Link
-      href={sportPath("slip", sport)}
+      href={sportPath("trackedSlips", sport)}
       className="relative grid size-10 place-items-center rounded-lg text-ink-muted transition-colors hover:bg-surface-2 hover:text-ink"
-      aria-label={count > 0 ? `Selections (${count})` : "Selections"}
-      title="Selections"
+      aria-label={count > 0 ? `My slips (${count} on your slip)` : "My slips"}
+      title="My slips"
     >
       <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2">
         <path strokeLinecap="round" strokeLinejoin="round" d="M4 5h16v14l-3-2-2 2-2-2-2 2-2-2-3 2V5Z" />

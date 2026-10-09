@@ -57,7 +57,7 @@ export default function manifest(): MetadataRoute.Manifest {
       {
         name: "My slip",
         short_name: "Slip",
-        url: sportPath("slip"),
+        url: `${sportPath("trackedSlips")}#slip`,
         icons: [{ src: "/icons/shortcut-96.png", sizes: "96x96", type: "image/png" }],
       },
     ],

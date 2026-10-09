@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
 import { PageHeader } from "@/components/ui/page-header";
 import { TrackedSlipsView } from "@/components/slip/tracked-slips-view";
-import { ButtonLink } from "@/components/ui/primitives";
 import { containerClass } from "@/components/ui/container";
-import { sportPath } from "@/lib/routes";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/football/slip/tracked" },
@@ -19,11 +17,6 @@ export default function TrackedSlipsPage() {
         eyebrow="Selections"
         title="My slips"
         description="Your slips, followed leg by leg."
-        actions={
-          <ButtonLink href={sportPath("slip")} variant="secondary" className="px-4 py-2 text-xs">
-            Selection builder
-          </ButtonLink>
-        }
       />
       <div className={`${containerClass()} py-7 sm:py-10`}>
         <TrackedSlipsView />
