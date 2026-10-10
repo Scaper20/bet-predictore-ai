@@ -48,7 +48,9 @@ export interface LeagueDef {
    * Premier League side meeting a League One side is rated on both clubs'
    * league seasons: FA Cup 77.7% and Carabao Cup 80.0% of picks landed over
    * the last two seasons (Premier League, Championship and League One
-   * pooled), Coppa Italia 73.0% (Serie A and B). Copa del Rey (43%) and the
+   * pooled), Coppa Italia 73.0% (Serie A and B). Re-run on the production
+   * archive (last 400 days, ties with a league club only): FA Cup 74.5%,
+   * Carabao Cup 81.7%, Coppa Italia 77.8%. Copa del Rey (43%) and the
    * DFB-Pokal (58%) did not reach that and are left out: their early rounds
    * are top-flight clubs against lower divisions and amateurs that the
    * pooled fit cannot separate.
@@ -63,6 +65,12 @@ export interface LeagueDef {
     source?: string;
     /** What the training is, for the "rated on ..." line under a prediction. */
     ratedOn: string;
+    /**
+     * Train on the cup's own ties only where a club from the pooled leagues
+     * plays (lib/archive/cup-ties.ts): the FA Cup's non-league qualifying
+     * rounds otherwise drown out the league clubs.
+     */
+    leagueClubsOnly?: boolean;
   };
   /**
    * A knockout cup: no league table, and no Elo of its own (its clubs are
@@ -137,6 +145,7 @@ const englishCup = (code: string) => ({
   codes: ["premier-league", "championship", "league-one", code],
   windowDays: 730,
   ratedOn: "the last two years of the Premier League, Championship, League One and the cup",
+  leagueClubsOnly: true,
 });
 
 export const LEAGUES: LeagueDef[] = [
@@ -347,6 +356,7 @@ export const LEAGUES: LeagueDef[] = [
       codes: ["serie-a", "serie-b", "coppa-italia"],
       windowDays: 730,
       ratedOn: "the last two years of Serie A, Serie B and the cup",
+      leagueClubsOnly: true,
     },
     // Checked against lookupleague.php ("Coppa Italia").
     ids: { theSportsDb: "4506", espn: "ita.coppa_italia" },

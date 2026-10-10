@@ -15,6 +15,7 @@ import { cached } from "@/lib/providers/cache";
 import { buildPrediction, type ModelOptions, type Prediction } from "@/lib/model/predict";
 import { after } from "next/server";
 import { archivedResults, storeResults } from "@/lib/archive/history-store";
+import { leagueClubTies } from "@/lib/archive/cup-ties";
 import { fitLeague, normaliseKey, type LeagueFit } from "@/lib/model/fit";
 import { scoreMatrix, deriveLiveWinProbability } from "@/lib/model/poisson";
 import { writeAnalysis, aiEnabled, type Analysis } from "@/lib/ai/analyst";
@@ -104,7 +105,8 @@ async function assembleTraining(match: Match, code: string): Promise<Training> {
   // with years of history fits on none of it.
   const scope = def ? nameScope(def) : null;
   const book = scope ? await nameBook(scope) : undefined;
-  const archived = book ? canonicaliseRows(raw, book) : raw;
+  const named = book ? canonicaliseRows(raw, book) : raw;
+  const archived = def?.cupPool?.leagueClubsOnly ? leagueClubTies(named, code) : named;
   // Deep enough to stand on its own; refreshed nightly (archive/refresh.ts).
   if (archived.length >= RICH_ARCHIVE) {
     const leagueName = def?.confederation
