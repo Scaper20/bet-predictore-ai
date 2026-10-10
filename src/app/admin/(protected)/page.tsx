@@ -139,7 +139,7 @@ export default async function AdminDashboardPage() {
                   <p className="truncate text-xs text-ink-dim">{p.plan}</p>
                 </div>
                 <div className="shrink-0 text-right">
-                  <p className="tnum text-sm text-ink">{naira(p.amountKobo / 100)}</p>
+                  <p className="tnum text-sm text-ink">{p.amountText}</p>
                   <Badge tone={PAYMENT_STATUS_TONE[p.status] ?? "neutral"} className="mt-0.5">
                     {p.status}
                   </Badge>

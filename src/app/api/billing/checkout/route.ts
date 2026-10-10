@@ -7,7 +7,7 @@ import { planCodeFor } from "@/lib/paystack/plan-codes";
 import { nairaToKobo } from "@/lib/paystack/money";
 import { cyclePrice, planById, type BillingCycle } from "@/lib/pricing";
 import { SITE_URL as SITE } from "@/lib/site-url";
-import { getSubscriptionRow, hasLivePaidSubscription } from "@/lib/subscriptions";
+import { getSubscriptionRow, hasLivePaidSubscription, prepaidUntil } from "@/lib/subscriptions";
 
 const CYCLES: BillingCycle[] = ["monthly", "quarterly", "yearly"];
 
@@ -41,6 +41,17 @@ export async function POST(request: Request) {
       {
         error: "You already have an active subscription. Cancel it from Manage subscription before switching plans.",
       },
+      { status: 409 }
+    );
+  }
+
+  // A subscription would replace a prepaid Flutterwave period on the same
+  // row and throw away the days left on it.
+  const prepaid = prepaidUntil(existing);
+  if (prepaid) {
+    const date = prepaid.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+    return NextResponse.json(
+      { error: `Your plan is paid up until ${date}. You can start a subscription when it ends.` },
       { status: 409 }
     );
   }

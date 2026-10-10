@@ -3,7 +3,6 @@ import { getPayments } from "@/lib/admin-analytics";
 import { AdminTable, AdminTableHead, AdminTableRow, AdminTableCell } from "@/components/admin/admin-table";
 import { ExpirePaymentsButton } from "@/components/admin/expire-payments-button";
 import { Badge, EmptyState, type Tone } from "@/components/ui/primitives";
-import { naira } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Payments" };
 
@@ -39,7 +38,7 @@ export default async function AdminPaymentsPage({
               <div key={p.id} className="card p-4">
                 <div className="flex items-start justify-between gap-3">
                   <p className="min-w-0 truncate text-sm font-medium text-ink">{p.email ?? "—"}</p>
-                  <span className="tnum shrink-0 text-sm font-semibold text-ink">{naira(p.amountKobo / 100)}</span>
+                  <span className="tnum shrink-0 text-sm font-semibold text-ink">{p.amountText}</span>
                 </div>
                 <div className="mt-2 flex items-center justify-between gap-2 text-xs text-ink-muted">
                   <span className="truncate">{p.plan}</span>
@@ -65,7 +64,7 @@ export default async function AdminPaymentsPage({
                   <AdminTableRow key={p.id}>
                     <AdminTableCell>{p.email ?? "—"}</AdminTableCell>
                     <AdminTableCell className="text-ink-muted">{p.plan}</AdminTableCell>
-                    <AdminTableCell className="tnum font-medium">{naira(p.amountKobo / 100)}</AdminTableCell>
+                    <AdminTableCell className="tnum font-medium">{p.amountText}</AdminTableCell>
                     <AdminTableCell>
                       <Badge tone={STATUS_TONE[p.status] ?? "neutral"}>{p.status}</Badge>
                     </AdminTableCell>
