@@ -6,7 +6,7 @@ import logging
 from datetime import datetime, timezone
 
 from .config import League, leagues
-from .db import Database
+from .db import Database, DbError
 from .records import Fixture, TableRow, TeamListing
 from .resolve import Resolver, Team, scope_for_country
 from .runlog import Run
@@ -63,8 +63,35 @@ def write_fixtures(db: Database, resolver: Resolver, source: str, league: League
         run.warn(f"{skipped} of {len(fixtures)} fixtures skipped: a club name could not be resolved")
     written = 0
     for i in range(0, len(rows), CHUNK):
-        written += db.rpc("ingest_matches", {"p_source": source, "p_rows": rows[i : i + CHUNK]}) or 0
+        written += _ingest_matches(db, source, rows[i : i + CHUNK], run)
     run.rows_written += written
+    return written
+
+
+def _ingest_matches(db: Database, source: str, rows: list[dict], run: Run) -> int:
+    """
+    One batch through ingest_matches, or row by row when Postgres refuses it.
+
+    The function runs as one statement, so a single conflicting row (a
+    rescheduled match another feed already holds on its new day: 409 on the
+    league/teams/day key) used to fail the league's whole batch, run after
+    run. On a conflict the rows go one at a time; the ones that still
+    conflict are skipped and reported, and everything else lands.
+    """
+    try:
+        return db.rpc("ingest_matches", {"p_source": source, "p_rows": rows}) or 0
+    except DbError as e:
+        if "-> 409" not in str(e) or len(rows) == 1:
+            raise
+    written = 0
+    for row in rows:
+        try:
+            written += db.rpc("ingest_matches", {"p_source": source, "p_rows": [row]}) or 0
+        except DbError as e:
+            if "-> 409" not in str(e):
+                raise
+            run.warn(f"{row['home_name']} v {row['away_name']} ({row['kickoff'][:10]}) skipped: "
+                     "the same fixture is already held on that day")
     return written
 
 

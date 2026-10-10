@@ -17,7 +17,7 @@ from .config import League, Settings, leagues
 from .db import Database
 from .http import SourceError
 from .records import NotSupported
-from .resolve import Resolver
+from .resolve import Resolver, loose_key
 from .runlog import SourceSwitch, run
 from .writer import seed_teams, sync_competitions, write_coverage, write_fixtures, write_table
 
@@ -106,10 +106,27 @@ def link_history(ctx: Context, years: int = 6) -> None:
                 {"select": "home_name,away_name", "league_code": f"eq.{lg.code}", "kickoff": f"gte.{since}"},
             )
             names = sorted({n for x in rows for n in (x["home_name"], x["away_name"]) if n})
+            # Spellings logged as unresolved by an earlier run. One a later run
+            # places (the club arrived, or a curated rename did) is marked
+            # resolved, or Data health keeps listing it for ever.
+            pending = {
+                u["alias_key"]
+                for u in ctx.db.select("unresolved_entities", {
+                    "select": "alias_key", "source": "eq.history", "scope": f"eq.{lg.scope}",
+                    "resolved_team_id": "is.null",
+                })
+            }
             linked = 0
             for name in names:
-                if ctx.resolver.resolve(name, lg.scope, "history", lg.code, create=False, log_unresolved=True):
+                team = ctx.resolver.resolve(name, lg.scope, "history", lg.code, create=False, log_unresolved=True)
+                if team:
                     linked += 1
+                    if loose_key(name) in pending:
+                        ctx.db.update(
+                            "unresolved_entities",
+                            {"source": "history", "scope": lg.scope, "alias_key": loose_key(name)},
+                            {"resolved_team_id": team.id},
+                        )
             r.rows_in = len(names)
             r.rows_written = linked
             if linked < len(names):

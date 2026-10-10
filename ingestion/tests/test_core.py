@@ -251,3 +251,26 @@ def test_knockout_cups_get_no_table_and_no_elo(monkeypatch):
     jobs.job_elo(ctx)
     assert calls == []
     assert not db.tables.get("elo_ratings")
+
+
+def test_link_history_clears_spellings_a_later_run_places():
+    from betrix_ingest import jobs
+    from betrix_ingest.config import Settings
+    from betrix_ingest.resolve import loose_key
+
+    s = Settings(None, None, "key", None, Path("."), Path("."), True)
+    db = MemoryDb()
+    ctx = jobs.Context(s, db, ["premier-league"])
+    leeds = ctx.resolver.resolve("Leeds United", "england", "thesportsdb")
+    db.tables["historical_results"] = [
+        {"league_code": "premier-league", "kickoff": jobs.today().isoformat(), "home_name": "Leeds", "away_name": "Wrexham"},
+    ]
+    # Logged by an earlier run, before Leeds United existed.
+    db.tables["unresolved_entities"] = [
+        {"source": "history", "entity_type": "team", "scope": "england", "raw_name": "Leeds",
+         "alias_key": loose_key("Leeds"), "resolved_team_id": None},
+    ]
+    jobs.link_history(ctx)
+    rows = {r["raw_name"]: r.get("resolved_team_id") for r in db.tables["unresolved_entities"]}
+    assert rows["Leeds"] == leeds.id
+    assert rows["Wrexham"] is None  # still unknown, still listed
