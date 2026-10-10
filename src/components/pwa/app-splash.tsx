@@ -1,3 +1,5 @@
+import { LogoLockup } from "@/components/brand/logo";
+
 /**
  * Splash screen for the installed app.
  *
@@ -10,11 +12,9 @@
 export function AppSplash() {
   return (
     <div className="app-splash" aria-hidden>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/icons/icon-192.png" alt="" width={88} height={88} className="app-splash-mark" />
-      <p className="app-splash-word">
-        Betri<span>X</span>
-      </p>
+      <span className="app-splash-mark">
+        <LogoLockup className="h-14 w-auto text-ink" />
+      </span>
       <span className="app-splash-bar" />
     </div>
   );

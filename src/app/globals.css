@@ -477,12 +477,10 @@ body {
   .app-splash {
     position: fixed; inset: 0; z-index: 100;
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
-    background: radial-gradient(60% 45% at 50% 42%, color-mix(in oklab, var(--color-brand) 16%, transparent), transparent 70%), #05080d;
+    background: radial-gradient(60% 45% at 50% 42%, color-mix(in oklab, var(--color-brand) 16%, transparent), transparent 70%), var(--color-canvas);
     animation: app-splash-out 0.45s ease 1.1s forwards;
   }
-  .app-splash-mark { width: 88px; height: 88px; border-radius: 22px; animation: app-splash-pop 0.6s cubic-bezier(.2,.9,.3,1.2) both; }
-  .app-splash-word { font-family: var(--font-display, inherit); font-size: 30px; font-weight: 800; letter-spacing: -0.02em; color: #fff; animation: app-splash-rise 0.5s ease 0.15s both; }
-  .app-splash-word span { color: var(--color-brand); }
+  .app-splash-mark { display: block; animation: app-splash-pop 0.6s cubic-bezier(.2,.9,.3,1.2) both; }
   .app-splash-bar { width: 72px; height: 3px; border-radius: 3px; overflow: hidden; background: color-mix(in oklab, #fff 12%, transparent); position: relative; }
   .app-splash-bar::after { content: ""; position: absolute; inset: 0; width: 40%; border-radius: 3px; background: var(--color-brand); animation: app-splash-load 0.9s ease-in-out infinite; }
 }
@@ -491,7 +489,7 @@ body {
 @keyframes app-splash-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 @keyframes app-splash-load { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
 @media (display-mode: standalone) and (prefers-reduced-motion: reduce) {
-  .app-splash, .app-splash-mark, .app-splash-word, .app-splash-bar::after { animation-duration: 0.01s; }
+  .app-splash, .app-splash-mark, .app-splash-bar::after { animation-duration: 0.01s; }
   .app-splash { animation-delay: 0.6s; }
 }
 

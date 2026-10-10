@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { resolveSurveyByToken } from "@/lib/outreach-feed";
 import { SURVEY_QUESTIONS } from "@/lib/outreach";
 import { SurveyForm } from "@/components/survey/survey-form";
+import { LogoLockup } from "@/components/brand/logo";
 
 export const metadata: Metadata = { title: "A quick survey", robots: { index: false, follow: false } };
 
@@ -12,9 +13,8 @@ export default async function SurveyPage({ params }: { params: Promise<{ token: 
   return (
     <div className="mx-auto max-w-lg px-4 py-10 sm:py-16 sm:px-6">
       <div className="mb-8 text-center">
-        <span className="font-display text-lg font-bold tracking-tight">
-          Betri<span className="text-brand">X</span>
-        </span>
+        <LogoLockup className="mx-auto h-7 w-auto text-ink" />
+        <span className="sr-only">KiqStat</span>
       </div>
 
       {!response ? (
