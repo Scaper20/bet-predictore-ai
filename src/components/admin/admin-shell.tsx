@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import type { AdminIdentity } from "@/lib/admin";
 import { signOut } from "@/app/actions/auth";
 import { ButtonLink } from "@/components/ui/primitives";
+import { LogoLockup } from "@/components/brand/logo";
 
 const BASE_NAV = [
   { href: "/admin", label: "Dashboard" },
@@ -45,9 +46,8 @@ export function AdminShell({
       <div className="mx-auto flex max-w-[100rem]">
         <aside className="sticky top-0 hidden h-screen w-56 shrink-0 flex-col border-r border-line bg-shell lg:flex">
           <div className="px-5 py-6">
-            <span className="font-display text-lg font-bold tracking-tight">
-              Betri<span className="text-brand">X</span>
-            </span>
+            <LogoLockup className="h-6 w-auto text-ink" />
+            <span className="sr-only">KiqStat</span>
             <p className="mt-0.5 text-xs text-ink-dim">Admin</p>
           </div>
           <nav className="flex-1 space-y-1 px-3">
@@ -85,8 +85,9 @@ export function AdminShell({
           <header className="border-b border-line bg-shell lg:hidden" style={{ paddingTop: "env(safe-area-inset-top)" }}>
             <div className="flex items-center justify-between gap-2 px-4 py-3">
               <div className="min-w-0">
-                <span className="font-display text-base font-bold">
-                  Betri<span className="text-brand">X</span> Admin
+                <span className="flex items-center gap-2 font-display text-base font-bold">
+                  <LogoLockup className="h-5 w-auto text-ink" />
+                  <span className="sr-only">KiqStat</span> Admin
                 </span>
                 {/* Only place a signed-in mobile admin can see which account
                     they're on or sign out — the desktop sidebar's identity +

@@ -16,6 +16,7 @@ import { useLiveCount } from "@/components/layout/use-live-count";
 import { isActive, mobileMenus, navFor, type NavLink, type NavMenu } from "@/lib/nav";
 import type { SportId } from "@/lib/sports";
 import type { Tier } from "@/lib/entitlements";
+import { LogoLockup } from "@/components/brand/logo";
 
 /**
  * The full mobile menu, behind the bottom bar's "More" tab.
@@ -95,8 +96,9 @@ export function MobileDrawer({
       style={{ paddingTop: "env(safe-area-inset-top)", overscrollBehavior: "contain" }}
     >
       <div className="flex items-center gap-2 px-5 pb-2 pt-3">
-        <span className="flex-1 font-display text-2xl font-bold tracking-tight">
-          Betri<span className="text-brand">X</span>
+        <span className="flex-1">
+          <LogoLockup className="h-7 w-auto text-ink" />
+          <span className="sr-only">KiqStat</span>
         </span>
         <button
           ref={initialFocusRef}
