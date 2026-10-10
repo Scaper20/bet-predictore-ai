@@ -310,3 +310,24 @@ export function whatsappCommunityAnnouncementEmail(opts: { communityUrl: string;
     `),
   };
 }
+
+export function rebrandAnnouncementEmail(opts: { unsubscribeUrl: string }): { subject: string; html: string } {
+  return {
+    subject: "BetriX is now KiqStat",
+    html: emailLayout(`
+      <p style="margin:0 0 16px;">Hi there,</p>
+      <p style="margin:0 0 16px;">BetriX has a new name: <strong>KiqStat</strong>.</p>
+      <p style="margin:0 0 16px;">Nothing you rely on has changed. Same team, same model, same picks and the same
+      public track record. Your account and your plan carry over as they are. Just sign in at
+      <a href="${SITE_URL}" style="color:#4f6b00;">www.kiqstat.app</a> with your usual email and password, and
+      any old betrix.com.ng link brings you straight there.</p>
+      <p style="margin:0 0 16px;">Why the change? We chose to settle a naming-rights question early, before it
+      could ever affect you. KiqStat is a name that's fully ours, and it's here to stay.</p>
+      <p style="margin:0 0 16px;">The standard behind every pick stays exactly where it was: fitted on real
+      results, logged before kick-off, and published win or lose.</p>
+      ${button(SITE_URL, "Open KiqStat")}
+      <p style="margin:24px 0 0;">Thank you for being with us.<br>— Scaper, Founder &amp; CEO, KiqStat</p>
+      ${unsubscribeFooter(opts.unsubscribeUrl)}
+    `),
+  };
+}
