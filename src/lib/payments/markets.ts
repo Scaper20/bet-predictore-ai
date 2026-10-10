@@ -12,9 +12,9 @@ import type { BillingCycle } from "@/lib/pricing";
  *
  * PRICES are a ladder, cheapest in Nigeria and dearest in US dollars:
  *   Nigeria (lib/pricing.ts)      Pro ₦5,000  ≈ US$3.75, VIP ₦12,000 ≈ US$9
- *   the African markets below     about 1.6x: Pro ≈ US$6, VIP ≈ US$14
- *   South Africa                  about 1.9x: Pro ≈ US$7, VIP ≈ US$17
- *   US dollars, everywhere else   the highest: Pro US$10, VIP US$24
+ *   the African markets below     about 60% of the dollar price: Pro ≈ US$12, VIP ≈ US$33
+ *   South Africa                  about 70%: Pro ≈ US$14, VIP ≈ US$39
+ *   US dollars, everywhere else   the highest: Pro US$20, VIP US$55
  * with Nigeria's 10% / 20% discounts for 3 months / a year, rounded to
  * figures that read naturally in each currency. Change them here; nothing
  * else holds a price. markets.test.ts checks the ladder against
@@ -71,7 +71,7 @@ export const ELSEWHERE: Market = {
   provider: "flutterwave",
   methods: "card",
   methodsLabel: "Card",
-  prices: tiered([10, 27, 96], [24, 65, 230]),
+  prices: tiered([20, 54, 192], [55, 149, 528]),
 };
 
 export const MARKETS: Market[] = [
@@ -79,52 +79,52 @@ export const MARKETS: Market[] = [
   {
     country: "GH", label: "Ghana", flag: "🇬🇭", currency: "GHS", provider: "flutterwave",
     methods: "card,mobilemoneyghana", methodsLabel: "Mobile Money (MTN, Telecel, AT) or card",
-    prices: tiered([65, 175, 625], [155, 420, 1490]),
+    prices: tiered([130, 350, 1250], [360, 970, 3450]),
   },
   {
     country: "KE", label: "Kenya", flag: "🇰🇪", currency: "KES", provider: "flutterwave",
     methods: "card,mpesa", methodsLabel: "M-Pesa or card",
-    prices: tiered([800, 2150, 7700], [1800, 4850, 17300]),
+    prices: tiered([1550, 4200, 14900], [4300, 11600, 41300]),
   },
   {
     country: "UG", label: "Uganda", flag: "🇺🇬", currency: "UGX", provider: "flutterwave",
     methods: "card,mobilemoneyuganda", methodsLabel: "Mobile Money (MTN, Airtel) or card",
-    prices: tiered([22000, 59400, 211000], [51000, 138000, 490000]),
+    prices: tiered([44000, 119000, 422000], [120000, 324000, 1152000]),
   },
   {
     country: "TZ", label: "Tanzania", flag: "🇹🇿", currency: "TZS", provider: "flutterwave",
     methods: "card,mobilemoneytanzania", methodsLabel: "Mobile Money or card",
-    prices: tiered([16000, 43200, 154000], [37000, 100000, 355000]),
+    prices: tiered([32000, 86400, 307000], [87000, 235000, 835000]),
   },
   {
     country: "RW", label: "Rwanda", flag: "🇷🇼", currency: "RWF", provider: "flutterwave",
     methods: "card,mobilemoneyrwanda", methodsLabel: "Mobile Money (MTN, Airtel) or card",
-    prices: tiered([9000, 24300, 86400], [20000, 54000, 192000]),
+    prices: tiered([17500, 47250, 168000], [48000, 129600, 461000]),
   },
   {
     country: "ZM", label: "Zambia", flag: "🇿🇲", currency: "ZMW", provider: "flutterwave",
     methods: "card,mobilemoneyzambia", methodsLabel: "Mobile Money or card",
-    prices: tiered([105, 285, 1010], [245, 660, 2350]),
+    prices: tiered([210, 565, 2020], [580, 1565, 5570]),
   },
   {
     country: "CM", label: "Cameroon", flag: "🇨🇲", currency: "XAF", provider: "flutterwave",
     methods: "card,mobilemoneyxaf,mobilemoneyfranco", methodsLabel: "Mobile Money (MTN, Orange) or card",
-    prices: tiered([3500, 9450, 33600], [8000, 21600, 76800]),
+    prices: tiered([7000, 18900, 67200], [18500, 50000, 177600]),
   },
   {
     country: "CI", label: "Côte d'Ivoire", flag: "🇨🇮", currency: "XOF", provider: "flutterwave",
     methods: "card,mobilemoneyxof,mobilemoneyfranco", methodsLabel: "Mobile Money (Orange, MTN, Moov) or card",
-    prices: tiered([3500, 9450, 33600], [8000, 21600, 76800]),
+    prices: tiered([7000, 18900, 67200], [18500, 50000, 177600]),
   },
   {
     country: "SN", label: "Senegal", flag: "🇸🇳", currency: "XOF", provider: "flutterwave",
     methods: "card,mobilemoneyxof,mobilemoneyfranco", methodsLabel: "Mobile Money (Orange, Free) or card",
-    prices: tiered([3500, 9450, 33600], [8000, 21600, 76800]),
+    prices: tiered([7000, 18900, 67200], [18500, 50000, 177600]),
   },
   {
     country: "ZA", label: "South Africa", flag: "🇿🇦", currency: "ZAR", provider: "flutterwave",
     methods: "card,account", methodsLabel: "Card or bank account",
-    prices: tiered([115, 310, 1100], [275, 745, 2640]),
+    prices: tiered([230, 620, 2210], [635, 1715, 6100]),
   },
   ELSEWHERE,
 ];

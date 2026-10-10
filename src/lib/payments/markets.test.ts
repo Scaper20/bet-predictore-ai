@@ -43,6 +43,6 @@ describe("markets", () => {
   it("shows a payment in the currency it was paid in", () => {
     expect(paymentAmount({ amount_kobo: 500_000 })).toBe("₦5,000");
     expect(paymentAmount({ amount_kobo: 0, currency: "KES", amount_minor: 50_000 })).toBe(formatMoney(500, "KES"));
-    expect(formatMoney(10, "USD")).toBe("$10");
+    expect(formatMoney(20, "USD")).toBe("$20");
   });
 });
