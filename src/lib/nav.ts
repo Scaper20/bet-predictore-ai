@@ -60,7 +60,7 @@ export interface NavLink {
   /** Set when the destination is a coming-soon page. */
   soon?: boolean;
   badge?: Badge;
-  /** Does something instead of navigating: opens Ask BetriX or the install prompt. */
+  /** Does something instead of navigating: opens Ask KiqStat or the install prompt. */
   action?: NavAction;
 }
 
@@ -125,7 +125,7 @@ export function navFor(sport: SportId): { tabs: NavTab[]; tools: NavLink[] } {
       },
     ],
     feature: {
-      kicker: "BetriX Forge",
+      kicker: "KiqStat Forge",
       title: "Tell us how you bet. We'll build the slip.",
       body: "Pick your style, total odds and markets. Forge picks the games and shows the chance of the slip winning.",
       cta: { label: "Build a slip", href: p("forge") },
@@ -181,10 +181,10 @@ export function navFor(sport: SportId): { tabs: NavTab[]; tools: NavLink[] } {
       },
     ],
     feature: {
-      kicker: "Ask BetriX",
+      kicker: "Ask KiqStat",
       title: "Ask anything about a match",
       body: "“Is Over 2.5 a good bet in Arsenal v Brighton?” Answers use the same model as our picks.",
-      cta: { label: "Open Ask BetriX", href: "#ask", action: "ask" },
+      cta: { label: "Open Ask KiqStat", href: "#ask", action: "ask" },
       tone: "violet",
     },
   };
@@ -195,12 +195,12 @@ export function navFor(sport: SportId): { tabs: NavTab[]; tools: NavLink[] } {
     match: [p("trackRecord"), "/responsible-gambling", "/how-it-works", "/guides", "/help", "/about"],
     columns: [
       {
-        title: "BetriX",
+        title: "KiqStat",
         links: [
           { label: "Track record", desc: "Every pick we've published, graded", href: p("trackRecord") },
           { label: "How our picks work", desc: "The model, in plain words", href: "/how-it-works" },
           { label: "Guides", desc: "Markets and staking, explained", href: "/guides" },
-          { label: "About BetriX", desc: "Who we are and what we do", href: "/about" },
+          { label: "About KiqStat", desc: "Who we are and what we do", href: "/about" },
         ],
       },
       {
@@ -215,7 +215,7 @@ export function navFor(sport: SportId): { tabs: NavTab[]; tools: NavLink[] } {
     ],
     feature: {
       kicker: "Get the app",
-      title: "Install BetriX on your phone",
+      title: "Install KiqStat on your phone",
       body: "Picks and kick-off alerts on your home screen. No app store needed.",
       cta: { label: "Install the app", href: "#install", action: "install" },
       tone: "brand",
@@ -233,7 +233,7 @@ export function navFor(sport: SportId): { tabs: NavTab[]; tools: NavLink[] } {
     ],
     tools: [
       { label: "Forge", desc: "Build a slip from how you bet", href: p("forge") },
-      { label: "Ask BetriX", desc: "Ask anything about a match", href: "#ask", action: "ask" },
+      { label: "Ask KiqStat", desc: "Ask anything about a match", href: "#ask", action: "ask" },
     ],
   };
 }

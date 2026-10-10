@@ -319,7 +319,7 @@ function AskPanelInner({ page }: { page: { matchId: string; label: string } | nu
   return (
     <div
       role="dialog"
-      aria-label="Ask BetriX"
+      aria-label="Ask KiqStat"
       className="fixed inset-0 z-[60] flex flex-col bg-canvas lg:inset-auto lg:bottom-0 lg:right-0 lg:top-[var(--header-h)] lg:z-40 lg:w-[27rem] lg:border-l lg:border-line lg:bg-shell lg:shadow-[-24px_0_60px_-30px_rgb(0_0_0/0.9)]"
       style={{ paddingTop: "env(safe-area-inset-top)" }}
     >
@@ -328,7 +328,7 @@ function AskPanelInner({ page }: { page: { matchId: string; label: string } | nu
         <AskAvatar />
         <div className="min-w-0 flex-1">
           <p className="font-display text-lg font-bold leading-tight">
-            Ask Betri<span className="text-brand">X</span>
+            Ask Kiq<span className="text-brand">Stat</span>
           </p>
           <p className="truncate text-xs text-ink-muted">{subtitle}</p>
         </div>
@@ -348,7 +348,7 @@ function AskPanelInner({ page }: { page: { matchId: string; label: string } | nu
         <button
           type="button"
           onClick={closeAsk}
-          aria-label="Close Ask BetriX"
+          aria-label="Close Ask KiqStat"
           className="grid size-10 place-items-center rounded-xl border border-line text-ink-muted transition-colors hover:border-line-strong hover:text-ink"
         >
           <svg viewBox="0 0 20 20" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
@@ -395,7 +395,7 @@ function AskPanelInner({ page }: { page: { matchId: string; label: string } | nu
       <div className="border-t border-line px-4 pb-3 pt-3 sm:px-5" style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}>
         {!enabled ? (
           <p className="rounded-xl border border-line bg-surface px-4 py-3 text-sm text-ink-muted">
-            Ask BetriX isn&apos;t available right now. Check back soon.
+            Ask KiqStat isn&apos;t available right now. Check back soon.
           </p>
         ) : (
           <>
@@ -516,7 +516,7 @@ function EmptyIntro({ context }: { context: boolean }) {
         {context ? "Ask about this, or anything" : "Ask about any match"}
       </p>
       <p className="mx-auto mt-2 max-w-xs text-sm leading-relaxed text-ink-muted">
-        Picks, prices, form, accas. Every answer comes from the BetriX model and live SportyBet prices, and you can add
+        Picks, prices, form, accas. Every answer comes from the KiqStat model and live SportyBet prices, and you can add
         what it suggests straight to your slip.
       </p>
       <p className="mx-auto mt-3 max-w-xs text-[11px] text-ink-dim">
@@ -535,7 +535,7 @@ function GuestGate({ pathname }: { pathname: string }) {
         <div className="mx-auto w-fit">
           <AskAvatar />
         </div>
-        <p className="mt-4 font-display text-2xl font-bold">Keep asking BetriX</p>
+        <p className="mt-4 font-display text-2xl font-bold">Keep asking KiqStat</p>
         <p className="mt-2 text-sm leading-relaxed text-ink-muted">
           You&apos;ve used your {ASK_GUEST_TOTAL} free questions. Create a free account to get {ASK_FREE_DAILY} questions
           a day. Your chat stays right here.

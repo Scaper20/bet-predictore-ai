@@ -10,7 +10,7 @@ import { APP_TIMEZONE } from "@/lib/format";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-const NOTIFY_EMAIL = process.env.WHATSAPP_DIGEST_NOTIFY_EMAIL ?? process.env.SUPPORT_INBOX_EMAIL ?? "support@betrix.com.ng";
+const NOTIFY_EMAIL = process.env.WHATSAPP_DIGEST_NOTIFY_EMAIL ?? process.env.SUPPORT_INBOX_EMAIL ?? "support@kiqstat.app";
 
 /**
  * Computes the day's WhatsApp community broadcast once, early — before

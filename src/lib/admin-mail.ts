@@ -64,9 +64,9 @@ export function isMailAdmin(email: string): boolean {
   return Boolean(allowed) && email.trim().toLowerCase() === allowed;
 }
 
-/** support@betrix.com.ng — same address and same env var the support-ticket notifier already sends to. */
+/** support@kiqstat.app — same address and same env var the support-ticket notifier already sends to. */
 export function supportFromAddress(): string {
-  return process.env.SUPPORT_INBOX_EMAIL?.trim() || "support@betrix.com.ng";
+  return process.env.SUPPORT_INBOX_EMAIL?.trim() || "support@kiqstat.app";
 }
 
 function redirectUri(): string {
@@ -222,7 +222,7 @@ export type SendMailResult = { ok: true } | { ok: false; error: string };
 /**
  * Sends one plain-text email through the connected account's Gmail, as
  * `from` (the connected address itself, or a verified Send As alias like
- * support@betrix.com.ng).
+ * support@kiqstat.app).
  *
  * Takes the caller's own already-loaded refresh token rather than an admin id
  * to look one up again — the caller (sendMail, admin/mail.ts) already has to

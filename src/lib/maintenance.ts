@@ -7,7 +7,7 @@
  */
 
 export const DEFAULT_MAINTENANCE_MESSAGE =
-  "Sorry for the inconvenience — we're making some major changes to BetriX. We'll be live again soon.";
+  "Sorry for the inconvenience — we're making some major changes to KiqStat. We'll be live again soon.";
 
 export const MAINTENANCE_MESSAGE_MAX = 500;
 
@@ -55,7 +55,7 @@ export function maintenanceHtml(message: string | null | undefined): string {
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex">
 <meta name="theme-color" content="#05080d">
-<title>BetriX · Back soon</title>
+<title>KiqStat · Back soon</title>
 <link rel="icon" href="/icon.png">
 <style>
   :root { color-scheme: dark; }
@@ -87,9 +87,9 @@ export function maintenanceHtml(message: string | null | undefined): string {
 </head>
 <body>
 <main>
-  <img src="/brand/icon-green-96.png" alt="BetriX" width="56" height="56">
+  <img src="/brand/icon-green-96.png" alt="KiqStat" width="56" height="56">
   <div class="tag">Under maintenance</div>
-  <h1>Betri<span>X</span> will be back soon</h1>
+  <h1>Kiq<span>Stat</span> will be back soon</h1>
   <p>${body}</p>
   <p class="small">Thanks for your patience. This page reloads by itself the moment we're back.</p>
 </main>

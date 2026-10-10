@@ -329,7 +329,7 @@ function LeagueGroup({
             {group.tracked && (
               <span
                 className="shrink-0 rounded border border-brand/25 bg-brand/10 px-1.5 py-px text-[9.5px] font-semibold uppercase tracking-wider text-brand"
-                title="BetriX models this competition — open a match for live win probability"
+                title="KiqStat models this competition — open a match for live win probability"
               >
                 Model
               </span>

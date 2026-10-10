@@ -59,7 +59,7 @@ export default function ResponsibleGamblingPage() {
             <p className="text-sm leading-relaxed text-ink">
               Betting laws differ from country to country. Where it is legal, it is for adults only:
               18 in Nigeria and most countries, older in some. Only bet where it is legal for you.
-              BetriX does not accept bets or hold funds — it is an analytics product.
+              KiqStat does not accept bets or hold funds — it is an analytics product.
             </p>
           </div>
         </div>

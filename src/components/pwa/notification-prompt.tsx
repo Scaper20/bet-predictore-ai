@@ -35,7 +35,7 @@ function snooze() {
  *
  * Offers itself on its own only inside the installed app, where it matters
  * most (iPhone has no notifications anywhere else) and where the person has
- * already chosen to keep BetriX around. In a browser tab the install sheet
+ * already chosen to keep KiqStat around. In a browser tab the install sheet
  * does the asking instead, so a visitor is never nudged twice. At most once a
  * fortnight, and only while the browser hasn't been asked yet.
  *

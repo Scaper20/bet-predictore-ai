@@ -39,7 +39,7 @@ const COLUMNS = [
   {
     title: "About",
     links: [
-      { href: "/about", label: "About BetriX" },
+      { href: "/about", label: "About KiqStat" },
       { href: "/pricing", label: "Pricing" },
       { href: sportPath("trackRecord"), label: "Our Track Record" },
       { href: "/how-it-works", label: "How Our Picks Work" },
@@ -60,7 +60,7 @@ export function SiteFooter() {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/brand/icon-green-96.png" alt="" width={32} height={32} className="size-8 rounded-lg" aria-hidden />
               <span className="font-display text-lg font-bold">
-                Betri<span className="text-brand">X</span>
+                Kiq<span className="text-brand">Stat</span>
               </span>
             </div>
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-ink-muted">
@@ -75,7 +75,7 @@ export function SiteFooter() {
         </div>
 
         {/*
-          Nigeria's National Lottery Regulatory Commission (BetriX is a
+          Nigeria's National Lottery Regulatory Commission (KiqStat is a
           Nigerian company) expects a visible 18+ notice on anything
           betting-adjacent, as regulators elsewhere do. It is also just the
           right thing to put in front of this audience, wherever they are.

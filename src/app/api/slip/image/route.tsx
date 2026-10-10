@@ -99,7 +99,7 @@ export async function GET(request: Request) {
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 64, height: 64, borderRadius: 16, background: C.brandInk, color: C.brand, fontSize: 30, fontWeight: 800 }}>
               BX
             </div>
-            <div style={{ display: "flex", fontSize: 48, fontWeight: 800, color: C.brandInk }}>BetriX</div>
+            <div style={{ display: "flex", fontSize: 48, fontWeight: 800, color: C.brandInk }}>KiqStat</div>
           </div>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", color: C.brandInk }}>
             <div style={{ display: "flex", fontSize: 26, fontWeight: 700 }}>Betslip</div>
@@ -149,7 +149,7 @@ export async function GET(request: Request) {
         {/* Footer */}
         <div style={{ display: "flex", marginTop: "auto", justifyContent: "space-between", alignItems: "center", padding: "28px 56px", background: C.panel, borderTop: `2px solid ${C.line}` }}>
           <div style={{ display: "flex", fontSize: 22, color: C.muted }}>Model chances, not guarantees · 18+</div>
-          <div style={{ display: "flex", fontSize: 26, fontWeight: 700, color: C.brand }}>betrix.com.ng</div>
+          <div style={{ display: "flex", fontSize: 26, fontWeight: 700, color: C.brand }}>kiqstat.app</div>
         </div>
       </div>
     ),

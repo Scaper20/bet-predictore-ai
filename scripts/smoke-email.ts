@@ -32,13 +32,13 @@ async function main() {
     console.error("Set RESEND_API_KEY in .env first.");
     process.exit(1);
   }
-  const from = process.env.EMAIL_FROM ?? "BetriX <hello@betrix.com.ng>";
+  const from = process.env.EMAIL_FROM ?? "KiqStat <hello@kiqstat.app>";
 
   const resend = new Resend(apiKey);
   const { data, error } = await resend.emails.send({
     from,
     to,
-    subject: "BetriX email smoke test",
+    subject: "KiqStat email smoke test",
     html: "<p>If you're reading this, RESEND_API_KEY and EMAIL_FROM are wired up correctly.</p>",
   });
 

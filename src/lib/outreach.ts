@@ -38,7 +38,7 @@ export const SURVEY_QUESTIONS: Record<SurveyType, SurveyQuestion[]> = {
   survey_subscribed: [
     {
       id: "satisfaction",
-      prompt: "Overall, how satisfied are you with BetriX so far?",
+      prompt: "Overall, how satisfied are you with KiqStat so far?",
       type: "scale",
       required: true,
       options: [
@@ -51,20 +51,20 @@ export const SURVEY_QUESTIONS: Record<SurveyType, SurveyQuestion[]> = {
     },
     {
       id: "nps",
-      prompt: "How likely are you to recommend BetriX to a friend? (0 = not at all, 10 = definitely)",
+      prompt: "How likely are you to recommend KiqStat to a friend? (0 = not at all, 10 = definitely)",
       type: "nps",
       required: true,
     },
     {
       id: "use_case",
-      prompt: "What do you use BetriX for most?",
+      prompt: "What do you use KiqStat for most?",
       type: "choice",
       required: true,
       options: USE_CASE_OPTIONS,
     },
     {
       id: "other_services",
-      prompt: "Do you also use another prediction site or tipster alongside BetriX? If so, which?",
+      prompt: "Do you also use another prediction site or tipster alongside KiqStat? If so, which?",
       type: "text",
       required: false,
       placeholder: "e.g. none, or the name of the other service",
@@ -112,20 +112,20 @@ export const SURVEY_QUESTIONS: Record<SurveyType, SurveyQuestion[]> = {
     },
     {
       id: "nps",
-      prompt: "How likely are you to recommend BetriX to a friend, even on the free plan? (0 = not at all, 10 = definitely)",
+      prompt: "How likely are you to recommend KiqStat to a friend, even on the free plan? (0 = not at all, 10 = definitely)",
       type: "nps",
       required: true,
     },
     {
       id: "use_case",
-      prompt: "What do you use BetriX for most?",
+      prompt: "What do you use KiqStat for most?",
       type: "choice",
       required: true,
       options: USE_CASE_OPTIONS,
     },
     {
       id: "improvement",
-      prompt: "What's one thing BetriX could do better?",
+      prompt: "What's one thing KiqStat could do better?",
       type: "text",
       required: false,
     },

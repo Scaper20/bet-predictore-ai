@@ -1,5 +1,5 @@
 /**
- * Shapes shared by the Ask BetriX route and panel, plus the request
+ * Shapes shared by the Ask KiqStat route and panel, plus the request
  * validation and context framing — pure, so it's unit-tested.
  */
 

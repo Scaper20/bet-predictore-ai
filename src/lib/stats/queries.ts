@@ -244,7 +244,7 @@ export interface RatingPoint {
 }
 
 /**
- * Each club's latest BetriX Elo in one scope, with the rating a month
+ * Each club's latest KiqStat Elo in one scope, with the rating a month
  * earlier. `scope` is the league's (a country, or the cup's code; national
  * teams share "international").
  */

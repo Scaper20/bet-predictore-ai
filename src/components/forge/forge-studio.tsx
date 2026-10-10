@@ -234,9 +234,9 @@ export function ForgeStudio() {
     if (!slip?.legs.length) return;
     const t = slipTotals(slip.legs, 1);
     const text = [
-      `My BetriX Forge slip · total odds ${t.odds.toFixed(2)}`,
+      `My KiqStat Forge slip · total odds ${t.odds.toFixed(2)}`,
       ...slip.legs.map((l) => `• ${l.fixture}: ${l.label} @ ${legOdds(l).toFixed(2)}`),
-      `Built on betrix.com.ng — probabilities, not guarantees. 18+`,
+      `Built on kiqstat.app — probabilities, not guarantees. 18+`,
     ].join("\n");
     try {
       if (navigator.share) await navigator.share({ text });
@@ -782,7 +782,7 @@ function EmptyResult() {
         ))}
       </ol>
       <p className="mt-8 text-xs text-ink-dim">
-        Every pick comes from the BetriX model, with SportyBet prices where they list it. Probabilities, not guarantees. 18+
+        Every pick comes from the KiqStat model, with SportyBet prices where they list it. Probabilities, not guarantees. 18+
       </p>
     </div>
   );
@@ -792,7 +792,7 @@ function GuestGate({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-canvas/60 p-5 backdrop-blur-md">
       <div className="w-full max-w-sm rounded-2xl border border-line bg-shell p-6 text-center shadow-2xl">
-        <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-brand">BetriX Forge</p>
+        <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-brand">KiqStat Forge</p>
         <p className="mt-3 font-display text-2xl font-bold">Keep forging slips</p>
         <p className="mt-2 text-sm leading-relaxed text-ink-muted">
           You&apos;ve used your {FORGE_GUEST_TOTAL} free slips. Create a free account for {FORGE_FREE_DAILY} a day. Your

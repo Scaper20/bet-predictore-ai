@@ -3,7 +3,7 @@ import "server-only";
 import { Resend } from "resend";
 
 const apiKey = process.env.RESEND_API_KEY;
-const FROM = process.env.EMAIL_FROM ?? "BetriX <hello@betrix.com.ng>";
+const FROM = process.env.EMAIL_FROM ?? "KiqStat <hello@kiqstat.app>";
 
 function client() {
   if (!apiKey) throw new Error("Resend requires RESEND_API_KEY.");
@@ -46,7 +46,7 @@ export function emailLayout(bodyHtml: string): string {
           <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e3e8ef;">
             <tr>
               <td style="background:#05080d;padding:24px 32px;">
-                <span style="font-size:22px;font-weight:800;color:#eef2f7;">Betri<span style="color:#00f48e;">X</span></span>
+                <span style="font-size:22px;font-weight:800;color:#eef2f7;">Kiq<span style="color:#00f48e;">Stat</span></span>
               </td>
             </tr>
             <tr>
@@ -56,7 +56,7 @@ export function emailLayout(bodyHtml: string): string {
             </tr>
             <tr>
               <td style="padding:20px 32px;background:#f6f8fb;border-top:1px solid #e3e8ef;color:#8d9db2;font-size:12px;">
-                BetriX · betrix.com.ng
+                KiqStat · kiqstat.app
               </td>
             </tr>
           </table>

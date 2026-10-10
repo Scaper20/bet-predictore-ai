@@ -12,7 +12,7 @@ import { useLiveCount } from "@/components/layout/use-live-count";
  * Not a miniature of the desktop nav: desktop navigation is a site map,
  * thumb navigation is a frequency ranking. For You and Live sit under the
  * left thumb, Forge is the raised centre action, Picks and More on the right.
- * The slip moved up beside Ask BetriX in the header, where it's visible on
+ * The slip moved up beside Ask KiqStat in the header, where it's visible on
  * every screen without spending a tab. Everything else is behind More.
  *
  * Deliberately static — no hide-on-scroll. A bar that disappears makes people

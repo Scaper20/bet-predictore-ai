@@ -43,7 +43,7 @@ export function MaintenanceForm({ enabled, message }: { enabled: boolean; messag
         {enabled ? (
           <Button type="submit" name="intent" value="disable" disabled={pending}>
             {pending && <Spinner className="size-3.5" />}
-            Turn off — put BetriX back live
+            Turn off — put KiqStat back live
           </Button>
         ) : (
           <Button type="submit" name="intent" value="enable" variant="danger" disabled={pending}>

@@ -9,7 +9,7 @@ const Icon = ({ small = false }: { small?: boolean }) => (
 );
 
 /**
- * Opens the Ask BetriX panel: the labelled pill on desktop, and the same
+ * Opens the Ask KiqStat panel: the labelled pill on desktop, and the same
  * pill a size down in the phone header.
  */
 export function AskButton({ size = "md" }: { size?: "md" | "sm" }) {
@@ -30,7 +30,7 @@ export function AskButton({ size = "md" }: { size?: "md" | "sm" }) {
     >
       <Icon small={sm} />
       <span>
-        Ask Betri<span className="text-brand">X</span>
+        Ask Kiq<span className="text-brand">Stat</span>
       </span>
     </button>
   );

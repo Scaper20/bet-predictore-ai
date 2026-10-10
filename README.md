@@ -1,4 +1,4 @@
-# BetriX
+# KiqStat
 
 A football prediction and betting-analysis platform built for the Nigerian market.
 Real fixtures, real live scores, and a statistical model fitted on actual completed

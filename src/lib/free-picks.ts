@@ -6,7 +6,7 @@ import { isFreeMarket } from "@/lib/access";
 /**
  * Today's featured set: one Strong pick (the most confident), two hot games
  * (the ones people most want to bet on) and three more of the model's best
- * reads. It leads the home page board and grid, and it is what Ask BetriX
+ * reads. It leads the home page board and grid, and it is what Ask KiqStat
  * opens in full on the free plan (access.ts toolView). Every pick is free on
  * the site itself.
  *
@@ -15,7 +15,7 @@ import { isFreeMarket } from "@/lib/access";
  * day's results.
  *
  * Only the Strong slot carries a Strong pick. Matches whose pick is 1X2 are
- * skipped while there are enough others, since Ask BetriX opens 1X2 anyway.
+ * skipped while there are enough others, since Ask KiqStat opens 1X2 anyway.
  */
 
 export const HOT_SLOTS = 2;

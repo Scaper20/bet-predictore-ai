@@ -1,5 +1,5 @@
 /**
- * Translating a BetriX market id into The Odds API's payload, and back.
+ * Translating a KiqStat market id into The Odds API's payload, and back.
  *
  * Pure and separately tested for the same reason src/lib/odds/markets.ts is:
  * a mistake here is silent, and it produces a confident number for the wrong

@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
-export const alt = "BetriX — Football Predictions Built on Real Data";
+export const alt = "KiqStat — Football Predictions Built on Real Data";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -27,7 +27,7 @@ export default async function Image() {
         { }
         <img src={logoSrc} width={140} height={140} alt="" />
         <div style={{ display: "flex", marginTop: 32, fontSize: 84, fontWeight: 800, color: "#eef2f7" }}>
-          Betri<span style={{ color: "#00f48e" }}>X</span>
+          Kiq<span style={{ color: "#00f48e" }}>Stat</span>
         </div>
         <div style={{ display: "flex", marginTop: 16, fontSize: 32, color: "#8d9db2" }}>
           Football Predictions Built on Real Data

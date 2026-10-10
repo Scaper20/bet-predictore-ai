@@ -1,5 +1,5 @@
 /*
- * BetriX service worker.
+ * KiqStat service worker.
  *
  * Deliberately conservative, because a stale prediction is worse than a slow
  * one: pages always go to the network first, and a cached copy is only ever
@@ -125,7 +125,7 @@ async function staleWhileRevalidate(request) {
 
 /* ------------------------------------------------------------ Notifications */
 
-/** A path on this site, whatever the payload says: a tap never leaves BetriX. */
+/** A path on this site, whatever the payload says: a tap never leaves KiqStat. */
 function sameOriginUrl(value) {
   try {
     const url = new URL(value || "/", self.location.origin);
@@ -144,7 +144,7 @@ self.addEventListener("push", (event) => {
   }
   const tag = typeof data.tag === "string" ? data.tag : undefined;
   event.waitUntil(
-    self.registration.showNotification(data.title || "BetriX", {
+    self.registration.showNotification(data.title || "KiqStat", {
       body: data.body || "",
       icon: "/icons/icon-192.png",
       // Android's status bar shows this as a white silhouette.
@@ -163,7 +163,7 @@ self.addEventListener("notificationclick", (event) => {
   const url = sameOriginUrl(event.notification.data && event.notification.data.url);
   event.waitUntil(
     (async () => {
-      // Reuse an open BetriX window rather than stacking new ones.
+      // Reuse an open KiqStat window rather than stacking new ones.
       const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
       for (const client of windows) {
         if (new URL(client.url).origin !== self.location.origin) continue;

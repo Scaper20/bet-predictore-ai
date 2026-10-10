@@ -238,7 +238,7 @@ export const FAQS = [
   },
   {
     q: "Is this legal where I live?",
-    a: "BetriX is an analytics product. We do not take bets, hold funds or act as a bookmaker, so using it is not betting. Betting itself is regulated differently in every country: only bet where it is legal for you, and never under your country's legal age (18 in Nigeria and most countries, higher in some).",
+    a: "KiqStat is an analytics product. We do not take bets, hold funds or act as a bookmaker, so using it is not betting. Betting itself is regulated differently in every country: only bet where it is legal for you, and never under your country's legal age (18 in Nigeria and most countries, higher in some).",
   },
 ];
 
@@ -284,7 +284,7 @@ export function FinalCta() {
           </h2>
           <p className="mx-auto mt-5 max-w-xl text-base text-ink-muted">
             Every pick on every match is free. Go Pro for the full breakdowns, half-time markets,
-            Asian handicap and more from Forge and Ask BetriX.
+            Asian handicap and more from Forge and Ask KiqStat.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             <ButtonLink href={sportPath("predictions")}>Open today&apos;s predictions</ButtonLink>

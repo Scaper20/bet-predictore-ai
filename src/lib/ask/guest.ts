@@ -6,7 +6,7 @@ import { APP_TIMEZONE } from "@/lib/format";
 import { ASK_GUEST_TOTAL } from "@/lib/ask/request";
 
 /**
- * Free tries for visitors without an account — Ask BetriX's questions,
+ * Free tries for visitors without an account — Ask KiqStat's questions,
  * Forge's slips — per browser, ever, then the feature asks them to sign up.
  * Enforced here, not in the browser — see migration 0027 for the table and
  * why the network cap is generous. Each feature counts under its own scope.

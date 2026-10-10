@@ -52,7 +52,7 @@ export async function setMaintenance(
       intent === "enable"
         ? "Maintenance mode is on. Visitors will see the maintenance page within a few seconds."
         : intent === "disable"
-          ? "Maintenance mode is off. BetriX is live again."
+          ? "Maintenance mode is off. KiqStat is live again."
           : "Message saved.",
   };
 }

@@ -143,7 +143,7 @@ const STREAK_TESTS: Record<StreakKind, (r: TeamResult) => boolean> = {
 
 /**
  * How often each test is true for an average club, roughly, across the
- * leagues BetriX covers. A run of something common (unbeaten) has to be
+ * leagues KiqStat covers. A run of something common (unbeaten) has to be
  * longer than a run of something rare (clean sheets) to rank as high.
  */
 const BASE_RATE: Record<StreakKind, number> = {

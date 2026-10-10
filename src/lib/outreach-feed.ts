@@ -9,11 +9,11 @@ import { SITE_URL } from "@/lib/site-url";
 import { WHATSAPP_COMMUNITY_URL } from "@/lib/whatsapp-community";
 import type { Tier } from "@/lib/entitlements";
 
-/** "Scaper, BetriX <support@…>" — falls back the same way the WhatsApp
+/** "Scaper, KiqStat <support@…>" — falls back the same way the WhatsApp
  * digest's notify email does if SUPPORT_INBOX_EMAIL isn't set. */
 function outreachFrom(): string {
-  const address = process.env.SUPPORT_INBOX_EMAIL ?? "support@betrix.com.ng";
-  return `Scaper, BetriX <${address}>`;
+  const address = process.env.SUPPORT_INBOX_EMAIL ?? "support@kiqstat.app";
+  return `Scaper, KiqStat <${address}>`;
 }
 
 /** Sends land one at a time with this gap between them — conservative

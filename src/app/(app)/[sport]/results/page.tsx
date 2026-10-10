@@ -21,8 +21,8 @@ export async function generateMetadata({ searchParams }: { searchParams: Promise
   return {
     title: def ? `${def.name} Results` : "Football Results",
     description: def
-      ? `${def.name} results day by day, with how each BetriX pick did.`
-      : "Final scores from every competition BetriX covers, day by day, with how each of our picks did.",
+      ? `${def.name} results day by day, with how each KiqStat pick did.`
+      : "Final scores from every competition KiqStat covers, day by day, with how each of our picks did.",
     alternates: { canonical: def ? `${base}?league=${def.code}` : base },
   };
 }

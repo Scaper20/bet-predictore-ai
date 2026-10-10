@@ -20,7 +20,7 @@ export async function generateMetadata({ searchParams }: { searchParams: Promise
   const name = code === NATIONAL ? "National team" : (leagueByCode(code)?.name ?? "");
   return {
     title: `${name} Ratings: Every Team Rated 1-10`,
-    description: `How strong BetriX rates every ${name} side, on a 1 to 10 scale built from results, with who is rising and falling.`,
+    description: `How strong KiqStat rates every ${name} side, on a 1 to 10 scale built from results, with who is rising and falling.`,
     alternates: { canonical: `${sportPath("ratings")}?league=${code}` },
   };
 }

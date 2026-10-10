@@ -36,7 +36,7 @@ const ORG_JSON_LD = {
     },
     {
       "@type": "WebSite",
-      name: "BetriX",
+      name: "KiqStat",
       url: SITE,
     },
   ],
@@ -63,8 +63,8 @@ const mono = JetBrains_Mono({ variable: "--font-mono-jb", subsets: ["latin"], di
 export const metadata: Metadata = {
   metadataBase: new URL(SITE),
   title: {
-    default: "BetriX — Football Predictions & Live Trends",
-    template: "%s · BetriX",
+    default: "KiqStat — Football Predictions & Live Trends",
+    template: "%s · KiqStat",
   },
   description:
     "Data-driven football predictions for fans across Africa and the world. Real live scores, " +
@@ -77,15 +77,15 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_GB",
-    siteName: "BetriX",
-    title: "BetriX — Football Predictions Built on Real Data",
+    siteName: "KiqStat",
+    title: "KiqStat — Football Predictions Built on Real Data",
     description:
       "Real fixtures, real live scores, and a statistical model fitted on actual results. " +
       "Know the numbers before you decide.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "BetriX — Football Predictions",
+    title: "KiqStat — Football Predictions",
     description: "Data-driven football insight for fans across Africa and the world.",
   },
   robots: { index: true, follow: true },
@@ -93,8 +93,8 @@ export const metadata: Metadata = {
   // the manifest and reads these instead: launch without Safari's chrome, and
   // let the dark canvas run up under the status bar. The header pads itself
   // by the safe-area inset so nothing sits under the notch.
-  applicationName: "BetriX",
-  appleWebApp: { capable: true, title: "BetriX", statusBarStyle: "black-translucent" },
+  applicationName: "KiqStat",
+  appleWebApp: { capable: true, title: "KiqStat", statusBarStyle: "black-translucent" },
   formatDetection: { telephone: false },
 };
 

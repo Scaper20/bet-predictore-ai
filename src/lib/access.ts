@@ -11,7 +11,7 @@ import { isStrong } from "@/lib/model/tiers";
  * Asian handicap lines and the half-time / second-half markets
  * (`viewPrediction`).
  *
- * Ask BetriX keeps the stricter tool view it had during the experiment
+ * Ask KiqStat keeps the stricter tool view it had during the experiment
  * (`toolView`): on the free plan its answers cover the match result market
  * and today's free picks; Pro opens the rest. Forge keeps its own market rule
  * (forge.ts marketsForPlan).
@@ -107,7 +107,7 @@ export function viewPrediction(p: Prediction, viewer: Viewer): ViewedPrediction 
 }
 
 /**
- * Ask BetriX's view for a free account: the 1X2 split and 1X2 picks, and the
+ * Ask KiqStat's view for a free account: the 1X2 split and 1X2 picks, and the
  * headline pick only when it is 1X2 or one of today's free picks.
  */
 export function toolView(p: Prediction, viewer: Viewer): ViewedPrediction {

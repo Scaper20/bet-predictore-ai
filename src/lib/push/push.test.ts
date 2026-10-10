@@ -57,7 +57,7 @@ describe("dailyPayload", () => {
   it("reports a bad day exactly like a good one", () => {
     const p = dailyPayload({ picks: [], record: { won: 2, lost: 8 }, topics: BOTH })!;
     expect(p.title).toBe("Yesterday's results");
-    expect(p.body).toContain("2 of 10 BetriX picks won (20%)");
+    expect(p.body).toContain("2 of 10 KiqStat picks won (20%)");
     expect(p.url).toBe("/football/track-record");
   });
 
@@ -170,7 +170,7 @@ describe("web-push encryption", () => {
     const req = webpush.generateRequestDetails(subscription, JSON.stringify(payload), {
       TTL: 3600,
       topic: "daily",
-      vapidDetails: { subject: "mailto:support@betrix.com.ng", publicKey: vapid.publicKey, privateKey: vapid.privateKey },
+      vapidDetails: { subject: "mailto:support@kiqstat.app", publicKey: vapid.publicKey, privateKey: vapid.privateKey },
     });
 
     expect(req.endpoint).toBe(subscription.endpoint);

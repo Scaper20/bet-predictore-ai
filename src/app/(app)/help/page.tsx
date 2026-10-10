@@ -12,7 +12,7 @@ import { sportPath } from "@/lib/routes";
 
 export const metadata: Metadata = {
   title: "Help Centre",
-  description: "Answers about accounts, plans and payments, predictions, Forge and slips, and responsible gambling on BetriX.",
+  description: "Answers about accounts, plans and payments, predictions, Forge and slips, and responsible gambling on KiqStat.",
   alternates: { canonical: "/help" },
 };
 
@@ -33,14 +33,14 @@ const GROUPS: FaqGroup[] = [
     title: "Getting started",
     items: [
       {
-        q: "Is BetriX free?",
+        q: "Is KiqStat free?",
         text: "Live scores fixtures results tables predictions free account markets",
-        a: <A>Yes. Live scores, fixtures, results, league tables, team stats and every pick and every market (1X2, over/under, GG/NG, double chance, correct score) are free, with {FORGE_FREE_DAILY} Forge slips a day (1X2 and double chance) and {ASK_FREE_DAILY} Ask BetriX questions a day. Pro adds Asian handicap, half-time markets, the full written breakdowns and more.</A>,
+        a: <A>Yes. Live scores, fixtures, results, league tables, team stats and every pick and every market (1X2, over/under, GG/NG, double chance, correct score) are free, with {FORGE_FREE_DAILY} Forge slips a day (1X2 and double chance) and {ASK_FREE_DAILY} Ask KiqStat questions a day. Pro adds Asian handicap, half-time markets, the full written breakdowns and more.</A>,
       },
       {
         q: "Do I need an account?",
         text: "account sign up guest",
-        a: <A>Not to browse. Without one you can try Forge and Ask BetriX a couple of times ({ASK_GUEST_TOTAL} questions in total). An account (free, email or Google) lets you follow your leagues, save and track slips, and get more each day. <L href="/account/sign-up">Create one</L>.</A>,
+        a: <A>Not to browse. Without one you can try Forge and Ask KiqStat a couple of times ({ASK_GUEST_TOTAL} questions in total). An account (free, email or Google) lets you follow your leagues, save and track slips, and get more each day. <L href="/account/sign-up">Create one</L>.</A>,
       },
       {
         q: "How do I choose my leagues?",
@@ -48,7 +48,7 @@ const GROUPS: FaqGroup[] = [
         a: <A>Open <L href="/account#preferences">your account</L> and pick the competitions you follow. Your For You page then shows only those, first.</A>,
       },
       {
-        q: "Can I install BetriX on my phone?",
+        q: "Can I install KiqStat on my phone?",
         text: "app install phone home screen android iphone",
         a: <A>Yes, without an app store. On Android, open the menu in Chrome and choose &ldquo;Install app&rdquo;; on iPhone, tap Share in Safari and &ldquo;Add to Home Screen&rdquo;. You&apos;ll get kick-off and result notifications if you allow them.</A>,
       },
@@ -126,17 +126,17 @@ const GROUPS: FaqGroup[] = [
   },
   {
     id: "tools",
-    title: "Forge, slips and Ask BetriX",
+    title: "Forge, slips and Ask KiqStat",
     items: [
       {
         q: "What is Forge?",
         text: "forge slip builder accumulator",
-        a: <A>Tell it your style, the total odds you want and your markets; it picks the games and shows the chance of the whole slip landing. BetriX doesn&apos;t take bets: copy the slip to your bookmaker.</A>,
+        a: <A>Tell it your style, the total odds you want and your markets; it picks the games and shows the chance of the whole slip landing. KiqStat doesn&apos;t take bets: copy the slip to your bookmaker.</A>,
       },
       {
-        q: "Can I place bets on BetriX?",
+        q: "Can I place bets on KiqStat?",
         text: "place bet stake bookmaker sportybet",
-        a: <A>No. BetriX is analysis only. We show probabilities and prices; you place bets with your own bookmaker, if you choose to.</A>,
+        a: <A>No. KiqStat is analysis only. We show probabilities and prices; you place bets with your own bookmaker, if you choose to.</A>,
       },
       {
         q: "How do I track a slip?",
@@ -144,8 +144,8 @@ const GROUPS: FaqGroup[] = [
         a: <A>Add games to your selections, then &ldquo;Track this slip&rdquo;. <L href={sportPath("trackedSlips")}>My slips</L> follows every leg live and marks each one won or lost.</A>,
       },
       {
-        q: "How many questions can I ask Ask BetriX?",
-        text: "ask betrix questions limit ai",
+        q: "How many questions can I ask Ask KiqStat?",
+        text: "ask kiqstat betrix questions limit ai",
         a: <A>{ASK_GUEST_TOTAL} without an account, {ASK_FREE_DAILY} a day on a free account, and plenty on any paid plan (fair use applies).</A>,
       },
     ],
@@ -160,7 +160,7 @@ const GROUPS: FaqGroup[] = [
         a: <A>You&apos;re not alone and help is free. Our <L href="/responsible-gambling">responsible gambling page</L> lists support lines and tools to set limits or take a break.</A>,
       },
       {
-        q: "Who can use BetriX?",
+        q: "Who can use KiqStat?",
         text: "age 18 who can use",
         a: <A>Adults only: you must be 18 or over.</A>,
       },

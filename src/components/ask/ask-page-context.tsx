@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { openAsk, setAskPage } from "@/lib/ask-store";
 
-/** Tells Ask BetriX which match the user is looking at, for as long as this page is mounted. */
+/** Tells Ask KiqStat which match the user is looking at, for as long as this page is mounted. */
 export function AskPageContext({ matchId, label }: { matchId: string; label: string }) {
   useEffect(() => {
     setAskPage({ matchId, label });
@@ -23,7 +23,7 @@ export function AskAboutMatch({ label }: { label: string }) {
           X
         </span>
         <div className="min-w-0">
-          <h2 className="text-sm font-semibold text-ink">Ask BetriX about this match</h2>
+          <h2 className="text-sm font-semibold text-ink">Ask KiqStat about this match</h2>
           <p className="truncate text-xs text-ink-dim">{label}</p>
         </div>
       </div>
