@@ -22,7 +22,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/football/track-record" },
   title: "Track Record",
   description:
-    "Every headline pick BetriX has published, graded against the final score once the match " +
+    "Every headline pick KiqStat has published, graded against the final score once the match " +
     "finishes. No cherry-picking — settled automatically, win or lose.",
 };
 

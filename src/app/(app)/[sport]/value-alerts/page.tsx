@@ -114,7 +114,7 @@ function AlertCard({ alert: a }: { alert: ValueAlert }) {
           </p>
         </div>
         <div className="text-right">
-          <p className="tnum font-display text-2xl font-extrabold text-brand">+{(a.edge * 100).toFixed(1)}%</p>
+          <p className="tnum font-mono tracking-tight text-xl font-medium text-brand">+{(a.edge * 100).toFixed(1)}%</p>
           <p className="text-[11px] text-ink-dim">{a.benchmark === "market" ? "vs market" : "vs model"}</p>
         </div>
       </div>

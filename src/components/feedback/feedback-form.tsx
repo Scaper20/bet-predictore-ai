@@ -34,7 +34,7 @@ export function FeedbackForm({ onDone }: { onDone?: () => void }) {
       <input type="hidden" name="pagePath" value={pathname} />
 
       <fieldset>
-        <legend className="mb-2 text-xs text-ink-muted">How likely are you to recommend BetriX?</legend>
+        <legend className="mb-2 text-xs text-ink-muted">How likely are you to recommend KiqStat?</legend>
         <div className="grid grid-cols-11 gap-0.5">
           {Array.from({ length: 11 }, (_, i) => i).map((n) => (
             <label key={n} className="cursor-pointer">

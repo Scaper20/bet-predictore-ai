@@ -25,7 +25,7 @@ export default function GuidesPage() {
     <DocPage
       eyebrow="Guides"
       title="Markets, odds and staking, without the jargon"
-      intro={<>Everything you need to read a BetriX page and a betting slip with confidence, with a worked example for each idea.</>}
+      intro={<>Everything you need to read a KiqStat page and a betting slip with confidence, with a worked example for each idea.</>}
       aside={
         <>
           <DocCard title="How we build the numbers" href="/how-it-works" cta="How our picks work">
@@ -80,7 +80,7 @@ export default function GuidesPage() {
             <>
               <p>
                 A bet is good value when its odds are longer than the true chance deserves. Enter your
-                bookmaker&apos;s price on a slip and BetriX rates it for you.
+                bookmaker&apos;s price on a slip and KiqStat rates it for you.
               </p>
               <p>
                 The best pick isn&apos;t the likeliest one, it&apos;s the one priced most generously. A sure-looking
@@ -117,7 +117,7 @@ export default function GuidesPage() {
               <li><strong className="text-ink">Set a budget first</strong> and treat it as spent. Never bet money meant for rent, food or school fees.</li>
               <li><strong className="text-ink">Stake the same small share each time</strong>, for example 1-2% of your budget per bet. One bad day then can&apos;t wipe you out.</li>
               <li><strong className="text-ink">Never chase losses.</strong> Doubling up after a loss is how budgets disappear.</li>
-              <li><strong className="text-ink">Keep a record.</strong> &ldquo;My slips&rdquo; on BetriX tracks your bets live, so you see honestly how you are doing.</li>
+              <li><strong className="text-ink">Keep a record.</strong> &ldquo;My slips&rdquo; on KiqStat tracks your bets live, so you see honestly how you are doing.</li>
               <li>
                 <strong className="text-ink">Take breaks.</strong> If it stops being fun, stop.{" "}
                 <Link href="/responsible-gambling" className="font-semibold text-brand hover:underline">Get support</Link>.
@@ -127,7 +127,7 @@ export default function GuidesPage() {
         },
         {
           id: "match-page",
-          title: "Reading a BetriX match page",
+          title: "Reading a KiqStat match page",
           body: (
             <>
               <ul className="list-disc space-y-2 pl-5">

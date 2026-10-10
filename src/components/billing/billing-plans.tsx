@@ -139,7 +139,7 @@ export function BillingPlans({
               <p className="mt-1 text-xs text-ink-muted">{plan.description}</p>
 
               <div className="mt-4 flex items-baseline gap-1.5">
-                <span className="font-display text-2xl font-extrabold">{!price ? "Free" : money(price)}</span>
+                <span className="font-mono tracking-tight text-xl font-medium">{!price ? "Free" : money(price)}</span>
                 {price ? (
                   <span className="text-xs text-ink-dim">
                     {CYCLE_LABEL[tierCycle].per}

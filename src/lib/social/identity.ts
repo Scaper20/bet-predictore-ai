@@ -41,7 +41,7 @@ export async function socialIdentity(request: Request, mint: boolean): Promise<S
   return { userId: null, guestKey: g.deviceKey, ipKey: g.ipKey, setCookie: g.setCookie };
 }
 
-const RESERVED = /betrix|admin|support|moderator|official|\boma\b/i;
+const RESERVED = /kiqstat|betrix|admin|support|moderator|official|\boma\b/i;
 
 /** A guest's nickname, or an error to show. */
 export function checkNickname(raw: unknown): { ok: true; name: string } | { ok: false; error: string } {

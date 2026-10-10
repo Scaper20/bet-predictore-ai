@@ -1,5 +1,6 @@
 "use client";
 
+import { LogoLockup, LogoMark } from "@/components/brand/logo";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ButtonLink } from "@/components/ui/primitives";
@@ -21,12 +22,12 @@ import { navFor } from "@/lib/nav";
  *
  * Desktop is two rows: identity, sport, search and the personal cluster on
  * top; the section nav with its menus below (mega-nav.tsx). Every section
- * BetriX has or has announced is in those menus — the announced ones are
+ * KiqStat has or has announced is in those menus — the announced ones are
  * tagged "Soon" and lead to their coming-soon page — so the nav shows where
  * the product is going and new features slot in without a redesign. The
  * menus themselves are data, in lib/nav.ts.
  *
- * Phones get one row: identity, Ask BetriX, the slip and the sign-up CTA.
+ * Phones get one row: identity, Ask KiqStat, the slip and the sign-up CTA.
  * Navigation there lives in the bottom bar and the menu behind its "More"
  * tab (mobile-nav.tsx), both reading the same lib/nav.ts.
  *
@@ -65,13 +66,11 @@ export function SiteHeader() {
             page, and 32px tall alone is a fiddly tap on a phone. */}
         <Link
           href="/"
-          aria-label="BetriX home"
+          aria-label="KiqStat home"
           className="-mx-1.5 flex shrink-0 items-center gap-2.5 rounded-lg px-1.5 py-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
         >
-          <Logo />
-          <span className="font-display text-lg font-bold tracking-tight max-[379px]:hidden">
-            Betri<span className="text-brand">X</span>
-          </span>
+          <LogoLockup className="h-6 w-auto text-ink max-[379px]:hidden lg:h-7" />
+          <LogoMark className="size-8 text-ink min-[380px]:hidden" />
         </Link>
 
         <div className="hidden lg:block">
@@ -122,13 +121,13 @@ export function SiteHeader() {
           )}
         </div>
 
-        {/* Phones: Ask BetriX with the slip beside it, then the reason an
+        {/* Phones: Ask KiqStat with the slip beside it, then the reason an
             anonymous visitor is here. Everything else is in the bottom bar. */}
         <div className="ml-auto flex items-center gap-1 lg:hidden">
           <AskButton size="sm" />
           <SlipButton sport={sport} />
           {!resolving && !signedIn && (
-            <ButtonLink href="/account/sign-up" variant="primary" className="ml-1 px-3 py-2 text-xs">
+            <ButtonLink href="/account/sign-up" variant="primary" className="ml-1 whitespace-nowrap px-3 py-2 text-xs">
               Sign up
             </ButtonLink>
           )}
@@ -150,12 +149,6 @@ function AuthPlaceholder() {
   return <div className="size-10 rounded-full bg-surface-2" aria-hidden />;
 }
 
-function Logo() {
-  return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img src="/brand/icon-green-96.png" alt="" width={32} height={32} className="size-8 rounded-lg" aria-hidden />
-  );
-}
 
 function BellIcon() {
   return (

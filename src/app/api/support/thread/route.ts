@@ -8,7 +8,7 @@ import { guestSend, guestThread } from "@/lib/support-guest";
 
 export const dynamic = "force-dynamic";
 const NO_STORE = { "Cache-Control": "no-store" };
-const SUPPORT_INBOX = process.env.SUPPORT_INBOX_EMAIL ?? "support@betrix.com.ng";
+const SUPPORT_INBOX = process.env.SUPPORT_INBOX_EMAIL ?? "support@kiqstat.app";
 
 // A signed-in user could otherwise script a loop of POSTs — there's no CDN/
 // WAF-level throttling in front of this route, and each message both writes

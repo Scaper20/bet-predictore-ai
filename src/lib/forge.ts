@@ -1,5 +1,5 @@
 /**
- * BetriX Forge — builds a slip to the user's taste out of the model's own
+ * KiqStat Forge — builds a slip to the user's taste out of the model's own
  * numbers. No language model is involved: every probability is read off the
  * same fitted scoreline grid the match pages show.
  *

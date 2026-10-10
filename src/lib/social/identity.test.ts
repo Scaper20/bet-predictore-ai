@@ -16,7 +16,7 @@ describe("checkNickname", () => {
     expect(checkNickname("A").ok).toBe(false);
     expect(checkNickname("x".repeat(25)).ok).toBe(false);
     expect(checkNickname("<script>").ok).toBe(false);
-    expect(checkNickname("BetriX Team").ok).toBe(false);
+    expect(checkNickname("KiqStat Team").ok).toBe(false);
     expect(checkNickname("Oma").ok).toBe(false);
     expect(checkNickname(undefined).ok).toBe(false);
   });

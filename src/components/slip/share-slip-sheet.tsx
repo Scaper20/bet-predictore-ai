@@ -21,7 +21,7 @@ export function slipImageUrl(view: SlipView): string {
 type Img = { status: "loading" } | { status: "ready"; blob: Blob; url: string } | { status: "failed" };
 
 /**
- * Share a tracked slip as a BetriX slip image: a preview, then the phone's
+ * Share a tracked slip as a KiqStat slip image: a preview, then the phone's
  * own share sheet (WhatsApp, Telegram, X…) or a download. An image of the
  * picks and the model's chances, not a booking code.
  */
@@ -48,14 +48,14 @@ export function ShareSlipSheet({ view, onClose }: { view: SlipView; onClose: () 
     };
   }, [src]);
 
-  const file = img.status === "ready" ? new File([img.blob], "betrix-slip.png", { type: "image/png" }) : null;
+  const file = img.status === "ready" ? new File([img.blob], "kiqstat-slip.png", { type: "image/png" }) : null;
   const canShareFile = typeof navigator !== "undefined" && !!file && !!navigator.canShare?.({ files: [file] });
 
   const download = () => {
     if (img.status !== "ready") return;
     const a = document.createElement("a");
     a.href = img.url;
-    a.download = "betrix-slip.png";
+    a.download = "kiqstat-slip.png";
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -65,7 +65,7 @@ export function ShareSlipSheet({ view, onClose }: { view: SlipView; onClose: () 
   const share = async () => {
     if (!file) return;
     try {
-      await navigator.share({ files: [file], title: "My BetriX slip", text: "My slip on BetriX · betrix.com.ng" });
+      await navigator.share({ files: [file], title: "My KiqStat slip", text: "My slip on KiqStat · kiqstat.app" });
     } catch (err) {
       // Closing the share sheet isn't a failure.
       if (err instanceof Error && err.name !== "AbortError") setNote("Couldn't open sharing here. Download the image instead.");
@@ -104,7 +104,7 @@ export function ShareSlipSheet({ view, onClose }: { view: SlipView; onClose: () 
             {img.status === "failed" && <p className="px-6 py-10 text-center text-sm text-ink-muted">Couldn&apos;t make the image. Close and try again.</p>}
             {img.status === "ready" && (
               // eslint-disable-next-line @next/next/no-img-element -- a blob: URL, which next/image can't optimise
-              <img src={img.url} alt="Your BetriX slip" className="block w-full" />
+              <img src={img.url} alt="Your KiqStat slip" className="block w-full" />
             )}
           </div>
         </div>

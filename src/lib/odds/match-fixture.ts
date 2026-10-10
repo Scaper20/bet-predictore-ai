@@ -1,7 +1,7 @@
 /**
- * Matching a BetriX fixture to a bookmaker's fixture.
+ * Matching a KiqStat fixture to a bookmaker's fixture.
  *
- * There is no shared id. BetriX identifies a match by whichever provider
+ * There is no shared id. KiqStat identifies a match by whichever provider
  * supplied it ("fd:12345", "sdb:98765"); SportyBet uses Sportradar
  * ("sr:match:72221248"). So a price can only be attached to a prediction by
  * agreeing on the teams and the kickoff.

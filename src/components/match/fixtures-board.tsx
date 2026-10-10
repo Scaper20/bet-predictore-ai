@@ -120,7 +120,7 @@ export function FixturesBoard({ matches, league, windowDays }: { matches: Match[
                   <span className="text-[10px] font-normal text-ink-dim">{shortDate(d.iso, tz)}</span>
                 </span>
               ),
-              meta: d.live > 0 ? <span className="text-rose">●</span> : d.count,
+              meta: d.live > 0 ? <span className="text-signal">●</span> : d.count,
             }))}
           />
         )}
@@ -279,7 +279,7 @@ function LeagueCard({ group, open, onToggle }: { group: LiveGroup; open: boolean
           <span className="flex items-center gap-2">
             <span className="truncate text-sm font-semibold text-ink">{group.name}</span>
             {group.tracked && (
-              <span className="shrink-0 rounded border border-brand/25 bg-brand/10 px-1.5 py-px text-[9.5px] font-semibold uppercase tracking-wider text-brand" title="BetriX models this competition">
+              <span className="shrink-0 rounded border border-brand/25 bg-brand/10 px-1.5 py-px text-[9.5px] font-semibold uppercase tracking-wider text-brand" title="KiqStat models this competition">
                 Model
               </span>
             )}

@@ -20,15 +20,15 @@ export const metadata: Metadata = {
   description:
     "Plans from a month to a full season, priced in your own currency. Start free — no card, no subscription required.",
   openGraph: {
-    title: "BetriX Pricing",
+    title: "KiqStat Pricing",
     description: "Priced for where you are. Start free.",
   },
 };
 
 const faqs = (sellsAbroad: boolean) => [
   {
-    q: "Do I need to pay to use BetriX?",
-    a: "No. Every pick and every market on every match is free, along with live scores, fixtures and results. Pro adds Asian handicap, half-time markets, the full breakdowns, value against the price you're offered, staking guidance and more from Forge and Ask BetriX.",
+    q: "Do I need to pay to use KiqStat?",
+    a: "No. Every pick and every market on every match is free, along with live scores, fixtures and results. Pro adds Asian handicap, half-time markets, the full breakdowns, value against the price you're offered, staking guidance and more from Forge and Ask KiqStat.",
   },
   {
     q: "What happened to passes?",
@@ -48,7 +48,7 @@ const faqs = (sellsAbroad: boolean) => [
   },
   {
     q: "Is my subscription tied to football?",
-    a: "No. A plan covers every competition and every sport BetriX tracks, including anything added later at no extra cost.",
+    a: "No. A plan covers every competition and every sport KiqStat tracks, including anything added later at no extra cost.",
   },
 ];
 
@@ -162,7 +162,7 @@ export default async function PricingPage({ searchParams }: PageProps<"/pricing"
             */}
             <LegalNote>
               <p>
-                BetriX is an analytics product. We do not accept bets, hold funds, or act as a
+                KiqStat is an analytics product. We do not accept bets, hold funds, or act as a
                 bookmaker, and we are not affiliated with any bookmaker.
               </p>
               <p>

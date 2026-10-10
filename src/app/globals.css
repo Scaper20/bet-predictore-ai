@@ -1,8 +1,10 @@
 @import "tailwindcss";
 
 /* ============================================================
-   BetriX — design system
-   Dark-first, data-dense, emerald accent + gold for premium tiers.
+   KiqStat — design system
+   "Floodlights on a night pitch": dark-first, data-dense. Volt is the one
+   accent and is spent sparingly (the needle, the ball, the one number that
+   matters on a screen); gold stays for premium tiers, Signal orange is live.
 
    Tokens live as CSS custom properties (Tailwind v4 @theme), so every
    `bg-brand` / `text-ink` / etc. utility resolves through a variable rather
@@ -11,30 +13,32 @@
    ============================================================ */
 
 @theme {
-  /* Surfaces (dark, default) */
-  --color-canvas: #05080d;
+  /* Surfaces (dark, default). Ink #07090B is the ground, Pitch #0F1513 the
+     cards; the steps between are the same green-black, a little lighter. */
+  --color-canvas: #07090b;
   /* Named 'shell' rather than 'base': a --color-base token makes Tailwind
      generate text-base as a colour utility, which collides with the built-in
      text-base font-size utility and silently blacks out headings. */
-  --color-shell: #0a0f16;
-  --color-surface: #0e1520;
-  --color-surface-2: #131c29;
-  --color-surface-3: #1a2534;
-  --color-line: #1d2838;
-  --color-line-strong: #2c3a4e;
+  --color-shell: #0b0e0d;
+  --color-surface: #0f1513;
+  --color-surface-2: #151c19;
+  --color-surface-3: #1c2521;
+  --color-line: #1e2723;
+  --color-line-strong: #2e3a34;
 
-  /* Text */
-  --color-ink: #eef2f7;
-  --color-ink-muted: #8d9db2;
-  --color-ink-dim: #5a6b81;
+  /* Text: Chalk, Steel, and a dimmer Steel for tertiary labels. */
+  --color-ink: #f2f4ec;
+  --color-ink-muted: #97a39c;
+  --color-ink-dim: #6b7670;
 
-  /* Brand — sampled directly from the logo files (brand logos/*.png):
-     green field #00F48E, navy mark #2A4352, teal wedge #22AFA7. */
-  --color-brand: #00f48e;
-  --color-brand-strong: #00d680;
-  --color-brand-dim: #086b48;
-  /* Navy, not near-black — matches how the logo itself renders text on green. */
-  --color-brand-ink: #2a4352;
+  /* Brand — Volt, from the identity board. Text on a Volt fill is Ink. */
+  --color-brand: #d4ff3a;
+  --color-brand-strong: #c2ee22;
+  --color-brand-dim: #5b6e12;
+  --color-brand-ink: #07090b;
+  /* The logo's needle and ball (components/brand/logo.tsx): Volt on dark,
+     the text colour on light ("two colours on dark, one colour elsewhere"). */
+  --color-logo-accent: #d4ff3a;
 
   /* Premium accent — VIP tier, upsell badges, "best bet" highlights */
   --color-gold: #e8b54b;
@@ -42,16 +46,18 @@
   --color-gold-dim: #7a5c1e;
   --color-gold-ink: #1a1200;
 
-  /* Data accents. "cyan" is the logo's own teal wedge colour, not a generic cyan. */
-  --color-cyan: #22afa7;
+  /* Data accents. Signal is the board's "live" orange. */
+  --color-signal: #ff6a2b;
+  --color-cyan: #2fc4b2;
   --color-amber: #ffb020;
   --color-rose: #ff4d6d;
   --color-violet: #a78bfa;
 
-  /* Fonts */
-  --font-display: var(--font-heading), "Arial Narrow", ui-sans-serif, system-ui, sans-serif;
+  /* Fonts: Unbounded for headlines, Space Grotesk for the interface,
+     IBM Plex Mono for odds, probabilities and times. */
+  --font-display: var(--font-heading), ui-sans-serif, system-ui, sans-serif;
   --font-sans: var(--font-body), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-mono-jb), ui-monospace, SFMono-Regular, monospace;
+  --font-mono: var(--font-mono-plex), ui-monospace, SFMono-Regular, monospace;
 
   /* Motion */
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
@@ -69,31 +75,35 @@
 }
 
 /* Light mode — opt-in via <html data-theme="light">, set server-side in
-   layout.tsx from the `theme` cookie so there is no flash on load. Brand
-   green is darkened a step so brand-on-white text still clears AA contrast;
-   --color-ink uses the logo's exact navy, matching its white-bg variant. */
+   layout.tsx from the `theme` cookie so there is no flash on load. Chalk
+   ground, Ink text, and the logo in one colour. Volt can't carry text on
+   white, so the brand token darkens to an olive that clears AA, with white
+   text on its fills. */
 :root[data-theme="light"] {
-  --color-canvas: #f6f8fb;
+  --color-canvas: #f4f5ef;
   --color-shell: #ffffff;
   --color-surface: #ffffff;
-  --color-surface-2: #f1f4f9;
-  --color-surface-3: #e6ebf3;
-  --color-line: #e2e8f1;
-  --color-line-strong: #c9d3e3;
+  --color-surface-2: #eef0e8;
+  --color-surface-3: #e3e6dc;
+  --color-line: #e1e4da;
+  --color-line-strong: #c9cec1;
 
-  --color-ink: #2a4352;
-  --color-ink-muted: #4c5f70;
-  --color-ink-dim: #7c8fa2;
+  --color-ink: #07090b;
+  --color-ink-muted: #4c5650;
+  --color-ink-dim: #78827c;
 
-  --color-brand: #049c6b;
-  --color-brand-strong: #038a5e;
-  --color-brand-dim: #086b47;
-  --color-brand-ink: #2a4352;
+  --color-brand: #4f6b00;
+  --color-brand-strong: #435b00;
+  --color-brand-dim: #3a4f00;
+  --color-brand-ink: #ffffff;
+  --color-logo-accent: #07090b;
 
   --color-gold: #b8862e;
   --color-gold-strong: #9c7126;
   --color-gold-dim: #6b4f1c;
   --color-gold-ink: #1a1200;
+
+  --color-signal: #e0521a;
 }
 
 @layer base {
@@ -104,14 +114,22 @@
   }
   body {
     font-family: var(--font-sans);
-    font-feature-settings: "cv02", "cv03", "cv04";
   }
+  /* Unbounded is a wide face: a semibold weight and tight tracking keep
+     headings dense, as on the identity board. */
   h1, h2, h3, h4 {
     font-family: var(--font-display);
-    font-weight: 700;
-    letter-spacing: -0.01em;
+    font-weight: 600;
+    letter-spacing: -0.03em;
     text-wrap: balance;
   }
+  /* Unbounded is far heavier than the old condensed face at the same
+     weight: bold and extrabold display text drop a step so headlines read
+     like the identity board instead of crowding. Higher specificity than
+     the single-class weight utilities, on purpose. */
+  :is(h1, h2, h3, h4, .font-display):is(.font-bold, .font-semibold) { font-weight: 600; }
+  :is(h1, h2, h3, h4, .font-display):is(.font-extrabold, .font-black) { font-weight: 700; }
+
   /* Stat numbers should never jitter while polling */
   .tnum { font-variant-numeric: tabular-nums; }
 
@@ -140,12 +158,9 @@
   .glow-brand { box-shadow: 0 0 0 1px color-mix(in oklab, var(--color-brand) 35%, transparent), 0 4px 16px -6px color-mix(in oklab, var(--color-brand) 30%, transparent); }
   .glow-soft  { box-shadow: 0 10px 40px -12px rgb(0 0 0 / 0.8); }
 
-  .text-gradient-brand {
-    background: linear-gradient(100deg, var(--color-brand) 0%, #7dffc4 45%, var(--color-cyan) 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-  }
+  /* Kept as a utility name, now a flat Volt: the identity uses one accent,
+     not a gradient. */
+  .text-gradient-brand { color: var(--color-brand); }
 
   /* Hairline card border that reads well on near-black. Radius is
      deliberately tighter than the old rounded-2xl default — full roundness
@@ -188,7 +203,7 @@
 .marquee-paused:hover .animate-marquee { animation-play-state: paused; }
 
 @keyframes pulse-ring {
-  0%   { box-shadow: 0 0 0 0 color-mix(in oklab, var(--color-rose) 70%, transparent); }
+  0%   { box-shadow: 0 0 0 0 color-mix(in oklab, var(--color-signal) 70%, transparent); }
   70%  { box-shadow: 0 0 0 7px transparent; }
   100% { box-shadow: 0 0 0 0 transparent; }
 }

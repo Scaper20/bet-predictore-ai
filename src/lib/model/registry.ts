@@ -78,7 +78,7 @@ export interface ModelDescriptor {
 const MODELS: Record<ModelId, ModelDescriptor> = {
   "goals-v1": {
     id: "goals-v1",
-    brandName: "BetriX Strike",
+    brandName: "KiqStat Strike",
     publicLabel: "the model",
     internalName: "Dixon-Coles bivariate Poisson, time-weighted MLE (goals only, picks from 15 matches)",
     sport: "football",
@@ -93,7 +93,7 @@ const MODELS: Record<ModelId, ModelDescriptor> = {
   },
   "goals-v2": {
     id: "goals-v2",
-    brandName: "BetriX Strike 2",
+    brandName: "KiqStat Strike 2",
     publicLabel: "the model",
     internalName:
       "Dixon-Coles bivariate Poisson on a goals + shots-on-target response, promoted-club prior, 200-match publishing bar",
@@ -108,7 +108,7 @@ const MODELS: Record<ModelId, ModelDescriptor> = {
   },
   "result-v1": {
     id: "result-v1",
-    brandName: "BetriX Verdict",
+    brandName: "KiqStat Verdict",
     publicLabel: "the model",
     internalName: "Ordinal outcome classifier — not yet implemented",
     sport: "football",
@@ -121,7 +121,7 @@ const MODELS: Record<ModelId, ModelDescriptor> = {
   },
   "value-v1": {
     id: "value-v1",
-    brandName: "BetriX Ledger",
+    brandName: "KiqStat Ledger",
     publicLabel: "the model",
     internalName: "Price-relative value scoring — not yet implemented",
     sport: "football",
@@ -134,7 +134,7 @@ const MODELS: Record<ModelId, ModelDescriptor> = {
   },
   "hoops-v1": {
     id: "hoops-v1",
-    brandName: "BetriX Rebound",
+    brandName: "KiqStat Rebound",
     publicLabel: "the model",
     internalName: "Possession and efficiency ratings — not yet implemented",
     sport: null,

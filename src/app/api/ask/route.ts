@@ -82,7 +82,7 @@ function fail(event: Extract<AskEvent, { type: "error" }>, status: number, setCo
  */
 export async function POST(request: Request) {
   if (!aiEnabled()) {
-    return fail({ type: "error", code: "unavailable", message: "Ask BetriX isn't available right now." }, 503);
+    return fail({ type: "error", code: "unavailable", message: "Ask KiqStat isn't available right now." }, 503);
   }
 
   const parsed = parseAskRequest(await request.json().catch(() => null));
@@ -92,7 +92,7 @@ export async function POST(request: Request) {
   const paid = meets(entitlement.tier, "pass");
   const tier: AskTier = paid ? "paid" : "free";
   const viewer = await viewerForTier(entitlement.tier);
-  const unavailable = { type: "error", code: "unavailable", message: "Ask BetriX isn't available right now. Try again shortly." } as const;
+  const unavailable = { type: "error", code: "unavailable", message: "Ask KiqStat isn't available right now. Try again shortly." } as const;
 
   let used: number;
   let limit: number | null;
@@ -275,7 +275,7 @@ export async function POST(request: Request) {
           type: "error",
           message: answered
             ? "The answer was cut off. Ask again to finish it."
-            : "Ask BetriX is busy right now. Your question wasn't counted. Try again in a moment.",
+            : "Ask KiqStat is busy right now. Your question wasn't counted. Try again in a moment.",
         });
       } finally {
         try {

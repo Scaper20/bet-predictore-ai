@@ -103,8 +103,8 @@ const nextConfig: NextConfig = {
         ],
       },
       /*
-       * The dev deployment (betrix-dev.vercel.app) and every preview URL serve
-       * the same pages as www.betrix.com.ng. Left indexable they compete with
+       * The dev deployment (kiqstat-dev.vercel.app) and every preview URL serve
+       * the same pages as www.kiqstat.app. Left indexable they compete with
        * production as duplicate content, so any *.vercel.app host is noindex.
        */
       {
@@ -117,6 +117,22 @@ const nextConfig: NextConfig = {
 
   async redirects() {
     return [
+      /*
+       * The earlier addresses (BetriX, then the .com.ng KiqStat domain) and the
+       * bare kiqstat.app all land on www.kiqstat.app, keeping the path, so old
+       * links, shared slips and search results carry over. Vercel's domain
+       * settings already redirect these hosts; this is the fallback if one is
+       * ever attached without a redirect. The target must stay the host Vercel
+       * serves (www): pointing it at the bare domain, which Vercel sends to
+       * www, would loop. /api is left alone: a webhook or pg_net request does
+       * not follow a redirect.
+       */
+      ...["betrix.com.ng", "www.betrix.com.ng", "kiqstat.com.ng", "www.kiqstat.com.ng", "kiqstat.app"].map((host) => ({
+        source: "/:path((?!api/).*)",
+        has: [{ type: "host" as const, value: host }],
+        destination: "https://www.kiqstat.app/:path",
+        permanent: true,
+      })),
       ...MOVED.map((path) => ({
         source: `/${path}`,
         destination: `/${DEFAULT_SPORT}/${path}`,

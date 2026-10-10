@@ -1,4 +1,4 @@
-# BetriX ingestion
+# KiqStat ingestion
 
 Scheduled jobs that bring third-party sports data into Supabase, so pages read
 the database instead of calling provider APIs while they render.
@@ -25,8 +25,8 @@ SportyBet, Odds API ─▶ /api/cron/odds-snapshot (pg_cron, hourly) ──▶ o
 | ESPN | `soccerdata` 1.9.1 | Fixture cross-check, NPFL and the internationals registered as custom leagues. No scores: soccerdata's ESPN match-sheet reader is broken for every league. |
 | football-data.co.uk | free CSVs | European results plus Pinnacle and market-average opening/closing odds (10 seasons). |
 | openfootball | CC0 files (git clone) | History: NPFL 2009–2026, CAF Champions League, UEFA Champions League, World Cup, Euros. |
-| International results ([martj42](https://github.com/martj42/international_results)) | CC0 CSV | Every men's international since 1990 for BetriX's international competitions (≈23,000 games, ≈10,800 friendlies): World Cup qualifiers split by confederation, AFCON + qualifiers, Euro + qualifiers, Nations League, Copa América, Gold Cup, World Cup. Scores include extra time. |
-| ClubElo | `soccerdata` | Daily Elo for European and South American clubs. No African clubs, so BetriX computes its own Elo for every league (`elo` job). |
+| International results ([martj42](https://github.com/martj42/international_results)) | CC0 CSV | Every men's international since 1990 for KiqStat's international competitions (≈23,000 games, ≈10,800 friendlies): World Cup qualifiers split by confederation, AFCON + qualifiers, Euro + qualifiers, Nations League, Copa América, Gold Cup, World Cup. Scores include extra time. |
+| ClubElo | `soccerdata` | Daily Elo for European and South American clubs. No African clubs, so KiqStat computes its own Elo for every league (`elo` job). |
 
 Checked and not used: **Sofascore** (403 from GitHub's runners on every
 request), **FotMob** (removed from soccerdata after 1.8.3; its API now returns a
@@ -102,7 +102,7 @@ python -m pytest -q
 3. In the SQL editor, store the five Vault secrets listed at the top of
    `0030_live_scores_cron.sql`. Until they exist the crons do nothing.
    `betrix_site_url` must be the address that answers without a redirect
-   (`https://www.betrix.com.ng`): pg_net does not follow a 308.
+   (`https://www.kiqstat.app`): pg_net does not follow a 308.
 
 ### GitHub, once
 
@@ -124,7 +124,7 @@ python -m betrix_ingest <job> [--league CODE ...] [--dry-run] [-v]
 | `results [--days 2] [--full-season]` | finished games from TheSportsDB | 05:40 and hourly 14:40–23:40; whole season Mondays 04:30 |
 | `tables` | league standings (not cups), TheSportsDB first, football-data.org where it has none | 06:50, 23:50 |
 | `clubelo` | today's ClubElo ratings | 04:10 |
-| `elo [--full]` | BetriX Elo for every league from the training results | 04:35 |
+| `elo [--full]` | KiqStat Elo for every league from the training results | 04:35 |
 | `backfill-openfootball` | NPFL, CAF CL, UCL, World Cup, Euro history + coverage flags | manual, once |
 | `backfill-football-data-uk [--seasons 25]` | European results (25 seasons) and opening/closing odds (last 10) | manual, once |
 | `backfill-thesportsdb [--seasons 10]` | past seasons of every competition from TheSportsDB (paid key) | manual, once |

@@ -64,7 +64,7 @@ const SPORT_KEYS: Record<string, string> = {
  */
 const REGIONS = ["eu"] as const;
 
-/** Which Odds API market key serves a BetriX market id, if any. */
+/** Which Odds API market key serves a KiqStat market id, if any. */
 function marketKeyFor(market: string): "h2h" | "totals" | null {
   const family = market.split(":")[0];
   if (family === "1x2") return "h2h";

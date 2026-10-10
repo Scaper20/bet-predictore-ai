@@ -105,7 +105,7 @@ function TrendCard({ t, index }: { t: StreakTrend; index: number }) {
     >
       <div className="flex items-start gap-4">
         <div className={`grid size-16 shrink-0 place-items-center rounded-2xl ${tone.bg}`}>
-          <span className={`font-display text-3xl font-extrabold leading-none ${tone.text}`}>
+          <span className={`font-mono tracking-tight text-2xl font-medium leading-none ${tone.text}`}>
             {t.streak.run}
             {!t.streak.consecutive && <span className="text-base text-ink-dim">/{t.streak.of}</span>}
           </span>

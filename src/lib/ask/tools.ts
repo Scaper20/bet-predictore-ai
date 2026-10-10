@@ -14,7 +14,7 @@ import type { AskPickCard } from "@/lib/ask/request";
 import { toolView, type Viewer } from "@/lib/access";
 
 /**
- * Ask BetriX's tools: the only way the assistant learns anything about a
+ * Ask KiqStat's tools: the only way the assistant learns anything about a
  * fixture. Every number it quotes comes back through one of these, read off
  * the same model and price feeds the rest of the site shows.
  */

@@ -14,6 +14,7 @@ import {
 } from "@/lib/slip-tracker";
 import type { TrackedSlip } from "@/lib/tracked-slips";
 import { useTickingMinute } from "@/components/match/use-live-clock";
+import { LogoLockup } from "@/components/brand/logo";
 
 /* ----------------------------------------------------------------- shared */
 
@@ -335,7 +336,7 @@ function Stat({ label, value, accent = false }: { label: ReactNode; value: strin
   return (
     <div className="min-w-0 rounded-xl border border-line bg-surface/60 px-3 py-3 sm:px-4">
       <p className="truncate font-mono text-[10px] uppercase tracking-wider text-ink-dim">{label}</p>
-      <p className={`tnum mt-1 font-display text-2xl font-bold sm:text-3xl ${accent ? "text-brand" : "text-ink"}`}>
+      <p className={`tnum mt-1 font-mono tracking-tight text-xl font-medium sm:text-2xl ${accent ? "text-brand" : "text-ink"}`}>
         {value}
       </p>
     </div>
@@ -354,13 +355,7 @@ export function TrackedSlipCard({ view }: { view: SlipView }) {
   return (
     <article className="card p-5 sm:p-7">
       <header className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2.5">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/brand/icon-green-96.png" alt="" width={36} height={36} className="size-9 rounded-xl" aria-hidden />
-          <span className="font-display text-xl font-bold tracking-tight">
-            Betri<span className="text-brand">X</span>
-          </span>
-        </div>
+        <LogoLockup className="h-8 w-auto text-ink" />
         <SlipStatusPill status={view.status} />
       </header>
 
@@ -395,7 +390,7 @@ export function TrackedSlipCard({ view }: { view: SlipView }) {
 
       <footer className="mt-6 flex items-center justify-between gap-4 border-t border-line pt-4">
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-ink">Built on betrix.com.ng</p>
+          <p className="text-sm font-semibold text-ink">Built on kiqstat.app</p>
           <p className="mt-0.5 text-xs text-ink-dim">Probabilities, not guarantees. Bet responsibly.</p>
         </div>
         <span className="shrink-0 rounded-md border border-line-strong px-2 py-1 text-xs font-bold text-ink-muted">

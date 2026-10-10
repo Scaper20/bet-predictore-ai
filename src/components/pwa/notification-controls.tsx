@@ -113,7 +113,7 @@ export function NotificationControls({
   if (state === "unsupported") {
     return (
       <p className="text-sm leading-relaxed text-ink-muted">
-        This browser can&apos;t show notifications. On Android, open BetriX in Chrome. On iPhone, add BetriX to your
+        This browser can&apos;t show notifications. On Android, open KiqStat in Chrome. On iPhone, add KiqStat to your
         Home Screen first.
       </p>
     );
@@ -123,7 +123,7 @@ export function NotificationControls({
     return (
       <div className="space-y-3">
         <p className="text-sm leading-relaxed text-ink-muted">
-          On iPhone, notifications only work in the BetriX app on your Home Screen. Add it, open it from there, and
+          On iPhone, notifications only work in the KiqStat app on your Home Screen. Add it, open it from there, and
           switch them on.
         </p>
         <Button
@@ -132,7 +132,7 @@ export function NotificationControls({
           className="px-4 py-2.5"
           onClick={() => window.dispatchEvent(new Event(OPEN_INSTALL_EVENT))}
         >
-          How to add BetriX
+          How to add KiqStat
         </Button>
       </div>
     );
@@ -141,7 +141,7 @@ export function NotificationControls({
   if (state === "denied") {
     return (
       <p className="text-sm leading-relaxed text-ink-muted">
-        Notifications are blocked for BetriX on this device. Allow them in your browser or phone settings, then come
+        Notifications are blocked for KiqStat on this device. Allow them in your browser or phone settings, then come
         back here.
       </p>
     );

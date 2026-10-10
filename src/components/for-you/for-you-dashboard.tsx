@@ -334,12 +334,12 @@ function PickRow({
           <p className="flex min-w-0 items-center gap-2.5">
             <Crest src={pick.homeCrest} name={pick.homeTeam} size={22} />
             <span className="min-w-0 flex-1 truncate">{pick.homeTeam}</span>
-            {showScore && <span className={`tnum shrink-0 font-bold ${inPlay ? "text-rose" : ""}`}>{state.home}</span>}
+            {showScore && <span className={`tnum shrink-0 font-bold ${inPlay ? "text-signal" : ""}`}>{state.home}</span>}
           </p>
           <p className="flex min-w-0 items-center gap-2.5">
             <Crest src={pick.awayCrest} name={pick.awayTeam} size={22} />
             <span className="min-w-0 flex-1 truncate">{pick.awayTeam}</span>
-            {showScore && <span className={`tnum shrink-0 font-bold ${inPlay ? "text-rose" : ""}`}>{state.away}</span>}
+            {showScore && <span className={`tnum shrink-0 font-bold ${inPlay ? "text-signal" : ""}`}>{state.away}</span>}
           </p>
         </div>
 
@@ -477,7 +477,7 @@ function AccaCard({
           <p className="text-[11px] uppercase tracking-wider text-ink-muted">
             Combined probability
           </p>
-          <p className="tnum font-display text-2xl font-extrabold text-brand">
+          <p className="tnum font-mono tracking-tight text-xl font-medium text-brand">
             {percent(acca.combinedProbability, 1)}
           </p>
         </div>

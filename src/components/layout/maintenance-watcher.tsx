@@ -11,7 +11,7 @@ function bypassed(): boolean {
 }
 
 /**
- * Moves people who already have BetriX open onto the maintenance page.
+ * Moves people who already have KiqStat open onto the maintenance page.
  *
  * The proxy blocks every new request while maintenance mode is on, but a tab
  * that's already loaded — signed in or not — would otherwise keep showing

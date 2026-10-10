@@ -131,7 +131,7 @@ export function MobileDrawer({
           )}
           {forge && <Shortcut href={forge.href} tone="brand" icon="forge" label={forge.label} desc={forge.desc} onClose={onClose} />}
           {ask && (
-            <Shortcut href={ask.href} action={ask.action} tone="violet" icon="ask" label={ask.label} desc={ask.desc} onClose={onClose} />
+            <Shortcut href={ask.href} action={ask.action} tone="brand" icon="ask" label={ask.label} desc={ask.desc} onClose={onClose} />
           )}
           {pricing && <Shortcut href={pricing.href} tone="amber" icon="pricing" label={pricing.label} desc="Plans in Naira" onClose={onClose} />}
         </div>
@@ -388,7 +388,7 @@ function Shortcut({
 }
 
 function ShortcutGlyph({ name }: { name: ShortcutIcon }) {
-  if (name === "live") return <span className="live-dot size-2.5 rounded-full bg-rose" aria-hidden />;
+  if (name === "live") return <span className="live-dot size-2.5 rounded-full bg-signal" aria-hidden />;
   const p = { viewBox: "0 0 24 24", className: "size-5", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinejoin: "round" as const, strokeLinecap: "round" as const, "aria-hidden": true };
   if (name === "forge") return <svg {...p}><path d="M13 3 5 14h6l-1 7 8-11h-6z" /></svg>;
   if (name === "ask") return <svg {...p}><path d="M4 5h16v11H9l-5 4z" /></svg>;

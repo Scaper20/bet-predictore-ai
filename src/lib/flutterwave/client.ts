@@ -1,7 +1,7 @@
 import "server-only";
 
 /**
- * Flutterwave v3, the two calls BetriX needs: start a hosted checkout
+ * Flutterwave v3, the two calls KiqStat needs: start a hosted checkout
  * (Flutterwave Standard) and verify a transaction by our own reference.
  * Checked against developer.flutterwave.com (Standard, verify_by_reference,
  * webhooks) in October 2026.
@@ -72,7 +72,7 @@ export async function createPaymentLink(p: PaymentLinkParams): Promise<string> {
       payment_options: p.methods,
       customer: { email: p.email, ...(p.name ? { name: p.name } : {}) },
       meta: p.meta,
-      customizations: { title: "BetriX", description: p.description },
+      customizations: { title: "KiqStat", description: p.description },
     }),
   });
   return data.link;

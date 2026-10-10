@@ -7,8 +7,8 @@ import { SITE_URL as SITE } from "@/lib/site-url";
 import { sportPath } from "@/lib/routes";
 
 export const metadata: Metadata = {
-  title: { absolute: "About BetriX · Who We Are" },
-  description: `BetriX is a football data and prediction platform built by ${COMPANY.legalName}, a ${COMPANY.nationality} company. What we do, what we don't, and how to reach us.`,
+  title: { absolute: "About KiqStat · Who We Are" },
+  description: `KiqStat is a football data and prediction platform built by ${COMPANY.legalName}, a ${COMPANY.nationality} company. What we do, what we don't, and how to reach us.`,
   alternates: { canonical: "/about" },
 };
 
@@ -20,32 +20,36 @@ export const metadata: Metadata = {
  */
 const FAQ: { q: string; a: string }[] = [
   {
-    q: "Is BetriX legit?",
-    a: `Yes. BetriX is a product of ${COMPANY.legalName}, a ${COMPANY.nationality} company. It publishes football data and statistical predictions, and logs every pick before kick-off so anyone can check how it has done.`,
+    q: "Is KiqStat the same as BetriX?",
+    a: `Yes. BetriX is now called KiqStat. It is the same product from the same company, ${COMPANY.legalName}, with the same model and the same track record, under a new name and a new address: www.kiqstat.app. Old betrix.com.ng links bring you straight here.`,
   },
   {
-    q: "Is BetriX a scam?",
-    a: "No. BetriX never takes bets, never holds your money and never promises wins. Most of the site is free with no card required, and paid plans are optional subscriptions paid through Paystack.",
+    q: "Is KiqStat legit?",
+    a: `Yes. KiqStat is a product of ${COMPANY.legalName}, a ${COMPANY.nationality} company. It publishes football data and statistical predictions, and logs every pick before kick-off so anyone can check how it has done.`,
   },
   {
-    q: "Is BetriX a betting company or a bookmaker?",
-    a: "No. BetriX is not a bookmaker and is not affiliated with any. You can't place a bet or deposit money on BetriX. It shows data and probabilities; what you do with them, and where, is up to you.",
+    q: "Is KiqStat a scam?",
+    a: "No. KiqStat never takes bets, never holds your money and never promises wins. Most of the site is free with no card required, and paid plans are optional subscriptions paid through Paystack.",
   },
   {
-    q: "Who owns BetriX?",
-    a: `BetriX is built and run by ${COMPANY.legalName}, a ${COMPANY.nationality} company.`,
+    q: "Is KiqStat a betting company or a bookmaker?",
+    a: "No. KiqStat is not a bookmaker and is not affiliated with any. You can't place a bet or deposit money on KiqStat. It shows data and probabilities; what you do with them, and where, is up to you.",
   },
   {
-    q: "Does BetriX guarantee wins or sell fixed matches?",
-    a: "No. Nobody can guarantee a football result, and anyone selling fixed matches is running a scam. BetriX predictions are probabilities from a statistical model, and some of them lose. The track record shows the losses as well as the wins.",
+    q: "Who owns KiqStat?",
+    a: `KiqStat is built and run by ${COMPANY.legalName}, a ${COMPANY.nationality} company.`,
+  },
+  {
+    q: "Does KiqStat guarantee wins or sell fixed matches?",
+    a: "No. Nobody can guarantee a football result, and anyone selling fixed matches is running a scam. KiqStat predictions are probabilities from a statistical model, and some of them lose. The track record shows the losses as well as the wins.",
   },
   {
     q: "How do I pay, and is it safe?",
-    a: "Payments go through Paystack, in Naira, by card or bank transfer. BetriX never sees or stores your card details, and you can cancel a plan at any time.",
+    a: "Payments go through Paystack, in Naira, by card or bank transfer. KiqStat never sees or stores your card details, and you can cancel a plan at any time.",
   },
   {
-    q: "How do I spot someone pretending to be BetriX?",
-    a: `The only BetriX website is www.betrix.com.ng and our email ends in @betrix.com.ng. BetriX will never ask for your password, your bank PIN or a payment to a personal account, by email, phone or WhatsApp. Report anything suspicious to ${COMPANY.supportEmail}.`,
+    q: "How do I spot someone pretending to be KiqStat?",
+    a: `The only KiqStat website is kiqstat.app and our email ends in @kiqstat.app. KiqStat will never ask for your password, your bank PIN or a payment to a personal account, by email, phone or WhatsApp. Report anything suspicious to ${COMPANY.supportEmail}.`,
   },
 ];
 
@@ -59,7 +63,7 @@ export default function AboutPage() {
             {
               "@type": "AboutPage",
               url: `${SITE}/about`,
-              name: "About BetriX",
+              name: "About KiqStat",
               about: { "@id": `${SITE}/#organization` },
             },
             {
@@ -74,11 +78,11 @@ export default function AboutPage() {
         }}
       />
       <DocPage
-        eyebrow="About BetriX"
+        eyebrow="About KiqStat"
         title="Football data you can check for yourself"
         intro={
           <>
-            BetriX is a football data and prediction platform for fans across Africa and the world. It is a product of{" "}
+            KiqStat is a football data and prediction platform for fans across Africa and the world. It is a product of{" "}
             <strong className="text-ink">{COMPANY.legalName}</strong>, a {COMPANY.nationality} company.
           </>
         }
@@ -95,11 +99,11 @@ export default function AboutPage() {
         sections={[
           {
             id: "what-betrix-is",
-            title: "What BetriX is",
+            title: "What KiqStat is",
             body: (
               <>
                 <p>
-                  BetriX turns real football results into probabilities. A statistical model rates how strongly every
+                  KiqStat turns real football results into probabilities. A statistical model rates how strongly every
                   team attacks and defends, works out the chance of every scoreline in a game, and from those the chance
                   of a home win, of over 2.5 goals, of both teams scoring and every other common market.
                 </p>
@@ -134,8 +138,8 @@ export default function AboutPage() {
                   do their own reading.
                 </li>
                 <li>
-                  <strong className="text-ink">Forge and Ask BetriX.</strong> Forge builds a slip from the
-                  model&apos;s own numbers to the risk and odds you choose; Ask BetriX answers questions about any
+                  <strong className="text-ink">Forge and Ask KiqStat.</strong> Forge builds a slip from the
+                  model&apos;s own numbers to the risk and odds you choose; Ask KiqStat answers questions about any
                   match. Both are free to try, and paid plans add more of each plus deeper markets and value alerts.{" "}
                   <Link href="/pricing" className="text-brand hover:underline">See plans</Link>.
                 </li>
@@ -147,7 +151,7 @@ export default function AboutPage() {
             title: "What we don't do",
             body: (
               <ul className="list-disc space-y-1.5 pl-5">
-                <li>We are <strong className="text-ink">not a bookmaker</strong> and are not affiliated with any. You can&apos;t bet or deposit money on BetriX.</li>
+                <li>We are <strong className="text-ink">not a bookmaker</strong> and are not affiliated with any. You can&apos;t bet or deposit money on KiqStat.</li>
                 <li>We <strong className="text-ink">never promise wins</strong> and never sell &ldquo;fixed&rdquo; or &ldquo;sure&rdquo; matches. Anyone who does is lying.</li>
                 <li>We <strong className="text-ink">don&apos;t hide the losses.</strong> Where the model has too little data to trust, it says so and publishes no pick.</li>
                 <li>We <strong className="text-ink">don&apos;t take your card details.</strong> Payments are handled by Paystack.</li>
@@ -159,7 +163,7 @@ export default function AboutPage() {
             title: "Responsible play",
             body: (
               <p>
-                BetriX is for adults, 18 and over. Predictions are estimates, not certainties: never stake money you
+                KiqStat is for adults, 18 and over. Predictions are estimates, not certainties: never stake money you
                 can&apos;t afford to lose. If betting stops being fun,{" "}
                 <Link href="/responsible-gambling" className="text-brand hover:underline">get help here</Link>.
               </p>
@@ -167,7 +171,7 @@ export default function AboutPage() {
           },
           {
             id: "faq",
-            title: "Is BetriX real? Common questions",
+            title: "Is KiqStat real? Common questions",
             body: (
               <div className="space-y-5">
                 {FAQ.map(({ q, a }) => (
@@ -191,7 +195,7 @@ export default function AboutPage() {
                   {COMPANY.supportEmail}
                 </a>
                 <br />
-                Website: <a href={SITE} className="text-brand hover:underline">www.betrix.com.ng</a>
+                Website: <a href={SITE} className="text-brand hover:underline">kiqstat.app</a>
               </p>
             ),
           },

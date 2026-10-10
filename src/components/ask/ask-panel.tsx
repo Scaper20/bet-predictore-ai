@@ -9,6 +9,7 @@ import { useEntitlement } from "@/components/entitlements/entitlement-provider";
 import { LocalTime } from "@/components/ui/local-time";
 import type { AskEvent, AskPickCard, AskTurn } from "@/lib/ask/request";
 import { ASK_FREE_DAILY, ASK_GUEST_TOTAL, ASK_MAX_QUESTION } from "@/lib/ask/request";
+import { AskAvatar } from "@/components/ask/ask-avatar";
 
 /* ------------------------------------------------------------------ types */
 
@@ -319,16 +320,16 @@ function AskPanelInner({ page }: { page: { matchId: string; label: string } | nu
   return (
     <div
       role="dialog"
-      aria-label="Ask BetriX"
+      aria-label="Ask KiqStat"
       className="fixed inset-0 z-[60] flex flex-col bg-canvas lg:inset-auto lg:bottom-0 lg:right-0 lg:top-[var(--header-h)] lg:z-40 lg:w-[27rem] lg:border-l lg:border-line lg:bg-shell lg:shadow-[-24px_0_60px_-30px_rgb(0_0_0/0.9)]"
       style={{ paddingTop: "env(safe-area-inset-top)" }}
     >
       {/* header */}
       <div className="flex items-center gap-3 border-b border-line px-4 py-3.5 sm:px-5">
-        <AskAvatar />
+        <AskAvatar size="lg" />
         <div className="min-w-0 flex-1">
           <p className="font-display text-lg font-bold leading-tight">
-            Ask Betri<span className="text-brand">X</span>
+            Ask KiqStat
           </p>
           <p className="truncate text-xs text-ink-muted">{subtitle}</p>
         </div>
@@ -348,7 +349,7 @@ function AskPanelInner({ page }: { page: { matchId: string; label: string } | nu
         <button
           type="button"
           onClick={closeAsk}
-          aria-label="Close Ask BetriX"
+          aria-label="Close Ask KiqStat"
           className="grid size-10 place-items-center rounded-xl border border-line text-ink-muted transition-colors hover:border-line-strong hover:text-ink"
         >
           <svg viewBox="0 0 20 20" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
@@ -362,13 +363,13 @@ function AskPanelInner({ page }: { page: { matchId: string; label: string } | nu
       <div ref={scroller} className="flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 py-4 sm:px-5">
         {(matchContext || slipContext) && (
           <div className="flex">
-            <span className="inline-flex max-w-full items-center gap-2 rounded-lg bg-violet/12 px-3 py-1.5 text-xs font-medium text-violet">
+            <span className="inline-flex max-w-full items-center gap-2 rounded-lg bg-brand/10 px-3 py-1.5 text-xs font-medium text-brand">
               <span className="truncate">About: {matchContext?.label ?? `your slip (${slipContext?.length} legs)`}</span>
               <button
                 type="button"
                 onClick={() => setUseContextPage(false)}
                 aria-label="Don't use this page"
-                className="shrink-0 text-violet/70 hover:text-violet"
+                className="shrink-0 text-brand/70 hover:text-brand"
               >
                 ✕
               </button>
@@ -395,7 +396,7 @@ function AskPanelInner({ page }: { page: { matchId: string; label: string } | nu
       <div className="border-t border-line px-4 pb-3 pt-3 sm:px-5" style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}>
         {!enabled ? (
           <p className="rounded-xl border border-line bg-surface px-4 py-3 text-sm text-ink-muted">
-            Ask BetriX isn&apos;t available right now. Check back soon.
+            Ask KiqStat isn&apos;t available right now. Check back soon.
           </p>
         ) : (
           <>
@@ -493,30 +494,17 @@ function AskPanelInner({ page }: { page: { matchId: string; label: string } | nu
 
 /* --------------------------------------------------------------- pieces */
 
-function AskAvatar({ small = false }: { small?: boolean }) {
-  return (
-    <span
-      className={`grid shrink-0 place-items-center rounded-full bg-violet font-display font-extrabold text-canvas ${
-        small ? "size-7 text-sm" : "size-11 text-xl"
-      }`}
-      aria-hidden
-    >
-      X
-    </span>
-  );
-}
-
 function EmptyIntro({ context }: { context: boolean }) {
   return (
     <div className="px-1 pb-2 pt-6 text-center">
       <div className="mx-auto w-fit">
-        <AskAvatar />
+        <AskAvatar size="lg" />
       </div>
       <p className="mt-4 font-display text-2xl font-bold">
         {context ? "Ask about this, or anything" : "Ask about any match"}
       </p>
       <p className="mx-auto mt-2 max-w-xs text-sm leading-relaxed text-ink-muted">
-        Picks, prices, form, accas. Every answer comes from the BetriX model and live SportyBet prices, and you can add
+        Picks, prices, form, accas. Every answer comes from the KiqStat model and live SportyBet prices, and you can add
         what it suggests straight to your slip.
       </p>
       <p className="mx-auto mt-3 max-w-xs text-[11px] text-ink-dim">
@@ -533,9 +521,9 @@ function GuestGate({ pathname }: { pathname: string }) {
     <div className="absolute inset-0 z-10 flex items-center justify-center bg-canvas/55 p-5 backdrop-blur-md">
       <div className="w-full max-w-sm rounded-2xl border border-line bg-shell/95 p-6 text-center shadow-2xl">
         <div className="mx-auto w-fit">
-          <AskAvatar />
+          <AskAvatar size="lg" />
         </div>
-        <p className="mt-4 font-display text-2xl font-bold">Keep asking BetriX</p>
+        <p className="mt-4 font-display text-2xl font-bold">Keep asking KiqStat</p>
         <p className="mt-2 text-sm leading-relaxed text-ink-muted">
           You&apos;ve used your {ASK_GUEST_TOTAL} free questions. Create a free account to get {ASK_FREE_DAILY} questions
           a day. Your chat stays right here.
@@ -573,9 +561,9 @@ function AssistantBubble({ message }: { message: ChatMessage }) {
         {message.pending && message.status && (
           <p className={`flex items-center gap-2 text-xs text-ink-muted ${empty ? "" : "pt-1"}`}>
             <span className="flex gap-1" aria-hidden>
-              <span className="size-1.5 animate-pulse rounded-full bg-violet" />
-              <span className="size-1.5 animate-pulse rounded-full bg-violet [animation-delay:150ms]" />
-              <span className="size-1.5 animate-pulse rounded-full bg-violet [animation-delay:300ms]" />
+              <span className="size-1.5 animate-pulse rounded-full bg-brand" />
+              <span className="size-1.5 animate-pulse rounded-full bg-brand [animation-delay:150ms]" />
+              <span className="size-1.5 animate-pulse rounded-full bg-brand [animation-delay:300ms]" />
             </span>
             {message.status}
           </p>

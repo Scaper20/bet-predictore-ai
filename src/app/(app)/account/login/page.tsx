@@ -8,7 +8,7 @@ import { POST_AUTH_DESTINATION } from "@/lib/routes";
 import { LoginForm } from "@/components/auth/login-form";
 import { Container } from "@/components/ui/container";
 
-export const metadata: Metadata = { title: "Sign in - BetriX" };
+export const metadata: Metadata = { title: "Sign in - KiqStat" };
 
 export default async function LoginPage({
   searchParams,
@@ -48,7 +48,7 @@ export default async function LoginPage({
           </div>
 
           <h1 className="font-display text-3xl font-extrabold tracking-tight sm:text-4xl lg:text-5xl">
-            Welcome back to <span className="text-gradient-brand">BetriX</span>
+            Welcome back to <span className="text-gradient-brand">KiqStat</span>
           </h1>
 
           <p className="text-base leading-relaxed text-ink-muted">

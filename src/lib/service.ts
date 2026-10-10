@@ -250,7 +250,7 @@ export async function matchDetail(id: string): Promise<MatchDetail | null> {
 /**
  * The fitted prediction for one fixture, without the written analysis.
  *
- * For Ask BetriX (lib/ask/tools.ts), which reads the numbers and writes its
+ * For Ask KiqStat (lib/ask/tools.ts), which reads the numbers and writes its
  * own answer: going through matchDetail() would pay for a second model call
  * (writeAnalysis) on every question about a fixture. Cached briefly, since a
  * conversation tends to ask about the same match several times in a row.

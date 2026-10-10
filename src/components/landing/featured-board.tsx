@@ -249,5 +249,5 @@ function TeamLine({ team }: { team: FeaturedRow["home"] }) {
 
 function LiveClock({ status, minute, at }: { status: FeaturedRow["status"]; minute: number | null; at: number }) {
   const now = useTickingMinute(minute, status, at);
-  return <span className="text-rose">{status === "halftime" ? "HT" : now ? `${now}'` : "LIVE"}</span>;
+  return <span className="text-signal">{status === "halftime" ? "HT" : now ? `${now}'` : "LIVE"}</span>;
 }

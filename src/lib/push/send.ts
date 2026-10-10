@@ -16,7 +16,7 @@ const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
 const privateKey = process.env.VAPID_PRIVATE_KEY;
 // Push services contact this address if our traffic misbehaves. Apple rejects
 // anything that is not a mailto: or an https URL.
-const subject = process.env.VAPID_SUBJECT ?? "mailto:support@betrix.com.ng";
+const subject = process.env.VAPID_SUBJECT ?? "mailto:support@kiqstat.app";
 
 export const pushConfigured = Boolean(publicKey && privateKey);
 

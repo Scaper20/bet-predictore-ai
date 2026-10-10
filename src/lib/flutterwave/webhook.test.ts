@@ -41,7 +41,7 @@ describe("Flutterwave webhook", () => {
     expect(grant).toHaveBeenCalledWith("betrix_fw_user-2_def");
   });
 
-  it("acknowledges, but ignores, references BetriX didn't issue", async () => {
+  it("acknowledges, but ignores, references KiqStat didn't issue", async () => {
     const { POST } = await import("@/app/api/billing/flutterwave/webhook/route");
     expect((await POST(delivery({ event: "charge.completed", data: { tx_ref: "dashboard-link-1" } }, HASH))).status).toBe(200);
     expect((await POST(delivery({ event: "transfer.completed", data: { reference: "payout-1" } }, HASH))).status).toBe(200);

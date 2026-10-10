@@ -8,7 +8,7 @@ import { POST_AUTH_DESTINATION } from "@/lib/routes";
 import { SignUpForm } from "@/components/auth/sign-up-form";
 import { Container } from "@/components/ui/container";
 
-export const metadata: Metadata = { title: "Create account - BetriX" };
+export const metadata: Metadata = { title: "Create account - KiqStat" };
 
 export default async function SignUpPage({
   searchParams,

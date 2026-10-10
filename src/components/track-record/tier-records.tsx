@@ -55,7 +55,7 @@ function TierCard({
       <p className="mt-0.5 text-xs text-ink-dim">{hint}</p>
       {show ? (
         <div className="mt-4 flex items-end justify-between gap-4">
-          <p className={`tnum font-display text-4xl font-extrabold ${highlight ? "text-amber" : "text-brand"}`}>
+          <p className={`tnum font-mono tracking-tighter text-3xl font-medium ${highlight ? "text-amber" : "text-brand"}`}>
             {percent(record.winRate ?? 0, 1)}
           </p>
           <p className="tnum text-right text-xs text-ink-muted">

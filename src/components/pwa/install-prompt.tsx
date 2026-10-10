@@ -120,7 +120,7 @@ export function InstallPrompt() {
         <img src="/icons/icon-192.png" alt="" width={48} height={48} className="size-12 shrink-0 rounded-xl" />
         <div className="min-w-0 flex-1">
           <h2 id="install-title" className="text-sm font-semibold text-ink">
-            {route === "installed" ? "BetriX is already on your phone" : "Get the BetriX app"}
+            {route === "installed" ? "KiqStat is already on your phone" : "Get the KiqStat app"}
           </h2>
 
           {route === "prompt" && (

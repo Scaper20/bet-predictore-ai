@@ -17,7 +17,7 @@ import { newTicketNotificationEmail } from "@/lib/email-templates";
 
 const COOKIE = "bx_support_guest";
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 90;
-const SUPPORT_INBOX = process.env.SUPPORT_INBOX_EMAIL ?? "support@betrix.com.ng";
+const SUPPORT_INBOX = process.env.SUPPORT_INBOX_EMAIL ?? "support@kiqstat.app";
 
 // No account to rate-limit on, so two caps: messages per conversation, and
 // new conversations per IP (each one emails the support inbox).

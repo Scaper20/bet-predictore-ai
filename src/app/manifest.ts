@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 import { sportPath } from "@/lib/routes";
 
 /**
- * Web app manifest — what makes BetriX installable to a phone's home screen.
+ * Web app manifest — what makes KiqStat installable to a phone's home screen.
  *
  * Opens on today's predictions rather than the marketing home page: someone
  * who installed the app already knows what it is and came back for the picks.
@@ -16,15 +16,15 @@ import { sportPath } from "@/lib/routes";
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: "/",
-    name: "BetriX — Football Predictions",
-    short_name: "BetriX",
+    name: "KiqStat — Football Predictions",
+    short_name: "KiqStat",
     description:
       "Football predictions for fans across Africa and the world, fitted on real results: probabilities, live scores and the sample size behind every pick.",
     start_url: sportPath("predictions"),
     scope: "/",
     display: "standalone",
-    background_color: "#05080d",
-    theme_color: "#05080d",
+    background_color: "#07090b",
+    theme_color: "#07090b",
     lang: "en-NG",
     dir: "ltr",
     categories: ["sports", "news"],

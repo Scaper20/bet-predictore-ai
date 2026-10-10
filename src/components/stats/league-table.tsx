@@ -190,7 +190,7 @@ function Row({
     <tr
       ref={refFn}
       className={`relative border-b border-line/70 transition-colors last:border-0 ${
-        highlighted ? "bg-brand/[0.07]" : live ? "bg-rose/[0.05]" : "hover:bg-surface-2/50"
+        highlighted ? "bg-brand/[0.07]" : live ? "bg-signal/[0.05]" : "hover:bg-surface-2/50"
       } ${moved === "up" ? "row-moved-up" : moved === "down" ? "row-moved-down" : ""}`}
     >
       <td className="relative py-2.5 pl-4 sm:pl-5">
@@ -232,7 +232,7 @@ function Row({
       {showForm && (
         <td className="hidden py-2.5 md:table-cell">{form && form.length > 0 ? <FormPips letters={form.slice(0, 5)} size="sm" index={index} /> : null}</td>
       )}
-      <td className="tnum py-2.5 pr-4 text-right font-display text-base font-bold sm:pr-5">{r.points}</td>
+      <td className="tnum py-2.5 pr-4 text-right font-mono text-base font-medium sm:pr-5">{r.points}</td>
     </tr>
   );
 }

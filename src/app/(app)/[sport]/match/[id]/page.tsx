@@ -239,15 +239,15 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
               <TeamBlock team={match.home} matchId={match.id} side="home" />
               <div className="text-center">
                 {live ? (
-                  <LiveScore className="tnum font-display text-4xl font-extrabold leading-none sm:text-6xl" />
+                  <LiveScore className="tnum font-mono tracking-tighter text-3xl font-medium leading-none sm:text-5xl" />
                 ) : match.status === "finished" ? (
-                  <p className="tnum font-display text-4xl font-extrabold leading-none sm:text-6xl">
+                  <p className="tnum font-mono tracking-tighter text-3xl font-medium leading-none sm:text-5xl">
                     {match.score.home ?? 0}
                     <span className="mx-1.5 text-ink-dim sm:mx-3">-</span>
                     {match.score.away ?? 0}
                   </p>
                 ) : (
-                  <p className="tnum font-display text-3xl font-bold leading-none sm:text-5xl"><LocalTime iso={match.kickoff} /></p>
+                  <p className="tnum font-mono tracking-tighter text-2xl font-medium leading-none sm:text-4xl"><LocalTime iso={match.kickoff} /></p>
                 )}
                 {live ? (
                   <LiveProgress />
@@ -335,7 +335,7 @@ function Overview({
             <div className="mt-2 flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
               <p className="font-display text-2xl font-bold text-ink sm:text-3xl">{pick.label}</p>
               <div className="text-right">
-                <AnimatedNumber value={pick.probability * 100} decimals={1} suffix="%" className="font-display text-3xl font-extrabold text-brand sm:text-4xl" />
+                <AnimatedNumber value={pick.probability * 100} decimals={1} suffix="%" className="font-mono tracking-tighter text-2xl font-semibold text-brand sm:text-3xl" />
               </div>
             </div>
             {prediction.sufficiency.level === "limited" && (
@@ -387,7 +387,7 @@ function Fact({ label, value, hot = false, index }: { label: string; value: stri
   return (
     <div style={{ ["--i" as string]: index }} className={`rounded-xl border px-3 py-3 text-center ${hot ? "border-brand/25 bg-brand/[0.06]" : "border-line bg-surface"}`}>
       <p className="truncate text-[10px] font-medium uppercase tracking-wider text-ink-dim">{label}</p>
-      <p className={`tnum mt-1 font-display text-lg font-bold sm:text-xl ${hot ? "text-brand" : "text-ink"}`}>{value}</p>
+      <p className={`tnum mt-1 whitespace-nowrap font-mono tracking-tighter text-base font-medium sm:text-xl sm:tracking-tight ${hot ? "text-brand" : "text-ink"}`}>{value}</p>
     </div>
   );
 }

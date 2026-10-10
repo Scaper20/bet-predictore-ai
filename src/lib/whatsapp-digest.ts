@@ -173,7 +173,7 @@ export function formatPicksMessage(picks: PersonalizedPick[]): string {
   });
 
   const overflow = picks.length - shown.length;
-  const header = `*BetriX — Today's Picks*\n${shown.length} pick${shown.length === 1 ? "" : "s"} for the next 24 hours, all at odds of ${odds(DIGEST_MIN_ODDS)} or longer.`;
+  const header = `*KiqStat — Today's Picks*\n${shown.length} pick${shown.length === 1 ? "" : "s"} for the next 24 hours, all at odds of ${odds(DIGEST_MIN_ODDS)} or longer.`;
   const footer =
     overflow > 0 ? `+${overflow} more at ${SITE_URL}/football/predictions` : `${SITE_URL}/football/predictions`;
 
@@ -195,7 +195,7 @@ export function formatAccaMessage(acca: DigestAcca): string {
 }
 
 export const NO_PICK_MESSAGE = [
-  "*BetriX — Today's Picks*",
+  "*KiqStat — Today's Picks*",
   "Nothing in the next 24 hours clears our bar — enough history, odds of 1.40 or longer. We'd rather send nothing than guess.",
   `Live scores anyway → ${SITE_URL}`,
 ].join("\n\n");

@@ -20,7 +20,7 @@ export default async function AdminWhatsappDigestPage() {
           <h1 className="font-display text-2xl font-bold">WhatsApp digest</h1>
           <p className="mt-1 max-w-2xl text-sm text-ink-muted">
             Computed once a day, early morning. Copy each message below and paste it into the
-            BetriX Picks community — nothing here posts to WhatsApp automatically.
+            KiqStat Picks community — nothing here posts to WhatsApp automatically.
           </p>
         </div>
         <RegenerateDigestButton />

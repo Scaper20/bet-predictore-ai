@@ -1,6 +1,6 @@
 /**
  * Named kickoff windows in Lagos time — "today", "tonight", "the weekend" —
- * shared by Ask BetriX and Forge so both mean the same thing by them.
+ * shared by Ask KiqStat and Forge so both mean the same thing by them.
  */
 
 import { APP_TIMEZONE, appDayBounds } from "@/lib/format";

@@ -72,7 +72,7 @@ async function logUpcomingPicks(admin: ReturnType<typeof supabaseAdmin>): Promis
       fair_odds: p.topPick!.fairOdds,
       // Stamped from the MARKET rather than from whichever model happens to
       // be active, so the attribution is already correct on the day a second
-      // model starts publishing — its picks separate from BetriX Strike's
+      // model starts publishing — its picks separate from KiqStat Strike's
       // without this line changing. The column default only exists to
       // backfill rows written before 0012.
       model_id: modelIdForMarket(p.topPick!.market),

@@ -7,7 +7,7 @@ import { sportPath } from "@/lib/routes";
 export const metadata: Metadata = {
   title: "How Our Picks Work",
   description:
-    "How BetriX turns real results into probabilities: team ratings, a scoreline model, the rules for when we publish a pick, and how every pick is graded.",
+    "How KiqStat turns real results into probabilities: team ratings, a scoreline model, the rules for when we publish a pick, and how every pick is graded.",
   alternates: { canonical: "/how-it-works" },
 };
 
@@ -18,7 +18,7 @@ export default function HowItWorksPage() {
       title="From real results to a probability"
       intro={
         <>
-          No tipsters, no gut feel. Every number on BetriX comes from one statistical model fitted on thousands of
+          No tipsters, no gut feel. Every number on KiqStat comes from one statistical model fitted on thousands of
           finished games, and every pick it publishes is graded in public. Here is the whole process in plain words.
         </>
       }

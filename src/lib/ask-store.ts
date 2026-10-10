@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Ask BetriX's client state that lives outside the panel: whether it's open,
+ * Ask KiqStat's client state that lives outside the panel: whether it's open,
  * what page the user is on (set by <AskPageContext> on match pages), and a
  * question queued by a button elsewhere ("Ask about this match").
  *

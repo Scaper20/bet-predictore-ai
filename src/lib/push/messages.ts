@@ -69,7 +69,7 @@ export function dailyPayload(opts: {
   if (record) {
     return {
       title: "Yesterday's results",
-      body: `${record.won} of ${record.won + record.lost} BetriX picks won (${percent(record.won / (record.won + record.lost))}). Tap for the full track record.`,
+      body: `${record.won} of ${record.won + record.lost} KiqStat picks won (${percent(record.won / (record.won + record.lost))}). Tap for the full track record.`,
       url: sportPath("trackRecord"),
       tag: "daily",
     };
@@ -101,7 +101,7 @@ export function valueAlertsPayload(alerts: AlertForPush[]): PushPayload | null {
 
 export const TEST_PAYLOAD: PushPayload = {
   title: "Notifications are on",
-  body: "This is how BetriX will reach you: today's picks each morning, Strong picks before kick-off, and how they did.",
+  body: "This is how KiqStat will reach you: today's picks each morning, Strong picks before kick-off, and how they did.",
   url: sportPath("predictions"),
   tag: "test",
 };

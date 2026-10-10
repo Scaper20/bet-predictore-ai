@@ -8,42 +8,42 @@ import { TIER_LABEL } from "@/lib/outreach";
 import type { Tier } from "@/lib/entitlements";
 
 function button(href: string, label: string): string {
-  return `<p style="margin:24px 0 0;"><a href="${href}" style="display:inline-block;background:#00c97a;color:#05080d;font-weight:700;text-decoration:none;padding:10px 20px;border-radius:8px;font-size:14px;">${label}</a></p>`;
+  return `<p style="margin:24px 0 0;"><a href="${href}" style="display:inline-block;background:#d4ff3a;color:#07090b;font-weight:700;text-decoration:none;padding:10px 20px;border-radius:8px;font-size:14px;">${label}</a></p>`;
 }
 
 /** Only on the one-off outreach campaigns below — transactional email
  * (receipts, replies, cancellations) isn't marketing and doesn't carry
  * this. See supabase/migrations/0020_email_campaigns.sql. */
 function unsubscribeFooter(url: string): string {
-  return `<p style="margin:28px 0 0;font-size:12px;color:#8d9db2;">Sent to you personally by the BetriX team, not an automated blast.
-  If you'd rather not get these, <a href="${url}" style="color:#8d9db2;">unsubscribe here</a> — this never affects your account or billing emails.</p>`;
+  return `<p style="margin:28px 0 0;font-size:12px;color:#6b7670;">Sent to you personally by the KiqStat team, not an automated blast.
+  If you'd rather not get these, <a href="${url}" style="color:#6b7670;">unsubscribe here</a> — this never affects your account or billing emails.</p>`;
 }
 
 export function welcomeEmail(): { subject: string; html: string } {
   return {
-    subject: "Welcome to BetriX",
+    subject: "Welcome to KiqStat",
     html: emailLayout(`
-      <p style="margin:0 0 12px;font-size:17px;font-weight:700;">Welcome to BetriX</p>
-      <p style="margin:0;">Your account is set up. BetriX gives you data-driven football predictions from a
+      <p style="margin:0 0 12px;font-size:17px;font-weight:700;">Welcome to KiqStat</p>
+      <p style="margin:0;">Your account is set up. KiqStat gives you data-driven football predictions from a
       statistical model fitted on real results — real fixtures, real live scores, no guesswork.</p>
       ${button(SITE_URL, "See today's matches")}
-      <p style="margin:24px 0 0;font-size:13px;color:#8d9db2;">Want to see how it has actually done? Every
+      <p style="margin:24px 0 0;font-size:13px;color:#6b7670;">Want to see how it has actually done? Every
       published pick is settled and kept on the
-      <a href="${SITE_URL}${sportPath("trackRecord")}" style="color:#00925c;">track record</a>.</p>
+      <a href="${SITE_URL}${sportPath("trackRecord")}" style="color:#4f6b00;">track record</a>.</p>
     `),
   };
 }
 
 export function passwordResetEmail(opts: { url: string }): { subject: string; html: string } {
   return {
-    subject: "Reset your BetriX password",
+    subject: "Reset your KiqStat password",
     html: emailLayout(`
       <p style="margin:0 0 12px;font-size:17px;font-weight:700;">Reset your password</p>
-      <p style="margin:0;">Someone asked to reset the password on your BetriX account. If that was you, choose a
+      <p style="margin:0;">Someone asked to reset the password on your KiqStat account. If that was you, choose a
       new one below. The link works once and expires within the hour.</p>
       ${button(opts.url, "Choose a new password")}
-      <p style="margin:24px 0 0;font-size:13px;color:#8d9db2;">Didn't ask for this? Ignore this email and your
-      password stays as it is. BetriX will never ask you for your password by email, phone or WhatsApp.</p>
+      <p style="margin:24px 0 0;font-size:13px;color:#6b7670;">Didn't ask for this? Ignore this email and your
+      password stays as it is. KiqStat will never ask you for your password by email, phone or WhatsApp.</p>
     `),
   };
 }
@@ -66,18 +66,18 @@ export function receiptEmail(opts: {
   const when = new Date(opts.date).toLocaleDateString("en-NG", { year: "numeric", month: "long", day: "numeric" });
 
   return {
-    subject: label ? `Receipt: ${label} payment` : "Receipt: BetriX payment",
+    subject: label ? `Receipt: ${label} payment` : "Receipt: KiqStat payment",
     html: emailLayout(`
       <p style="margin:0 0 12px;font-size:17px;font-weight:700;">Payment received</p>
       <p style="margin:0 0 20px;">${
         label ? `Thanks for subscribing to ${label}.` : "Thanks for your payment."
       } Here's your receipt.</p>
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;">
-        <tr><td style="padding:6px 0;color:#8d9db2;">Amount</td><td style="padding:6px 0;text-align:right;font-weight:700;">${amount}</td></tr>
-        ${label ? `<tr><td style="padding:6px 0;color:#8d9db2;">Plan</td><td style="padding:6px 0;text-align:right;">${label}</td></tr>` : ""}
-        <tr><td style="padding:6px 0;color:#8d9db2;">Date</td><td style="padding:6px 0;text-align:right;">${when}</td></tr>
-        ${until ? `<tr><td style="padding:6px 0;color:#8d9db2;">Access until</td><td style="padding:6px 0;text-align:right;">${until}</td></tr>` : ""}
-        <tr><td style="padding:6px 0;color:#8d9db2;">Reference</td><td style="padding:6px 0;text-align:right;">${opts.reference}</td></tr>
+        <tr><td style="padding:6px 0;color:#6b7670;">Amount</td><td style="padding:6px 0;text-align:right;font-weight:700;">${amount}</td></tr>
+        ${label ? `<tr><td style="padding:6px 0;color:#6b7670;">Plan</td><td style="padding:6px 0;text-align:right;">${label}</td></tr>` : ""}
+        <tr><td style="padding:6px 0;color:#6b7670;">Date</td><td style="padding:6px 0;text-align:right;">${when}</td></tr>
+        ${until ? `<tr><td style="padding:6px 0;color:#6b7670;">Access until</td><td style="padding:6px 0;text-align:right;">${until}</td></tr>` : ""}
+        <tr><td style="padding:6px 0;color:#6b7670;">Reference</td><td style="padding:6px 0;text-align:right;">${opts.reference}</td></tr>
       </table>
       ${button(`${SITE_URL}/account/billing`, "View billing")}
     `),
@@ -125,18 +125,18 @@ export function giftSubscriptionEmail(opts: {
   const duration = opts.months === 1 ? "one month" : `${opts.months} months`;
 
   return {
-    subject: `You've been gifted ${duration} of BetriX ${label}`,
+    subject: `You've been gifted ${duration} of KiqStat ${label}`,
     html: emailLayout(`
       <p style="margin:0 0 12px;font-size:17px;font-weight:700;">🎁 You just got ${label}, on the house</p>
-      <p style="margin:0;">BetriX gifted you ${duration} of ${label} — free, no card required. It's active now
+      <p style="margin:0;">KiqStat gifted you ${duration} of ${label} — free, no card required. It's active now
       and runs through ${until}.</p>
       ${
         opts.note
-          ? `<p style="margin:20px 0 0;padding:12px 16px;background:#f6f8fb;border-radius:8px;font-size:14px;color:#1c2430;font-style:italic;">"${escapeHtml(opts.note)}"</p>`
+          ? `<p style="margin:20px 0 0;padding:12px 16px;background:#f4f5ef;border-radius:8px;font-size:14px;color:#1a1f1c;font-style:italic;">"${escapeHtml(opts.note)}"</p>`
           : ""
       }
       ${button(SITE_URL, "See what's unlocked")}
-      <p style="margin:24px 0 0;font-size:13px;color:#8d9db2;">Nothing to cancel — this isn't a subscription, it
+      <p style="margin:24px 0 0;font-size:13px;color:#6b7670;">Nothing to cancel — this isn't a subscription, it
       just quietly ends on ${until} unless you decide to subscribe for real.</p>
     `),
   };
@@ -154,14 +154,14 @@ export function valueAlertsEmail(opts: {
         timeZone: "Africa/Lagos", weekday: "short", hour: "2-digit", minute: "2-digit",
       });
       return `<tr>
-        <td style="padding:10px 0;border-top:1px solid #e6ebf2;">
-          <a href="${SITE_URL}${matchPath(a.matchId)}" style="color:#1c2430;font-weight:700;text-decoration:none;">${escapeHtml(a.homeName)} vs ${escapeHtml(a.awayName)}</a>
-          <div style="font-size:12px;color:#8d9db2;">${escapeHtml(a.leagueName)} · ${when} WAT</div>
+        <td style="padding:10px 0;border-top:1px solid #e1e4da;">
+          <a href="${SITE_URL}${matchPath(a.matchId)}" style="color:#1a1f1c;font-weight:700;text-decoration:none;">${escapeHtml(a.homeName)} vs ${escapeHtml(a.awayName)}</a>
+          <div style="font-size:12px;color:#6b7670;">${escapeHtml(a.leagueName)} · ${when} WAT</div>
           <div style="font-size:14px;margin-top:4px;">${escapeHtml(a.label)} @ <strong>${a.localPrice.toFixed(2)}</strong> on SportyBet</div>
         </td>
-        <td style="padding:10px 0;border-top:1px solid #e6ebf2;text-align:right;white-space:nowrap;vertical-align:top;">
-          <strong style="color:#00925c;">+${(a.edge * 100).toFixed(1)}%</strong>
-          <div style="font-size:11px;color:#8d9db2;">${a.benchmark === "market" ? "vs market" : "vs model"}</div>
+        <td style="padding:10px 0;border-top:1px solid #e1e4da;text-align:right;white-space:nowrap;vertical-align:top;">
+          <strong style="color:#4f6b00;">+${(a.edge * 100).toFixed(1)}%</strong>
+          <div style="font-size:11px;color:#6b7670;">${a.benchmark === "market" ? "vs market" : "vs model"}</div>
         </td>
       </tr>`;
     })
@@ -175,8 +175,8 @@ export function valueAlertsEmail(opts: {
       appears only where no consensus exists. Prices move — check before you stake.</p>
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;">${rows}</table>
       ${button(`${SITE_URL}${sportPath("valueAlerts")}`, "See every live alert")}
-      <p style="margin:24px 0 0;font-size:12px;color:#8d9db2;">You get this because you're a BetriX VIP member.
-      <a href="${opts.settingsUrl}" style="color:#8d9db2;">Turn these emails off</a> — the alerts page keeps working either way. 18+, bet responsibly.</p>
+      <p style="margin:24px 0 0;font-size:12px;color:#6b7670;">You get this because you're a KiqStat VIP member.
+      <a href="${opts.settingsUrl}" style="color:#6b7670;">Turn these emails off</a> — the alerts page keeps working either way. 18+, bet responsibly.</p>
     `),
   };
 }
@@ -194,7 +194,7 @@ export function newTicketNotificationEmail(opts: {
       <p style="margin:0 0 12px;font-size:17px;font-weight:700;">${opts.priority ? "New VIP priority ticket" : "New support ticket"}</p>
       <p style="margin:0 0 4px;"><strong>From:</strong> ${escapeHtml(opts.fromEmail)}</p>
       <p style="margin:0 0 20px;"><strong>Subject:</strong> ${escapeHtml(opts.subject)}</p>
-      <p style="margin:0 0 20px;padding:12px 16px;background:#f6f8fb;border-radius:8px;font-size:14px;color:#1c2430;">${escapeHtml(opts.preview)}</p>
+      <p style="margin:0 0 20px;padding:12px 16px;background:#f4f5ef;border-radius:8px;font-size:14px;color:#1a1f1c;">${escapeHtml(opts.preview)}</p>
       ${button(`${SITE_URL}/admin/tickets/${opts.ticketId}`, "Reply in the admin dashboard")}
     `),
   };
@@ -206,8 +206,8 @@ export function ticketReplyNotificationEmail(opts: { subject: string }): { subje
     html: emailLayout(`
       <p style="margin:0 0 12px;font-size:17px;font-weight:700;">You have a reply</p>
       <p style="margin:0;">An admin replied to your support request, "${opts.subject}".</p>
-      ${button(SITE_URL, "Open BetriX")}
-      <p style="margin:24px 0 0;font-size:13px;color:#8d9db2;">Reply from the chat icon in the bottom corner of the site.</p>
+      ${button(SITE_URL, "Open KiqStat")}
+      <p style="margin:24px 0 0;font-size:13px;color:#6b7670;">Reply from the chat icon in the bottom corner of the site.</p>
     `),
   };
 }
@@ -222,7 +222,7 @@ export function subscriptionCanceledEmail(opts: {
     : null;
 
   return {
-    subject: "Your BetriX subscription was canceled",
+    subject: "Your KiqStat subscription was canceled",
     html: emailLayout(`
       <p style="margin:0 0 12px;font-size:17px;font-weight:700;">Subscription canceled</p>
       <p style="margin:0;">Your ${label} subscription has been canceled. ${
@@ -239,13 +239,13 @@ export function warmCheckInEmail(opts: { unsubscribeUrl: string }): { subject: s
   return {
     subject: "A quick note from Scaper",
     html: emailLayout(`
-      <p style="margin:0 0 16px;">Hey — Scaper here, I built BetriX.</p>
+      <p style="margin:0 0 16px;">Hey — Scaper here, I built KiqStat.</p>
       <p style="margin:0 0 16px;">No ask in this one, I just wanted to check in. I look at every ticket and every
       piece of feedback that comes through myself, but I don't always get to hear from people who are quietly
       using the site without ever needing to reach out — which is most of you.</p>
       <p style="margin:0 0 16px;">So: how's it been? If something's confusing, missing, or just annoying, hit
       reply — this inbox reaches me directly, not a queue.</p>
-      <p style="margin:0;">Thanks for being here.<br />— Scaper, Founder &amp; CEO, BetriX</p>
+      <p style="margin:0;">Thanks for being here.<br />— Scaper, Founder &amp; CEO, KiqStat</p>
       ${unsubscribeFooter(opts.unsubscribeUrl)}
     `),
   };
@@ -258,15 +258,15 @@ export function subscriberSurveyEmail(opts: {
 }): { subject: string; html: string } {
   const label = TIER_LABEL[opts.tier];
   return {
-    subject: "2 minutes? I'd love your take on BetriX",
+    subject: "2 minutes? I'd love your take on KiqStat",
     html: emailLayout(`
-      <p style="margin:0 0 16px;">Hey — Scaper here, founder of BetriX.</p>
+      <p style="margin:0 0 16px;">Hey — Scaper here, founder of KiqStat.</p>
       <p style="margin:0 0 16px;">We're excited to see you subscribed to the <strong>${label}</strong> plan — genuinely,
       thank you. Paying for something means you expect it to be worth it, and I want to make sure it actually is.</p>
       <p style="margin:0 0 16px;">I put together a short survey — 6 questions, under 3 minutes, no account needed.
       Your answers go straight to me and shape what gets built next, not a marketing team.</p>
       ${button(opts.surveyUrl, "Take the 3-minute survey")}
-      <p style="margin:24px 0 0;">Thanks for trusting us with your subscription.<br />— Scaper, Founder &amp; CEO, BetriX</p>
+      <p style="margin:24px 0 0;">Thanks for trusting us with your subscription.<br />— Scaper, Founder &amp; CEO, KiqStat</p>
       ${unsubscribeFooter(opts.unsubscribeUrl)}
     `),
   };
@@ -277,15 +277,15 @@ export function freeSurveyEmail(opts: { surveyUrl: string; unsubscribeUrl: strin
   html: string;
 } {
   return {
-    subject: "2 minutes? I'd love your take on BetriX",
+    subject: "2 minutes? I'd love your take on KiqStat",
     html: emailLayout(`
-      <p style="margin:0 0 16px;">Hey — Scaper here, founder of BetriX.</p>
-      <p style="margin:0 0 16px;">You've been using BetriX on the free plan, and I'd genuinely like to know how
+      <p style="margin:0 0 16px;">Hey — Scaper here, founder of KiqStat.</p>
+      <p style="margin:0 0 16px;">You've been using KiqStat on the free plan, and I'd genuinely like to know how
       it's going — what's working, what isn't, and what (if anything) would make the paid side worth it to you.</p>
       <p style="margin:0 0 16px;">I put together a short survey — 6 questions, under 3 minutes, no account needed.
       Your answers go straight to me, not a marketing team, and directly shape what we build next.</p>
       ${button(opts.surveyUrl, "Take the 3-minute survey")}
-      <p style="margin:24px 0 0;">Thanks for giving BetriX a shot.<br />— Scaper, Founder &amp; CEO, BetriX</p>
+      <p style="margin:24px 0 0;">Thanks for giving KiqStat a shot.<br />— Scaper, Founder &amp; CEO, KiqStat</p>
       ${unsubscribeFooter(opts.unsubscribeUrl)}
     `),
   };
@@ -296,16 +296,37 @@ export function whatsappCommunityAnnouncementEmail(opts: { communityUrl: string;
   html: string;
 } {
   return {
-    subject: "New: BetriX picks on WhatsApp",
+    subject: "New: KiqStat picks on WhatsApp",
     html: emailLayout(`
       <p style="margin:0 0 16px;">Hey — Scaper here.</p>
-      <p style="margin:0 0 16px;">Quick one: we just launched a BetriX WhatsApp community. Once a day, before
+      <p style="margin:0 0 16px;">Quick one: we just launched a KiqStat WhatsApp community. Once a day, before
       kickoff, everyone in it gets that day's value picks — individual picks plus safe/balanced/risky
       accumulator combos — in one message. Only picks that clear our sample-size bar, same standard as the
       site.</p>
       <p style="margin:0 0 16px;">Free, no spam, leave anytime.</p>
       ${button(opts.communityUrl, "Join the WhatsApp community")}
-      <p style="margin:24px 0 0;">— Scaper, Founder &amp; CEO, BetriX</p>
+      <p style="margin:24px 0 0;">— Scaper, Founder &amp; CEO, KiqStat</p>
+      ${unsubscribeFooter(opts.unsubscribeUrl)}
+    `),
+  };
+}
+
+export function rebrandAnnouncementEmail(opts: { unsubscribeUrl: string }): { subject: string; html: string } {
+  return {
+    subject: "BetriX is now KiqStat",
+    html: emailLayout(`
+      <p style="margin:0 0 16px;">Hi there,</p>
+      <p style="margin:0 0 16px;">BetriX has a new name: <strong>KiqStat</strong>.</p>
+      <p style="margin:0 0 16px;">Nothing you rely on has changed. Same team, same model, same picks and the same
+      public track record. Your account and your plan carry over as they are. Just sign in at
+      <a href="${SITE_URL}" style="color:#4f6b00;">www.kiqstat.app</a> with your usual email and password, and
+      any old betrix.com.ng link brings you straight there.</p>
+      <p style="margin:0 0 16px;">Why the change? We chose to settle a naming-rights question early, before it
+      could ever affect you. KiqStat is a name that's fully ours, and it's here to stay.</p>
+      <p style="margin:0 0 16px;">The standard behind every pick stays exactly where it was: fitted on real
+      results, logged before kick-off, and published win or lose.</p>
+      ${button(SITE_URL, "Open KiqStat")}
+      <p style="margin:24px 0 0;">Thank you for being with us.<br>— Scaper, Founder &amp; CEO, KiqStat</p>
       ${unsubscribeFooter(opts.unsubscribeUrl)}
     `),
   };

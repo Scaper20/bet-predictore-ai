@@ -5,8 +5,8 @@ import { ForYouDashboard } from "@/components/for-you/for-you-dashboard";
 import { isSportId } from "@/lib/sports";
 
 export const metadata: Metadata = {
-  // The root layout's template appends "· BetriX" — spelling the brand out
-  // here too produced "… | BetriX · BetriX".
+  // The root layout's template appends "· KiqStat" — spelling the brand out
+  // here too produced "… | KiqStat · KiqStat".
   title: "For You",
   description:
     "Predictions from the competitions you follow, with the settled record behind them. " +

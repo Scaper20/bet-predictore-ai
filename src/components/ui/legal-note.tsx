@@ -29,7 +29,7 @@ import type { ReactNode } from "react";
  */
 export function LegalNote({
   title = "Important information",
-  summary = "BetriX is an analytics product, not a bookmaker. No plan guarantees a return.",
+  summary = "KiqStat is an analytics product, not a bookmaker. No plan guarantees a return.",
   children,
 }: {
   title?: string;

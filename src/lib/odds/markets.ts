@@ -1,5 +1,5 @@
 /**
- * Translating BetriX market ids to SportyBet's, and back.
+ * Translating KiqStat market ids to SportyBet's, and back.
  *
  * Pure and separately tested, because this mapping is the one place a mistake
  * is both silent and expensive: quoting the wrong market means telling a user
@@ -42,7 +42,7 @@ const BTTS: Record<string, string> = { yes: "74", no: "76" };
 const TOTALS: Record<string, string> = { over: "12", under: "13" };
 
 /**
- * The SportyBet address for a BetriX market id, or null when the market has no
+ * The SportyBet address for a KiqStat market id, or null when the market has no
  * equivalent we are confident about.
  *
  * Correct score is deliberately unmapped. SportyBet carries it (market 45) but

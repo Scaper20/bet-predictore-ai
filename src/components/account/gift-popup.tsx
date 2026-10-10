@@ -87,7 +87,7 @@ export function GiftPopup() {
           Congratulations!
         </h2>
         <p className="mt-2 text-sm leading-relaxed text-ink-muted">
-          BetriX just gifted you <strong className="text-ink">{TIER_LABEL[gift.tier]}</strong> — free, on the house.
+          KiqStat just gifted you <strong className="text-ink">{TIER_LABEL[gift.tier]}</strong> — free, on the house.
         </p>
         {gift.note && (
           <p className="mt-3 rounded-lg bg-surface-2 p-3 text-sm italic text-ink-muted">&ldquo;{gift.note}&rdquo;</p>

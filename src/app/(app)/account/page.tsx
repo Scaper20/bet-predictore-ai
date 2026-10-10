@@ -207,7 +207,7 @@ export default async function AccountPage() {
             <p className="mt-3 text-sm text-ink-muted">
               {paid
                 ? "Invoices, payment method and cancellation all live on the billing page."
-                : "Free covers every pick and every market on every match. Pro adds the full breakdowns, half-time markets, Asian handicap and more from Forge and Ask BetriX."}
+                : "Free covers every pick and every market on every match. Pro adds the full breakdowns, half-time markets, Asian handicap and more from Forge and Ask KiqStat."}
             </p>
           </div>
           <div className="flex flex-wrap gap-3">

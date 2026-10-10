@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Public_Sans, Big_Shoulders, JetBrains_Mono } from "next/font/google";
+import { Unbounded, Space_Grotesk, IBM_Plex_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { SITE_URL as SITE } from "@/lib/site-url";
@@ -27,44 +27,49 @@ const ORG_JSON_LD = {
       "@type": "Organization",
       "@id": `${SITE}/#organization`,
       name: COMPANY.brand,
+      // The product's previous name. Ties the new name to everything search
+      // engines and AI assistants already know about it, so ranking and
+      // citations carry over instead of starting from zero.
+      alternateName: [...COMPANY.formerNames],
       legalName: COMPANY.legalName,
       url: SITE,
-      logo: `${SITE}/brand/icon-green.png`,
+      logo: `${SITE}/brand/icon.png`,
       email: COMPANY.supportEmail,
       address: { "@type": "PostalAddress", addressCountry: COMPANY.countryCode },
       contactPoint: { "@type": "ContactPoint", contactType: "customer support", email: COMPANY.supportEmail },
     },
     {
       "@type": "WebSite",
-      name: "BetriX",
+      name: COMPANY.brand,
       url: SITE,
+      publisher: { "@id": `${SITE}/#organization` },
     },
   ],
 };
 
-// "optional", not "swap", for both display fonts: Next has no fallback
-// metrics for Big Shoulders (adjustFontFallback can't size-match it), and on
-// Android the fallback is Roboto — far wider than a condensed face — so a
-// late swap reflowed every heading and was the bulk of the field CLS (0.2).
-// With "optional" a font that misses the ~100ms window is used from the next
-// navigation onward instead of swapped in mid-read.
-const heading = Big_Shoulders({
-  variable: "--font-heading",
+// Both are variable fonts, so one file each covers every weight in use.
+// "swap" with Next's size-matched fallback (adjustFontFallback, on by default)
+// rather than "optional": Next has metrics for both faces, so the fallback is
+// sized to the same width and the swap doesn't reflow headings. That was the
+// problem with the previous condensed display face, which had no metrics and
+// fell back to a far wider Roboto on Android.
+const heading = Unbounded({ variable: "--font-heading", subsets: ["latin"], display: "swap" });
+const body = Space_Grotesk({ variable: "--font-body", subsets: ["latin"], display: "swap" });
+// Odds, probabilities, scores and times — including the big numbers at the
+// top of match and pick cards, so it is preloaded and swapped in like the
+// other two rather than left to "optional".
+const mono = IBM_Plex_Mono({
+  variable: "--font-mono-plex",
   subsets: ["latin"],
-  weight: ["600", "700", "800"],
-  display: "optional",
-  adjustFontFallback: false,
+  weight: ["400", "500", "600"],
+  display: "swap",
 });
-const body = Public_Sans({ variable: "--font-body", subsets: ["latin"], display: "swap" });
-// Small tabular labels only — not worth a preload competing with the fonts
-// the first screen is actually set in.
-const mono = JetBrains_Mono({ variable: "--font-mono-jb", subsets: ["latin"], display: "optional", preload: false });
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE),
   title: {
-    default: "BetriX — Football Predictions & Live Trends",
-    template: "%s · BetriX",
+    default: "KiqStat — Football Predictions & Live Trends",
+    template: "%s · KiqStat",
   },
   description:
     "Data-driven football predictions for fans across Africa and the world. Real live scores, " +
@@ -77,15 +82,15 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_GB",
-    siteName: "BetriX",
-    title: "BetriX — Football Predictions Built on Real Data",
+    siteName: "KiqStat",
+    title: "KiqStat — Football Predictions Built on Real Data",
     description:
       "Real fixtures, real live scores, and a statistical model fitted on actual results. " +
       "Know the numbers before you decide.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "BetriX — Football Predictions",
+    title: "KiqStat — Football Predictions",
     description: "Data-driven football insight for fans across Africa and the world.",
   },
   robots: { index: true, follow: true },
@@ -93,15 +98,15 @@ export const metadata: Metadata = {
   // the manifest and reads these instead: launch without Safari's chrome, and
   // let the dark canvas run up under the status bar. The header pads itself
   // by the safe-area inset so nothing sits under the notch.
-  applicationName: "BetriX",
-  appleWebApp: { capable: true, title: "BetriX", statusBarStyle: "black-translucent" },
+  applicationName: "KiqStat",
+  appleWebApp: { capable: true, title: "KiqStat", statusBarStyle: "black-translucent" },
   formatDetection: { telephone: false },
 };
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f6f8fb" },
-    { media: "(prefers-color-scheme: dark)", color: "#05080d" },
+    { media: "(prefers-color-scheme: light)", color: "#f4f5ef" },
+    { media: "(prefers-color-scheme: dark)", color: "#07090b" },
   ],
   width: "device-width",
   initialScale: 1,

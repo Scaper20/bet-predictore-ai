@@ -45,7 +45,7 @@ describe("free-tier access", () => {
     expect(viewPrediction(p, paid).markets.halves).toBeDefined();
   });
 
-  it("Ask BetriX's tool view strips locked numbers before they leave the server", () => {
+  it("Ask KiqStat's tool view strips locked numbers before they leave the server", () => {
     const p = {
       match: { id: "m1" },
       markets: { home: 0.5, draw: 0.3, away: 0.2, bttsYes: 0.6, bttsNo: 0.4, over: { "2.5": 0.55 }, under: { "2.5": 0.45 },

@@ -48,7 +48,7 @@ export function ChatWidget() {
   const pathname = usePathname();
   const { entitlement } = useEntitlement();
   const vip = meetsTier(entitlement.tier, "vip");
-  // Ask BetriX's panel covers this corner (and its send button) while open,
+  // Ask KiqStat's panel covers this corner (and its send button) while open,
   // and Forge's action bar sits there on phones.
   const askOpen = useAskState().open || /\/forge\/?$/.test(pathname);
   const [open, setOpen] = useState(false);
@@ -185,7 +185,7 @@ export function ChatWidget() {
                   Oma
                   {vip && <Badge tone="violet">VIP priority</Badge>}
                 </span>
-                <span className="block text-[11px] text-ink-dim">BetriX support</span>
+                <span className="block text-[11px] text-ink-dim">KiqStat support</span>
               </span>
             </span>
             <span className="flex items-center gap-3">

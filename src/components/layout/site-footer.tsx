@@ -1,3 +1,4 @@
+import { LogoLockup } from "@/components/brand/logo";
 import Link from "next/link";
 import { Container } from "@/components/ui/container";
 import { sportPath } from "@/lib/routes";
@@ -39,7 +40,7 @@ const COLUMNS = [
   {
     title: "About",
     links: [
-      { href: "/about", label: "About BetriX" },
+      { href: "/about", label: "About KiqStat" },
       { href: "/pricing", label: "Pricing" },
       { href: sportPath("trackRecord"), label: "Our Track Record" },
       { href: "/how-it-works", label: "How Our Picks Work" },
@@ -56,17 +57,13 @@ export function SiteFooter() {
       <Container className="py-9 sm:py-14">
         <div className="grid gap-6 lg:grid-cols-[1.4fr_repeat(3,1fr)] lg:gap-10">
           <div>
-            <div className="flex items-center gap-2.5">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/brand/icon-green-96.png" alt="" width={32} height={32} className="size-8 rounded-lg" aria-hidden />
-              <span className="font-display text-lg font-bold">
-                Betri<span className="text-brand">X</span>
-              </span>
-            </div>
+            <LogoLockup className="h-8 w-auto text-ink" />
+            <span className="sr-only">KiqStat</span>
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-ink-muted">
               Data-driven football insight for fans across Africa and the world. Real fixtures,
               real results, and a model that shows its working.
             </p>
+            <p className="mt-2 text-xs text-ink-dim">Formerly BetriX.</p>
           </div>
 
           {COLUMNS.map((col) => (
@@ -75,7 +72,7 @@ export function SiteFooter() {
         </div>
 
         {/*
-          Nigeria's National Lottery Regulatory Commission (BetriX is a
+          Nigeria's National Lottery Regulatory Commission (KiqStat is a
           Nigerian company) expects a visible 18+ notice on anything
           betting-adjacent, as regulators elsewhere do. It is also just the
           right thing to put in front of this audience, wherever they are.

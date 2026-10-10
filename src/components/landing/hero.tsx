@@ -77,7 +77,7 @@ export function Hero({ liveCount, board }: { liveCount: number; board: ReactNode
 function Stat({ value, label }: { value: string; label: string }) {
   return (
     <div>
-      <dt className="font-display text-2xl font-bold text-brand">{value}</dt>
+      <dt className="font-mono tracking-tight text-xl font-medium text-brand">{value}</dt>
       <dd className="mt-1 text-xs leading-snug text-ink-muted">{label}</dd>
     </div>
   );

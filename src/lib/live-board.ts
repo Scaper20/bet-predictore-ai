@@ -16,7 +16,7 @@ export interface LiveGroup {
   country?: string;
   logo?: string;
   flag?: string;
-  /** One of the competitions BetriX models (lib/leagues.ts). */
+  /** One of the competitions KiqStat models (lib/leagues.ts). */
   tracked: boolean;
   rank: number;
   matches: Match[];

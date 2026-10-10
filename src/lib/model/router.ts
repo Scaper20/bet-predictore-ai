@@ -22,7 +22,7 @@
  *      rejected at module load rather than discovered in production.
  *   2. Attribution is per pick, not per deployment. predictions_log.model_id
  *      is stamped from the market, so the day a totals specialist starts
- *      publishing, its record separates from BetriX Strike's automatically and
+ *      publishing, its record separates from KiqStat Strike's automatically and
  *      the history stays readable.
  *   3. A model that has not shipped cannot claim anything. `development`
  *      entries declare the markets they are aiming at; ownership only ever

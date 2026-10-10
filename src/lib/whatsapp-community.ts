@@ -1,5 +1,5 @@
 /**
- * The BetriX Picks WhatsApp community invite link. Not set until the
+ * The KiqStat Picks WhatsApp community invite link. Not set until the
  * community actually exists (created by hand in the WhatsApp app — there's
  * no API for that part) — every component that shows a "join" CTA reads
  * this and renders nothing at all when it's unset, same "runs with zero

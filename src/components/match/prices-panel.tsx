@@ -86,7 +86,7 @@ function PriceRow({ row }: { row: SelectionPricing }) {
         <span className="min-w-0 flex-1 truncate text-sm font-semibold">{row.label}</span>
         <span className="flex shrink-0 items-baseline gap-3">
           {row.local !== null ? (
-            <span className="tnum font-display text-xl font-extrabold">{odds(row.local)}</span>
+            <span className="tnum font-mono tracking-tight text-xl font-medium">{odds(row.local)}</span>
           ) : (
             <span className="text-xs text-ink-dim">Not listed</span>
           )}

@@ -96,7 +96,7 @@ async function Comparison({ a, b }: { a: TeamRef; b: TeamRef }) {
           <Side team={a} />
           <div className="text-center">
             <p className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-ink-dim">{n} meetings</p>
-            <p className="mt-1 font-display text-4xl font-extrabold sm:text-5xl">
+            <p className="mt-1 font-mono tracking-tighter text-3xl font-medium sm:text-4xl">
               <AnimatedNumber value={winsA} className="text-brand" />
               <span className="mx-2 text-ink-dim">–</span>
               <AnimatedNumber value={winsB} className="text-cyan" />
@@ -166,7 +166,7 @@ function Side({ team }: { team: TeamRef }) {
 function Stat({ label, value, suffix = "", i }: { label: string; value: number; suffix?: string; i: number }) {
   return (
     <div style={{ ["--i" as string]: i }} className="border-line px-4 py-4 text-center odd:border-r sm:border-r sm:last:border-r-0">
-      <p className="font-display text-2xl font-bold"><AnimatedNumber value={value} suffix={suffix} /></p>
+      <p className="font-mono tracking-tight text-xl font-medium"><AnimatedNumber value={value} suffix={suffix} /></p>
       <p className="mt-0.5 truncate text-[11px] text-ink-dim">{label}</p>
     </div>
   );
