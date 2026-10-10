@@ -173,6 +173,18 @@ duplicate looks wrong):
    `fixtures`, `tables`, `elo --full`.
 
 Add the spelling to `aliases.json` if a rule can't tell the clubs apart.
+
+**Adding a country's league.** Clubs met before in a UEFA cup sit under
+`europe` (or under their country, as openfootball duplicates), and clubs from
+TheSportsDB's club friendlies can sit under `international`. The new league's
+fixtures land on those rows through the TheSportsDB id, but `link-history`
+looks in the country and finds nothing, so the club trains on none of its
+history. After the first `sync` and `results`, list fixture clubs whose scope
+isn't the league's country; `merge_team(keep, drop)` any duplicate (keep
+TheSportsDB's row), then move the club and its non-id aliases into the
+country, and rerun `link-history`. The October 2026 league expansion moved 16
+clubs this way (Beşiktaş, PAOK, Genk, LA Galaxy, ...) and split Glasgow
+Rangers off Rangers International, which had taken its TheSportsDB id.
 The October 2026 repair (PSG into Paris FC, AC Milan into Inter, Aves into
 Chaves, African cup clubs into "AS Port") followed exactly these steps and
 rebuilt both club cups.
