@@ -96,7 +96,7 @@ def link_history(ctx: Context, years: int = 6) -> None:
     """
     since = (today() - timedelta(days=365 * years)).isoformat()
     for lg in ctx.ordered():
-        if lg.multinational:
+        if lg.multinational or lg.knockout:
             continue  # cup history is written under canonical names already
         with run(ctx.db, ctx.switch, "link-history", "history", lg.code) as r:
             if r.skipped:
@@ -219,7 +219,7 @@ def job_tables(ctx: Context) -> None:
                           lambda: FootballDataOrg(ctx.settings.football_data_key, ctx.db))
     y = season_start_year()
     for lg in ctx.ordered():
-        if lg.international or lg.multinational:
+        if lg.international or lg.multinational or lg.knockout:
             continue  # cups have groups and knockouts, not a table TheSportsDB serves
         done = False
         if tsdb and lg.ids.get("theSportsDb"):
@@ -277,6 +277,10 @@ def job_elo(ctx: Context, full: bool = False, window_days: int = 14) -> None:
     """BetriX Elo per league from the training results; writes recent days unless --full."""
     cutoff = None if full else today() - timedelta(days=window_days)
     for lg in ctx.ordered():
+        if lg.knockout:
+            # Its clubs are rated in their leagues, in the same country scope;
+            # a cup-only Elo would overwrite those ratings on cup days.
+            continue
         with run(ctx.db, ctx.switch, "elo", "betrix", lg.code) as r:
             if r.skipped:
                 continue

@@ -229,3 +229,25 @@ def test_tables_try_the_calendar_season_label_when_the_split_one_errors(monkeypa
     assert len(asked) == 2 and "-" in asked[0] and "-" not in asked[1]
     assert written and written[0][0].team == "Boca Juniors"
     assert league("argentina-liga-profesional").ids["theSportsDb"] == "4406"
+
+
+def test_knockout_cups_get_no_table_and_no_elo(monkeypatch):
+    from betrix_ingest import jobs
+    from betrix_ingest.config import Settings, league
+
+    assert league("fa-cup").knockout and league("efl-cup").knockout and not league("premier-league").knockout
+    calls = []
+
+    class FakeTsdb:
+        def fetch_table(self, lg, label):
+            calls.append(lg.code)
+            return []
+
+    monkeypatch.setattr(jobs.Context, "tsdb", lambda self: FakeTsdb())
+    s = Settings(None, None, "key", None, Path("."), Path("."), True)
+    db = MemoryDb()
+    ctx = jobs.Context(s, db, ["fa-cup", "efl-cup", "coppa-italia"])
+    jobs.job_tables(ctx)
+    jobs.job_elo(ctx)
+    assert calls == []
+    assert not db.tables.get("elo_ratings")

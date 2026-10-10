@@ -13,7 +13,7 @@ import { STAT_LEAGUES, pickLeague } from "@/lib/stats/leagues";
 import { sportPath } from "@/lib/routes";
 
 /** Cups have groups and knockouts, not a table we publish. */
-const TABLE_LEAGUES = STAT_LEAGUES.filter((l) => l.code !== "caf-champions-league");
+const TABLE_LEAGUES = STAT_LEAGUES.filter((l) => l.code !== "caf-champions-league" && !leagueByCode(l.code)?.knockout);
 
 export async function generateMetadata({ searchParams }: { searchParams: Promise<{ league?: string }> }): Promise<Metadata> {
   const { league } = await searchParams;

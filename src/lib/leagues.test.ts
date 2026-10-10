@@ -66,11 +66,19 @@ describe("cupPool", () => {
     }
   });
 
-  it("points only at catalogued competitions, and never at a league", () => {
+  it("points only at catalogued competitions, the cup itself included", () => {
     for (const league of LEAGUES) {
-      for (const code of league.cupPool?.codes ?? []) {
-        expect(leagueByCode(code)?.cupPool).toBeDefined();
-      }
+      if (!league.cupPool) continue;
+      expect(league.cupPool.codes).toContain(league.code);
+      for (const code of league.cupPool.codes) expect(leagueByCode(code), code).toBeDefined();
+    }
+  });
+
+  it("rates domestic cups on their own country's leagues, with no table", () => {
+    for (const code of ["fa-cup", "efl-cup", "coppa-italia"]) {
+      const cup = leagueByCode(code)!;
+      expect(cup.knockout).toBe(true);
+      for (const c of cup.cupPool!.codes) expect(leagueByCode(c)!.country).toBe(cup.country);
     }
   });
 });

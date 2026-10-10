@@ -43,8 +43,33 @@ export interface LeagueDef {
    * twelve months the published pick landed 45-51% on each UEFA cup's own
    * history, and 74-78% rated on all three over the last two years -- in
    * line with the leagues (scripts/league-lab.ts --cups).
+   *
+   * Domestic cups pool the country's leagues with the cup itself, so a
+   * Premier League side meeting a League One side is rated on both clubs'
+   * league seasons: FA Cup 77.7% and Carabao Cup 80.0% of picks landed over
+   * the last two seasons (Premier League, Championship and League One
+   * pooled), Coppa Italia 73.0% (Serie A and B). Copa del Rey (43%) and the
+   * DFB-Pokal (58%) did not reach that and are left out: their early rounds
+   * are top-flight clubs against lower divisions and amateurs that the
+   * pooled fit cannot separate.
    */
-  cupPool?: { codes: string[]; windowDays: number };
+  cupPool?: {
+    codes: string[];
+    windowDays: number;
+    /**
+     * Only archive rows from this source. The UEFA cups' archive holds many
+     * games twice under two sources' club names; TheSportsDB alone is clean.
+     */
+    source?: string;
+    /** What the training is, for the "rated on ..." line under a prediction. */
+    ratedOn: string;
+  };
+  /**
+   * A knockout cup: no league table, and no Elo of its own (its clubs are
+   * rated in their leagues; a cup-only Elo would overwrite those ratings in
+   * the shared country scope).
+   */
+  knockout?: boolean;
   ids: {
     /** football-data.org competition code. */
     footballData?: string;
@@ -101,7 +126,18 @@ export interface LeagueDef {
 }
 
 /** The three UEFA club competitions, rated together (see LeagueDef.cupPool). */
-const UEFA_CUPS = { codes: ["champions-league", "europa-league", "conference-league"], windowDays: 730 };
+const UEFA_CUPS = {
+  codes: ["champions-league", "europa-league", "conference-league"],
+  windowDays: 730,
+  source: "thesportsdb",
+  ratedOn: "the last two years of the UEFA club competitions",
+};
+/** English cups: the three catalogued English leagues plus the cup's own ties. */
+const englishCup = (code: string) => ({
+  codes: ["premier-league", "championship", "league-one", code],
+  windowDays: 730,
+  ratedOn: "the last two years of the Premier League, Championship, League One and the cup",
+});
 
 export const LEAGUES: LeagueDef[] = [
   {
@@ -154,6 +190,31 @@ export const LEAGUES: LeagueDef[] = [
     cupPool: UEFA_CUPS,
     ids: { theSportsDb: "5071", espn: "uefa.europa.conf" },
     archive: { openfootball: { repo: "champions-league", glob: "*/conf.txt" } },
+  },
+  {
+    code: "fa-cup",
+    sport: "football",
+    name: "English FA Cup",
+    shortName: "FA Cup",
+    country: "England",
+    flag: "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
+    rank: 14,
+    knockout: true,
+    cupPool: englishCup("fa-cup"),
+    // Both ids checked against lookupleague.php ("FA Cup", "EFL Cup").
+    ids: { theSportsDb: "4482", espn: "eng.fa" },
+  },
+  {
+    code: "efl-cup",
+    sport: "football",
+    name: "English EFL Cup",
+    shortName: "Carabao Cup",
+    country: "England",
+    flag: "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
+    rank: 15,
+    knockout: true,
+    cupPool: englishCup("efl-cup"),
+    ids: { theSportsDb: "4570", espn: "eng.league_cup" },
   },
   {
     code: "la-liga",
@@ -222,7 +283,7 @@ export const LEAGUES: LeagueDef[] = [
     shortName: "Championship",
     country: "England",
     flag: "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
-    rank: 14,
+    rank: 16,
     ids: { footballData: "ELC", theSportsDb: "4329", apiFootball: 40, sportyBet: "sr:tournament:18", espn: "eng.2" },
     archive: { footballDataUk: "E1" },
   },
@@ -233,7 +294,7 @@ export const LEAGUES: LeagueDef[] = [
     shortName: "Eredivisie",
     country: "Netherlands",
     flag: "🇳🇱",
-    rank: 15,
+    rank: 17,
     ids: { footballData: "DED", theSportsDb: "4337", apiFootball: 88, sportyBet: "sr:tournament:37", espn: "ned.1" },
     archive: { footballDataUk: "N1" },
   },
@@ -244,7 +305,7 @@ export const LEAGUES: LeagueDef[] = [
     shortName: "Primeira Liga",
     country: "Portugal",
     flag: "🇵🇹",
-    rank: 16,
+    rank: 18,
     ids: { footballData: "PPL", theSportsDb: "4344", apiFootball: 94, espn: "por.1" },
     archive: { footballDataUk: "P1" },
   },
@@ -255,7 +316,7 @@ export const LEAGUES: LeagueDef[] = [
     shortName: "CAF CL",
     country: "Africa",
     flag: "🌍",
-    rank: 17,
+    rank: 19,
     // 4720, checked against lookupleague.php: "CAF Champions League", soccer,
     // seasons keyed "2026-2027". (An earlier guess, 4552, was a defunct
     // American-football league; never add an id here without looking it up.)
@@ -269,9 +330,26 @@ export const LEAGUES: LeagueDef[] = [
     shortName: "Brasileirão",
     country: "Brazil",
     flag: "🇧🇷",
-    rank: 18,
+    rank: 20,
     ids: { footballData: "BSA", theSportsDb: "4351", apiFootball: 71, sportyBet: "sr:tournament:325", espn: "bra.1" },
     archive: { footballDataUkCountry: { file: "BRA", league: "Serie A" } },
+  },
+  {
+    code: "coppa-italia",
+    sport: "football",
+    name: "Coppa Italia",
+    shortName: "Coppa Italia",
+    country: "Italy",
+    flag: "🇮🇹",
+    rank: 21,
+    knockout: true,
+    cupPool: {
+      codes: ["serie-a", "serie-b", "coppa-italia"],
+      windowDays: 730,
+      ratedOn: "the last two years of Serie A, Serie B and the cup",
+    },
+    // Checked against lookupleague.php ("Coppa Italia").
+    ids: { theSportsDb: "4506", espn: "ita.coppa_italia" },
   },
   {
     code: "scottish-premiership",
@@ -280,7 +358,7 @@ export const LEAGUES: LeagueDef[] = [
     shortName: "Scottish Prem",
     country: "Scotland",
     flag: "🏴󠁧󠁢󠁳󠁣󠁴󠁿",
-    rank: 28,
+    rank: 31,
     ids: { theSportsDb: "4330", espn: "sco.1" },
     archive: { footballDataUk: "SC0" },
   },
@@ -291,7 +369,7 @@ export const LEAGUES: LeagueDef[] = [
     shortName: "Süper Lig",
     country: "Turkey",
     flag: "🇹🇷",
-    rank: 29,
+    rank: 32,
     ids: { theSportsDb: "4339", espn: "tur.1" },
     archive: { footballDataUk: "T1" },
   },
@@ -302,7 +380,7 @@ export const LEAGUES: LeagueDef[] = [
     shortName: "MLS",
     country: "United States",
     flag: "🇺🇸",
-    rank: 30,
+    rank: 33,
     ids: { theSportsDb: "4346", espn: "usa.1" },
     archive: { footballDataUkCountry: { file: "USA", league: "MLS" } },
   },
@@ -313,7 +391,7 @@ export const LEAGUES: LeagueDef[] = [
     shortName: "Pro League",
     country: "Belgium",
     flag: "🇧🇪",
-    rank: 31,
+    rank: 34,
     ids: { theSportsDb: "4338", espn: "bel.1" },
     archive: { footballDataUk: "B1" },
   },
@@ -324,7 +402,7 @@ export const LEAGUES: LeagueDef[] = [
     shortName: "Argentina",
     country: "Argentina",
     flag: "🇦🇷",
-    rank: 32,
+    rank: 35,
     ids: { theSportsDb: "4406", espn: "arg.1" },
     archive: { footballDataUkCountry: { file: "ARG", league: "Liga Profesional" } },
   },
@@ -335,7 +413,7 @@ export const LEAGUES: LeagueDef[] = [
     shortName: "Liga MX",
     country: "Mexico",
     flag: "🇲🇽",
-    rank: 33,
+    rank: 36,
     ids: { theSportsDb: "4350", espn: "mex.1" },
     archive: { footballDataUkCountry: { file: "MEX", league: "Liga MX" } },
   },
@@ -346,7 +424,7 @@ export const LEAGUES: LeagueDef[] = [
     shortName: "Greek SL",
     country: "Greece",
     flag: "🇬🇷",
-    rank: 34,
+    rank: 37,
     ids: { theSportsDb: "4336", espn: "gre.1" },
     archive: { footballDataUk: "G1" },
   },
@@ -357,7 +435,7 @@ export const LEAGUES: LeagueDef[] = [
     shortName: "League One",
     country: "England",
     flag: "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
-    rank: 35,
+    rank: 38,
     ids: { theSportsDb: "4396", espn: "eng.3" },
     archive: { footballDataUk: "E2" },
   },
@@ -368,7 +446,7 @@ export const LEAGUES: LeagueDef[] = [
     shortName: "2. Bundesliga",
     country: "Germany",
     flag: "🇩🇪",
-    rank: 36,
+    rank: 39,
     ids: { theSportsDb: "4399", espn: "ger.2" },
     archive: { footballDataUk: "D2" },
   },
@@ -379,7 +457,7 @@ export const LEAGUES: LeagueDef[] = [
     shortName: "Serie B",
     country: "Italy",
     flag: "🇮🇹",
-    rank: 37,
+    rank: 40,
     ids: { theSportsDb: "4394", espn: "ita.2" },
     archive: { footballDataUk: "I2" },
   },
@@ -390,7 +468,7 @@ export const LEAGUES: LeagueDef[] = [
     shortName: "La Liga 2",
     country: "Spain",
     flag: "🇪🇸",
-    rank: 38,
+    rank: 41,
     ids: { theSportsDb: "4400", espn: "esp.2" },
     archive: { footballDataUk: "SP2" },
   },
@@ -401,7 +479,7 @@ export const LEAGUES: LeagueDef[] = [
     shortName: "Ligue 2",
     country: "France",
     flag: "🇫🇷",
-    rank: 39,
+    rank: 42,
     ids: { theSportsDb: "4401", espn: "fra.2" },
     archive: { footballDataUk: "F2" },
   },
@@ -472,7 +550,7 @@ export const LEAGUES: LeagueDef[] = [
     shortName: "Euro",
     country: "Europe",
     flag: "🇪🇺",
-    rank: 19,
+    rank: 22,
     confederation: "UEFA",
     neutralVenue: true,
     ids: { footballData: "EC", theSportsDb: "4502", espn: "uefa.euro" },
@@ -485,7 +563,7 @@ export const LEAGUES: LeagueDef[] = [
     shortName: "Nations League",
     country: "Europe",
     flag: "🇪🇺",
-    rank: 20,
+    rank: 23,
     confederation: "UEFA",
     ids: { theSportsDb: "4490", espn: "uefa.nations" },
   },
@@ -496,7 +574,7 @@ export const LEAGUES: LeagueDef[] = [
     shortName: "WCQ Europe",
     country: "Europe",
     flag: "🇪🇺",
-    rank: 21,
+    rank: 24,
     confederation: "UEFA",
     ids: { theSportsDb: "5518", espn: "fifa.worldq.uefa" },
   },
@@ -507,7 +585,7 @@ export const LEAGUES: LeagueDef[] = [
     shortName: "Copa América",
     country: "South America",
     flag: "🌎",
-    rank: 22,
+    rank: 25,
     confederation: "CONMEBOL",
     neutralVenue: true,
     ids: { theSportsDb: "4499", espn: "conmebol.america" },
@@ -519,7 +597,7 @@ export const LEAGUES: LeagueDef[] = [
     shortName: "WCQ S. America",
     country: "South America",
     flag: "🌎",
-    rank: 23,
+    rank: 26,
     confederation: "CONMEBOL",
     ids: { theSportsDb: "5515", espn: "fifa.worldq.conmebol" },
   },
@@ -530,7 +608,7 @@ export const LEAGUES: LeagueDef[] = [
     shortName: "Euro Qualifiers",
     country: "Europe",
     flag: "🇪🇺",
-    rank: 24,
+    rank: 27,
     confederation: "UEFA",
     ids: { theSportsDb: "5519", espn: "uefa.euroq" },
   },
@@ -541,7 +619,7 @@ export const LEAGUES: LeagueDef[] = [
     shortName: "Friendlies",
     country: "World",
     flag: "🤝",
-    rank: 25,
+    rank: 28,
     confederation: "global",
     ids: { theSportsDb: "4562", espn: "fifa.friendly" },
   },
@@ -552,7 +630,7 @@ export const LEAGUES: LeagueDef[] = [
     shortName: "Gold Cup",
     country: "North America",
     flag: "🌎",
-    rank: 26,
+    rank: 29,
     confederation: "CONCACAF",
     neutralVenue: true,
     ids: { theSportsDb: "4873", espn: "concacaf.gold" },
@@ -564,7 +642,7 @@ export const LEAGUES: LeagueDef[] = [
     shortName: "WCQ CONCACAF",
     country: "North America",
     flag: "🌎",
-    rank: 27,
+    rank: 30,
     confederation: "CONCACAF",
     ids: { theSportsDb: "5516", espn: "fifa.worldq.concacaf" },
   },
@@ -642,6 +720,9 @@ const PROVIDER_ALIASES: Record<string, string> = {
   "caf-champions-league": "CAF Champions League | CAF Champions League Group Stage",
   npfl: "Nigeria Professional Football League | Nigerian Premier League | NPFL | Nigerian Professional Football League",
   "europa-league": "UEFA Europa League | Europa League",
+  "fa-cup": "FA Cup | English FA Cup | Emirates FA Cup",
+  "efl-cup": "EFL Cup | English Carabao Cup | Carabao Cup | League Cup | English League Cup",
+  "coppa-italia": "Coppa Italia | Italian Coppa Italia | Coppa Italia Frecciarossa",
   "conference-league": "UEFA Conference League | UEFA Europa Conference League | Conference League | Europa Conference League",
   "scottish-premiership": "Scottish Premier League | Scottish Premiership | Scotland Premiership",
   "super-lig": "Turkish Super Lig | Super Lig | Trendyol Super Lig",

@@ -17,6 +17,8 @@ export function leagueCatalogueJson(): string {
     // Who writes this league's finished results into historical_results
     // (see competitions.history_owner in migration 0029).
     historyOwner: l.archive?.footballDataUk || l.archive?.footballDataUkCountry ? "football-data-uk" : "matches",
+    // Knockout cups: no table to fetch, and no Elo of their own.
+    knockout: Boolean(l.knockout),
   }));
   return `${JSON.stringify(rows, null, 2)}\n`;
 }

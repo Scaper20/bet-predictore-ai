@@ -110,7 +110,7 @@ async function assembleTraining(match: Match, code: string): Promise<Training> {
     const leagueName = def?.confederation
       ? `${match.league.name} (rated on all ${def.confederation === "global" ? "national-team" : `${def.confederation} and global`} internationals)`
       : def?.cupPool
-        ? `${match.league.name} (rated on the last two years of the UEFA club competitions)`
+        ? `${match.league.name} (rated on ${def.cupPool.ratedOn})`
         : match.league.name;
     return { rows: archived, leagueName, curated: true, book };
   }
@@ -185,11 +185,11 @@ async function pooledArchive(def: NonNullable<ReturnType<typeof leagueByCode>>):
 }
 
 /**
- * A club cup's training: its pool's archives, recent window only, TheSportsDB
- * rows only (LeagueDef.cupPool; archivedResults explains the source).
+ * A cup's training: its pool's archives, recent window only, from one source
+ * where the pool says so (LeagueDef.cupPool; archivedResults explains why).
  */
-async function cupArchive(pool: { codes: string[]; windowDays: number }): Promise<ResultRow[]> {
-  const parts = await Promise.all(pool.codes.map((c) => archivedResults(c, "thesportsdb").catch(() => [] as ResultRow[])));
+async function cupArchive(pool: { codes: string[]; windowDays: number; source?: string }): Promise<ResultRow[]> {
+  const parts = await Promise.all(pool.codes.map((c) => archivedResults(c, pool.source).catch(() => [] as ResultRow[])));
   const from = Date.now() - pool.windowDays * 86_400_000;
   return mergeResults(parts.flat().filter((r) => r.date >= from), []);
 }
