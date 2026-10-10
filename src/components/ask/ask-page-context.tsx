@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { openAsk, setAskPage } from "@/lib/ask-store";
+import { AskAvatar } from "@/components/ask/ask-avatar";
 
 /** Tells Ask KiqStat which match the user is looking at, for as long as this page is mounted. */
 export function AskPageContext({ matchId, label }: { matchId: string; label: string }) {
@@ -19,9 +20,7 @@ export function AskAboutMatch({ label }: { label: string }) {
   return (
     <section className="card p-5">
       <div className="flex items-center gap-2.5">
-        <span className="grid size-8 place-items-center rounded-full bg-violet font-display text-base font-extrabold text-canvas" aria-hidden>
-          X
-        </span>
+        <AskAvatar />
         <div className="min-w-0">
           <h2 className="text-sm font-semibold text-ink">Ask KiqStat about this match</h2>
           <p className="truncate text-xs text-ink-dim">{label}</p>
@@ -33,7 +32,7 @@ export function AskAboutMatch({ label }: { label: string }) {
             key={q}
             type="button"
             onClick={() => openAsk({ text: q, send: true })}
-            className="rounded-full border border-violet/30 bg-violet/8 px-3 py-1.5 text-xs font-medium text-violet transition-colors hover:border-violet/60"
+            className="rounded-full border border-line-strong bg-surface-2 px-3 py-1.5 text-xs font-medium text-ink-muted transition-colors hover:border-brand/40 hover:text-ink"
           >
             {q}
           </button>

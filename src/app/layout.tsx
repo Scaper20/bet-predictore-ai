@@ -55,14 +55,14 @@ const ORG_JSON_LD = {
 // fell back to a far wider Roboto on Android.
 const heading = Unbounded({ variable: "--font-heading", subsets: ["latin"], display: "swap" });
 const body = Space_Grotesk({ variable: "--font-body", subsets: ["latin"], display: "swap" });
-// Odds, probabilities and times. Small tabular labels only — not worth a
-// preload competing with the fonts the first screen is actually set in.
+// Odds, probabilities, scores and times — including the big numbers at the
+// top of match and pick cards, so it is preloaded and swapped in like the
+// other two rather than left to "optional".
 const mono = IBM_Plex_Mono({
   variable: "--font-mono-plex",
   subsets: ["latin"],
-  weight: ["500", "600"],
-  display: "optional",
-  preload: false,
+  weight: ["400", "500", "600"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {

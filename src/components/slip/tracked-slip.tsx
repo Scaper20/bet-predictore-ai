@@ -336,7 +336,7 @@ function Stat({ label, value, accent = false }: { label: ReactNode; value: strin
   return (
     <div className="min-w-0 rounded-xl border border-line bg-surface/60 px-3 py-3 sm:px-4">
       <p className="truncate font-mono text-[10px] uppercase tracking-wider text-ink-dim">{label}</p>
-      <p className={`tnum mt-1 font-display text-2xl font-bold sm:text-3xl ${accent ? "text-brand" : "text-ink"}`}>
+      <p className={`tnum mt-1 font-mono tracking-tight text-xl font-medium sm:text-2xl ${accent ? "text-brand" : "text-ink"}`}>
         {value}
       </p>
     </div>

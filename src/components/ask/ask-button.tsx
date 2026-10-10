@@ -24,11 +24,13 @@ export function AskButton({ size = "md" }: { size?: "md" | "sm" }) {
         sm ? "h-9 gap-1.5 rounded-[10px] px-2.5 text-[13px]" : "h-10 gap-2 rounded-xl px-3.5 text-sm"
       } ${
         open
-          ? "border-violet/60 bg-violet/15 text-violet"
-          : "border-violet/35 text-violet hover:border-violet/60 hover:bg-violet/10"
+          ? "border-brand/50 bg-brand/10 text-brand"
+          : "border-line-strong text-ink hover:border-brand/50 hover:bg-brand/8"
       }`}
     >
-      <Icon small={sm} />
+      <span className={open ? "" : "text-brand"}>
+        <Icon small={sm} />
+      </span>
       <span>Ask KiqStat</span>
     </button>
   );

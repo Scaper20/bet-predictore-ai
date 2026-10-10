@@ -119,7 +119,7 @@ export function HowItWorks() {
           <div className="mt-14 grid gap-6 md:grid-cols-3">
             {STEPS.map((s) => (
               <div key={s.n} className="relative card p-5 sm:p-7">
-                <span className="font-display text-5xl font-extrabold text-brand/15">{s.n}</span>
+                <span className="font-mono tracking-tighter text-4xl font-medium text-brand/15">{s.n}</span>
                 <h3 className="mt-3 text-lg font-semibold">{s.title}</h3>
                 <p className="mt-2.5 text-sm leading-relaxed text-ink-muted">{s.body}</p>
               </div>

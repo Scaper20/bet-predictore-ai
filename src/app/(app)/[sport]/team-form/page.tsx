@@ -105,7 +105,7 @@ export default async function TeamFormPage({ searchParams }: { searchParams: Pro
                       {r.form.won}-{r.form.drawn}-{r.form.lost} · {r.form.goalsFor}:{r.form.goalsAgainst}
                     </span>
                     <span className="text-right">
-                      <span className="tnum block font-display text-lg font-bold leading-none">{r.form.points}</span>
+                      <span className="tnum block font-mono text-lg font-medium leading-none">{r.form.points}</span>
                       <span className="text-[10px] text-ink-dim">pts</span>
                     </span>
                   </li>

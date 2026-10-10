@@ -275,7 +275,7 @@ export function SlipView({ variant = "page" }: { variant?: "page" | "sheet" }) {
               <p className="text-[10px] uppercase tracking-wider text-ink-dim">
                 Chance all {legs.length} land
               </p>
-              <p className={`tnum mt-1 font-display font-extrabold text-brand ${sheet ? "text-3xl" : "text-4xl"}`}>
+              <p className={`tnum mt-1 font-mono tracking-tighter font-semibold text-brand ${sheet ? "text-2xl" : "text-3xl"}`}>
                 {percent(acc.probability, acc.probability < 0.1 ? 2 : 1)}
               </p>
               <div className="mt-3">

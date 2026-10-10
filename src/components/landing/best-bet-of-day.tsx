@@ -65,7 +65,7 @@ export function BestBetOfDay({ prediction }: { prediction: Prediction | ViewedPr
           {locked ? (
             <ProTag />
           ) : (
-            <AnimatedNumber value={topPick.probability * 100} decimals={1} suffix="%" className="font-display text-3xl font-extrabold text-brand" />
+            <AnimatedNumber value={topPick.probability * 100} decimals={1} suffix="%" className="font-mono tracking-tight text-2xl font-semibold text-brand" />
           )}
           <PickAction match={match} pick={topPick} locked={locked} />
         </div>

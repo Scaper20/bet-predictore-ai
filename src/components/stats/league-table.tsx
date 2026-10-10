@@ -232,7 +232,7 @@ function Row({
       {showForm && (
         <td className="hidden py-2.5 md:table-cell">{form && form.length > 0 ? <FormPips letters={form.slice(0, 5)} size="sm" index={index} /> : null}</td>
       )}
-      <td className="tnum py-2.5 pr-4 text-right font-display text-base font-bold sm:pr-5">{r.points}</td>
+      <td className="tnum py-2.5 pr-4 text-right font-mono text-base font-medium sm:pr-5">{r.points}</td>
     </tr>
   );
 }

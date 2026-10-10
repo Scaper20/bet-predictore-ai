@@ -19,7 +19,7 @@ export function RatingDial({ score, size = 44, index = 0 }: { score: number; siz
       role="img"
       aria-label={`Rated ${score.toFixed(1)} out of 10`}
     >
-      <span className="tnum font-display font-bold leading-none" style={{ fontSize: size * 0.32, color: ratingColor(score, 0.82) }}>
+      <span className="tnum font-mono font-medium leading-none" style={{ fontSize: size * 0.32, color: ratingColor(score, 0.82) }}>
         {score.toFixed(1)}
       </span>
     </span>

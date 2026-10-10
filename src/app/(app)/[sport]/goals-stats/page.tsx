@@ -80,7 +80,7 @@ function Avg({ label, value, suffix = "", decimals = 0, i }: { label: string; va
   return (
     <div style={{ ["--i" as string]: i }} className="card p-4">
       <p className="text-[10.5px] font-semibold uppercase tracking-wider text-ink-dim">{label}</p>
-      <p className="mt-1.5 font-display text-3xl font-extrabold text-ink">
+      <p className="mt-1.5 font-mono tracking-tight text-2xl font-medium text-ink">
         <AnimatedNumber value={value} decimals={decimals} suffix={suffix} />
       </p>
     </div>

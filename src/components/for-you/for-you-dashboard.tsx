@@ -477,7 +477,7 @@ function AccaCard({
           <p className="text-[11px] uppercase tracking-wider text-ink-muted">
             Combined probability
           </p>
-          <p className="tnum font-display text-2xl font-extrabold text-brand">
+          <p className="tnum font-mono tracking-tight text-xl font-medium text-brand">
             {percent(acca.combinedProbability, 1)}
           </p>
         </div>

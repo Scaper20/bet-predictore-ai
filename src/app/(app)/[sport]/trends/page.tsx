@@ -60,7 +60,7 @@ export default async function TrendsPage() {
 function Glance({ value, suffix = "", label, i }: { value: number; suffix?: string; label: string; i: number }) {
   return (
     <div style={{ ["--i" as string]: i }} className="card flex items-center gap-4 p-4">
-      <span className="font-display text-3xl font-extrabold text-brand">
+      <span className="font-mono tracking-tight text-2xl font-medium text-brand">
         <AnimatedNumber value={value} suffix={suffix} />
       </span>
       <span className="text-sm leading-snug text-ink-muted">{label}</span>

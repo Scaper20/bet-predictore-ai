@@ -185,7 +185,7 @@ export function navFor(sport: SportId): { tabs: NavTab[]; tools: NavLink[] } {
       title: "Ask anything about a match",
       body: "“Is Over 2.5 a good bet in Arsenal v Brighton?” Answers use the same model as our picks.",
       cta: { label: "Open Ask KiqStat", href: "#ask", action: "ask" },
-      tone: "violet",
+      tone: "brand",
     },
   };
 

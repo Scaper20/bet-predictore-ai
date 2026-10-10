@@ -40,7 +40,7 @@ export function PlanPrice({
   return (
     <>
       <div className="mt-4 flex items-baseline gap-2 sm:mt-5">
-        <span className="font-display text-3xl font-extrabold sm:text-4xl">
+        <span className="font-mono tracking-tighter text-2xl font-medium sm:text-3xl">
           {amount === undefined ? "Free" : money(amount)}
         </span>
         <span className="text-sm text-ink-dim">{recurring ? CYCLE_LABEL[cycle].per : plan.cadence}</span>

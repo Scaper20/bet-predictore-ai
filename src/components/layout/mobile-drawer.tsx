@@ -131,7 +131,7 @@ export function MobileDrawer({
           )}
           {forge && <Shortcut href={forge.href} tone="brand" icon="forge" label={forge.label} desc={forge.desc} onClose={onClose} />}
           {ask && (
-            <Shortcut href={ask.href} action={ask.action} tone="violet" icon="ask" label={ask.label} desc={ask.desc} onClose={onClose} />
+            <Shortcut href={ask.href} action={ask.action} tone="brand" icon="ask" label={ask.label} desc={ask.desc} onClose={onClose} />
           )}
           {pricing && <Shortcut href={pricing.href} tone="amber" icon="pricing" label={pricing.label} desc="Plans in Naira" onClose={onClose} />}
         </div>

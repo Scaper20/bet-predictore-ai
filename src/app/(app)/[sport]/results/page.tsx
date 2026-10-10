@@ -174,7 +174,7 @@ function Tile({ label, value, suffix = "", hint }: { label: string; value: numbe
   return (
     <div className="rounded-xl border border-line bg-surface-2/60 px-3 py-3 text-center">
       <p className="text-[10px] font-medium uppercase tracking-wider text-ink-dim">{label}</p>
-      <p className="mt-1 font-display text-2xl font-bold">
+      <p className="mt-1 font-mono tracking-tight text-xl font-medium">
         <AnimatedNumber value={value} />
         <span className="text-base text-ink-dim">{suffix}</span>
       </p>
