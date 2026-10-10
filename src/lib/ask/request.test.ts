@@ -7,6 +7,14 @@ describe("parseAskRequest", () => {
     expect(r).toEqual({ turns: [{ role: "user", text: "Safest picks today?" }], context: {} });
   });
 
+  it("keeps a real time zone and drops anything else", () => {
+    const turns = [{ role: "user", text: "Tonight?" }];
+    const ok = parseAskRequest({ turns, context: { timeZone: "Africa/Nairobi" } });
+    expect(typeof ok !== "string" && ok.context.timeZone).toBe("Africa/Nairobi");
+    const bad = parseAskRequest({ turns, context: { timeZone: "Mars/Olympus" } });
+    expect(typeof bad !== "string" && bad.context.timeZone).toBeUndefined();
+  });
+
   it("rejects a conversation that doesn't end with the user", () => {
     expect(parseAskRequest({ turns: [{ role: "user", text: "hi" }, { role: "assistant", text: "hello" }] })).toBeTypeOf(
       "string",
@@ -53,8 +61,9 @@ describe("parseAskRequest", () => {
 describe("contextPreamble", () => {
   const now = new Date("2026-10-05T13:30:00Z");
 
-  it("always states the time in WAT", () => {
-    expect(contextPreamble({}, now)).toMatch(/14:30 WAT/);
+  it("states the time in the user's zone, WAT when the browser didn't say", () => {
+    expect(contextPreamble({}, now)).toMatch(/14:30 in the user's time zone \(Africa\/Lagos\)/);
+    expect(contextPreamble({ timeZone: "Africa/Nairobi" }, now)).toMatch(/16:30 in the user's time zone \(Africa\/Nairobi\)/);
   });
 
   it("names the open match and the slip", () => {

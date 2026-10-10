@@ -5,7 +5,7 @@ import type { Match } from "@/lib/types";
 import { Crest } from "@/components/ui/crest";
 import { LiveDot } from "@/components/ui/primitives";
 import { Morph, morphName } from "@/components/motion/morph";
-import { kickoffTime } from "@/lib/format";
+import { LocalTime } from "@/components/ui/local-time";
 import { matchPath } from "@/lib/routes";
 import { useLiveReading } from "@/components/match/use-live-feed";
 import { useTickingMinute } from "@/components/match/use-live-clock";
@@ -101,7 +101,7 @@ function Clock({ match, since }: { match: Match; since?: number }) {
   if (match.status === "finished") return <span className="font-mono text-[11px] font-bold text-ink-dim">FT</span>;
   if (match.status === "postponed") return <span className="font-mono text-[11px] font-bold text-amber">PST</span>;
   if (match.status === "cancelled") return <span className="font-mono text-[11px] font-bold text-rose">CAN</span>;
-  return <span className="tnum font-mono text-[13px] font-semibold text-ink">{kickoffTime(match.kickoff)}</span>;
+  return <span className="tnum font-mono text-[13px] font-semibold text-ink"><LocalTime iso={match.kickoff} /></span>;
 }
 
 function TeamLine({

@@ -6,7 +6,7 @@ import type { StreakKind } from "@/lib/stats/compute";
 import type { StreakTrend } from "@/lib/stats/trends";
 import { Crest } from "@/components/ui/crest";
 import { SlidingTabs } from "@/components/motion/sliding-tabs";
-import { kickoffTime, relativeDay } from "@/lib/format";
+import { LocalTime } from "@/components/ui/local-time";
 import { matchPath } from "@/lib/routes";
 
 const FILTERS: { key: string; label: string; kinds: StreakKind[] }[] = [
@@ -142,7 +142,7 @@ function TrendCard({ t, index }: { t: StreakTrend; index: number }) {
         <Crest src={t.fixture.opponentCrest} name={t.fixture.opponent} size={18} />
         <span className="min-w-0 flex-1 truncate font-medium text-ink">{t.fixture.opponent}</span>
         <span className="tnum shrink-0 text-ink-muted">
-          {relativeDay(t.fixture.kickoff)} {kickoffTime(t.fixture.kickoff)}
+          <LocalTime iso={t.fixture.kickoff} kind="relative" /> <LocalTime iso={t.fixture.kickoff} />
         </span>
         <svg viewBox="0 0 20 20" className="size-3.5 shrink-0 text-ink-dim transition-transform group-hover:translate-x-0.5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
           <path d="m7.5 5 5 5-5 5" strokeLinecap="round" strokeLinejoin="round" />

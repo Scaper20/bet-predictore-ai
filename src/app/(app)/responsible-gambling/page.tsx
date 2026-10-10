@@ -5,8 +5,8 @@ export const metadata: Metadata = {
   alternates: { canonical: "/responsible-gambling" },
   title: "Responsible Gambling",
   description:
-    "Betting should stay entertainment. Warning signs, practical limits, and where to get help " +
-    "in Nigeria.",
+    "Betting should stay entertainment. Warning signs, practical limits, and where to get help, " +
+    "wherever you are.",
 };
 
 const SIGNS = [
@@ -57,8 +57,9 @@ export default function ResponsibleGamblingPage() {
               18+
             </span>
             <p className="text-sm leading-relaxed text-ink">
-              Sports betting in Nigeria is legal and regulated, and restricted to adults aged 18 and
-              over. BetriX does not accept bets or hold funds — it is an analytics product.
+              Betting laws differ from country to country. Where it is legal, it is for adults only:
+              18 in Nigeria and most countries, older in some. Only bet where it is legal for you.
+              BetriX does not accept bets or hold funds — it is an analytics product.
             </p>
           </div>
         </div>
@@ -118,6 +119,11 @@ export default function ResponsibleGamblingPage() {
               Commission</strong> oversees licensed operators, and every licensed bookmaker is
               required to offer self-exclusion. Ask them to close or freeze your account; they must
               act on it.
+            </p>
+            <p>
+              Elsewhere, your country&apos;s gambling regulator licenses bookmakers and can point you
+              to local support, and licensed bookmakers generally offer self-exclusion too. Gamblers
+              Anonymous runs groups in many countries, and meetings online.
             </p>
             <p>
               Talking to someone you trust is not a small step. It is usually the one that

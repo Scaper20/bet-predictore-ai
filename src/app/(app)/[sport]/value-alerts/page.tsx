@@ -7,7 +7,8 @@ import { containerClass } from "@/components/ui/container";
 import { getEntitlement, meets } from "@/lib/entitlements";
 import { activeAlerts, latestScan, runValueScan, type ValueAlert } from "@/lib/value-alerts";
 import { scanDue, STALE_AFTER_MS } from "@/lib/value-alert-rules";
-import { kickoffTime, odds, percent, relativeDay } from "@/lib/format";
+import { odds, percent } from "@/lib/format";
+import { LocalTime } from "@/components/ui/local-time";
 import { matchPath } from "@/lib/routes";
 
 export const metadata: Metadata = {
@@ -56,9 +57,14 @@ async function AlertsBody() {
       <div className="flex flex-wrap items-center gap-3 text-xs text-ink-dim">
         <Badge tone="violet">VIP</Badge>
         <span>
-          {checked
-            ? `Last checked ${new Date(checked).toLocaleTimeString("en-NG", { timeZone: "Africa/Lagos", hour: "2-digit", minute: "2-digit" })} WAT${scan?.fixtures != null ? ` across ${scan.fixtures} fixtures` : ""}.`
-            : "First scan is running now."}{" "}
+          {checked ? (
+            <>
+              Last checked <LocalTime iso={new Date(checked).toISOString()} />
+              {scan?.fixtures != null ? ` across ${scan.fixtures} fixtures` : ""}.
+            </>
+          ) : (
+            "First scan is running now."
+          )}{" "}
           Rechecked every {Math.round(STALE_AFTER_MS / 60_000)} minutes while you use this page; new alerts are also emailed each morning.
         </span>
       </div>
@@ -94,7 +100,7 @@ function AlertCard({ alert: a }: { alert: ValueAlert }) {
       <div className="flex items-center justify-between gap-3 text-xs text-ink-dim">
         <span className="truncate">{a.leagueName}</span>
         <span className="shrink-0">
-          {relativeDay(a.kickoff)} · {kickoffTime(a.kickoff)}
+          <LocalTime iso={a.kickoff} kind="relative" /> · <LocalTime iso={a.kickoff} />
         </span>
       </div>
       <p className="mt-2 truncate text-sm font-semibold">

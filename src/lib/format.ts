@@ -2,24 +2,29 @@
 
 import type { Match } from "@/lib/types";
 
-/** Nigeria runs on WAT (UTC+1) year round, with no daylight saving. */
+/**
+ * The app's own clock: which calendar day "today's" picks and free picks
+ * belong to, and when the daily jobs run. WAT (UTC+1) year round, with no
+ * daylight saving. Times shown to a visitor use their own zone instead
+ * (the `tz` arguments below, from useTimeZone() in lib/use-visitor.ts).
+ */
 export const APP_TIMEZONE = "Africa/Lagos";
 
-export function kickoffTime(iso: string): string {
+export function kickoffTime(iso: string, tz: string = APP_TIMEZONE): string {
   return new Date(iso).toLocaleTimeString("en-NG", {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
-    timeZone: APP_TIMEZONE,
+    timeZone: tz,
   });
 }
 
-export function kickoffDay(iso: string): string {
+export function kickoffDay(iso: string, tz: string = APP_TIMEZONE): string {
   return new Date(iso).toLocaleDateString("en-NG", {
     weekday: "short",
     day: "numeric",
     month: "short",
-    timeZone: APP_TIMEZONE,
+    timeZone: tz,
   });
 }
 
@@ -33,14 +38,14 @@ export function appDayBounds(now: Date, offsetDays = 0): { start: Date; end: Dat
   return { start, end: new Date(start.getTime() + 86_400_000) };
 }
 
-/** "Today" / "Tomorrow" / "Sat 23 Aug", in Lagos time. */
-export function relativeDay(iso: string, now = new Date()): string {
+/** "Today" / "Tomorrow" / "Sat 23 Aug", in `tz` (Lagos by default). */
+export function relativeDay(iso: string, now = new Date(), tz: string = APP_TIMEZONE): string {
   const dayKey = (d: Date) =>
-    d.toLocaleDateString("en-CA", { timeZone: APP_TIMEZONE });
+    d.toLocaleDateString("en-CA", { timeZone: tz });
   const target = dayKey(new Date(iso));
   if (target === dayKey(now)) return "Today";
   if (target === dayKey(new Date(now.getTime() + 86_400_000))) return "Tomorrow";
-  return kickoffDay(iso);
+  return kickoffDay(iso, tz);
 }
 
 export function percent(v: number, digits = 0): string {
@@ -61,7 +66,7 @@ export function isLive(m: Match): boolean {
   return m.status === "live" || m.status === "halftime";
 }
 
-export function statusLabel(m: Match): string {
+export function statusLabel(m: Match, tz: string = APP_TIMEZONE): string {
   switch (m.status) {
     case "live":
       return m.minute ? `${m.minute}'` : "LIVE";
@@ -74,7 +79,7 @@ export function statusLabel(m: Match): string {
     case "cancelled":
       return "CANC";
     default:
-      return kickoffTime(m.kickoff);
+      return kickoffTime(m.kickoff, tz);
   }
 }
 

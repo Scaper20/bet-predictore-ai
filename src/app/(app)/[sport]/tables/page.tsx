@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { LocalTime } from "@/components/ui/local-time";
 import { Suspense } from "react";
 import { PageHeader } from "@/components/ui/page-header";
 import { containerClass } from "@/components/ui/container";
@@ -63,7 +64,17 @@ export default async function TablesPage({ searchParams }: { searchParams: Promi
                   <Badge tone="live"><LiveDot /> Live · {table.liveGames} in play</Badge>
                 ) : (
                   <span className="text-[11px] text-ink-dim">
-                    {table.updatedAt ? `Updated ${new Date(table.updatedAt).toLocaleString("en-NG", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Africa/Lagos" })}` : ""}
+                    {table.updatedAt ? (
+                      <>
+                        Updated{" "}
+                        <LocalTime
+                          iso={new Date(table.updatedAt).toISOString()}
+                          options={{ day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false }}
+                        />
+                      </>
+                    ) : (
+                      ""
+                    )}
                   </span>
                 )}
               </span>

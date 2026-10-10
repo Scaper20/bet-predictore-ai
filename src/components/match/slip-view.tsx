@@ -5,7 +5,8 @@ import { useEffect, useMemo, useState } from "react";
 import { legTeams, useSlip, type SlipLeg } from "@/lib/slip";
 import { accumulator } from "@/lib/model/odds";
 import { Badge, Button, ButtonLink, EmptyState, ProbabilityBar } from "@/components/ui/primitives";
-import { kickoffTime, odds, percent, relativeDay } from "@/lib/format";
+import { odds, percent } from "@/lib/format";
+import { LocalTime } from "@/components/ui/local-time";
 import { sportPath, matchPath } from "@/lib/routes";
 import { worstLeg } from "@/lib/value";
 
@@ -224,7 +225,7 @@ export function SlipView({ variant = "page" }: { variant?: "page" | "sheet" }) {
             <div key={l.matchId} className="card flex items-center gap-3 px-4 py-3">
               <div className="min-w-0 flex-1">
                 <p className="truncate text-[11px] text-ink-dim">
-                  {l.league} · {relativeDay(l.kickoff)} {kickoffTime(l.kickoff)}
+                  {l.league} · <LocalTime iso={l.kickoff} kind="relative" /> <LocalTime iso={l.kickoff} />
                 </p>
                 <Link href={matchPath(l.matchId)} className="mt-0.5 block truncate text-sm font-semibold hover:text-brand">
                   {l.fixture}

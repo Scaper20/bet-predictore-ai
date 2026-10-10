@@ -64,8 +64,8 @@ export function SiteFooter() {
               </span>
             </div>
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-ink-muted">
-              Data-driven football insight for Nigerian football fans. Real fixtures, real
-              results, and a model that shows its working.
+              Data-driven football insight for fans across Africa and the world. Real fixtures,
+              real results, and a model that shows its working.
             </p>
           </div>
 
@@ -75,9 +75,10 @@ export function SiteFooter() {
         </div>
 
         {/*
-          Nigeria's National Lottery Regulatory Commission expects a visible
-          18+ notice on anything betting-adjacent. It is also just the right
-          thing to put in front of this audience.
+          Nigeria's National Lottery Regulatory Commission (BetriX is a
+          Nigerian company) expects a visible 18+ notice on anything
+          betting-adjacent, as regulators elsewhere do. It is also just the
+          right thing to put in front of this audience, wherever they are.
         */}
         <div className="mt-8 rounded-2xl sm:mt-12 border border-amber/20 bg-amber/5 p-5">
           <div className="flex flex-wrap items-center gap-3">
@@ -86,8 +87,8 @@ export function SiteFooter() {
             </span>
             <p className="min-w-[16rem] flex-1 text-sm text-ink-muted">
               <strong className="text-ink">Bet responsibly.</strong> Predictions are statistical
-              estimates, not certainties. Never stake money you cannot afford to lose. If gambling
-              stops being fun, take a break.{" "}
+              estimates, not certainties. Only bet where it is legal for you, and never stake money
+              you cannot afford to lose. If gambling stops being fun, take a break.{" "}
               <Link href="/responsible-gambling" className="text-amber underline underline-offset-2">
                 Get help
               </Link>
@@ -105,7 +106,7 @@ export function SiteFooter() {
         */}
         <div className="mt-6 flex flex-col gap-3 border-t border-line pt-6 sm:mt-8 sm:pt-8 text-xs text-ink-dim sm:flex-row sm:items-center sm:justify-between">
           <p>
-            © {new Date().getFullYear()} {COMPANY.legalName}. Built for Nigeria, made for Africa.
+            © {new Date().getFullYear()} {COMPANY.legalName}. Built in Nigeria, for Africa and the world.
           </p>
           <p>Not affiliated with any bookmaker.</p>
         </div>

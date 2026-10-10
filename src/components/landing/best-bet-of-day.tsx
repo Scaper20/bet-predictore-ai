@@ -3,7 +3,7 @@ import type { Prediction } from "@/lib/model/predict";
 import { Crest } from "@/components/ui/crest";
 import { SplitBar } from "@/components/stats/split-bar";
 import { AnimatedNumber } from "@/components/motion/animated-number";
-import { kickoffTime, relativeDay } from "@/lib/format";
+import { LocalTime } from "@/components/ui/local-time";
 import { matchPath } from "@/lib/routes";
 import { isStrong } from "@/lib/model/tiers";
 import { StrongBadge } from "@/components/ui/strong-badge";
@@ -34,7 +34,7 @@ export function BestBetOfDay({ prediction }: { prediction: Prediction | ViewedPr
             Best bet today
           </span>
           <span className="truncate text-xs text-ink-muted">
-            {match.league.name} · {relativeDay(match.kickoff)} {kickoffTime(match.kickoff)}
+            {match.league.name} · <LocalTime iso={match.kickoff} kind="relative" /> <LocalTime iso={match.kickoff} />
           </span>
         </div>
 

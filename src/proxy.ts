@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { type NextFetchEvent, type NextRequest, NextResponse } from "next/server";
 import { FIRST_TOUCH_COOKIE, type FirstTouch, trimFirstTouchValue } from "@/lib/first-touch";
 import { MAINTENANCE_BYPASS_COOKIE, isMaintenanceExempt, maintenanceHtml } from "@/lib/maintenance";
+import { COUNTRY_COOKIE } from "@/lib/visitor";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const anonKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -87,6 +88,19 @@ export async function proxy(request: NextRequest, event: NextFetchEvent) {
   }
 
   captureFirstTouch(request, response);
+
+  // Which country's prices to show (lib/visitor.ts). Same rules as bx_auth:
+  // a display hint only, written only when it changes.
+  const country = request.headers.get("x-vercel-ip-country");
+  if (country && /^[A-Z]{2}$/.test(country) && request.cookies.get(COUNTRY_COOKIE)?.value !== country) {
+    response.cookies.set(COUNTRY_COOKIE, country, {
+      httpOnly: false,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 30,
+    });
+  }
 
   // Local development against the production database: preview the site
   // while it's in maintenance without an admin login. Never honoured in a

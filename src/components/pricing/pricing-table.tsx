@@ -1,10 +1,8 @@
 import Link from "next/link";
 import type { Tier } from "@/lib/entitlements";
-import {
-  CYCLE_LABEL, PLANS, cycleSaving, type BillingCycle, type PlanDefinition,
-} from "@/lib/pricing";
-import { naira } from "@/lib/format";
+import { PLANS, type BillingCycle, type PlanDefinition } from "@/lib/pricing";
 import { Badge } from "@/components/ui/primitives";
+import { PlanPrice } from "@/components/pricing/plan-price";
 
 /**
  * One set of pricing cards, rendered from PLANS.
@@ -18,7 +16,9 @@ import { Badge } from "@/components/ui/primitives";
  *
  * This is the presentational core and stays a Server Component. The two
  * behaviours that need a client — the interval toggle and the checkout POST —
- * are passed in, so the marketing surface never ships that JavaScript.
+ * are passed in, so the marketing surface never ships that JavaScript. The
+ * price itself is a small client island (plan-price.tsx), so cached pages
+ * can still show each visitor their own currency.
  */
 export function PricingTable({
   interval = "monthly",
@@ -26,6 +26,8 @@ export function PricingTable({
   hrefFor,
   renderCta,
   plans = PLANS,
+  sellsAbroad = false,
+  country,
 }: {
   interval?: BillingCycle;
   /** Marks "your plan" and suppresses its CTA. Omitted on marketing surfaces. */
@@ -35,6 +37,10 @@ export function PricingTable({
   /** For surfaces that need a button rather than a link (checkout). */
   renderCta?: (plan: PlanDefinition) => React.ReactNode;
   plans?: PlanDefinition[];
+  /** Whether payers outside Nigeria get local prices (Flutterwave configured). */
+  sellsAbroad?: boolean;
+  /** The visitor's country, when the page knows it; otherwise the browser works it out. */
+  country?: string;
 }) {
   const ordered = [...plans].sort((a, b) => a.order - b.order);
 
@@ -45,8 +51,6 @@ export function PricingTable({
         // A plan not sold on the chosen cycle shows monthly.
         const cycle: BillingCycle = plan.price[interval] !== undefined ? interval : "monthly";
         const recurring = plan.price.monthly !== undefined;
-        const saving = recurring ? cycleSaving(plan, cycle) : null;
-        const amount = recurring ? plan.price[cycle] : undefined;
 
         return (
           <div
@@ -75,21 +79,12 @@ export function PricingTable({
             <h3 className="text-lg font-semibold">{plan.name}</h3>
             <p className="mt-1 text-sm text-ink-muted">{plan.description}</p>
 
-            <div className="mt-4 flex items-baseline gap-2 sm:mt-5">
-              <span className="font-display text-3xl font-extrabold sm:text-4xl">
-                {amount === undefined ? "Free" : naira(amount)}
-              </span>
-              <span className="text-sm text-ink-dim">
-                {recurring ? CYCLE_LABEL[cycle].per : plan.cadence}
-              </span>
-            </div>
-
-            {/* Only on a longer cycle, where it is the reason to switch. */}
-            {saving && (
-              <p className="mt-1.5 text-xs font-medium text-brand">
-                Saves {naira(saving.amount)} ({saving.percent}%) against paying monthly
-              </p>
-            )}
+            <PlanPrice
+              plan={{ id: plan.id, price: plan.price, cadence: plan.cadence }}
+              cycle={cycle}
+              sellsAbroad={sellsAbroad}
+              country={country}
+            />
 
             {recurring && cycle !== interval && (
               <p className="mt-1.5 text-xs text-ink-dim">Billed monthly or yearly</p>

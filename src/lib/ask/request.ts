@@ -3,6 +3,8 @@
  * validation and context framing — pure, so it's unit-tested.
  */
 
+import { APP_TIMEZONE } from "@/lib/format";
+
 export const ASK_FREE_DAILY = 3;
 /** Questions a visitor gets before the panel asks them to create an account. */
 export const ASK_GUEST_TOTAL = 2;
@@ -41,6 +43,8 @@ export interface AskContext {
   matchLabel?: string;
   /** The selection builder's legs, when the user is on the slip page. */
   slip?: AskSlipLeg[];
+  /** The user's IANA time zone from their browser ("Africa/Nairobi"). */
+  timeZone?: string;
 }
 
 /** A pick card the chat renders, with "+ Slip". Built by the show_picks tool, never by the model. */
@@ -100,6 +104,8 @@ export function parseAskRequest(body: unknown): AskRequest | string {
 
   const c = (b.context ?? {}) as Record<string, unknown>;
   const context: AskContext = {};
+  const timeZone = clip(c.timeZone, 64);
+  if (timeZone && validTimeZone(timeZone)) context.timeZone = timeZone;
   const matchId = clip(c.matchId, 64);
   if (/^[a-z]+:[\w.-]{1,60}$/i.test(matchId)) {
     context.matchId = matchId;
@@ -136,6 +142,7 @@ export function parseAskRequest(body: unknown): AskRequest | string {
  * so the cached system prefix never changes.
  */
 export function contextPreamble(context: AskContext, now: Date): string {
+  const tz = context.timeZone ?? APP_TIMEZONE;
   const when = now.toLocaleString("en-NG", {
     weekday: "short",
     day: "numeric",
@@ -144,9 +151,9 @@ export function contextPreamble(context: AskContext, now: Date): string {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
-    timeZone: "Africa/Lagos",
+    timeZone: tz,
   });
-  const lines = [`[Context — not from the user] Now: ${when} WAT.`];
+  const lines = [`[Context — not from the user] Now: ${when} in the user's time zone (${tz}). Kickoff times in tool results are already in it.`];
   if (context.matchId) {
     lines.push(
       `The user has the match page open for ${context.matchLabel ?? "a fixture"} (match_id ${context.matchId}). "This game" means this fixture.`,
@@ -162,4 +169,14 @@ export function contextPreamble(context: AskContext, now: Date): string {
     }
   }
   return lines.join("\n");
+}
+
+/** Whether Intl knows this IANA zone; a browser's own value always passes. */
+function validTimeZone(tz: string): boolean {
+  try {
+    new Intl.DateTimeFormat("en", { timeZone: tz });
+    return true;
+  } catch {
+    return false;
+  }
 }

@@ -22,7 +22,9 @@ import {
 import { CLUB_LEAGUES, INTERNATIONAL_LEAGUES } from "@/lib/leagues";
 import { useSlip, type SlipLeg } from "@/lib/slip";
 import { trackSlip } from "@/lib/tracked-slips";
-import { kickoffDay, kickoffTime } from "@/lib/format";
+import { LocalTime } from "@/components/ui/local-time";
+import { formatMoney, marketFor } from "@/lib/payments/markets";
+import { useCountry } from "@/lib/use-visitor";
 import { sportPath } from "@/lib/routes";
 import { Spinner } from "@/components/ui/primitives";
 import { BuildProgress, useBuildProgress } from "@/components/forge/build-progress";
@@ -68,7 +70,6 @@ function save(key: string, value: unknown) {
   }
 }
 
-const naira = (n: number) => `₦${Math.round(n).toLocaleString("en-NG")}`;
 const pct = (p: number) => `${Math.round(p * 100)}%`;
 
 /* ----------------------------------------------------------------- studio */
@@ -231,7 +232,7 @@ export function ForgeStudio() {
 
   const share = async () => {
     if (!slip?.legs.length) return;
-    const t = slipTotals(slip.legs, EXAMPLE_STAKE);
+    const t = slipTotals(slip.legs, 1);
     const text = [
       `My BetriX Forge slip · total odds ${t.odds.toFixed(2)}`,
       ...slip.legs.map((l) => `• ${l.fixture}: ${l.label} @ ${legOdds(l).toFixed(2)}`),
@@ -309,10 +310,12 @@ export function ForgeStudio() {
  * money reads as if the slip could be placed here. What a slip pays is
  * still worth knowing, so it is shown on one fixed example amount.
  */
-const EXAMPLE_STAKE = 1000;
-
 function ReturnInsight({ odds, probability }: { odds: number; probability: number }) {
-  const returns = Math.round(EXAMPLE_STAKE * odds);
+  // An everyday stake in the visitor's currency: ₦1,000, KSh 100, $10.
+  const market = marketFor(useCountry());
+  const stake = market.stake;
+  const money = (n: number) => formatMoney(Math.round(n), market.currency);
+  const returns = Math.round(stake * odds);
   return (
     <div className="mt-4 flex items-start gap-3 rounded-xl border border-brand/20 bg-brand/[0.06] px-4 py-3.5">
       <span className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-full bg-brand/15 text-brand" aria-hidden>
@@ -321,9 +324,9 @@ function ReturnInsight({ odds, probability }: { odds: number; probability: numbe
         </svg>
       </span>
       <p className="text-sm leading-relaxed text-ink-muted">
-        If you placed <span className="font-semibold text-ink">{naira(EXAMPLE_STAKE)}</span> on this slip with your bookmaker, it
-        would pay <span className="tnum font-bold text-brand">{naira(returns)}</span>{" "}
-        <span className="text-ink-dim">(₦{(returns - EXAMPLE_STAKE).toLocaleString("en-NG")} profit)</span> if every pick lands
+        If you placed <span className="font-semibold text-ink">{money(stake)}</span> on this slip with your bookmaker, it
+        would pay <span className="tnum font-bold text-brand">{money(returns)}</span>{" "}
+        <span className="text-ink-dim">({money(returns - stake)} profit)</span> if every pick lands
         {probability > 0 && probability < 1 ? (
           <>, which a slip like this does {oneIn(probability)}{1 / probability >= 1.15 ? " times" : ""}.</>
         ) : (
@@ -589,7 +592,7 @@ function ResultPanel({
   onSwap: (leg: ForgeLeg) => void;
   onRemove: (leg: ForgeLeg) => void;
 }) {
-  const t = useMemo(() => slipTotals(slip.legs, EXAMPLE_STAKE), [slip.legs]);
+  const t = useMemo(() => slipTotals(slip.legs, 1), [slip.legs]);
   const onSlip = new Set(slip.legs.map((l) => l.matchId));
   const style = RISK_PRESETS[slip.settings.risk].label;
   const target = slip.settings.targetOdds;
@@ -709,7 +712,7 @@ function LegCard({
     <article className={`card flex flex-col p-4 sm:p-5 ${combo ? "border-violet/35" : ""} ${locked ? "ring-1 ring-brand/40" : ""}`}>
       <div className="flex items-start justify-between gap-3">
         <p className="min-w-0 truncate text-xs text-ink-dim">
-          {leg.league} · {kickoffDay(leg.kickoff)} {kickoffTime(leg.kickoff)}
+          {leg.league} · <LocalTime iso={leg.kickoff} kind="day" /> <LocalTime iso={leg.kickoff} />
         </p>
         {combo && (
           <span className="shrink-0 rounded-md bg-violet/15 px-2 py-0.5 text-[11px] font-semibold text-violet">

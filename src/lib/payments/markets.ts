@@ -37,6 +37,8 @@ export interface Market {
   methodsLabel: string;
   /** Major units of `currency`, per plan and cycle. Paystack markets read lib/pricing.ts instead. */
   prices?: Record<"pro" | "vip", Record<BillingCycle, number>>;
+  /** A round, everyday stake in this currency, for "if you placed …" examples (Forge). */
+  stake: number;
 }
 
 /**
@@ -61,6 +63,7 @@ export const NIGERIA: Market = {
   currency: "NGN",
   provider: "paystack",
   methodsLabel: "Card, bank transfer or USSD",
+  stake: 1000,
 };
 
 export const ELSEWHERE: Market = {
@@ -72,6 +75,7 @@ export const ELSEWHERE: Market = {
   methods: "card",
   methodsLabel: "Card",
   prices: tiered([20, 54, 192], [55, 149, 528]),
+  stake: 10,
 };
 
 export const MARKETS: Market[] = [
@@ -80,51 +84,61 @@ export const MARKETS: Market[] = [
     country: "GH", label: "Ghana", flag: "🇬🇭", currency: "GHS", provider: "flutterwave",
     methods: "card,mobilemoneyghana", methodsLabel: "Mobile Money (MTN, Telecel, AT) or card",
     prices: tiered([130, 350, 1250], [360, 970, 3450]),
+    stake: 10,
   },
   {
     country: "KE", label: "Kenya", flag: "🇰🇪", currency: "KES", provider: "flutterwave",
     methods: "card,mpesa", methodsLabel: "M-Pesa or card",
     prices: tiered([1550, 4200, 14900], [4300, 11600, 41300]),
+    stake: 100,
   },
   {
     country: "UG", label: "Uganda", flag: "🇺🇬", currency: "UGX", provider: "flutterwave",
     methods: "card,mobilemoneyuganda", methodsLabel: "Mobile Money (MTN, Airtel) or card",
     prices: tiered([44000, 119000, 422000], [120000, 324000, 1152000]),
+    stake: 3000,
   },
   {
     country: "TZ", label: "Tanzania", flag: "🇹🇿", currency: "TZS", provider: "flutterwave",
     methods: "card,mobilemoneytanzania", methodsLabel: "Mobile Money or card",
     prices: tiered([32000, 86400, 307000], [87000, 235000, 835000]),
+    stake: 2000,
   },
   {
     country: "RW", label: "Rwanda", flag: "🇷🇼", currency: "RWF", provider: "flutterwave",
     methods: "card,mobilemoneyrwanda", methodsLabel: "Mobile Money (MTN, Airtel) or card",
     prices: tiered([17500, 47250, 168000], [48000, 129600, 461000]),
+    stake: 1000,
   },
   {
     country: "ZM", label: "Zambia", flag: "🇿🇲", currency: "ZMW", provider: "flutterwave",
     methods: "card,mobilemoneyzambia", methodsLabel: "Mobile Money or card",
     prices: tiered([210, 565, 2020], [580, 1565, 5570]),
+    stake: 20,
   },
   {
     country: "CM", label: "Cameroon", flag: "🇨🇲", currency: "XAF", provider: "flutterwave",
     methods: "card,mobilemoneyxaf,mobilemoneyfranco", methodsLabel: "Mobile Money (MTN, Orange) or card",
     prices: tiered([7000, 18900, 67200], [18500, 50000, 177600]),
+    stake: 500,
   },
   {
     country: "CI", label: "Côte d'Ivoire", flag: "🇨🇮", currency: "XOF", provider: "flutterwave",
     methods: "card,mobilemoneyxof,mobilemoneyfranco", methodsLabel: "Mobile Money (Orange, MTN, Moov) or card",
     prices: tiered([7000, 18900, 67200], [18500, 50000, 177600]),
+    stake: 500,
   },
   {
     country: "SN", label: "Senegal", flag: "🇸🇳", currency: "XOF", provider: "flutterwave",
     methods: "card,mobilemoneyxof,mobilemoneyfranco", methodsLabel: "Mobile Money (Orange, Free) or card",
     prices: tiered([7000, 18900, 67200], [18500, 50000, 177600]),
+    stake: 500,
   },
   {
     country: "ZA", label: "South Africa", flag: "🇿🇦", currency: "ZAR", provider: "flutterwave",
     methods: "card,account", methodsLabel: "Card or bank account",
     prices: tiered([230, 620, 2210], [635, 1715, 6100]),
+    stake: 20,
   },
   ELSEWHERE,
 ];

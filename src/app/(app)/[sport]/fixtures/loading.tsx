@@ -5,7 +5,7 @@ import { containerClass } from "@/components/ui/container";
 export default function Loading() {
   return (
     <>
-      <PageHeader eyebrow="Fixtures" title="Upcoming fixtures" description="All times WAT." />
+      <PageHeader eyebrow="Fixtures" title="Upcoming fixtures" description="Times in your time zone." />
       <div className={`${containerClass()} space-y-6 py-7 sm:py-10`}>
         <div className="h-10" />
         <section>

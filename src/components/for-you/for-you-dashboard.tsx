@@ -6,7 +6,8 @@ import type { AccaSuggestion, ForYouFeedPayload, PersonalizedPick } from "@/lib/
 import { Badge, ButtonLink, Button, EmptyState, LiveDot, SectionHeading } from "@/components/ui/primitives";
 import { Container } from "@/components/ui/container";
 import { useSlip } from "@/lib/slip";
-import { kickoffDay, kickoffTime, percent } from "@/lib/format";
+import { percent } from "@/lib/format";
+import { LocalTime } from "@/components/ui/local-time";
 import { sportPath } from "@/lib/routes";
 import { Crest } from "@/components/ui/crest";
 import { isStrong } from "@/lib/model/tiers";
@@ -314,7 +315,7 @@ function PickRow({
             <span className="shrink-0 rounded-full bg-surface-3 px-2 py-0.5 text-[11px] font-bold text-ink-muted">FT</span>
           ) : (
             <span className="shrink-0">
-              {kickoffDay(pick.kickoff)} {kickoffTime(pick.kickoff)}
+              <LocalTime iso={pick.kickoff} kind="day" /> <LocalTime iso={pick.kickoff} />
             </span>
           )}
           <svg

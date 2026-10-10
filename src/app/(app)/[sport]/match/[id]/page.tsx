@@ -33,7 +33,8 @@ import { freeViewer, matchDetail } from "@/lib/service";
 import { viewPrediction, type ViewedPrediction } from "@/lib/access";
 import { MatchAccessProvider, ProMarkets } from "@/components/match/match-access";
 import { SITE_URL as SITE } from "@/lib/site-url";
-import { kickoffDay, kickoffTime, percent, relativeDay, isLive } from "@/lib/format";
+import { percent, isLive } from "@/lib/format";
+import { LocalTime } from "@/components/ui/local-time";
 import type { Match } from "@/lib/types";
 import type { Prediction } from "@/lib/model/predict";
 import { containerClass } from "@/components/ui/container";
@@ -229,7 +230,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
                 ) : match.status === "postponed" ? (
                   <Badge tone="amber">Postponed</Badge>
                 ) : (
-                  <Badge tone="neutral">{relativeDay(match.kickoff)}</Badge>
+                  <Badge tone="neutral"><LocalTime iso={match.kickoff} kind="relative" /></Badge>
                 )}
               </span>
             </div>
@@ -246,13 +247,13 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
                     {match.score.away ?? 0}
                   </p>
                 ) : (
-                  <p className="tnum font-display text-3xl font-bold leading-none sm:text-5xl">{kickoffTime(match.kickoff)}</p>
+                  <p className="tnum font-display text-3xl font-bold leading-none sm:text-5xl"><LocalTime iso={match.kickoff} /></p>
                 )}
                 {live ? (
                   <LiveProgress />
                 ) : (
                   <p className="mt-2 text-[11px] text-ink-dim sm:text-xs">
-                    {match.status === "finished" ? kickoffDay(match.kickoff) : `${kickoffDay(match.kickoff)} · WAT`}
+                    <LocalTime iso={match.kickoff} kind="day" />
                   </p>
                 )}
               </div>

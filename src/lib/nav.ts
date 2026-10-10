@@ -34,7 +34,7 @@ export const SOON: Record<string, SoonFeature> = {
     title: "Basketball",
     blurb: "NBA, EuroLeague, BAL and FIBA, modelled like our football.",
     points: [
-      "Tonight's slate with tip-off times in WAT — most NBA games land after midnight here.",
+      "Tonight's slate with tip-off times in your time zone.",
       "Projected score, spread and total points for every game.",
       "Rest and back-to-backs priced into every number.",
     ],

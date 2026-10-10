@@ -15,8 +15,15 @@ function secretKey(): string {
   return key;
 }
 
+/**
+ * Only a v3 secret key (FLWSECK-..., or FLWSECK_TEST-... in test mode) works
+ * here. v4 credentials (a client ID and secret for OAuth) can't call the v3
+ * hosted checkout, and v4 has no hosted checkout of its own yet, so with any
+ * other key Flutterwave stays off and everyone pays through Paystack rather
+ * than reaching a checkout that fails.
+ */
 export function flutterwaveConfigured(): boolean {
-  return Boolean(process.env.FLUTTERWAVE_SECRET_KEY);
+  return /^FLWSECK(_TEST)?-/.test(process.env.FLUTTERWAVE_SECRET_KEY ?? "");
 }
 
 async function flwFetch<T>(path: string, init?: RequestInit): Promise<T> {

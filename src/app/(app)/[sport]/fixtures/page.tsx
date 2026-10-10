@@ -23,13 +23,13 @@ export async function generateMetadata({
       title: "Football Fixtures",
       description:
         "Upcoming football fixtures across the Premier League, NPFL, AFCON, Champions League " +
-        "and more, with kickoff times in West Africa Time.",
+        "and more, with kickoff times in your own time zone.",
       alternates: { canonical: base },
     };
   }
   return {
     title: `${def.name} Fixtures`,
-    description: `Upcoming ${def.name} fixtures with kickoff times in West Africa Time and a model prediction for every match.`,
+    description: `Upcoming ${def.name} fixtures with kickoff times in your own time zone and a model prediction for every match.`,
     alternates: { canonical: `${base}?league=${def.code}` },
   };
 }
@@ -53,7 +53,7 @@ export default async function FixturesPage({
       <PageHeader
         eyebrow="Fixtures"
         title={def ? `${def.name} fixtures` : "Fixtures"}
-        description="All times WAT. Tap a game for our read."
+        description="Times in your time zone. Tap a game for our read."
       />
 
       <div className={`${containerClass()} space-y-6 py-7 sm:py-10`}>
