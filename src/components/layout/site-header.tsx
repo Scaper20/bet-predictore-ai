@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { ButtonLink } from "@/components/ui/primitives";
 import { Container } from "@/components/ui/container";
 import { AccountMenu } from "@/components/layout/account-menu";
-import { SlipButton } from "@/components/layout/slip-button";
+import { SlipButton, TrackedSlipsWatcher } from "@/components/layout/slip-button";
 import { AskButton } from "@/components/ask/ask-button";
 import { SportSwitch } from "@/components/layout/sport-switch";
 import { NavSearch } from "@/components/layout/nav-search";
@@ -80,6 +80,8 @@ export function SiteHeader() {
         <div className="hidden min-w-0 flex-1 lg:block">
           <NavSearch sport={sport} />
         </div>
+
+        <TrackedSlipsWatcher />
 
         {/* Desktop: the personal cluster. */}
         <div className="ml-auto hidden items-center gap-2 lg:flex">

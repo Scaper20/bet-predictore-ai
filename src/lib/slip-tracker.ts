@@ -137,6 +137,15 @@ export function legsToPoll(legs: TrackedLeg[], results: Record<string, LegResult
   return legs.filter((l) => !results[l.matchId] && Date.parse(l.kickoff) <= now);
 }
 
+/**
+ * Whether a slip is decided on its recorded results alone: a leg lost, or
+ * every leg in. What the header's count of slips still running leaves out.
+ */
+export function slipSettled(legs: TrackedLeg[], results: Record<string, LegResult>): boolean {
+  if (legs.some((l) => results[l.matchId]?.grade === "lose")) return true;
+  return legs.every((l) => results[l.matchId] !== undefined);
+}
+
 /** Product of the legs' probabilities — the "combined chance" the slip was saved at. */
 export function combinedProbability(legs: TrackedLeg[]): number {
   return legs.reduce((p, l) => p * l.probability, 1);

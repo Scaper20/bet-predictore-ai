@@ -18,7 +18,7 @@ const TICK_MS = 60_000;
  *
  * Paused while the tab is hidden; catches up as soon as it's visible again.
  */
-export function useSlipScores(slips: TrackedSlip[]): Record<string, LegScore> {
+export function useSlipScores(slips: TrackedSlip[], pollMs = POLL_MS): Record<string, LegScore> {
   const [scores, setScores] = useState<Record<string, LegScore>>({});
   const [now, setNow] = useState(() => Date.now());
 
@@ -64,7 +64,7 @@ export function useSlipScores(slips: TrackedSlip[]): Record<string, LegScore> {
     };
 
     void poll();
-    const timer = window.setInterval(() => void poll(), POLL_MS);
+    const timer = window.setInterval(() => void poll(), pollMs);
     const onVisible = () => {
       if (document.visibilityState === "visible") void poll();
     };
@@ -76,7 +76,7 @@ export function useSlipScores(slips: TrackedSlip[]): Record<string, LegScore> {
       window.clearInterval(timer);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [key]);
+  }, [key, pollMs]);
 
   return scores;
 }
