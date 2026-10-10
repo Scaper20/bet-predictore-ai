@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { LOCKUP_ASPECT, lockupSvg } from "@/lib/brand-mark";
 
 export const runtime = "nodejs";
 
@@ -17,16 +18,20 @@ const SHOWN_LEGS = 12;
 const MAX_STRING_LEN = 80;
 
 const C = {
-  bg: "#0b111a",
-  panel: "#131c29",
-  line: "#223043",
-  ink: "#eef2f7",
-  muted: "#8d9db2",
-  dim: "#5a6b81",
-  brand: "#00f48e",
-  brandInk: "#04281b",
+  bg: "#0b0e0d",
+  panel: "#151c19",
+  line: "#24302a",
+  ink: "#f2f4ec",
+  muted: "#97a39c",
+  dim: "#6b7670",
+  brand: "#d4ff3a",
+  brandInk: "#07090b",
   rose: "#ff5d73",
 };
+
+// One colour on the Volt band, as the identity board's "on Volt" lockup.
+const LOCKUP_SRC = `data:image/svg+xml;base64,${Buffer.from(lockupSvg(C.brandInk)).toString("base64")}`;
+const LOCKUP_H = 60;
 
 /**
  * A branded image of a tracked slip, for saving or sharing (My slips →
@@ -95,12 +100,8 @@ export async function GET(request: Request) {
       <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", background: C.bg, fontFamily: "sans-serif" }}>
         {/* Brand band */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: C.brand, padding: "34px 56px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 64, height: 64, borderRadius: 16, background: C.brandInk, color: C.brand, fontSize: 30, fontWeight: 800 }}>
-              BX
-            </div>
-            <div style={{ display: "flex", fontSize: 48, fontWeight: 800, color: C.brandInk }}>KiqStat</div>
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element -- satori renders plain <img> */}
+          <img src={LOCKUP_SRC} width={Math.round(LOCKUP_H * LOCKUP_ASPECT)} height={LOCKUP_H} alt="KiqStat" />
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", color: C.brandInk }}>
             <div style={{ display: "flex", fontSize: 26, fontWeight: 700 }}>Betslip</div>
             <div style={{ display: "flex", fontSize: 22 }}>{lagos(now, { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}</div>

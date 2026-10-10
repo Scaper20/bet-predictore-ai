@@ -70,7 +70,7 @@ export function PickAction({
     return (
       <span
         className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold ${
-          inPlay ? "bg-rose/12 text-rose" : "bg-surface-3 text-ink-muted"
+          inPlay ? "bg-signal/12 text-signal" : "bg-surface-3 text-ink-muted"
         } ${className}`}
       >
         {inPlay && <LiveDot />}

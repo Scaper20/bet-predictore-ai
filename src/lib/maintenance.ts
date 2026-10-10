@@ -54,7 +54,7 @@ export function maintenanceHtml(message: string | null | undefined): string {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex">
-<meta name="theme-color" content="#05080d">
+<meta name="theme-color" content="#07090b">
 <title>KiqStat · Back soon</title>
 <link rel="icon" href="/icon.png">
 <style>
@@ -63,33 +63,32 @@ export function maintenanceHtml(message: string | null | undefined): string {
   html, body { height: 100%; margin: 0; }
   body {
     display: grid; place-items: center; padding: 24px 16px;
-    background: radial-gradient(60rem 30rem at 50% -10%, rgba(0, 244, 142, 0.10), transparent 70%), #05080d;
-    color: #eef2f7;
+    background: radial-gradient(60rem 30rem at 50% -10%, rgba(212, 255, 58, 0.08), transparent 70%), #07090b;
+    color: #f2f4ec;
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
   }
   main {
     width: 100%; max-width: 30rem; text-align: center;
-    padding: 40px 28px; border: 1px solid #1d2838; border-radius: 20px; background: #0e1520;
+    padding: 40px 28px; border: 1px solid #1e2723; border-radius: 20px; background: #0f1513;
   }
-  img { width: 56px; height: 56px; }
+  img { width: 176px; height: auto; }
   .tag {
     display: inline-block; margin-top: 20px; padding: 4px 12px; border-radius: 999px;
     border: 1px solid rgba(255, 176, 32, 0.3); background: rgba(255, 176, 32, 0.12);
     color: #ffb020; font-size: 12px; font-weight: 600; letter-spacing: 0.04em;
   }
   h1 { margin: 16px 0 0; font-size: 28px; line-height: 1.15; letter-spacing: -0.01em; }
-  h1 span { color: #00f48e; }
-  p { margin: 14px 0 0; color: #8d9db2; font-size: 15px; line-height: 1.6; white-space: pre-line; }
-  .small { margin-top: 24px; font-size: 13px; color: #5a6b81; }
-  a { color: #00f48e; }
+  p { margin: 14px 0 0; color: #97a39c; font-size: 15px; line-height: 1.6; white-space: pre-line; }
+  .small { margin-top: 24px; font-size: 13px; color: #6b7670; }
+  a { color: #d4ff3a; }
 </style>
 </head>
 <body>
 <main>
-  <img src="/brand/icon-green-96.png" alt="KiqStat" width="56" height="56">
+  <img src="/brand/lockup.svg" alt="KiqStat" width="176" height="44">
   <div class="tag">Under maintenance</div>
-  <h1>Kiq<span>Stat</span> will be back soon</h1>
+  <h1>KiqStat will be back soon</h1>
   <p>${body}</p>
   <p class="small">Thanks for your patience. This page reloads by itself the moment we're back.</p>
 </main>

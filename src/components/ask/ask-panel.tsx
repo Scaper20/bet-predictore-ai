@@ -328,7 +328,7 @@ function AskPanelInner({ page }: { page: { matchId: string; label: string } | nu
         <AskAvatar />
         <div className="min-w-0 flex-1">
           <p className="font-display text-lg font-bold leading-tight">
-            Ask Kiq<span className="text-brand">Stat</span>
+            Ask KiqStat
           </p>
           <p className="truncate text-xs text-ink-muted">{subtitle}</p>
         </div>

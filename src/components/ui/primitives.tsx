@@ -8,7 +8,7 @@ export type Tone = "brand" | "neutral" | "live" | "amber" | "cyan" | "violet" | 
 const TONES: Record<Tone, string> = {
   brand: "bg-brand/12 text-brand border-brand/25",
   neutral: "bg-surface-2 text-ink-muted border-line",
-  live: "bg-rose/12 text-rose border-rose/30",
+  live: "bg-signal/12 text-signal border-signal/30",
   amber: "bg-amber/12 text-amber border-amber/25",
   cyan: "bg-cyan/12 text-cyan border-cyan/25",
   violet: "bg-violet/12 text-violet border-violet/25",
@@ -36,7 +36,7 @@ export function Badge({
 export function LiveDot() {
   return (
     <span className="relative inline-flex size-2 shrink-0">
-      <span className="live-dot absolute inset-0 rounded-full bg-rose" />
+      <span className="live-dot absolute inset-0 rounded-full bg-signal" />
     </span>
   );
 }
@@ -161,7 +161,7 @@ export function ProbabilityBar({
   const fill: Record<Tone, string> = {
     brand: "bg-brand",
     neutral: "bg-ink-dim",
-    live: "bg-rose",
+    live: "bg-signal",
     amber: "bg-amber",
     cyan: "bg-cyan",
     violet: "bg-violet",

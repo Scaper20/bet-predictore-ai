@@ -127,7 +127,7 @@ export function LiveProgress() {
   return (
     <div className="mx-auto mt-2.5 w-16">
       <span className="block h-0.5 overflow-hidden rounded-full bg-line" aria-hidden>
-        <span className="block h-full rounded-full bg-rose" style={{ width: `${Math.round(share * 100)}%` }} />
+        <span className="block h-full rounded-full bg-signal" style={{ width: `${Math.round(share * 100)}%` }} />
       </span>
     </div>
   );

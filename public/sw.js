@@ -17,7 +17,7 @@
  * Bump VERSION to drop every cache on the next visit.
  */
 
-const VERSION = "v1";
+const VERSION = "v2";
 const STATIC_CACHE = `betrix-static-${VERSION}`;
 const PAGE_CACHE = `betrix-pages-${VERSION}`;
 const OFFLINE_URL = "/offline";

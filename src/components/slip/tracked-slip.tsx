@@ -14,6 +14,7 @@ import {
 } from "@/lib/slip-tracker";
 import type { TrackedSlip } from "@/lib/tracked-slips";
 import { useTickingMinute } from "@/components/match/use-live-clock";
+import { LogoLockup } from "@/components/brand/logo";
 
 /* ----------------------------------------------------------------- shared */
 
@@ -354,13 +355,7 @@ export function TrackedSlipCard({ view }: { view: SlipView }) {
   return (
     <article className="card p-5 sm:p-7">
       <header className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2.5">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/brand/icon-green-96.png" alt="" width={36} height={36} className="size-9 rounded-xl" aria-hidden />
-          <span className="font-display text-xl font-bold tracking-tight">
-            Kiq<span className="text-brand">Stat</span>
-          </span>
-        </div>
+        <LogoLockup className="h-8 w-auto text-ink" />
         <SlipStatusPill status={view.status} />
       </header>
 

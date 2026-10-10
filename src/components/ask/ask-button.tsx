@@ -29,9 +29,7 @@ export function AskButton({ size = "md" }: { size?: "md" | "sm" }) {
       }`}
     >
       <Icon small={sm} />
-      <span>
-        Ask Kiq<span className="text-brand">Stat</span>
-      </span>
+      <span>Ask KiqStat</span>
     </button>
   );
 }

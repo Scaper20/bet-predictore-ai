@@ -20,6 +20,10 @@ export const metadata: Metadata = {
  */
 const FAQ: { q: string; a: string }[] = [
   {
+    q: "Is KiqStat the same as BetriX?",
+    a: `Yes. BetriX is now called KiqStat. It is the same product from the same company, ${COMPANY.legalName}, with the same model and the same track record, under a new name and a new address: www.kiqstat.app. Old betrix.com.ng links bring you straight here.`,
+  },
+  {
     q: "Is KiqStat legit?",
     a: `Yes. KiqStat is a product of ${COMPANY.legalName}, a ${COMPANY.nationality} company. It publishes football data and statistical predictions, and logs every pick before kick-off so anyone can check how it has done.`,
   },

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { LogoLockup } from "@/components/brand/logo";
 
 export const metadata: Metadata = {
   title: "You're offline",
@@ -12,9 +13,8 @@ export const dynamic = "force-static";
 export default function OfflinePage() {
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col items-center justify-center gap-5 px-6 text-center">
-      <span className="font-display text-4xl font-extrabold">
-        Kiq<span className="text-brand">Stat</span>
-      </span>
+      <LogoLockup className="h-11 w-auto text-ink" />
+      <span className="sr-only">KiqStat</span>
       <h1 className="font-display text-2xl font-bold">You&apos;re offline</h1>
       <p className="text-sm leading-relaxed text-ink-muted">
         KiqStat needs a connection for live scores and fresh predictions. Pages you opened recently

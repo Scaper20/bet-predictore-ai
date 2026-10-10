@@ -1,6 +1,7 @@
 import "server-only";
 
 import { Resend } from "resend";
+import { SITE_URL } from "@/lib/site-url";
 
 const apiKey = process.env.RESEND_API_KEY;
 const FROM = process.env.EMAIL_FROM ?? "KiqStat <hello@kiqstat.app>";
@@ -39,23 +40,23 @@ export async function sendEmail(opts: { to: string; subject: string; html: strin
 export function emailLayout(bodyHtml: string): string {
   return `<!doctype html>
 <html>
-  <body style="margin:0;padding:0;background:#f6f8fb;font-family:Arial,Helvetica,sans-serif;">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f6f8fb;padding:32px 16px;">
+  <body style="margin:0;padding:0;background:#f4f5ef;font-family:Arial,Helvetica,sans-serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f5ef;padding:32px 16px;">
       <tr>
         <td align="center">
-          <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e3e8ef;">
+          <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e1e4da;">
             <tr>
-              <td style="background:#05080d;padding:24px 32px;">
-                <span style="font-size:22px;font-weight:800;color:#eef2f7;">Kiq<span style="color:#00f48e;">Stat</span></span>
+              <td style="background:#07090b;padding:24px 32px;">
+                <img src="${SITE_URL}/brand/lockup.png" width="150" height="41" alt="KiqStat" style="display:block;border:0;height:41px;width:150px;color:#f2f4ec;font-size:22px;font-weight:800;">
               </td>
             </tr>
             <tr>
-              <td style="padding:32px;color:#1c2430;font-size:15px;line-height:1.6;">
+              <td style="padding:32px;color:#1a1f1c;font-size:15px;line-height:1.6;">
                 ${bodyHtml}
               </td>
             </tr>
             <tr>
-              <td style="padding:20px 32px;background:#f6f8fb;border-top:1px solid #e3e8ef;color:#8d9db2;font-size:12px;">
+              <td style="padding:20px 32px;background:#f4f5ef;border-top:1px solid #e1e4da;color:#6b7670;font-size:12px;">
                 KiqStat · kiqstat.app
               </td>
             </tr>

@@ -49,7 +49,7 @@ export function BottomNav({ onOpenMenu, menuOpen }: { onOpenMenu: () => void; me
             <Icon name={t.icon} active={active} />
             {t.route === "live" && live !== null && live > 0 && (
               <span
-                className="tnum absolute -right-3 -top-1.5 grid min-w-4 place-items-center rounded-full bg-rose px-1 font-mono text-[9.5px] font-bold leading-4 text-canvas"
+                className="tnum absolute -right-3 -top-1.5 grid min-w-4 place-items-center rounded-full bg-signal px-1 font-mono text-[9.5px] font-bold leading-4 text-canvas"
                 aria-label={`${live} live`}
               >
                 {live}

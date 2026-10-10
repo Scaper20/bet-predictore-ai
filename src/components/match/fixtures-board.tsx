@@ -120,7 +120,7 @@ export function FixturesBoard({ matches, league, windowDays }: { matches: Match[
                   <span className="text-[10px] font-normal text-ink-dim">{shortDate(d.iso, tz)}</span>
                 </span>
               ),
-              meta: d.live > 0 ? <span className="text-rose">●</span> : d.count,
+              meta: d.live > 0 ? <span className="text-signal">●</span> : d.count,
             }))}
           />
         )}

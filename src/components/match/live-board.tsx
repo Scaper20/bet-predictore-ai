@@ -337,7 +337,7 @@ function LeagueGroup({
           </span>
           {group.country && <span className="block truncate text-[11px] text-ink-dim">{group.country}</span>}
         </span>
-        <span className="tnum shrink-0 rounded-full bg-rose/10 px-2 py-0.5 text-[11px] font-semibold text-rose">
+        <span className="tnum shrink-0 rounded-full bg-signal/10 px-2 py-0.5 text-[11px] font-semibold text-signal">
           {group.matches.length}
         </span>
         <svg
@@ -417,14 +417,14 @@ function Clock({ match }: { match: Match }) {
           HT
         </span>
       ) : (
-        <span className="flex items-center gap-1.5 font-mono text-xs font-bold text-rose">
+        <span className="flex items-center gap-1.5 font-mono text-xs font-bold text-signal">
           <LiveDot />
           <span className="tnum">{minute ? `${minute}′` : "Live"}</span>
         </span>
       )}
       <span className="h-0.5 w-9 overflow-hidden rounded-full bg-line" aria-hidden>
         <span
-          className={`block h-full rounded-full ${halftime ? "bg-amber" : "bg-rose/70"}`}
+          className={`block h-full rounded-full ${halftime ? "bg-amber" : "bg-signal/70"}`}
           style={{ width: `${Math.round(progress * 100)}%` }}
         />
       </span>

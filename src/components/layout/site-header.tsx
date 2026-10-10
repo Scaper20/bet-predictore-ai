@@ -1,5 +1,6 @@
 "use client";
 
+import { LogoLockup, LogoMark } from "@/components/brand/logo";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ButtonLink } from "@/components/ui/primitives";
@@ -68,10 +69,8 @@ export function SiteHeader() {
           aria-label="KiqStat home"
           className="-mx-1.5 flex shrink-0 items-center gap-2.5 rounded-lg px-1.5 py-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
         >
-          <Logo />
-          <span className="font-display text-lg font-bold tracking-tight max-[379px]:hidden">
-            Kiq<span className="text-brand">Stat</span>
-          </span>
+          <LogoLockup className="h-6 w-auto text-ink max-[379px]:hidden lg:h-7" />
+          <LogoMark className="size-8 text-ink min-[380px]:hidden" />
         </Link>
 
         <div className="hidden lg:block">
@@ -128,7 +127,7 @@ export function SiteHeader() {
           <AskButton size="sm" />
           <SlipButton sport={sport} />
           {!resolving && !signedIn && (
-            <ButtonLink href="/account/sign-up" variant="primary" className="ml-1 px-3 py-2 text-xs">
+            <ButtonLink href="/account/sign-up" variant="primary" className="ml-1 whitespace-nowrap px-3 py-2 text-xs">
               Sign up
             </ButtonLink>
           )}
@@ -150,12 +149,6 @@ function AuthPlaceholder() {
   return <div className="size-10 rounded-full bg-surface-2" aria-hidden />;
 }
 
-function Logo() {
-  return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img src="/brand/icon-green-96.png" alt="" width={32} height={32} className="size-8 rounded-lg" aria-hidden />
-  );
-}
 
 function BellIcon() {
   return (

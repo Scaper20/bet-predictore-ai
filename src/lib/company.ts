@@ -4,6 +4,8 @@
  */
 export const COMPANY = {
   brand: "KiqStat",
+  /** What the product was called before (October 2026), for search engines and the About page. */
+  formerNames: ["BetriX", "Betrix"],
   legalName: "Betrix Data Technologies Ltd",
   country: "Nigeria",
   nationality: "Nigerian",
