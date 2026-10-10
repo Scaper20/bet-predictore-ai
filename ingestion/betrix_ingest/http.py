@@ -88,7 +88,7 @@ def with_backoff(
 
 
 _session = requests.Session()
-_session.headers["User-Agent"] = "KiqStat-ingestion/0.1 (+https://kiqstat.app)"
+_session.headers["User-Agent"] = "KiqStat-ingestion/0.1 (+https://www.kiqstat.app)"
 
 
 def get_json(source: str, url: str, params: dict | None = None, headers: dict | None = None, timeout: float = 30) -> Any:

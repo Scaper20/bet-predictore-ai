@@ -1,3 +1,6 @@
+/** The host Vercel serves production on; kiqstat.app and the old domains redirect here. */
+export const CANONICAL_ORIGIN = "https://www.kiqstat.app";
+
 /**
  * Canonical site URL, used for metadata, sitemap/robots, and the Paystack
  * checkout callback.
@@ -14,6 +17,10 @@
  */
 export const SITE_URL = (
   process.env.NEXT_PUBLIC_SITE_URL ??
+  // Production's canonical host, in case the variable above is ever missing:
+  // the deployment URL would put *.vercel.app (noindex) into every canonical
+  // link and the sitemap.
+  (process.env.NEXT_PUBLIC_VERCEL_ENV === "production" ? CANONICAL_ORIGIN : undefined) ??
   (process.env.NEXT_PUBLIC_VERCEL_URL ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}` : undefined) ??
   "http://localhost:3000"
 ).replace(/\/$/, "");

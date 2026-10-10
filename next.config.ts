@@ -103,8 +103,8 @@ const nextConfig: NextConfig = {
         ],
       },
       /*
-       * The dev deployment (betrix-dev.vercel.app) and every preview URL serve
-       * the same pages as kiqstat.app. Left indexable they compete with
+       * The dev deployment (kiqstat-dev.vercel.app) and every preview URL serve
+       * the same pages as www.kiqstat.app. Left indexable they compete with
        * production as duplicate content, so any *.vercel.app host is noindex.
        */
       {
@@ -119,16 +119,18 @@ const nextConfig: NextConfig = {
     return [
       /*
        * The earlier addresses (BetriX, then the .com.ng KiqStat domain) and the
-       * www form all land on the one canonical host, keeping the path, so old
-       * links, shared slips and search results carry over. /api is left alone:
-       * Paystack, Flutterwave and the Supabase cron jobs still call the old
-       * address until their settings are switched over, and a webhook or
-       * pg_net request does not follow a redirect.
+       * bare kiqstat.app all land on www.kiqstat.app, keeping the path, so old
+       * links, shared slips and search results carry over. Vercel's domain
+       * settings already redirect these hosts; this is the fallback if one is
+       * ever attached without a redirect. The target must stay the host Vercel
+       * serves (www): pointing it at the bare domain, which Vercel sends to
+       * www, would loop. /api is left alone: a webhook or pg_net request does
+       * not follow a redirect.
        */
-      ...["betrix.com.ng", "www.betrix.com.ng", "kiqstat.com.ng", "www.kiqstat.com.ng", "www.kiqstat.app"].map((host) => ({
+      ...["betrix.com.ng", "www.betrix.com.ng", "kiqstat.com.ng", "www.kiqstat.com.ng", "kiqstat.app"].map((host) => ({
         source: "/:path((?!api/).*)",
         has: [{ type: "host" as const, value: host }],
-        destination: "https://kiqstat.app/:path",
+        destination: "https://www.kiqstat.app/:path",
         permanent: true,
       })),
       ...MOVED.map((path) => ({

@@ -102,7 +102,7 @@ python -m pytest -q
 3. In the SQL editor, store the five Vault secrets listed at the top of
    `0030_live_scores_cron.sql`. Until they exist the crons do nothing.
    `betrix_site_url` must be the address that answers without a redirect
-   (`https://kiqstat.app`): pg_net does not follow a 308.
+   (`https://www.kiqstat.app`): pg_net does not follow a 308.
 
 ### GitHub, once
 
