@@ -19,6 +19,7 @@
  *
  * Usage:
  *   npx tsx scripts/league-lab.ts                  # every candidate + baseline
+ *   npx tsx scripts/league-lab.ts --cups=<dir>     # European cups, ESPN results
  *   npx tsx scripts/league-lab.ts --only=SC0,B1
  *   npx tsx scripts/league-lab.ts --days=365
  */
@@ -66,10 +67,13 @@ const SOURCES: Source[] = [
 ];
 
 const SEASONS = ["2122", "2223", "2324", "2425", "2526", "2627"];
-const TRAIN_CAP = 1200;
+const TRAIN_CAP = Number(process.argv.find((a) => a.startsWith("--cap="))?.split("=")[1] ?? 1200);
 const DAY = 86_400_000;
 
 const arg = (n: string) => process.argv.find((a) => a.startsWith(`--${n}=`))?.split("=")[1];
+/** Fit overrides for experiments, e.g. --newcomer=0 to drop the promoted-club prior. */
+const FIT_OPTIONS = arg("newcomer") !== undefined ? { newcomerPrior: Number(arg("newcomer")) } : {};
+const WINDOW_DAYS = Number(arg("window") ?? 0);
 
 async function countryFile(file: string): Promise<string> {
   fs.mkdirSync(CACHE, { recursive: true });
@@ -148,10 +152,16 @@ interface Score {
 const brier = (p: [number, number, number], o: number) =>
   p.reduce((a, v, i) => a + (v - (i === o ? 1 : 0)) ** 2, 0);
 
-async function score(s: Source, days: number): Promise<Score> {
-  const all = await load(s);
+function score(
+  s: { id: string; label: string; baseline?: boolean },
+  rows: Row[],
+  days: number,
+  /** Train on this instead of `rows` (a cup rated on every European cup). */
+  pool: Row[] = rows,
+): Score {
+  const all = pool;
   const end = Date.now();
-  const target = all.filter((r) => r.date >= end - days * DAY && r.date <= end);
+  const target = rows.filter((r) => r.date >= end - days * DAY && r.date <= end);
   const out: Score = {
     label: s.label, baseline: Boolean(s.baseline), fixtures: target.length, history: all.length,
     picks: 0, pickWins: 0, pickLosses: 0, declined: 0,
@@ -164,10 +174,13 @@ async function score(s: Source, days: number): Promise<Score> {
     const day = Math.floor(row.date / DAY) * DAY;
     // Strictly before the day: no result from the same matchday leaks in.
     while (i < all.length && all[i].date < day) i++;
-    const prior = all.slice(Math.max(0, i - TRAIN_CAP), i).map(toResultRow);
+    let from = Math.max(0, i - TRAIN_CAP);
+    // --window: train only on results from the last N days (cups).
+    while (WINDOW_DAYS && from < i && all[from].date < day - WINDOW_DAYS * DAY) from++;
+    const prior = all.slice(from, i).map(toResultRow);
     let fit = fits.get(day);
     if (!fit) {
-      fit = fitLeague(prior);
+      fit = fitLeague(prior, FIT_OPTIONS);
       fits.set(day, fit);
     }
     const p = buildPrediction(toMatch(row, league), prior, [], { prefit: fit });
@@ -199,15 +212,45 @@ async function score(s: Source, days: number): Promise<Score> {
 
 const pct = (n: number, d: number) => (d ? `${((100 * n) / d).toFixed(1)}%` : "—").padStart(6);
 
+/**
+ * European cups, from ESPN scoreboard results saved one JSON file per
+ * competition ({comp, date, home, away, hg, ag}). football-data.co.uk has no
+ * cup files, so these carry no closing price and no market columns.
+ */
+const CUPS = [
+  { id: "uefa.champions", label: "Champions League", baseline: true },
+  { id: "uefa.europa", label: "Europa League" },
+  { id: "uefa.europa.conf", label: "Conference League" },
+];
+
+function loadCup(dir: string, id: string): Row[] {
+  const p = path.join(dir, `${id}.json`);
+  if (!fs.existsSync(p)) return [];
+  const raw = JSON.parse(fs.readFileSync(p, "utf8")) as { date: string; home: string; away: string; hg: number; ag: number }[];
+  return raw
+    .map((r) => ({ div: id, date: Date.parse(r.date), home: r.home, away: r.away, homeGoals: r.hg, awayGoals: r.ag }))
+    .sort((a, b) => a.date - b.date);
+}
+
 async function main() {
   const only = arg("only")?.split(",");
   const days = Number(arg("days") ?? 365);
+  const cupDir = arg("cups");
   const scores: Score[] = [];
-  for (const s of SOURCES.filter((x) => !only || only.includes(x.id))) {
-    process.stderr.write(`${s.id}… `);
-    scores.push(await score(s, days));
+  if (cupDir) {
+    const rows = new Map(CUPS.map((c) => [c.id, loadCup(cupDir, c.id)]));
+    const pooled = [...rows.values()].flat().sort((a, b) => a.date - b.date);
+    for (const c of CUPS) {
+      scores.push(score(c, rows.get(c.id)!, days));
+      scores.push(score({ ...c, label: `${c.label} (all cups)` }, rows.get(c.id)!, days, pooled));
+    }
+  } else {
+    for (const s of SOURCES.filter((x) => !only || only.includes(x.id))) {
+      process.stderr.write(`${s.id}… `);
+      scores.push(score(s, await load(s), days));
+    }
+    process.stderr.write("\n");
   }
-  process.stderr.write("\n");
 
   const header =
     "league                        fixtures  history | picks  pick hit | 1X2 model  market | Brier model  market";

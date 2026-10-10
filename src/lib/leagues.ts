@@ -32,6 +32,19 @@ export interface LeagueDef {
    * Qualifiers are home-and-away and must NOT carry this.
    */
   neutralVenue?: boolean;
+  /**
+   * Club cups: rate this competition on its own results and its sibling
+   * cups', from the last `windowDays` only.
+   *
+   * A cup's own long history rates its clubs badly. Each club plays a handful
+   * of ties a season, the field turns over every year, and the sample fills
+   * with clubs last seen seasons ago that the fit can barely place (home
+   * advantage drifts to twice its real size). Walk-forward over the last
+   * twelve months the published pick landed 45-51% on each UEFA cup's own
+   * history, and 74-78% rated on all three over the last two years -- in
+   * line with the leagues (scripts/league-lab.ts --cups).
+   */
+  cupPool?: { codes: string[]; windowDays: number };
   ids: {
     /** football-data.org competition code. */
     footballData?: string;
@@ -87,6 +100,9 @@ export interface LeagueDef {
   };
 }
 
+/** The three UEFA club competitions, rated together (see LeagueDef.cupPool). */
+const UEFA_CUPS = { codes: ["champions-league", "europa-league", "conference-league"], windowDays: 730 };
+
 export const LEAGUES: LeagueDef[] = [
   {
     code: "premier-league",
@@ -107,6 +123,7 @@ export const LEAGUES: LeagueDef[] = [
     country: "Europe",
     flag: "🇪🇺",
     rank: 2,
+    cupPool: UEFA_CUPS,
     ids: { footballData: "CL", theSportsDb: "4480", apiFootball: 2, sportyBet: "sr:tournament:7", espn: "uefa.champions" },
     archive: { sportApi: 7, openfootball: { repo: "champions-league", glob: "*/cl.txt" } },
   },
@@ -118,6 +135,7 @@ export const LEAGUES: LeagueDef[] = [
     country: "Europe",
     flag: "🇪🇺",
     rank: 6,
+    cupPool: UEFA_CUPS,
     // TheSportsDB ids for this and every competition added with it were
     // checked against lookupleague.php (name, sport, country), not assumed.
     // API-Football and SportyBet ids are left off until they can be read off
@@ -133,6 +151,7 @@ export const LEAGUES: LeagueDef[] = [
     country: "Europe",
     flag: "🇪🇺",
     rank: 13,
+    cupPool: UEFA_CUPS,
     ids: { theSportsDb: "5071", espn: "uefa.europa.conf" },
     archive: { openfootball: { repo: "champions-league", glob: "*/conf.txt" } },
   },

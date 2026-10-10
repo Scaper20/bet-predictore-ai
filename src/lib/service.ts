@@ -94,7 +94,11 @@ async function trainingRows(match: Match): Promise<Training> {
 async function assembleTraining(match: Match, code: string): Promise<Training> {
 
   const def = leagueByCode(code);
-  const raw = def?.confederation ? await pooledArchive(def) : await archivedResults(code).catch(() => []);
+  const raw = def?.confederation
+    ? await pooledArchive(def)
+    : def?.cupPool
+      ? await cupArchive(def.cupPool)
+      : await archivedResults(code).catch(() => []);
   // The archive spells clubs the way each source does ("Leeds", "Nott'm
   // Forest"); the fixture uses the canonical name. Linked here, or a club
   // with years of history fits on none of it.
@@ -105,7 +109,9 @@ async function assembleTraining(match: Match, code: string): Promise<Training> {
   if (archived.length >= RICH_ARCHIVE) {
     const leagueName = def?.confederation
       ? `${match.league.name} (rated on all ${def.confederation === "global" ? "national-team" : `${def.confederation} and global`} internationals)`
-      : match.league.name;
+      : def?.cupPool
+        ? `${match.league.name} (rated on the last two years of the UEFA club competitions)`
+        : match.league.name;
     return { rows: archived, leagueName, curated: true, book };
   }
 
@@ -176,6 +182,13 @@ async function pooledArchive(def: NonNullable<ReturnType<typeof leagueByCode>>):
   // One pass over every part: merging pairwise re-keyed the growing pool on
   // each step, tens of thousands of key computations per request.
   return mergeResults(parts.flat(), []);
+}
+
+/** A club cup's training: its pool's archives, recent window only (LeagueDef.cupPool). */
+async function cupArchive(pool: { codes: string[]; windowDays: number }): Promise<ResultRow[]> {
+  const parts = await Promise.all(pool.codes.map((c) => archivedResults(c).catch(() => [] as ResultRow[])));
+  const from = Date.now() - pool.windowDays * 86_400_000;
+  return mergeResults(parts.flat().filter((r) => r.date >= from), []);
 }
 
 /** Archive depth past which the live feeds add nothing worth a request. */

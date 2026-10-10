@@ -55,3 +55,22 @@ describe("leagueByProviderName", () => {
     }
   });
 });
+
+describe("cupPool", () => {
+  it("rates the three UEFA club cups on each other, over a recent window", () => {
+    const cups = ["champions-league", "europa-league", "conference-league"];
+    for (const code of cups) {
+      const pool = leagueByCode(code)?.cupPool;
+      expect(pool?.codes.slice().sort()).toEqual(cups.slice().sort());
+      expect(pool?.windowDays).toBeGreaterThan(365);
+    }
+  });
+
+  it("points only at catalogued competitions, and never at a league", () => {
+    for (const league of LEAGUES) {
+      for (const code of league.cupPool?.codes ?? []) {
+        expect(leagueByCode(code)?.cupPool).toBeDefined();
+      }
+    }
+  });
+});
