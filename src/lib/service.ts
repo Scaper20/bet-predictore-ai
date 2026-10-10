@@ -184,9 +184,12 @@ async function pooledArchive(def: NonNullable<ReturnType<typeof leagueByCode>>):
   return mergeResults(parts.flat(), []);
 }
 
-/** A club cup's training: its pool's archives, recent window only (LeagueDef.cupPool). */
+/**
+ * A club cup's training: its pool's archives, recent window only, TheSportsDB
+ * rows only (LeagueDef.cupPool; archivedResults explains the source).
+ */
 async function cupArchive(pool: { codes: string[]; windowDays: number }): Promise<ResultRow[]> {
-  const parts = await Promise.all(pool.codes.map((c) => archivedResults(c).catch(() => [] as ResultRow[])));
+  const parts = await Promise.all(pool.codes.map((c) => archivedResults(c, "thesportsdb").catch(() => [] as ResultRow[])));
   const from = Date.now() - pool.windowDays * 86_400_000;
   return mergeResults(parts.flat().filter((r) => r.date >= from), []);
 }
