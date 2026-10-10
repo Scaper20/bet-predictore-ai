@@ -25,6 +25,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--with-espn", action="store_true", help="fixtures: also cross-check against ESPN")
     p.add_argument("--full-season", action="store_true", help="results: whole current season per league")
     p.add_argument("--full", action="store_true", help="elo: write the whole history, not just recent days")
+    p.add_argument("--window-days", type=int,
+                   help="elo: days of ratings to write (default 14); 400 fills the Ratings page for a new league")
     p.add_argument("--seasons", type=int, help="backfill-football-data-uk (default 25) / backfill-thesportsdb (default 10)")
     p.add_argument("--odds-seasons", type=int,
                    help="backfill-football-data-uk: seasons of opening/closing odds to keep (default 10)")
@@ -48,6 +50,8 @@ def main(argv: list[str] | None = None) -> int:
         kwargs = {"days": a.days or 3, "full_season": a.full_season}
     elif a.job == "elo":
         kwargs = {"full": a.full}
+        if a.window_days:
+            kwargs["window_days"] = a.window_days
     elif a.job in {"backfill-football-data-uk", "backfill-thesportsdb"}:
         if a.seasons:
             kwargs["seasons"] = a.seasons
