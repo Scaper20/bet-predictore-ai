@@ -27,6 +27,11 @@ const CAMPAIGNS: { type: CampaignType; label: string; description: string }[] = 
     label: "WhatsApp community launch",
     description: "One-off announcement pointing at the new WhatsApp community. Won't queue until the community link is configured.",
   },
+  {
+    type: "announce_rebrand",
+    label: "BetriX is now KiqStat",
+    description: "One-off note to everyone: the new name and address, nothing else changes, and why we renamed.",
+  },
 ];
 
 export default async function AdminOutreachPage() {

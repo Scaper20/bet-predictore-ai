@@ -3,7 +3,7 @@ import "server-only";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { supabaseConfigured } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/email";
-import { warmCheckInEmail, subscriberSurveyEmail, freeSurveyEmail, whatsappCommunityAnnouncementEmail } from "@/lib/email-templates";
+import { warmCheckInEmail, subscriberSurveyEmail, freeSurveyEmail, whatsappCommunityAnnouncementEmail, rebrandAnnouncementEmail } from "@/lib/email-templates";
 import { classifySegment, type CampaignType } from "@/lib/outreach";
 import { SITE_URL } from "@/lib/site-url";
 import { WHATSAPP_COMMUNITY_URL } from "@/lib/whatsapp-community";
@@ -142,6 +142,10 @@ async function buildCampaignEmail(
 ): Promise<{ subject: string; html: string } | null> {
   if (campaign === "warm_checkin") {
     return warmCheckInEmail({ unsubscribeUrl });
+  }
+
+  if (campaign === "announce_rebrand") {
+    return rebrandAnnouncementEmail({ unsubscribeUrl });
   }
 
   if (campaign === "announce_whatsapp") {
