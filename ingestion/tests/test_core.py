@@ -1,4 +1,5 @@
 import pytest
+from pathlib import Path
 
 from betrix_ingest import http
 from betrix_ingest.db import MemoryDb
@@ -201,3 +202,30 @@ def test_history_spellings_link_without_creating_clubs():
     keys = {a["alias_key"] for a in db.tables["team_aliases"]}
     assert "nottmforest" in keys and "leeds" in keys
     assert len(db.tables["teams"]) == 2
+
+
+def test_tables_try_the_calendar_season_label_when_the_split_one_errors(monkeypatch):
+    """Argentina: "2026-2027" answers with a web page; "2026" has the table."""
+    from betrix_ingest import jobs
+    from betrix_ingest.config import Settings, league
+    from betrix_ingest.records import TableRow
+
+    asked = []
+
+    class FakeTsdb:
+        def fetch_table(self, lg, label):
+            asked.append(label)
+            if "-" in label:
+                raise http.SourceError("thesportsdb", "non-JSON response")
+            return [TableRow(league_code=lg.code, season=label, team="Boca Juniors", position=1, played=1, won=1,
+                             drawn=0, lost=0, goals_for=2, goals_against=0, goal_difference=2, points=3)]
+
+    written = []
+    monkeypatch.setattr(jobs.Context, "tsdb", lambda self: FakeTsdb())
+    monkeypatch.setattr(jobs, "write_table", lambda db, resolver, source, lg, table, r: written.append(table) or len(table))
+    s = Settings(None, None, "key", None, Path("."), Path("."), True)
+    ctx = jobs.Context(s, MemoryDb(), ["argentina-liga-profesional"])
+    jobs.job_tables(ctx)
+    assert len(asked) == 2 and "-" in asked[0] and "-" not in asked[1]
+    assert written and written[0][0].team == "Boca Juniors"
+    assert league("argentina-liga-profesional").ids["theSportsDb"] == "4406"

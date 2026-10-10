@@ -15,6 +15,7 @@ from pathlib import Path
 from . import elo
 from .config import League, Settings, leagues
 from .db import Database
+from .http import SourceError
 from .records import NotSupported
 from .resolve import Resolver
 from .runlog import SourceSwitch, run
@@ -224,8 +225,17 @@ def job_tables(ctx: Context) -> None:
         if tsdb and lg.ids.get("theSportsDb"):
             with run(ctx.db, ctx.switch, "tables", "thesportsdb", lg.code) as r:
                 if not r.skipped:
-                    for label in season_labels(lg, y):
-                        table = tsdb.fetch_table(lg, label)
+                    labels = season_labels(lg, y)
+                    for i, label in enumerate(labels):
+                        try:
+                            table = tsdb.fetch_table(lg, label)
+                        except SourceError:
+                            # A label TheSportsDB doesn't use for this league can
+                            # answer with a web page (Argentina, "2026-2027");
+                            # try the other form before failing the unit.
+                            if i == len(labels) - 1:
+                                raise
+                            continue
                         if table:
                             done = write_table(ctx.db, ctx.resolver, "thesportsdb", lg, table, r) > 0
                             break
