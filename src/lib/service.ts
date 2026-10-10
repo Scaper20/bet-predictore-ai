@@ -15,6 +15,7 @@ import { cached } from "@/lib/providers/cache";
 import { buildPrediction, type ModelOptions, type Prediction } from "@/lib/model/predict";
 import { after } from "next/server";
 import { archivedResults, storeResults } from "@/lib/archive/history-store";
+import { leagueClubTies } from "@/lib/archive/cup-ties";
 import { fitLeague, normaliseKey, type LeagueFit } from "@/lib/model/fit";
 import { scoreMatrix, deriveLiveWinProbability } from "@/lib/model/poisson";
 import { writeAnalysis, aiEnabled, type Analysis } from "@/lib/ai/analyst";
@@ -94,18 +95,25 @@ async function trainingRows(match: Match): Promise<Training> {
 async function assembleTraining(match: Match, code: string): Promise<Training> {
 
   const def = leagueByCode(code);
-  const raw = def?.confederation ? await pooledArchive(def) : await archivedResults(code).catch(() => []);
+  const raw = def?.confederation
+    ? await pooledArchive(def)
+    : def?.cupPool
+      ? await cupArchive(def.cupPool)
+      : await archivedResults(code).catch(() => []);
   // The archive spells clubs the way each source does ("Leeds", "Nott'm
   // Forest"); the fixture uses the canonical name. Linked here, or a club
   // with years of history fits on none of it.
   const scope = def ? nameScope(def) : null;
   const book = scope ? await nameBook(scope) : undefined;
-  const archived = book ? canonicaliseRows(raw, book) : raw;
+  const named = book ? canonicaliseRows(raw, book) : raw;
+  const archived = def?.cupPool?.leagueClubsOnly ? leagueClubTies(named, code) : named;
   // Deep enough to stand on its own; refreshed nightly (archive/refresh.ts).
   if (archived.length >= RICH_ARCHIVE) {
     const leagueName = def?.confederation
       ? `${match.league.name} (rated on all ${def.confederation === "global" ? "national-team" : `${def.confederation} and global`} internationals)`
-      : match.league.name;
+      : def?.cupPool
+        ? `${match.league.name} (rated on ${def.cupPool.ratedOn})`
+        : match.league.name;
     return { rows: archived, leagueName, curated: true, book };
   }
 
@@ -176,6 +184,16 @@ async function pooledArchive(def: NonNullable<ReturnType<typeof leagueByCode>>):
   // One pass over every part: merging pairwise re-keyed the growing pool on
   // each step, tens of thousands of key computations per request.
   return mergeResults(parts.flat(), []);
+}
+
+/**
+ * A cup's training: its pool's archives, recent window only, from one source
+ * where the pool says so (LeagueDef.cupPool; archivedResults explains why).
+ */
+async function cupArchive(pool: { codes: string[]; windowDays: number; source?: string }): Promise<ResultRow[]> {
+  const parts = await Promise.all(pool.codes.map((c) => archivedResults(c, pool.source).catch(() => [] as ResultRow[])));
+  const from = Date.now() - pool.windowDays * 86_400_000;
+  return mergeResults(parts.flat().filter((r) => r.date >= from), []);
 }
 
 /** Archive depth past which the live feeds add nothing worth a request. */

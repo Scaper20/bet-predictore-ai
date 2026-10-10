@@ -6,7 +6,7 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type React
 import { closeAsk, takeQueued, useAskState } from "@/lib/ask-store";
 import { useSlip } from "@/lib/slip";
 import { useEntitlement } from "@/components/entitlements/entitlement-provider";
-import { kickoffDay, kickoffTime } from "@/lib/format";
+import { LocalTime } from "@/components/ui/local-time";
 import type { AskEvent, AskPickCard, AskTurn } from "@/lib/ask/request";
 import { ASK_FREE_DAILY, ASK_GUEST_TOTAL, ASK_MAX_QUESTION } from "@/lib/ask/request";
 
@@ -181,6 +181,7 @@ function AskPanelInner({ page }: { page: { matchId: string; label: string } | nu
           body: JSON.stringify({
             turns: toTurns(history),
             context: {
+              timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
               ...(matchContext ? { matchId: matchContext.matchId, matchLabel: matchContext.label } : {}),
               ...(slipContext
                 ? {
@@ -682,7 +683,7 @@ function PickCards({ picks }: { picks: AskPickCard[] }) {
                 {c.label} · {pct(c.probability)}
               </p>
               <p className="truncate text-[10.5px] text-ink-dim">
-                {c.league} · {kickoffDay(c.kickoff)}, {kickoffTime(c.kickoff)}
+                {c.league} · <LocalTime iso={c.kickoff} kind="day" />, <LocalTime iso={c.kickoff} />
               </p>
             </div>
             <div className="shrink-0 text-right">

@@ -11,7 +11,8 @@ import { isTeamId, meetings, recentResults, teamsById, type Meeting, type TeamRe
 import { outcome } from "@/lib/stats/compute";
 import { upcomingFeed } from "@/lib/service";
 import { leagueByCode } from "@/lib/leagues";
-import { kickoffTime, percent, relativeDay } from "@/lib/format";
+import { percent } from "@/lib/format";
+import { LocalTime } from "@/components/ui/local-time";
 import { matchPath, sportPath } from "@/lib/routes";
 
 export async function generateMetadata({ searchParams }: { searchParams: Promise<{ a?: string; b?: string }> }): Promise<Metadata> {
@@ -223,7 +224,7 @@ async function Suggestions() {
             </span>
             <span className="min-w-0 flex-1">
               <span className="block truncate text-sm font-semibold">{m.home.name} v {m.away.name}</span>
-              <span className="block truncate text-xs text-ink-dim">{leagueByCode(m.league.code!)?.shortName} · {relativeDay(m.kickoff)} {kickoffTime(m.kickoff)}</span>
+              <span className="block truncate text-xs text-ink-dim">{leagueByCode(m.league.code!)?.shortName} · <LocalTime iso={m.kickoff} kind="relative" /> <LocalTime iso={m.kickoff} /></span>
             </span>
             <span className="text-xs font-semibold text-brand">Compare</span>
           </Link>

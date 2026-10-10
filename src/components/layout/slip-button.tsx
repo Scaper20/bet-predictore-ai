@@ -1,37 +1,37 @@
 "use client";
 
 import Link from "next/link";
-import { useSlip } from "@/lib/slip";
+import { useMemo } from "react";
+import { useTrackedSlips } from "@/lib/tracked-slips";
+import { slipSettled } from "@/lib/slip-tracker";
+import { useSlipScores } from "@/components/slip/use-slip-scores";
 import { sportPath } from "@/lib/routes";
 import type { SportId } from "@/lib/sports";
 
+/** Tracked slips still running: not yet lost, and not every leg in. */
+function useOpenSlips() {
+  const slips = useTrackedSlips();
+  return useMemo(() => slips.filter((s) => !slipSettled(s.legs, s.results)), [slips]);
+}
+
 /**
- * My slips (the tracked slips page). The slip itself is the floating
- * overlay (components/slip/slip-sheet.tsx); this icon keeps the slip count
- * so the header still shows what's on it.
+ * My slips (the tracked slips page), with a count of the tracked slips still
+ * running. Tracking a slip adds one; it comes off when the slip is decided (a
+ * leg loses, or every game is over) or is removed. The slip being built has
+ * its own count on the floating button (components/slip/slip-sheet.tsx).
  *
- * Before October 2026 this opened the selection builder page.
- *
- * It was one of six equal-weight nav items, which is the wrong shape for it:
- * an empty slip is not a destination anyone wants, and a slip with three legs
- * in it is the strongest return-visit hook the product has. As a counter it
- * costs a fraction of the space and only speaks up when it has something to
- * say.
- *
- * The count comes from localStorage via useSlip, so it renders as zero on the
- * server and corrects after hydration — the badge is therefore conditional on
- * a non-zero count rather than always present, which makes the correction
- * read as an arrival instead of a flicker.
+ * The tracked slips live in localStorage, so the badge renders nothing on the
+ * server and appears after hydration — conditional on a non-zero count, so it
+ * reads as an arrival rather than a flicker.
  */
 export function SlipButton({ sport }: { sport: SportId }) {
-  const { legs } = useSlip();
-  const count = legs.length;
+  const count = useOpenSlips().length;
 
   return (
     <Link
       href={sportPath("trackedSlips", sport)}
       className="relative grid size-10 place-items-center rounded-lg text-ink-muted transition-colors hover:bg-surface-2 hover:text-ink"
-      aria-label={count > 0 ? `My slips (${count} on your slip)` : "My slips"}
+      aria-label={count > 0 ? `My slips (${count} being tracked)` : "My slips"}
       title="My slips"
     >
       <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2">
@@ -48,4 +48,19 @@ export function SlipButton({ sport }: { sport: SportId }) {
       )}
     </Link>
   );
+}
+
+/** Every two minutes is plenty to notice a game has ended; the slips page polls faster. */
+const WATCH_MS = 120_000;
+
+/**
+ * Keeps the count honest away from the slips page: checks the scores of open
+ * slips' legs that have kicked off and records finished ones, which takes the
+ * slip off the count once it's decided. Mounted once in the header (the two
+ * SlipButtons are the desktop and phone layouts of the same thing). Costs
+ * nothing while no tracked leg is in play.
+ */
+export function TrackedSlipsWatcher() {
+  useSlipScores(useOpenSlips(), WATCH_MS);
+  return null;
 }

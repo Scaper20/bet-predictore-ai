@@ -3,7 +3,8 @@
 import { useMemo, useState } from "react";
 import { StrongBadge } from "@/components/ui/strong-badge";
 import { Badge, Button } from "@/components/ui/primitives";
-import { kickoffDay, percent } from "@/lib/format";
+import { percent } from "@/lib/format";
+import { LocalTime } from "@/components/ui/local-time";
 import { leagueByProviderName } from "@/lib/leagues";
 import { RecordDetailModal, type TrackRecordMatch } from "./record-detail-modal";
 
@@ -151,7 +152,7 @@ export function TrackRecordInteractive({ rows }: { rows: TrackRecordMatch[] }) {
                     {row.pick_tier === "strong" && <StrongBadge />}
                     <span className="font-semibold text-brand">{row.league}</span>
                     <span aria-hidden>·</span>
-                    <span>{kickoffDay(row.kickoff)}</span>
+                    <span><LocalTime iso={row.kickoff} kind="day" /></span>
                   </div>
                   <p className="mt-1 truncate text-sm font-semibold text-ink transition-colors group-hover:text-brand">
                     {row.home_name} <span className="font-normal text-ink-muted">vs</span>{" "}

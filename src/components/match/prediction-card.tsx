@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Prediction } from "@/lib/model/predict";
-import { kickoffTime, percent, relativeDay } from "@/lib/format";
+import { percent } from "@/lib/format";
+import { LocalTime } from "@/components/ui/local-time";
 import { Crest } from "@/components/ui/crest";
 import { SplitBar } from "@/components/stats/split-bar";
 import { Morph, morphName } from "@/components/motion/morph";
@@ -37,7 +38,7 @@ export function PredictionCard({ prediction, morph = true }: { prediction: Predi
           {match.league.logo ? <Crest src={match.league.logo} name={match.league.name} size={16} /> : null}
           <span className="min-w-0 truncate text-xs font-medium text-ink-muted">{match.league.name}</span>
           <span className="tnum ml-auto shrink-0 rounded-md bg-surface-2 px-2 py-0.5 text-[11px] font-semibold text-ink-muted">
-            {relativeDay(match.kickoff)} · {kickoffTime(match.kickoff)}
+            <LocalTime iso={match.kickoff} kind="relative" /> · <LocalTime iso={match.kickoff} />
           </span>
         </div>
 

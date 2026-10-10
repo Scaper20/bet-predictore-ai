@@ -5,6 +5,7 @@ import {
   legState,
   legsToPoll,
   settleLeg,
+  slipSettled,
   slipSignature,
   slipStatus,
   type LegState,
@@ -117,6 +118,14 @@ describe("helpers", () => {
     const legs = [leg({ matchId: "fd:1" }), leg({ matchId: "fd:2" }), leg({ matchId: "fd:3", kickoff: "2026-10-04T10:00:00Z" })];
     const polled = legsToPoll(legs, { "fd:1": { home: 1, away: 0, grade: "win" } }, NOW);
     expect(polled.map((l) => l.matchId)).toEqual(["fd:2"]);
+  });
+
+  it("counts a slip as settled once a leg loses or every leg is in", () => {
+    const legs = [leg({ matchId: "fd:1" }), leg({ matchId: "fd:2" })];
+    expect(slipSettled(legs, {})).toBe(false);
+    expect(slipSettled(legs, { "fd:1": { home: 1, away: 0, grade: "win" } })).toBe(false);
+    expect(slipSettled(legs, { "fd:1": { home: 0, away: 1, grade: "lose" } })).toBe(true);
+    expect(slipSettled(legs, { "fd:1": { home: 1, away: 0, grade: "win" }, "fd:2": { home: 1, away: 1, grade: "void" } })).toBe(true);
   });
 
   it("multiplies the legs into a combined chance", () => {

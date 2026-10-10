@@ -78,7 +78,7 @@ export default function AboutPage() {
         title="Football data you can check for yourself"
         intro={
           <>
-            BetriX is a football data and prediction platform for Nigerian fans. It is a product of{" "}
+            BetriX is a football data and prediction platform for fans across Africa and the world. It is a product of{" "}
             <strong className="text-ink">{COMPANY.legalName}</strong>, a {COMPANY.nationality} company.
           </>
         }

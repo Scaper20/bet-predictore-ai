@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { verifyTransaction } from "@/lib/paystack/client";
+import { grantFlutterwavePayment } from "@/lib/flutterwave/grant";
 import { ButtonLink } from "@/components/ui/primitives";
 import { sportPath } from "@/lib/routes";
 
@@ -12,15 +13,28 @@ export const metadata: Metadata = { title: "Payment" };
  * since a user can close this tab before it ever loads. `reference` is a
  * client-supplied query param, so it's verified server-to-server against
  * Paystack rather than trusted at face value.
+ *
+ * Flutterwave sends people back with `status=…&tx_ref=betrix_fw_…`. There
+ * the page also runs the grant, which re-verifies with Flutterwave and is
+ * idempotent with the webhook, so access shows up even if the webhook is
+ * slow or misconfigured.
  */
 export default async function BillingCallbackPage({
   searchParams,
 }: PageProps<"/account/billing/callback">) {
   const params = await searchParams;
   const reference = typeof params.reference === "string" ? params.reference : undefined;
+  const txRef = typeof params.tx_ref === "string" ? params.tx_ref : undefined;
 
   let status: "success" | "failed" | "unknown" = "unknown";
-  if (reference) {
+  if (txRef?.startsWith("betrix_fw_")) {
+    if (params.status === "cancelled") {
+      status = "failed";
+    } else {
+      const outcome = await grantFlutterwavePayment(txRef).catch(() => "pending" as const);
+      status = outcome === "granted" || outcome === "already" ? "success" : outcome === "failed" ? "failed" : "unknown";
+    }
+  } else if (reference) {
     try {
       const result = await verifyTransaction(reference);
       status = result.status === "success" ? "success" : "failed";

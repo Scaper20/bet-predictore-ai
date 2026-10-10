@@ -202,6 +202,10 @@
     "Atlético Madrid": [
       "Ath Madrid",
       "Atletico Madrid"
+    ],
+    "Sporting de Gijón": [
+      "Sp Gijon",
+      "Sporting Gijon"
     ]
   },
   "brazil": {
@@ -227,6 +231,9 @@
     "AEK Athens": [
       "PAE AEK",
       "AEK Athen"
+    ],
+    "Levadiakos": [
+      "Levadeiakos"
     ]
   },
   "azerbaijan": {
@@ -278,6 +285,36 @@
       "Qarabağ FK",
       "Qarabağ Ağdam FK",
       "Qarabag"
+    ]
+  },
+  "turkey": {
+    "Göztepe": [
+      "Goztep",
+      "Goztepe"
+    ],
+    "Istanbul Basaksehir": [
+      "Buyuksehyr",
+      "Basaksehir"
+    ]
+  },
+  "argentina": {
+    "Atlético Tucumán": [
+      "Atl. Tucuman"
+    ],
+    "Independiente Rivadavia": [
+      "Ind. Rivadavia"
+    ],
+    "Deportivo Riestra": [
+      "Dep. Riestra"
+    ]
+  },
+  "mexico": {
+    "CD Guadalajara": [
+      "Guadalajara Chivas",
+      "Chivas"
+    ],
+    "Pumas UNAM": [
+      "UNAM Pumas"
     ]
   }
 }

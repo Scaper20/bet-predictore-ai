@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { groupByDay } from "./format";
+import { groupByDay, kickoffDay, kickoffTime, relativeDay, statusLabel } from "./format";
 import type { Match, MatchStatus } from "@/lib/types";
 
 /**
@@ -78,5 +78,27 @@ describe("groupByDay", () => {
 
   it("returns nothing for an empty slate", () => {
     expect(groupByDay([])).toEqual([]);
+  });
+});
+
+describe("times in the visitor's zone", () => {
+  const iso = "2026-10-11T22:30:00Z"; // 23:30 in Lagos, 01:30 the next day in Nairobi
+
+  it("defaults to WAT", () => {
+    expect(kickoffTime(iso)).toBe("23:30");
+    expect(kickoffDay(iso)).toBe(kickoffDay(iso, "Africa/Lagos"));
+  });
+
+  it("formats in the zone it is given, day included", () => {
+    expect(kickoffTime(iso, "Africa/Nairobi")).toBe("01:30");
+    expect(kickoffDay(iso, "Africa/Nairobi")).not.toBe(kickoffDay(iso, "Africa/Lagos"));
+    const now = new Date("2026-10-11T12:00:00Z");
+    expect(relativeDay(iso, now, "Africa/Lagos")).toBe("Today");
+    expect(relativeDay(iso, now, "Africa/Nairobi")).toBe("Tomorrow");
+  });
+
+  it("shows a scheduled match's kickoff in that zone", () => {
+    const m = { status: "scheduled", kickoff: iso } as Match;
+    expect(statusLabel(m, "America/New_York")).toBe("18:30");
   });
 });

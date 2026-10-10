@@ -177,7 +177,7 @@ export async function writeAnalysis(p: Prediction): Promise<Analysis> {
         // computed — low effort is the right spend here.
         output_config: { effort: "low" },
         system:
-          "You are a football data analyst writing for a Nigerian audience. " +
+          "You are a football data analyst writing for football fans across Africa and the world. " +
           "You will be given the output of a Dixon-Coles goal model fitted to real " +
           "historical results. Your job is to explain what those numbers mean in " +
           "clear, confident prose.\n\n" +
@@ -186,7 +186,7 @@ export async function writeAnalysis(p: Prediction): Promise<Analysis> {
           "lineup, transfer, or news event. You have no information beyond this brief.\n" +
           "- Never promise a result or imply an outcome is guaranteed.\n" +
           "- Write plainly. No hype, no emoji, no tipster cliches.\n" +
-          "- Nigerian English is the register: direct and unfussy.\n\n" +
+          "- Plain, everyday English is the register: direct and unfussy.\n\n" +
           "- Keep it short: people skim this on a phone. Lead with the call, " +
           "then the one or two numbers behind it.\n\n" +
           "Respond in exactly this format:\n" +

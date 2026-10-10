@@ -1,4 +1,5 @@
 import pytest
+from pathlib import Path
 
 from betrix_ingest import http
 from betrix_ingest.db import MemoryDb
@@ -201,3 +202,75 @@ def test_history_spellings_link_without_creating_clubs():
     keys = {a["alias_key"] for a in db.tables["team_aliases"]}
     assert "nottmforest" in keys and "leeds" in keys
     assert len(db.tables["teams"]) == 2
+
+
+def test_tables_try_the_calendar_season_label_when_the_split_one_errors(monkeypatch):
+    """Argentina: "2026-2027" answers with a web page; "2026" has the table."""
+    from betrix_ingest import jobs
+    from betrix_ingest.config import Settings, league
+    from betrix_ingest.records import TableRow
+
+    asked = []
+
+    class FakeTsdb:
+        def fetch_table(self, lg, label):
+            asked.append(label)
+            if "-" in label:
+                raise http.SourceError("thesportsdb", "non-JSON response")
+            return [TableRow(league_code=lg.code, season=label, team="Boca Juniors", position=1, played=1, won=1,
+                             drawn=0, lost=0, goals_for=2, goals_against=0, goal_difference=2, points=3)]
+
+    written = []
+    monkeypatch.setattr(jobs.Context, "tsdb", lambda self: FakeTsdb())
+    monkeypatch.setattr(jobs, "write_table", lambda db, resolver, source, lg, table, r: written.append(table) or len(table))
+    s = Settings(None, None, "key", None, Path("."), Path("."), True)
+    ctx = jobs.Context(s, MemoryDb(), ["argentina-liga-profesional"])
+    jobs.job_tables(ctx)
+    assert len(asked) == 2 and "-" in asked[0] and "-" not in asked[1]
+    assert written and written[0][0].team == "Boca Juniors"
+    assert league("argentina-liga-profesional").ids["theSportsDb"] == "4406"
+
+
+def test_knockout_cups_get_no_table_and_no_elo(monkeypatch):
+    from betrix_ingest import jobs
+    from betrix_ingest.config import Settings, league
+
+    assert league("fa-cup").knockout and league("efl-cup").knockout and not league("premier-league").knockout
+    calls = []
+
+    class FakeTsdb:
+        def fetch_table(self, lg, label):
+            calls.append(lg.code)
+            return []
+
+    monkeypatch.setattr(jobs.Context, "tsdb", lambda self: FakeTsdb())
+    s = Settings(None, None, "key", None, Path("."), Path("."), True)
+    db = MemoryDb()
+    ctx = jobs.Context(s, db, ["fa-cup", "efl-cup", "coppa-italia"])
+    jobs.job_tables(ctx)
+    jobs.job_elo(ctx)
+    assert calls == []
+    assert not db.tables.get("elo_ratings")
+
+
+def test_link_history_clears_spellings_a_later_run_places():
+    from betrix_ingest import jobs
+    from betrix_ingest.config import Settings
+    from betrix_ingest.resolve import loose_key
+
+    s = Settings(None, None, "key", None, Path("."), Path("."), True)
+    db = MemoryDb()
+    ctx = jobs.Context(s, db, ["premier-league"])
+    leeds = ctx.resolver.resolve("Leeds United", "england", "thesportsdb")
+    db.tables["historical_results"] = [
+        {"league_code": "premier-league", "kickoff": jobs.today().isoformat(), "home_name": "Leeds", "away_name": "Wrexham"},
+    ]
+    # Logged by an earlier run, before Leeds United existed.
+    db.tables["unresolved_entities"] = [
+        {"source": "history", "entity_type": "team", "scope": "england", "raw_name": "Leeds",
+         "alias_key": loose_key("Leeds"), "resolved_team_id": None},
+    ]
+    jobs.link_history(ctx)
+    rows = {r["raw_name"]: r.get("resolved_team_id") for r in db.tables["unresolved_entities"]}
+    assert rows["Leeds"] == leeds.id
+    assert rows["Wrexham"] is None  # still unknown, still listed

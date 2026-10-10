@@ -19,7 +19,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "BetriX — Football Predictions",
     short_name: "BetriX",
     description:
-      "Football predictions for Nigerian fans, fitted on real results: probabilities, live scores and the sample size behind every pick.",
+      "Football predictions for fans across Africa and the world, fitted on real results: probabilities, live scores and the sample size behind every pick.",
     start_url: sportPath("predictions"),
     scope: "/",
     display: "standalone",

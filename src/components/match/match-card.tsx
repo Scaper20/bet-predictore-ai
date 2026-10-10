@@ -2,7 +2,8 @@ import Link from "next/link";
 import type { Match } from "@/lib/types";
 import type { Prediction } from "@/lib/model/predict";
 import { Badge, LiveDot, ProbabilityBar } from "@/components/ui/primitives";
-import { isLive, kickoffTime, percent, relativeDay, statusLabel } from "@/lib/format";
+import { isLive, percent, statusLabel } from "@/lib/format";
+import { LocalTime } from "@/components/ui/local-time";
 import { Crest } from "@/components/ui/crest";
 import { matchPath } from "@/lib/routes";
 import { isLockedPick } from "@/lib/access";
@@ -38,7 +39,7 @@ export function MatchCard({ match, prediction }: { match: Match; prediction?: Pr
             </Badge>
           ) : (
             <span className="tnum text-xs font-medium text-ink-muted">
-              {relativeDay(match.kickoff)} · {kickoffTime(match.kickoff)}
+              <LocalTime iso={match.kickoff} kind="relative" /> · <LocalTime iso={match.kickoff} />
             </span>
           )}
         </div>

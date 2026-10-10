@@ -3,6 +3,7 @@ import { getEntitlement, meets } from "@/lib/entitlements";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { aiEnabled } from "@/lib/ai/analyst";
 import { ASK_SYSTEM_PROMPT } from "@/lib/ask/prompt";
+import { APP_TIMEZONE } from "@/lib/format";
 import { ASK_TOOLS, runTool, toolStatus, type AskTier } from "@/lib/ask/tools";
 import { claimGuest, guestIdentity, guestUsed, refundGuest } from "@/lib/ask/guest";
 import { viewerForTier } from "@/lib/viewer";
@@ -231,6 +232,7 @@ export async function POST(request: Request) {
               const outcome = await runTool(use.name, use.input, {
                 tier,
                 viewer,
+                timeZone: parsed.context.timeZone ?? APP_TIMEZONE,
                 onPicks: (picks) => {
                   answered = true;
                   send({ type: "picks", picks });

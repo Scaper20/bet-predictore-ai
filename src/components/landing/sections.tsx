@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ButtonLink, SectionHeading } from "@/components/ui/primitives";
 import { PricingTable } from "@/components/pricing/pricing-table";
+import { flutterwaveConfigured } from "@/lib/flutterwave/client";
 import { Container, containerClass } from "@/components/ui/container";
 import { Reveal } from "@/components/ui/reveal";
 import { CLUB_LEAGUES, INTERNATIONAL_LEAGUES } from "@/lib/leagues";
@@ -38,11 +39,11 @@ const FEATURES = [
       "price the selection has to beat, and tell you whether it is worth taking at all.",
   },
   {
-    icon: "🇳🇬",
-    title: "Nigeria first",
+    icon: "🌍",
+    title: "African football, worldwide",
     body:
-      "NPFL and CAF competitions alongside the Premier League. Prices in Naira, kickoff " +
-      "times in WAT, written the way Nigerian football fans actually talk.",
+      "NPFL and CAF competitions alongside the Premier League and the rest of Europe. Kickoff " +
+      "times in your own time zone, prices in your own currency, and Mobile Money, M-Pesa or card to pay.",
   },
   {
     icon: "🔍",
@@ -143,8 +144,8 @@ export function Leagues() {
       <Reveal>
         <SectionHeading
           eyebrow="Coverage"
-          title="The football that matters most in Nigeria"
-          description="The big leagues and Super Eagles football."
+          title="The football fans follow, from Lagos to Nairobi and beyond"
+          description="Europe's big leagues and cups, African club football, and the national teams."
         />
         {(
           [
@@ -183,14 +184,15 @@ export function Pricing() {
         <Reveal>
           <SectionHeading
             eyebrow="Pricing"
-            title="Priced for Nigeria"
-            description="From a single matchday to a full season. Cancel whenever you like."
+            title="Priced for where you are"
+            description="In your own currency, from a month to a full season."
             align="center"
           />
           {/* Same cards as /pricing and /account/billing — see pricing-table.tsx
               for why all three stopped having their own copy of this. */}
           <div className="mt-12">
             <PricingTable
+              sellsAbroad={flutterwaveConfigured()}
               hrefFor={(plan) =>
                 plan.id === "free" ? "/account/sign-up" : `/account/billing?plan=${plan.id}`
               }
@@ -228,15 +230,15 @@ export const FAQS = [
   },
   {
     q: "Do you cover the NPFL?",
-    a: "Yes, alongside the CAF Champions League and the European competitions Nigerians follow most. Depth of NPFL data depends on which feeds are configured, and each prediction tells you what it was fitted on.",
+    a: "Yes, alongside the CAF Champions League and the European leagues and cups fans across Africa follow most. Depth of NPFL data depends on which feeds are configured, and each prediction tells you what it was fitted on.",
   },
   {
     q: "Do you predict Super Eagles and other international matches?",
     a: "Yes. AFCON, World Cup and qualifiers, the Euros, Nations League, Copa America, Gold Cup and international friendlies are all covered. National teams play too rarely for one tournament to rate them, so each side is rated on every international in its confederation, and tournament finals are modelled at a neutral venue.",
   },
   {
-    q: "Is this legal in Nigeria?",
-    a: "This is an analytics product. We do not take bets, hold funds or act as a bookmaker. Sports betting is regulated in Nigeria and restricted to adults 18 and over.",
+    q: "Is this legal where I live?",
+    a: "BetriX is an analytics product. We do not take bets, hold funds or act as a bookmaker, so using it is not betting. Betting itself is regulated differently in every country: only bet where it is legal for you, and never under your country's legal age (18 in Nigeria and most countries, higher in some).",
   },
 ];
 

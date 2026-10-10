@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { LocalTime } from "@/components/ui/local-time";
 import { Suspense } from "react";
 import { PageHeader } from "@/components/ui/page-header";
 import { containerClass } from "@/components/ui/container";
@@ -13,7 +14,7 @@ import { STAT_LEAGUES, pickLeague } from "@/lib/stats/leagues";
 import { sportPath } from "@/lib/routes";
 
 /** Cups have groups and knockouts, not a table we publish. */
-const TABLE_LEAGUES = STAT_LEAGUES.filter((l) => l.code !== "caf-champions-league");
+const TABLE_LEAGUES = STAT_LEAGUES.filter((l) => l.code !== "caf-champions-league" && !leagueByCode(l.code)?.knockout);
 
 export async function generateMetadata({ searchParams }: { searchParams: Promise<{ league?: string }> }): Promise<Metadata> {
   const { league } = await searchParams;
@@ -63,7 +64,17 @@ export default async function TablesPage({ searchParams }: { searchParams: Promi
                   <Badge tone="live"><LiveDot /> Live · {table.liveGames} in play</Badge>
                 ) : (
                   <span className="text-[11px] text-ink-dim">
-                    {table.updatedAt ? `Updated ${new Date(table.updatedAt).toLocaleString("en-NG", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Africa/Lagos" })}` : ""}
+                    {table.updatedAt ? (
+                      <>
+                        Updated{" "}
+                        <LocalTime
+                          iso={new Date(table.updatedAt).toISOString()}
+                          options={{ day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false }}
+                        />
+                      </>
+                    ) : (
+                      ""
+                    )}
                   </span>
                 )}
               </span>

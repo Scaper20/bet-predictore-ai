@@ -8,10 +8,12 @@ import { Badge } from "@/components/ui/primitives";
 import { SlidingTabs } from "@/components/motion/sliding-tabs";
 import { FixtureRow } from "@/components/match/fixture-row";
 import { groupLiveMatches, searchLiveGroups, type LiveGroup } from "@/lib/live-board";
-import { APP_TIMEZONE, relativeDay } from "@/lib/format";
+import { relativeDay } from "@/lib/format";
+import { useTimeZone } from "@/lib/use-visitor";
 import { CLUB_LEAGUES, INTERNATIONAL_LEAGUES } from "@/lib/leagues";
 
-const dayKey = (iso: string) => new Date(iso).toLocaleDateString("en-CA", { timeZone: APP_TIMEZONE });
+// Days are the visitor's own (lib/use-visitor.ts): a 23:00 WAT kickoff is tomorrow in Nairobi.
+const dayKey = (iso: string, tz: string) => new Date(iso).toLocaleDateString("en-CA", { timeZone: tz });
 
 /**
  * Fixtures as the Live board lays out live games: pick a day, then every
@@ -25,18 +27,19 @@ export function FixturesBoard({ matches, league, windowDays }: { matches: Match[
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
+  const tz = useTimeZone();
 
   const days = useMemo(() => {
     const map = new Map<string, { key: string; iso: string; count: number; live: number }>();
     for (const m of matches) {
-      const k = dayKey(m.kickoff);
+      const k = dayKey(m.kickoff, tz);
       const d = map.get(k) ?? { key: k, iso: m.kickoff, count: 0, live: 0 };
       d.count++;
       if (m.status === "live" || m.status === "halftime") d.live++;
       map.set(k, d);
     }
     return [...map.values()].sort((a, b) => a.key.localeCompare(b.key));
-  }, [matches]);
+  }, [matches, tz]);
 
   const [picked, setPicked] = useState(() => days[0]?.key ?? "");
   // A league change swaps the window; fall back to its first day if the
@@ -48,7 +51,7 @@ export function FixturesBoard({ matches, league, windowDays }: { matches: Match[
   const [direction, setDirection] = useState<"left" | "right">("right");
 
   const groups = useMemo(() => {
-    const onDay = matches.filter((m) => dayKey(m.kickoff) === day);
+    const onDay = matches.filter((m) => dayKey(m.kickoff, tz) === day);
     return groupLiveMatches(onDay).map((g) => ({
       ...g,
       // The live grouping orders by clock; a day's fixtures read by kick-off.
@@ -56,7 +59,7 @@ export function FixturesBoard({ matches, league, windowDays }: { matches: Match[
         (a, b) => liveFirst(a) - liveFirst(b) || Date.parse(a.kickoff) - Date.parse(b.kickoff),
       ),
     }));
-  }, [matches, day]);
+  }, [matches, day, tz]);
 
   const trackedCount = groups.filter((g) => g.tracked).reduce((n, g) => n + g.matches.length, 0);
   const visible = useMemo(
@@ -101,7 +104,7 @@ export function FixturesBoard({ matches, league, windowDays }: { matches: Match[
               <span className="tnum font-semibold text-ink">{days.length}</span> matchdays
             </span>
           </div>
-          <span className="text-xs text-ink-dim">Kick-off times in WAT</span>
+          <span className="text-xs text-ink-dim">Kick-off times in your time zone</span>
         </div>
 
         {days.length > 0 && (
@@ -113,8 +116,8 @@ export function FixturesBoard({ matches, league, windowDays }: { matches: Match[
               key: d.key,
               label: (
                 <span className="flex flex-col items-center leading-tight">
-                  <span className="text-[13px] font-semibold">{dayLabel(d.iso)}</span>
-                  <span className="text-[10px] font-normal text-ink-dim">{shortDate(d.iso)}</span>
+                  <span className="text-[13px] font-semibold">{dayLabel(d.iso, tz)}</span>
+                  <span className="text-[10px] font-normal text-ink-dim">{shortDate(d.iso, tz)}</span>
                 </span>
               ),
               meta: d.live > 0 ? <span className="text-rose">●</span> : d.count,
@@ -194,7 +197,7 @@ export function FixturesBoard({ matches, league, windowDays }: { matches: Match[
         <div className="card p-8 text-center">
           <p className="text-sm text-ink-muted">
             {query ? (
-              <>Nothing matches <span className="font-semibold text-ink">&ldquo;{query}&rdquo;</span> on {relativeDay(days.find((d) => d.key === day)?.iso ?? new Date().toISOString())}.</>
+              <>Nothing matches <span className="font-semibold text-ink">&ldquo;{query}&rdquo;</span> on {relativeDay(days.find((d) => d.key === day)?.iso ?? new Date().toISOString(), new Date(), tz)}.</>
             ) : (
               "No fixtures on this day."
             )}
@@ -227,14 +230,14 @@ function liveFirst(m: Match): number {
   return m.status === "live" || m.status === "halftime" ? 0 : 1;
 }
 
-function dayLabel(iso: string): string {
-  const rel = relativeDay(iso);
+function dayLabel(iso: string, tz: string): string {
+  const rel = relativeDay(iso, new Date(), tz);
   if (rel === "Today" || rel === "Tomorrow") return rel;
-  return new Date(iso).toLocaleDateString("en-NG", { weekday: "short", timeZone: APP_TIMEZONE });
+  return new Date(iso).toLocaleDateString("en-NG", { weekday: "short", timeZone: tz });
 }
 
-function shortDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-NG", { day: "numeric", month: "short", timeZone: APP_TIMEZONE });
+function shortDate(iso: string, tz: string): string {
+  return new Date(iso).toLocaleDateString("en-NG", { day: "numeric", month: "short", timeZone: tz });
 }
 
 function slug(key: string): string {

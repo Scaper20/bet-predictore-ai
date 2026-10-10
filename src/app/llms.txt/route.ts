@@ -1,5 +1,6 @@
 import { CLUB_LEAGUES, INTERNATIONAL_LEAGUES } from "@/lib/leagues";
 import { PLANS } from "@/lib/pricing";
+import { ELSEWHERE, formatMoney } from "@/lib/payments/markets";
 import { SITE_URL as SITE } from "@/lib/site-url";
 import { sportPath } from "@/lib/routes";
 
@@ -24,14 +25,16 @@ export function GET() {
       p.price.quarterly && `${naira(p.price.quarterly)}/3 months`,
       p.price.yearly && `${naira(p.price.yearly)}/year`,
     ].filter(Boolean);
-    return `- ${p.name} (${prices.length ? prices.join(", ") : "free"}): ${p.description}`;
+    const usd = p.id === "pro" || p.id === "vip" ? ELSEWHERE.prices?.[p.id] : undefined;
+    const abroad = usd ? `; outside Africa ${formatMoney(usd.monthly, "USD")}/month, ${formatMoney(usd.yearly, "USD")}/year` : "";
+    return `- ${p.name} (${prices.length ? `in Nigeria ${prices.join(", ")}${abroad}` : "free"}): ${p.description}`;
   });
 
   const body = `# BetriX
 
-> BetriX is a football prediction and analytics site for Nigerian football fans. Every prediction comes from a statistical goal model (time-weighted Dixon-Coles Poisson) fitted on real completed matches, and every pick shows the sample size and data quality behind it. When the history is too thin, BetriX publishes no pick rather than guessing.
+> BetriX is a football prediction and analytics site for football fans across Africa and the world, built in Nigeria. Every prediction comes from a statistical goal model (time-weighted Dixon-Coles Poisson) fitted on real completed matches, and every pick shows the sample size and data quality behind it. When the history is too thin, BetriX publishes no pick rather than guessing.
 
-BetriX is an analytics product, not a bookmaker: it takes no bets and holds no funds. Prices are in Naira and kickoff times in West Africa Time (WAT). For adults 18+ only.
+BetriX is an analytics product, not a bookmaker: it takes no bets and holds no funds. Prices are shown in the visitor's own currency: naira in Nigeria, the local currency in Ghana, Kenya, Uganda, Tanzania, Rwanda, Zambia, Cameroon, Côte d'Ivoire, Senegal and South Africa, and US dollars elsewhere. Kickoff times are shown in the visitor's own time zone. For adults only (18+, or older where local law requires).
 
 ## How the predictions work
 
@@ -46,7 +49,7 @@ BetriX is an analytics product, not a bookmaker: it takes no bets and holds no f
 ## Key pages
 
 - [Today's predictions](${SITE}${sportPath("predictions")}): every upcoming fixture with model probabilities
-- [Fixtures](${SITE}${sportPath("fixtures")}): upcoming matches, kickoff times in WAT
+- [Fixtures](${SITE}${sportPath("fixtures")}): upcoming matches, kickoff times in your own time zone
 - [Live scores](${SITE}${sportPath("live")})
 - [Results](${SITE}${sportPath("results")}): final scores by day, with how each published pick did
 - [League tables](${SITE}${sportPath("tables")}): standings, updated live while games are in play

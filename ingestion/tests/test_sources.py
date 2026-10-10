@@ -86,6 +86,32 @@ def test_write_fixtures_resolves_and_skips_unknowns():
     assert espn_run.warnings  # ...and reported
 
 
+def test_write_fixtures_skips_a_conflicting_row_and_keeps_the_rest():
+    from betrix_ingest.db import DbError
+    from betrix_ingest.records import Fixture
+
+    class ConflictDb(MemoryDb):
+        """Refuses any batch holding source id "2" the way Postgres does: 409, whole batch."""
+
+        def rpc(self, fn, args):
+            if fn == "ingest_matches" and any(r.get("source_id") == "2" for r in args["p_rows"]):
+                raise DbError("POST .../rpc/ingest_matches -> 409: duplicate key value")
+            return super().rpc(fn, args)
+
+    db = ConflictDb()
+    lg = league("npfl")
+    ko = datetime(2026, 10, 4, 15, tzinfo=timezone.utc)
+    run = Run("fixtures", "thesportsdb", "npfl")
+    written = write_fixtures(db, Resolver(db), "thesportsdb", lg, [
+        Fixture("npfl", ko, "Remo Stars", "Enyimba", source_id="1"),
+        Fixture("npfl", ko, "Kano Pillars", "Rivers United", source_id="2"),
+        Fixture("npfl", ko, "Shooting Stars", "Lobi Stars", source_id="3"),
+    ], run)
+    assert written == 2
+    assert {m["source_id"] for m in db.tables["matches"]} == {"1", "3"}
+    assert any("already held" in w for w in run.warnings)
+
+
 def test_coverage_flags_gaps_without_inventing_matches():
     db = MemoryDb()
     write_coverage(db, league("npfl"), "openfootball",

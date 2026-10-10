@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { kickoffDay, kickoffTime } from "@/lib/format";
+import { useTimeZone } from "@/lib/use-visitor";
 import {
   combinedProbability,
   legState,
@@ -46,12 +47,12 @@ function pct(p: number): string {
 
 const NUMBER_WORDS = ["Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten"];
 
-function kickoffLabel(iso: string): string {
-  return `${kickoffDay(iso)}, ${kickoffTime(iso)}`;
+function kickoffLabel(iso: string, tz: string): string {
+  return `${kickoffDay(iso, tz)}, ${kickoffTime(iso, tz)}`;
 }
 
-function kickoffRange(legs: TrackedLeg[]): string {
-  const days = [...new Set(legs.map((l) => kickoffDay(l.kickoff)))];
+function kickoffRange(legs: TrackedLeg[], tz: string): string {
+  const days = [...new Set(legs.map((l) => kickoffDay(l.kickoff, tz)))];
   return days.length === 1 ? `${days[0]}` : `${days[0]} to ${days[days.length - 1]}`;
 }
 
@@ -222,6 +223,7 @@ function LegBadge({ state }: { state: LegState }) {
 }
 
 function LegClock({ leg, state }: { leg: TrackedLeg; state: LegState }) {
+  const tz = useTimeZone();
   const live = state.kind === "live" ? state.score : null;
   // A hook, so it runs for every leg; it only counts for one in play.
   const minute = useTickingMinute(live?.minute, live?.status ?? "scheduled", live?.observedAt ?? Number.NaN);
@@ -233,7 +235,7 @@ function LegClock({ leg, state }: { leg: TrackedLeg; state: LegState }) {
     if (live.status === "halftime") return <>Half time</>;
     return <>{minute ? `${minute}′` : "Live"}</>;
   }
-  return <>{kickoffLabel(leg.kickoff)}</>;
+  return <>{kickoffLabel(leg.kickoff, tz)}</>;
 }
 
 function legGoals(state: LegState): [number | null, number | null] | null {
@@ -283,6 +285,7 @@ function LegCard({ leg, state }: { leg: TrackedLeg; state: LegState }) {
 }
 
 function Headline({ view }: { view: SlipView }) {
+  const tz = useTimeZone();
   const n = view.legs.length;
   const chance = pct(view.combined);
 
@@ -311,8 +314,8 @@ function Headline({ view }: { view: SlipView }) {
         </h2>
         <p className="mt-3 text-sm leading-relaxed text-ink-muted sm:text-base">
           {n === 1
-            ? `One selection, read off the model. Kicks off ${kickoffLabel(legs[0].kickoff)}, West Africa Time.`
-            : `${count} selections, each read off the model. Kickoffs ${kickoffRange(legs)}, West Africa Time.`}
+            ? `One selection, read off the model. Kicks off ${kickoffLabel(legs[0].kickoff, tz)}, your time.`
+            : `${count} selections, each read off the model. Kickoffs ${kickoffRange(legs, tz)}, your time.`}
         </p>
       </>
     );
@@ -405,7 +408,7 @@ export function TrackedSlipCard({ view }: { view: SlipView }) {
 
 /* ---------------------------------------------------------- minimized row */
 
-function rowSummary(view: SlipView): string {
+function rowSummary(view: SlipView, tz: string): string {
   const n = view.legs.length;
   switch (view.status) {
     case "won":
@@ -418,12 +421,13 @@ function rowSummary(view: SlipView): string {
       return "Voided";
     default: {
       const next = view.legs[0]?.leg.kickoff;
-      return next ? `First kickoff ${kickoffLabel(next)}` : "";
+      return next ? `First kickoff ${kickoffLabel(next, tz)}` : "";
     }
   }
 }
 
 export function TrackedSlipRow({ view, onOpen, onShare }: { view: SlipView; onOpen: () => void; onShare?: () => void }) {
+  const tz = useTimeZone();
   const n = view.legs.length;
   return (
     <article className="card card-hover min-w-0 overflow-hidden">
@@ -467,7 +471,7 @@ export function TrackedSlipRow({ view, onOpen, onShare }: { view: SlipView; onOp
     </button>
       {/* Its own row, outside the card's tap area: a button can't sit inside another. */}
       <div className="flex items-center justify-between gap-3 px-4 pb-4 sm:px-5">
-        <p className="min-w-0 truncate text-xs text-ink-dim">{rowSummary(view)}</p>
+        <p className="min-w-0 truncate text-xs text-ink-dim">{rowSummary(view, tz)}</p>
         {onShare && <ShareButton onClick={onShare} />}
       </div>
     </article>

@@ -52,6 +52,8 @@ class League:
     ids: dict = field(default_factory=dict)
     archive: dict = field(default_factory=dict)
     history_owner: str = "matches"
+    #: Knockout cup: no table, and no Elo of its own (see leagues.ts LeagueDef.knockout).
+    knockout: bool = False
 
     @property
     def scope(self) -> str:
@@ -77,6 +79,7 @@ def leagues() -> tuple[League, ...]:
             ids=r.get("ids") or {},
             archive=r.get("archive") or {},
             history_owner=r.get("historyOwner", "matches"),
+            knockout=bool(r.get("knockout", False)),
         )
         for r in rows
     )

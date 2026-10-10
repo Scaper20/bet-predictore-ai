@@ -32,19 +32,28 @@ import type { ResultRow } from "@/lib/types";
  */
 const MAX_ROWS = 1200;
 
-export async function archivedResults(leagueCode: string): Promise<ResultRow[]> {
+export async function archivedResults(
+  leagueCode: string,
+  /**
+   * Only rows from this source. The UEFA cups' archive holds many games twice,
+   * once under TheSportsDB's club names and once under openfootball's ("Monaco"
+   * and "AS Monaco FC"), which splits clubs in two; TheSportsDB alone is
+   * complete for the cups' recent window (see LeagueDef.cupPool).
+   */
+  source?: string,
+): Promise<ResultRow[]> {
   // Grows nightly (refreshArchive) and as live feeds report results. An hour
   // is conservative; the cost of a stale read is one missing matchday.
-  return cached(`archive:${leagueCode}`, 60 * 60_000, async () => {
+  return cached(`archive:${leagueCode}:${source ?? "all"}`, 60 * 60_000, async () => {
     const supabase = supabasePublic();
     if (!supabase) return [];
 
-    const { data, error } = await supabase
+    let query = supabase
       .from("historical_results")
       .select("kickoff, home_name, away_name, home_goals, away_goals, home_shots_on_target, away_shots_on_target")
-      .eq("league_code", leagueCode)
-      .order("kickoff", { ascending: false })
-      .limit(MAX_ROWS);
+      .eq("league_code", leagueCode);
+    if (source) query = query.eq("source", source);
+    const { data, error } = await query.order("kickoff", { ascending: false }).limit(MAX_ROWS);
 
     // A missing table (0014 not applied yet) or a failed read degrades to "no
     // archive", and the caller falls back to the live providers exactly as it

@@ -27,6 +27,8 @@ export interface ToolContext {
   viewer: Viewer;
   /** Called by show_picks with the cards to render. */
   onPicks: (cards: AskPickCard[]) => void;
+  /** The user's IANA time zone, for kickoff times (WAT when the browser didn't say). */
+  timeZone: string;
 }
 
 export interface ToolOutcome {
@@ -158,7 +160,8 @@ function normalise(text: string): string {
 
 const pct = (p: number) => Math.round(p * 1000) / 10;
 const odds2 = (o: number) => Math.round(o * 100) / 100;
-const wat = (iso: string) => `${kickoffDay(iso)}, ${kickoffTime(iso)} WAT`;
+/** A kickoff in the user's own time, e.g. "Sun, 11 Oct, 20:00". */
+const at = (iso: string, tz: string) => `${kickoffDay(iso, tz)}, ${kickoffTime(iso, tz)}`;
 const fixtureName = (m: Match) => `${m.home.name} v ${m.away.name}`;
 
 /**
@@ -197,12 +200,12 @@ function matchesQuery(m: Match, team?: string, league?: string): boolean {
   return true;
 }
 
-function fixtureRow(m: Match) {
+function fixtureRow(m: Match, tz: string) {
   return {
     match_id: m.id,
     fixture: fixtureName(m),
     league: m.league.name,
-    kickoff: wat(m.kickoff),
+    kickoff: at(m.kickoff, tz),
     status: m.status,
     ...(isLive(m) || m.status === "finished"
       ? { score: `${m.score.home ?? 0}-${m.score.away ?? 0}`, minute: m.minute ?? null }
@@ -213,7 +216,7 @@ function fixtureRow(m: Match) {
 
 /* ------------------------------------------------------------ executors */
 
-async function searchFixtures(input: Record<string, unknown>): Promise<ToolOutcome> {
+async function searchFixtures(input: Record<string, unknown>, ctx: ToolContext): Promise<ToolOutcome> {
   const team = str(input.team);
   const league = str(input.league);
   const when = (WHEN as readonly string[]).includes(input.when as string) ? (input.when as When) : "next_7_days";
@@ -232,7 +235,7 @@ async function searchFixtures(input: Record<string, unknown>): Promise<ToolOutco
       return matchesQuery(m, team, league);
     })
     .slice(0, 12)
-    .map(fixtureRow);
+    .map((m) => fixtureRow(m, ctx.timeZone));
 
   return {
     content: JSON.stringify(
@@ -262,7 +265,7 @@ function predictionSummary(p: Prediction, ctx: ToolContext) {
     match_id: p.match.id,
     fixture: fixtureName(p.match),
     league: p.match.league.name,
-    kickoff: wat(p.match.kickoff),
+    kickoff: at(p.match.kickoff, ctx.timeZone),
     status: p.match.status,
     data: {
       publishable: p.sufficiency.publishable,
@@ -412,7 +415,7 @@ async function topPicks(input: Record<string, unknown>, ctx: ToolContext): Promi
         match_id: p.match.id,
         fixture: fixtureName(p.match),
         league: p.match.league.name,
-        kickoff: wat(p.match.kickoff),
+        kickoff: at(p.match.kickoff, ctx.timeZone),
         market: pick.market,
         label: pick.label,
         pct: pct(pick.probability),
@@ -424,9 +427,9 @@ async function topPicks(input: Record<string, unknown>, ctx: ToolContext): Promi
   };
 }
 
-async function liveScores(input: Record<string, unknown>): Promise<ToolOutcome> {
+async function liveScores(input: Record<string, unknown>, ctx: ToolContext): Promise<ToolOutcome> {
   const team = str(input.team);
-  const rows = (await liveNow()).filter((m) => matchesQuery(m, team)).slice(0, 15).map(fixtureRow);
+  const rows = (await liveNow()).filter((m) => matchesQuery(m, team)).slice(0, 15).map((m) => fixtureRow(m, ctx.timeZone));
   return { content: JSON.stringify({ live: rows, total_live: (await liveNow()).length }) };
 }
 
@@ -512,7 +515,7 @@ export async function runTool(name: string, input: unknown, ctx: ToolContext): P
   try {
     switch (name) {
       case "search_fixtures":
-        return await searchFixtures(args);
+        return await searchFixtures(args, ctx);
       case "get_prediction":
         return await getPrediction(args, ctx);
       case "get_prices":
@@ -520,7 +523,7 @@ export async function runTool(name: string, input: unknown, ctx: ToolContext): P
       case "top_picks":
         return await topPicks(args, ctx);
       case "get_live_scores":
-        return await liveScores(args);
+        return await liveScores(args, ctx);
       case "show_picks":
         return await showPicks(args, ctx);
       default:

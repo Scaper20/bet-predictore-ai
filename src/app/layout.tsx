@@ -67,16 +67,16 @@ export const metadata: Metadata = {
     template: "%s · BetriX",
   },
   description:
-    "Data-driven football predictions for Nigerian football fans. Real live scores, real " +
-    "fixtures, and a statistical model fitted on actual results — not guesswork.",
+    "Data-driven football predictions for fans across Africa and the world. Real live scores, " +
+    "real fixtures, and a statistical model fitted on actual results — not guesswork.",
   keywords: [
-    "football predictions Nigeria", "soccer prediction tips", "NPFL predictions",
-    "Premier League predictions", "football prediction model", "live scores Nigeria",
+    "football predictions Nigeria", "football predictions Africa", "soccer prediction tips",
+    "NPFL predictions", "Premier League predictions", "football prediction model", "live scores",
     "over 2.5 goals prediction", "BTTS tips", "value bets",
   ],
   openGraph: {
     type: "website",
-    locale: "en_NG",
+    locale: "en_GB",
     siteName: "BetriX",
     title: "BetriX — Football Predictions Built on Real Data",
     description:
@@ -86,7 +86,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "BetriX — Football Predictions",
-    description: "Data-driven football insight for Nigerian football fans.",
+    description: "Data-driven football insight for fans across Africa and the world.",
   },
   robots: { index: true, follow: true },
   // Installed to the home screen (see app/manifest.ts). iOS ignores most of

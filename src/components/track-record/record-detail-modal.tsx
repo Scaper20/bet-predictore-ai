@@ -2,6 +2,7 @@
 
 import { Badge, Button } from "@/components/ui/primitives";
 import { kickoffDay, kickoffTime, percent } from "@/lib/format";
+import { useTimeZone } from "@/lib/use-visitor";
 import { isModelId, modelById, LEGACY_MODEL_ID } from "@/lib/model/registry";
 import { useOverlay } from "@/components/ui/use-overlay";
 
@@ -41,6 +42,7 @@ export function RecordDetailModal({
   match: TrackRecordMatch | null;
   onClose: () => void;
 }) {
+  const tz = useTimeZone();
   // Scroll lock, Escape, tab trap and focus restoration — see use-overlay.ts.
   const { containerRef: dialog, initialFocusRef: closeButton } = useOverlay<
     HTMLDivElement,
@@ -73,7 +75,7 @@ export function RecordDetailModal({
               <span className="font-semibold text-brand">{match.league}</span>
               <span aria-hidden>·</span>
               <span>
-                {kickoffDay(match.kickoff)} at {kickoffTime(match.kickoff)}
+                {kickoffDay(match.kickoff, tz)} at {kickoffTime(match.kickoff, tz)}
               </span>
             </div>
             <h3 id="record-modal-title" className="mt-1 font-display text-xl font-bold text-ink">
@@ -141,7 +143,7 @@ export function RecordDetailModal({
           <span className="font-semibold text-ink">Logged before kickoff</span> and graded
           automatically against the final score from the match feeds
           {match.settled_at
-            ? ` on ${kickoffDay(match.settled_at)} at ${kickoffTime(match.settled_at)}`
+            ? ` on ${kickoffDay(match.settled_at, tz)} at ${kickoffTime(match.settled_at, tz)}`
             : ""}
           . Nothing is edited after full time.
         </p>

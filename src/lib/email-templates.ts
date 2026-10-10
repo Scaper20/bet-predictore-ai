@@ -51,11 +51,18 @@ export function passwordResetEmail(opts: { url: string }): { subject: string; ht
 export function receiptEmail(opts: {
   tier?: Tier;
   amountKobo: number;
+  /** The amount already written in its own currency (Flutterwave payments); overrides amountKobo. */
+  amountText?: string;
+  /** Prepaid plans (Flutterwave): the date access now runs to. */
+  accessUntil?: string;
   reference: string;
   date: string;
 }): { subject: string; html: string } {
   const label = opts.tier ? TIER_LABEL[opts.tier] : undefined;
-  const amount = naira(opts.amountKobo / 100);
+  const amount = opts.amountText ?? naira(opts.amountKobo / 100);
+  const until = opts.accessUntil
+    ? new Date(opts.accessUntil).toLocaleDateString("en-GB", { year: "numeric", month: "long", day: "numeric" })
+    : undefined;
   const when = new Date(opts.date).toLocaleDateString("en-NG", { year: "numeric", month: "long", day: "numeric" });
 
   return {
@@ -69,6 +76,7 @@ export function receiptEmail(opts: {
         <tr><td style="padding:6px 0;color:#8d9db2;">Amount</td><td style="padding:6px 0;text-align:right;font-weight:700;">${amount}</td></tr>
         ${label ? `<tr><td style="padding:6px 0;color:#8d9db2;">Plan</td><td style="padding:6px 0;text-align:right;">${label}</td></tr>` : ""}
         <tr><td style="padding:6px 0;color:#8d9db2;">Date</td><td style="padding:6px 0;text-align:right;">${when}</td></tr>
+        ${until ? `<tr><td style="padding:6px 0;color:#8d9db2;">Access until</td><td style="padding:6px 0;text-align:right;">${until}</td></tr>` : ""}
         <tr><td style="padding:6px 0;color:#8d9db2;">Reference</td><td style="padding:6px 0;text-align:right;">${opts.reference}</td></tr>
       </table>
       ${button(`${SITE_URL}/account/billing`, "View billing")}

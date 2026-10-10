@@ -221,6 +221,8 @@ export async function POST(request: Request) {
           paystack_customer_code: customerCode,
           paystack_subscription_code: subscriptionCode,
           current_period_end: periodEnd ? new Date(periodEnd).toISOString() : null,
+          // Clears "flutterwave" on a row that held a prepaid period before.
+          provider: "paystack",
           updated_at: now,
         },
         { onConflict: "user_id" }

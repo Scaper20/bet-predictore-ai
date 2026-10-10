@@ -6,7 +6,8 @@ import type { Match } from "@/lib/types";
 import { REASON_LABEL, type FeaturedRow } from "@/lib/featured";
 import { Badge, ButtonLink, LiveDot, type Tone } from "@/components/ui/primitives";
 import { Crest } from "@/components/ui/crest";
-import { kickoffTime, percent, relativeDay } from "@/lib/format";
+import { percent } from "@/lib/format";
+import { LocalTime } from "@/components/ui/local-time";
 import { sportPath } from "@/lib/routes";
 import { LockIcon } from "@/components/entitlements/locked-pick";
 import { useTickingMinute } from "@/components/match/use-live-clock";
@@ -180,7 +181,9 @@ export function FeaturedBoard({ rows, renderedAt }: { rows: FeaturedRow[]; rende
                     {row.status === "live" || row.status === "halftime" ? (
                       <LiveClock status={row.status} minute={row.minute} at={row.at} />
                     ) : (
-                      `${relativeDay(row.kickoff)} ${kickoffTime(row.kickoff)}`
+                      <>
+                        <LocalTime iso={row.kickoff} kind="relative" /> <LocalTime iso={row.kickoff} />
+                      </>
                     )}
                   </span>
                 </div>

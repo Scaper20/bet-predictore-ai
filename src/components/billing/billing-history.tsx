@@ -1,11 +1,13 @@
 import { Badge, EmptyState, type Tone } from "@/components/ui/primitives";
-import { naira } from "@/lib/format";
+import { paymentAmount } from "@/lib/payments/markets";
 
 export interface PaymentRow {
   id: string;
   created_at: string;
   plan: string;
   amount_kobo: number;
+  currency?: string | null;
+  amount_minor?: number | null;
   status: string;
 }
 
@@ -44,7 +46,7 @@ export function BillingHistory({ payments }: { payments: PaymentRow[] }) {
                 })}
               </td>
               <td className="px-4 py-3">{p.plan}</td>
-              <td className="tnum px-4 py-3">{naira(p.amount_kobo / 100)}</td>
+              <td className="tnum px-4 py-3">{paymentAmount(p)}</td>
               <td className="px-4 py-3">
                 <Badge tone={STATUS_TONE[p.status] ?? "neutral"}>{p.status}</Badge>
               </td>

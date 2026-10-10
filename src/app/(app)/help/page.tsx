@@ -6,6 +6,8 @@ import { planById } from "@/lib/pricing";
 import { ASK_FREE_DAILY, ASK_GUEST_TOTAL } from "@/lib/ask/request";
 import { FORGE_FREE_DAILY } from "@/lib/forge";
 import { naira } from "@/lib/format";
+import { flutterwaveConfigured } from "@/lib/flutterwave/client";
+import { ELSEWHERE, formatMoney } from "@/lib/payments/markets";
 import { sportPath } from "@/lib/routes";
 
 export const metadata: Metadata = {
@@ -16,6 +18,9 @@ export const metadata: Metadata = {
 
 const pro = naira(planById("pro").price.monthly ?? 0);
 const vip = naira(planById("vip").price.monthly ?? 0);
+// Payers outside Nigeria get local prices once Flutterwave is configured.
+const sellsAbroad = flutterwaveConfigured();
+const usd = (tier: "pro" | "vip") => formatMoney(ELSEWHERE.prices?.[tier].monthly ?? 0, "USD");
 
 const A = ({ children }: { children: React.ReactNode }) => <p>{children}</p>;
 const L = ({ href, children }: { href: string; children: React.ReactNode }) => (
@@ -56,7 +61,11 @@ const GROUPS: FaqGroup[] = [
       {
         q: "What does each plan cost?",
         text: "price cost pass pro vip naira",
-        a: <A>Pro is {pro} a month (cheaper if you pay for 3 months or a year) and VIP {vip} a month. Everything is on the <L href="/pricing">pricing page</L>.</A>,
+        a: sellsAbroad ? (
+          <A>In Nigeria, Pro is {pro} a month (cheaper if you pay for 3 months or a year) and VIP {vip} a month. Elsewhere in Africa they are priced in your own currency, and in US dollars everywhere else (Pro {usd("pro")}, VIP {usd("vip")} a month). The <L href="/pricing">pricing page</L> shows the prices where you are.</A>
+        ) : (
+          <A>Pro is {pro} a month (cheaper if you pay for 3 months or a year) and VIP {vip} a month. Everything is on the <L href="/pricing">pricing page</L>.</A>
+        ),
       },
       {
         q: "What happened to passes?",
@@ -65,8 +74,12 @@ const GROUPS: FaqGroup[] = [
       },
       {
         q: "How do I pay?",
-        text: "pay paystack card transfer ussd",
-        a: <A>Through Paystack, in naira, by card or bank transfer. We never see or store your card details.</A>,
+        text: "pay paystack flutterwave card transfer ussd mobile money mpesa",
+        a: sellsAbroad ? (
+          <A>In Nigeria through Paystack, in naira, by card or bank transfer. Elsewhere through Flutterwave, in your own currency: Mobile Money, M-Pesa or card. Outside Nigeria each payment buys a set period that never renews. We never see or store your card details.</A>
+        ) : (
+          <A>Through Paystack, in naira, by card or bank transfer. We never see or store your card details.</A>
+        ),
       },
       {
         q: "How do I cancel?",

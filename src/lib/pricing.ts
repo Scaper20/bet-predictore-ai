@@ -201,8 +201,16 @@ export function cycleSaving(
   plan: PlanDefinition,
   cycle: BillingCycle,
 ): { amount: number; percent: number } | null {
-  const { monthly } = plan.price;
-  const price = plan.price[cycle];
+  return priceSaving(plan.price, cycle);
+}
+
+/** cycleSaving for any set of cycle prices, such as a market's local ones (lib/payments/markets.ts). */
+export function priceSaving(
+  prices: Partial<Record<BillingCycle, number>>,
+  cycle: BillingCycle,
+): { amount: number; percent: number } | null {
+  const { monthly } = prices;
+  const price = prices[cycle];
   if (!monthly || !price || cycle === "monthly") return null;
 
   const fullPrice = monthly * (cycle === "yearly" ? 12 : 3);

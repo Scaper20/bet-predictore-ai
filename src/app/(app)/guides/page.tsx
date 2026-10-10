@@ -61,7 +61,7 @@ export default function GuidesPage() {
           body: (
             <>
               <p>
-                Decimal odds tell you what a ₦1 stake returns, stake included. Turn them into the chance the bookmaker
+                Decimal odds tell you what each unit you stake returns (₦1, $1, KSh 1), stake included. Turn them into the chance the bookmaker
                 is implying by dividing 1 by the odds.
               </p>
               <Example>Odds of 2.50 → 1 ÷ 2.50 = 40%. Odds of 1.25 → 80%.</Example>

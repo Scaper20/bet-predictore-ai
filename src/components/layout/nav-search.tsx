@@ -9,6 +9,7 @@ import { allLinks, type NavLink } from "@/lib/nav";
 import { CLUB_LEAGUES, INTERNATIONAL_LEAGUES } from "@/lib/leagues";
 import { matchPath, sportPath } from "@/lib/routes";
 import { kickoffDay, kickoffTime } from "@/lib/format";
+import { useTimeZone } from "@/lib/use-visitor";
 import { runNavAction } from "@/components/layout/nav-actions";
 
 interface Result {
@@ -42,6 +43,7 @@ function loadFixtures(): Promise<Match[]> {
 
 function useSearch(sport: SportId, query: string, active: boolean) {
   const [matches, setMatches] = useState<Match[]>([]);
+  const tz = useTimeZone();
   useEffect(() => {
     if (!active) return;
     let cancelled = false;
@@ -69,11 +71,11 @@ function useSearch(sport: SportId, query: string, active: boolean) {
         key: `m:${m.id}`,
         group: "Matches",
         label: `${m.home.name} v ${m.away.name}`,
-        meta: `${m.league.name} · ${kickoffDay(m.kickoff)} ${kickoffTime(m.kickoff)}`,
+        meta: `${m.league.name} · ${kickoffDay(m.kickoff, tz)} ${kickoffTime(m.kickoff, tz)}`,
         href: matchPath(m.id, sport),
       }));
     return [...games, ...leagues, ...pages];
-  }, [query, matches, sport]);
+  }, [query, matches, sport, tz]);
 }
 
 /**

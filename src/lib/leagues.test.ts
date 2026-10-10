@@ -36,7 +36,8 @@ describe("leagueByProviderName", () => {
   it("keeps competitions that merely share words apart", () => {
     // The bug a substring match would reintroduce: three different countries'
     // top divisions all containing "Primera Division".
-    expect(leagueByProviderName("Argentinian Primera Division")).toBeUndefined();
+    // Argentina is catalogued now: its name must reach Argentina, not Spain.
+    expect(leagueByProviderName("Argentinian Primera Division")?.code).toBe("argentina-liga-profesional");
     expect(leagueByProviderName("Chile Primera Division")).toBeUndefined();
     expect(leagueByProviderName("American USL Championship")).toBeUndefined();
   });
@@ -51,6 +52,33 @@ describe("leagueByProviderName", () => {
     for (const league of LEAGUES) {
       expect(leagueByProviderName(league.name)?.code, league.name).toBe(league.code);
       expect(leagueByCode(league.code)).toBe(league);
+    }
+  });
+});
+
+describe("cupPool", () => {
+  it("rates the three UEFA club cups on each other, over a recent window", () => {
+    const cups = ["champions-league", "europa-league", "conference-league"];
+    for (const code of cups) {
+      const pool = leagueByCode(code)?.cupPool;
+      expect(pool?.codes.slice().sort()).toEqual(cups.slice().sort());
+      expect(pool?.windowDays).toBeGreaterThan(365);
+    }
+  });
+
+  it("points only at catalogued competitions, the cup itself included", () => {
+    for (const league of LEAGUES) {
+      if (!league.cupPool) continue;
+      expect(league.cupPool.codes).toContain(league.code);
+      for (const code of league.cupPool.codes) expect(leagueByCode(code), code).toBeDefined();
+    }
+  });
+
+  it("rates domestic cups on their own country's leagues, with no table", () => {
+    for (const code of ["fa-cup", "efl-cup", "coppa-italia"]) {
+      const cup = leagueByCode(code)!;
+      expect(cup.knockout).toBe(true);
+      for (const c of cup.cupPool!.codes) expect(leagueByCode(c)!.country).toBe(cup.country);
     }
   });
 });

@@ -2,6 +2,7 @@ import "server-only";
 
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { APP_TIMEZONE } from "@/lib/format";
+import { paymentAmount } from "@/lib/payments/markets";
 
 /**
  * Every function here trusts its caller already ran requireAdmin()/
@@ -151,6 +152,7 @@ export interface RecentPayment {
   id: string;
   email: string | null;
   amountKobo: number;
+  amountText: string;
   plan: string;
   status: string;
   createdAt: string;
@@ -189,7 +191,7 @@ export async function getRecentActivity(): Promise<RecentActivity> {
     admin.from("profiles").select("id, email, display_name, created_at").order("created_at", { ascending: false }).limit(LIMIT),
     admin
       .from("payments")
-      .select("id, amount_kobo, plan, status, created_at, profiles(email)")
+      .select("id, amount_kobo, currency, amount_minor, plan, status, created_at, profiles(email)")
       .order("created_at", { ascending: false })
       .limit(LIMIT),
     admin
@@ -210,6 +212,7 @@ export async function getRecentActivity(): Promise<RecentActivity> {
       id: p.id as string,
       email: firstOf(p.profiles as ProfileJoin | ProfileJoin[] | null)?.email ?? null,
       amountKobo: p.amount_kobo as number,
+      amountText: paymentAmount(p as { amount_kobo: number; currency: string | null; amount_minor: number | null }),
       plan: p.plan as string,
       status: p.status as string,
       createdAt: p.created_at as string,
@@ -229,7 +232,10 @@ export async function getRecentActivity(): Promise<RecentActivity> {
 export interface PaymentRow {
   id: string;
   email: string | null;
+  /** Naira only; 0 for a payment in another currency. Revenue sums read this. */
   amountKobo: number;
+  /** The amount as paid, in its own currency. What lists show. */
+  amountText: string;
   plan: string;
   status: string;
   reference: string;
@@ -250,7 +256,7 @@ export async function getPayments(page: number, pageSize = 50): Promise<Payments
 
   const { data } = await admin
     .from("payments")
-    .select("id, amount_kobo, plan, status, paystack_reference, created_at, profiles(email)")
+    .select("id, amount_kobo, currency, amount_minor, plan, status, paystack_reference, created_at, profiles(email)")
     .order("created_at", { ascending: false })
     .range(from, to);
 
@@ -262,6 +268,7 @@ export async function getPayments(page: number, pageSize = 50): Promise<Payments
       id: p.id as string,
       email: firstOf(p.profiles as ProfileJoin | ProfileJoin[] | null)?.email ?? null,
       amountKobo: p.amount_kobo as number,
+      amountText: paymentAmount(p as { amount_kobo: number; currency: string | null; amount_minor: number | null }),
       plan: p.plan as string,
       status: p.status as string,
       reference: p.paystack_reference as string,

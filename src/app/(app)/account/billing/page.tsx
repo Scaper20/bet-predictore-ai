@@ -1,10 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { supabaseServer, supabaseConfigured } from "@/lib/supabase/server";
 import { getEntitlement } from "@/lib/entitlements";
-import { getSubscriptionRow, hasLivePaidSubscription } from "@/lib/subscriptions";
+import { getSubscriptionRow, hasLivePaidSubscription, prepaidUntil } from "@/lib/subscriptions";
+import { flutterwaveConfigured } from "@/lib/flutterwave/client";
+import { MARKETS, NIGERIA, marketFor } from "@/lib/payments/markets";
 import { BillingPlans } from "@/components/billing/billing-plans";
+import { MarketPicker } from "@/components/billing/market-picker";
 import { ManageSubscriptionButton } from "@/components/billing/manage-subscription-button";
 import { BillingHistory, type PaymentRow } from "@/components/billing/billing-history";
 import { SectionHeading } from "@/components/ui/primitives";
@@ -17,6 +21,7 @@ export default async function BillingPage({ searchParams }: PageProps<"/account/
   const params = await searchParams;
   const rawCycle = Array.isArray(params.cycle) ? params.cycle[0] : params.cycle;
   const initialCycle: BillingCycle = rawCycle === "quarterly" || rawCycle === "yearly" ? rawCycle : "monthly";
+  const rawCountry = Array.isArray(params.country) ? params.country[0] : params.country;
   if (!supabaseConfigured) {
     return (
       <div className="mx-auto max-w-lg px-4 py-10 sm:py-16 text-center sm:px-6">
@@ -38,12 +43,25 @@ export default async function BillingPage({ searchParams }: PageProps<"/account/
   const subscription = await getSubscriptionRow(supabase, user.id);
   const { data: payments } = await supabase
     .from("payments")
-    .select("id, created_at, plan, amount_kobo, status")
+    .select("id, created_at, plan, amount_kobo, currency, amount_minor, status")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
     .limit(20);
 
   const hasActiveSubscription = hasLivePaidSubscription(subscription);
+
+  // Where the payer is decides the currency and the provider: the country
+  // they pick, else the one Vercel sees them connect from. Until Flutterwave
+  // is configured everyone pays as before, through Paystack in naira.
+  const sellsAbroad = flutterwaveConfigured();
+  const market = sellsAbroad
+    ? marketFor(rawCountry ?? (await headers()).get("x-vercel-ip-country") ?? NIGERIA.country)
+    : NIGERIA;
+  const prepaidEnd = prepaidUntil(subscription);
+  const prepaid =
+    prepaidEnd && (subscription?.tier === "pro" || subscription?.tier === "vip")
+      ? { tier: subscription.tier, until: prepaidEnd.toISOString() }
+      : null;
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:py-16 sm:px-6 lg:px-8">
@@ -63,9 +81,18 @@ export default async function BillingPage({ searchParams }: PageProps<"/account/
       <div className="mx-auto mt-8 max-w-2xl text-center">
         <h1 className="font-display text-3xl font-bold">Plans &amp; billing</h1>
         <p className="mt-3 text-sm text-ink-muted">
-          From a single matchday to a full season. Payments are handled by Paystack — cancel a subscription anytime
-          from here.
+          {market.provider === "flutterwave"
+            ? `Pay in ${market.currency} through Flutterwave: ${market.methodsLabel}. Each payment buys a set period — nothing renews or charges you again, so there's nothing to cancel.`
+            : "From a single matchday to a full season. Payments are handled by Paystack — cancel a subscription anytime from here."}
         </p>
+        {sellsAbroad && (
+          <div className="mt-4">
+            <MarketPicker
+              current={market.country}
+              options={MARKETS.map(({ country, label, flag, currency }) => ({ country, label, flag, currency }))}
+            />
+          </div>
+        )}
       </div>
       <div className="mt-10">
         <BillingPlans
@@ -73,8 +100,22 @@ export default async function BillingPage({ searchParams }: PageProps<"/account/
           hasActiveSubscription={hasActiveSubscription}
           available={availableCycles()}
           initialCycle={initialCycle}
+          market={market}
+          prepaid={prepaid}
         />
       </div>
+
+      {prepaid && (
+        <section className="mt-14">
+          <SectionHeading
+            eyebrow="Subscription"
+            title={`Your ${prepaid.tier === "vip" ? "VIP" : "Pro"} plan`}
+            description={`Paid up until ${new Date(prepaid.until).toLocaleDateString("en-GB", {
+              day: "numeric", month: "long", year: "numeric",
+            })}. It's prepaid — it won't renew or charge you again. Pay for the same plan any time and the new period starts when this one ends, so you never lose days.`}
+          />
+        </section>
+      )}
 
       {(entitlement.tier === "pro" || entitlement.tier === "vip") && subscription?.paystack_subscription_code && (
         <section className="mt-14">
