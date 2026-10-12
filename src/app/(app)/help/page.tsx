@@ -145,7 +145,7 @@ const GROUPS: FaqGroup[] = [
       },
       {
         q: "How many questions can I ask Ask KiqStat?",
-        text: "ask kiqstat betrix questions limit ai",
+        text: "ask kiqstat questions limit ai",
         a: <A>{ASK_GUEST_TOTAL} without an account, {ASK_FREE_DAILY} a day on a free account, and plenty on any paid plan (fair use applies).</A>,
       },
     ],

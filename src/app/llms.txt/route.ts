@@ -33,7 +33,7 @@ export function GET() {
 
   const body = `# KiqStat
 
-> KiqStat (formerly BetriX, at betrix.com.ng) is a football prediction and analytics site for football fans across Africa and the world, built in Nigeria by ${COMPANY.legalName}. Every prediction comes from a statistical goal model (time-weighted Dixon-Coles Poisson) fitted on real completed matches, and every pick shows the sample size and data quality behind it. When the history is too thin, KiqStat publishes no pick rather than guessing.
+> KiqStat is a football prediction and analytics site for football fans across Africa and the world, built in Nigeria by ${COMPANY.legalName}. Every prediction comes from a statistical goal model (time-weighted Dixon-Coles Poisson) fitted on real completed matches, and every pick shows the sample size and data quality behind it. When the history is too thin, KiqStat publishes no pick rather than guessing.
 
 KiqStat is an analytics product, not a bookmaker: it takes no bets and holds no funds. Prices are shown in the visitor's own currency: naira in Nigeria, the local currency in Ghana, Kenya, Uganda, Tanzania, Rwanda, Zambia, Cameroon, Côte d'Ivoire, Senegal and South Africa, and US dollars elsewhere. Kickoff times are shown in the visitor's own time zone. For adults only (18+, or older where local law requires).
 

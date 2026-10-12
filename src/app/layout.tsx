@@ -27,10 +27,6 @@ const ORG_JSON_LD = {
       "@type": "Organization",
       "@id": `${SITE}/#organization`,
       name: COMPANY.brand,
-      // The product's previous name. Ties the new name to everything search
-      // engines and AI assistants already know about it, so ranking and
-      // citations carry over instead of starting from zero.
-      alternateName: [...COMPANY.formerNames],
       legalName: COMPANY.legalName,
       url: SITE,
       logo: `${SITE}/brand/icon.png`,
