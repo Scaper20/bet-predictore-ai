@@ -3,7 +3,7 @@ import {
   poissonPmf, scoreMatrix, deriveMarkets, deriveAsianHandicap, deriveLiveWinProbability, tau, MAX_GOALS,
 } from "./poisson";
 import { fitLeague, expectedRates, normaliseKey } from "./fit";
-import { assessSufficiency, buildPrediction } from "./predict";
+import { assessSufficiency, buildPrediction, inflateDraws } from "./predict";
 import type { ResultRow } from "@/lib/types";
 
 const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
@@ -558,5 +558,21 @@ describe("goals-v2 fit options", () => {
     const off = fitLeague(late, { newcomerPrior: 0, shotWeight: 0 }).ratings.get("n")!;
     const on = fitLeague(late, { newcomerPrior: 0.3, shotWeight: 0 }).ratings.get("n")!;
     expect(on.attack + on.defence).toBeLessThan(off.attack + off.defence);
+  });
+});
+
+describe("inflateDraws", () => {
+  it("raises the draw share and keeps the grid a distribution", () => {
+    const base = scoreMatrix(1.4, 1.1, -0.05);
+    const draws = (g: number[][]) => g.reduce((a, row, i) => a + row[i], 0);
+    const before = draws(base);
+    const g = inflateDraws(scoreMatrix(1.4, 1.1, -0.05), 1.1);
+    expect(draws(g)).toBeGreaterThan(before);
+    expect(g.flat().reduce((a, v) => a + v, 0)).toBeCloseTo(1, 10);
+  });
+
+  it("leaves the grid alone at a factor of 1", () => {
+    const g = scoreMatrix(1.4, 1.1, -0.05);
+    expect(inflateDraws(g, 1)).toBe(g);
   });
 });
