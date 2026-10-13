@@ -112,6 +112,18 @@
     ],
     "Nottingham Forest": [
       "Nott'm Forest"
+    ],
+    "Bristol Rovers": [
+      "Bristol Rvs"
+    ],
+    "Carlisle United": [
+      "Carlisle"
+    ],
+    "Northampton Town": [
+      "Northampton"
+    ],
+    "Swindon Town": [
+      "Swindon"
     ]
   },
   "france": {
@@ -125,6 +137,13 @@
       "Stade Rennais",
       "Stade Rennais FC 1901",
       "Stade Rennais FC"
+    ],
+    "St Etienne": [
+      "Saint-Étienne",
+      "Saint-Etienne"
+    ],
+    "Rodez AF": [
+      "Rodez Aveyron"
     ]
   },
   "germany": {
@@ -193,7 +212,9 @@
       "RC Deportivo La Coruña",
       "Deportivo La Coruna",
       "Dep. La Coruna",
-      "La Coruna"
+      "La Coruna",
+      "Deportivo",
+      "Deportivo La Coruña"
     ],
     "Espanyol": [
       "RCD Espanyol de Barcelona",
@@ -234,6 +255,9 @@
     ],
     "Levadiakos": [
       "Levadeiakos"
+    ],
+    "Asteras Tripolis": [
+      "Asteras Tripoli"
     ]
   },
   "azerbaijan": {
@@ -250,6 +274,9 @@
   "belgium": {
     "Club Brugge": [
       "Club Brugge KV"
+    ],
+    "Sint-Truiden": [
+      "Sint-Truidense"
     ]
   },
   "ukraine": {
@@ -295,6 +322,10 @@
     "Istanbul Basaksehir": [
       "Buyuksehyr",
       "Basaksehir"
+    ],
+    "Erzurumspor": [
+      "Erzurum BB",
+      "BB Erzurumspor"
     ]
   },
   "argentina": {
@@ -315,6 +346,12 @@
     ],
     "Pumas UNAM": [
       "UNAM Pumas"
+    ]
+  },
+  "united states": {
+    "New York Red Bulls": [
+      "Red Bull New York",
+      "NY Red Bulls"
     ]
   }
 }

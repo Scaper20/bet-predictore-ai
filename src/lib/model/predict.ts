@@ -208,6 +208,10 @@ export interface ModelOptions {
   familyReliability?: Record<string, number>;
   /** Market ids barred from the headline, on top of headlineEligible's rules. */
   excludeHeadline?: string[];
+  /** Multiplies every drawn scoreline before renormalising (1 = off). Lab knob. */
+  drawInflation?: number;
+  /** Scales both expected goal rates after the totals shrink (1 = off). Lab knob. */
+  goalScale?: number;
 }
 
 export function buildPrediction(
@@ -231,9 +235,12 @@ export function buildPrediction(
   const awayName = options.ratingNames?.away ?? match.away.name;
   const rates = expectedRates(fit, homeName, awayName);
   const { homeRating, awayRating } = rates;
-  const { lambda, mu } = calibrateTotals(rates.lambda, rates.mu, fit, options.totalsShrink ?? TOTALS_SHRINK);
+  const shrunk = calibrateTotals(rates.lambda, rates.mu, fit, options.totalsShrink ?? TOTALS_SHRINK);
+  const goalScale = options.goalScale ?? 1;
+  const lambda = shrunk.lambda * goalScale;
+  const mu = shrunk.mu * goalScale;
 
-  const grid = scoreMatrix(lambda, mu, fit.rho);
+  const grid = inflateDraws(scoreMatrix(lambda, mu, fit.rho), options.drawInflation ?? 1);
   const markets = {
     ...deriveMarkets(grid, lambda, mu),
     halves: halfMarkets(lambda, mu, { home: SITE_FIRST_HALF_SHARE, away: SITE_FIRST_HALF_SHARE }, SITE_HALF_TILT, SITE_SECOND_HALF_TILT),
@@ -312,6 +319,20 @@ function calibrateTotals(lambda: number, mu: number, fit: LeagueFit, shrink: num
   const target = mean + shrink * (total - mean);
   const scale = target / total;
   return { lambda: lambda * scale, mu: mu * scale };
+}
+
+/** Multiplies the drawn scorelines by `factor` and renormalises the grid. */
+export function inflateDraws(grid: number[][], factor: number): number[][] {
+  if (factor === 1) return grid;
+  let total = 0;
+  for (let x = 0; x < grid.length; x++) {
+    for (let y = 0; y < grid[x].length; y++) {
+      if (x === y) grid[x][y] *= factor;
+      total += grid[x][y];
+    }
+  }
+  for (const row of grid) for (let y = 0; y < row.length; y++) row[y] /= total;
+  return grid;
 }
 
 /**
