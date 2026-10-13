@@ -83,6 +83,13 @@ def job_sync(ctx: Context) -> None:
     link_history(ctx)
 
 
+#: A club with no game in its competition for this long has left it (relegated,
+#: dissolved, or a franchise moved). Its old spelling has no current club to be
+#: linked to, so it is not a problem to list: its results still train the model
+#: under the name they were played under.
+LEFT_COMPETITION_DAYS = 120
+
+
 def link_history(ctx: Context, years: int = 6) -> None:
     """Link every club spelling in the training history to its club.
 
@@ -92,9 +99,13 @@ def link_history(ctx: Context, years: int = 6) -> None:
     with years of results trains on none of them. Runs after the club lists,
     resolving each name with the normal rules but never creating a club; a
     spelling no rule can place is logged in unresolved_entities, where Data
-    health shows it.
+    health shows it. Two kinds are left out of that list, because there is
+    nothing for a person to place: a club that has left the competition
+    (LEFT_COMPETITION_DAYS), and, in the internationals, a club side a country
+    played in a warm-up game.
     """
     since = (today() - timedelta(days=365 * years)).isoformat()
+    left_before = (today() - timedelta(days=LEFT_COMPETITION_DAYS)).isoformat()
     for lg in ctx.ordered():
         if lg.multinational or lg.knockout:
             continue  # cup history is written under canonical names already
@@ -103,9 +114,14 @@ def link_history(ctx: Context, years: int = 6) -> None:
                 continue
             rows = ctx.db.select(
                 "historical_results",
-                {"select": "home_name,away_name", "league_code": f"eq.{lg.code}", "kickoff": f"gte.{since}"},
+                {"select": "home_name,away_name,kickoff", "league_code": f"eq.{lg.code}", "kickoff": f"gte.{since}"},
             )
-            names = sorted({n for x in rows for n in (x["home_name"], x["away_name"]) if n})
+            last_played: dict[str, str] = {}
+            for x in rows:
+                for n in (x["home_name"], x["away_name"]):
+                    if n and str(x.get("kickoff") or "") > last_played.get(n, ""):
+                        last_played[n] = str(x.get("kickoff") or "")
+            names = sorted(last_played)
             # Spellings logged as unresolved by an earlier run. One a later run
             # places (the club arrived, or a curated rename did) is marked
             # resolved, or Data health keeps listing it for ever.
@@ -118,15 +134,17 @@ def link_history(ctx: Context, years: int = 6) -> None:
             }
             linked = 0
             for name in names:
-                team = ctx.resolver.resolve(name, lg.scope, "history", lg.code, create=False, log_unresolved=True)
+                listable = not lg.international and last_played[name][:10] >= left_before
+                team = ctx.resolver.resolve(name, lg.scope, "history", lg.code, create=False, log_unresolved=listable)
+                key = {"source": "history", "scope": lg.scope, "alias_key": loose_key(name)}
                 if team:
                     linked += 1
                     if loose_key(name) in pending:
-                        ctx.db.update(
-                            "unresolved_entities",
-                            {"source": "history", "scope": lg.scope, "alias_key": loose_key(name)},
-                            {"resolved_team_id": team.id},
-                        )
+                        ctx.db.update("unresolved_entities", key, {"resolved_team_id": team.id})
+                elif not listable and loose_key(name) in pending:
+                    # Listed by an earlier run; the club has since left the
+                    # competition (or never belonged in it), so stop listing it.
+                    ctx.db.delete("unresolved_entities", key)
             r.rows_in = len(names)
             r.rows_written = linked
             if linked < len(names):

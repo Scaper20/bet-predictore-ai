@@ -274,3 +274,59 @@ def test_link_history_clears_spellings_a_later_run_places():
     rows = {r["raw_name"]: r.get("resolved_team_id") for r in db.tables["unresolved_entities"]}
     assert rows["Leeds"] == leeds.id
     assert rows["Wrexham"] is None  # still unknown, still listed
+
+
+def test_link_history_stops_listing_clubs_that_left_the_competition():
+    from datetime import timedelta
+
+    from betrix_ingest import jobs
+    from betrix_ingest.config import Settings
+    from betrix_ingest.resolve import loose_key
+
+    s = Settings(None, None, "key", None, Path("."), Path("."), True)
+    db = MemoryDb()
+    ctx = jobs.Context(s, db, ["premier-league"])
+    ctx.resolver.resolve("Arsenal", "england", "thesportsdb")
+    long_ago = (jobs.today() - timedelta(days=jobs.LEFT_COMPETITION_DAYS + 30)).isoformat()
+    db.tables["historical_results"] = [
+        {"league_code": "premier-league", "kickoff": long_ago, "home_name": "Arsenal", "away_name": "Ipswich Old"},
+        {"league_code": "premier-league", "kickoff": jobs.today().isoformat(), "home_name": "Arsenal", "away_name": "Wrexham"},
+    ]
+    # Listed by an earlier run, when the club was still in the league.
+    db.tables["unresolved_entities"] = [
+        {"source": "history", "entity_type": "team", "scope": "england", "raw_name": "Ipswich Old",
+         "alias_key": loose_key("Ipswich Old"), "resolved_team_id": None},
+    ]
+    jobs.link_history(ctx)
+    names = {r["raw_name"] for r in db.tables["unresolved_entities"]}
+    assert "Ipswich Old" not in names  # left the league: nothing to place
+    assert "Wrexham" in names  # still playing and unplaced: still listed
+
+
+def test_link_history_does_not_list_club_sides_in_internationals():
+    from betrix_ingest import jobs
+    from betrix_ingest.config import Settings
+
+    s = Settings(None, None, "key", None, Path("."), Path("."), True)
+    db = MemoryDb()
+    ctx = jobs.Context(s, db, ["international-friendlies"])
+    ctx.resolver.resolve("El Salvador", "international", "thesportsdb")
+    db.tables["historical_results"] = [
+        {"league_code": "international-friendlies", "kickoff": jobs.today().isoformat(),
+         "home_name": "LA Galaxy", "away_name": "El Salvador"},
+    ]
+    jobs.link_history(ctx)
+    assert not db.tables.get("unresolved_entities")
+
+
+def test_seeded_spellings_place_abbreviated_archive_names():
+    db, r = make()
+    rovers = r.resolve("Bristol Rovers", "england", "thesportsdb")
+    r.resolve("Bristol City", "england", "thesportsdb")
+    carlisle = r.resolve("Carlisle United", "england", "thesportsdb")
+    r.resolve("Carlisle City", "england", "thesportsdb")
+    assert r.resolve("Bristol Rvs", "england", "history", create=False).id == rovers.id
+    assert r.resolve("Carlisle", "england", "history", create=False).id == carlisle.id
+    red_bulls = r.resolve("New York Red Bulls", "united states", "thesportsdb")
+    r.resolve("New York City FC", "united states", "thesportsdb")
+    assert r.resolve("Red Bull New York", "united states", "espn", create=False).id == red_bulls.id

@@ -21,6 +21,7 @@ class Database(Protocol):
     def insert(self, table: str, rows: list[dict] | dict, returning: bool = False) -> list[dict]: ...
     def upsert(self, table: str, rows: list[dict], on_conflict: str) -> int: ...
     def update(self, table: str, match: dict[str, str], values: dict) -> None: ...
+    def delete(self, table: str, match: dict[str, str]) -> None: ...
     def rpc(self, fn: str, args: dict) -> Any: ...
 
 
@@ -99,6 +100,16 @@ class RestDb:
             )
         )
 
+    def delete(self, table: str, match: dict[str, str]) -> None:
+        self._check(
+            self.session.delete(
+                f"{self.base}/{table}",
+                params={k: f"eq.{v}" for k, v in match.items()},
+                headers={"Prefer": "return=minimal"},
+                timeout=self.timeout,
+            )
+        )
+
     def rpc(self, fn: str, args: dict) -> Any:
         res = self._check(
             self.session.post(f"{self.base}/rpc/{fn}", data=json.dumps(args, default=str), timeout=self.timeout)
@@ -160,6 +171,12 @@ class MemoryDb:
             if all(str(r.get(k)) == str(v) for k, v in match.items()):
                 r.update(values)
         self.calls.append(("update", table, (match, values)))
+
+    def delete(self, table: str, match: dict[str, str]) -> None:
+        self.tables[table] = [
+            r for r in self.tables.get(table, []) if not all(str(r.get(k)) == str(v) for k, v in match.items())
+        ]
+        self.calls.append(("delete", table, match))
 
     def rpc(self, fn: str, args: dict) -> Any:
         self.calls.append(("rpc", fn, args))
