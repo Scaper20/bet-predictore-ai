@@ -71,9 +71,9 @@ export const metadata: Metadata = {
     "Data-driven football predictions for fans across Africa and the world. Real live scores, " +
     "real fixtures, and a statistical model fitted on actual results — not guesswork.",
   keywords: [
-    "football predictions Nigeria", "football predictions Africa", "soccer prediction tips",
+    "football predictions Nigeria", "football predictions Africa", "soccer predictions",
     "NPFL predictions", "Premier League predictions", "football prediction model", "live scores",
-    "over 2.5 goals prediction", "BTTS tips", "value bets",
+    "over 2.5 goals prediction", "both teams to score predictions", "football statistics",
   ],
   openGraph: {
     type: "website",

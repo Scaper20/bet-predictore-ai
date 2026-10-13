@@ -31,7 +31,7 @@ export function BestBetOfDay({ prediction }: { prediction: Prediction | ViewedPr
             <svg viewBox="0 0 16 16" className="size-3" fill="currentColor" aria-hidden>
               <path d="M8 1.5 9.9 5.6l4.4.5-3.3 3 1 4.4L8 11.3 4 13.5l1-4.4-3.3-3 4.4-.5Z" />
             </svg>
-            Best bet today
+            Top pick today
           </span>
           <span className="truncate text-xs text-ink-muted">
             {match.league.name} · <LocalTime iso={match.kickoff} kind="relative" /> <LocalTime iso={match.kickoff} />

@@ -28,7 +28,7 @@ export const metadata: Metadata = {
 const faqs = (sellsAbroad: boolean) => [
   {
     q: "Do I need to pay to use KiqStat?",
-    a: "No. Every pick and every market on every match is free, along with live scores, fixtures and results. Pro adds Asian handicap, half-time markets, the full breakdowns, value against the price you're offered, staking guidance and more from Forge and Ask KiqStat.",
+    a: "No. Every pick and every prediction type on every match is free, along with live scores, fixtures and results. Pro adds winning margins, half-time predictions, the full breakdowns, value against the market price and more from Forge and Ask KiqStat.",
   },
   {
     q: "What happened to passes?",
@@ -162,13 +162,13 @@ export default async function PricingPage({ searchParams }: PageProps<"/pricing"
             */}
             <LegalNote>
               <p>
-                KiqStat is an analytics product. We do not accept bets, hold funds, or act as a
-                bookmaker, and we are not affiliated with any bookmaker.
+                KiqStat is a sports analytics product. We do not hold customer funds, and no money
+                can be placed on a match or won through KiqStat.
               </p>
               <p>
                 Probabilities are statistical estimates, not statements of fact or predictions of
-                outcome. Nothing here is financial advice and no plan guarantees a return. You are
-                responsible for your own decisions and any money you stake.
+                outcome. Nothing here is financial advice and no plan guarantees any result. You are
+                responsible for your own decisions.
               </p>
               <p>
                 {sellsAbroad
@@ -182,13 +182,13 @@ export default async function PricingPage({ searchParams }: PageProps<"/pricing"
                 {sellsAbroad ? " Outside Nigeria, each payment buys a fixed period and nothing renews." : ""}
               </p>
               <p>
-                Value-shift alerts depend on bookmaker prices that move constantly; an alert
+                Value-shift alerts depend on market prices that move constantly; an alert
                 reflects the price when we last checked it, and on most days there are few or none.
               </p>
               <p>
-                18+ only. If gambling stops being fun,{" "}
+                18+ only. If it stops being fun,{" "}
                 <Link
-                  href="/responsible-gambling"
+                  href="/responsible-use"
                   className="text-amber underline underline-offset-2"
                 >
                   take a break

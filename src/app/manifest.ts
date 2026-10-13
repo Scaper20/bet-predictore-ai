@@ -55,9 +55,9 @@ export default function manifest(): MetadataRoute.Manifest {
         icons: [{ src: "/icons/shortcut-96.png", sizes: "96x96", type: "image/png" }],
       },
       {
-        name: "My slip",
-        short_name: "Slip",
-        url: `${sportPath("trackedSlips")}#slip`,
+        name: "My combos",
+        short_name: "Combos",
+        url: `${sportPath("trackedSlips")}#combo`,
         icons: [{ src: "/icons/shortcut-96.png", sizes: "96x96", type: "image/png" }],
       },
     ],

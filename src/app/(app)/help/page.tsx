@@ -12,7 +12,7 @@ import { sportPath } from "@/lib/routes";
 
 export const metadata: Metadata = {
   title: "Help Centre",
-  description: "Answers about accounts, plans and payments, predictions, Forge and slips, and responsible gambling on KiqStat.",
+  description: "Answers about accounts, plans and payments, predictions, Forge and combos, and responsible use on KiqStat.",
   alternates: { canonical: "/help" },
 };
 
@@ -34,13 +34,13 @@ const GROUPS: FaqGroup[] = [
     items: [
       {
         q: "Is KiqStat free?",
-        text: "Live scores fixtures results tables predictions free account markets",
-        a: <A>Yes. Live scores, fixtures, results, league tables, team stats and every pick and every market (1X2, over/under, GG/NG, double chance, correct score) are free, with {FORGE_FREE_DAILY} Forge slips a day (1X2 and double chance) and {ASK_FREE_DAILY} Ask KiqStat questions a day. Pro adds Asian handicap, half-time markets, the full written breakdowns and more.</A>,
+        text: "Live scores fixtures results tables predictions free account prediction types",
+        a: <A>Yes. Live scores, fixtures, results, league tables, team stats and every pick and every prediction type (match result, over/under, both teams to score, two results, correct score) are free, with {FORGE_FREE_DAILY} Forge combos a day (match result and two results) and {ASK_FREE_DAILY} Ask KiqStat questions a day. Pro adds winning margins, half-time predictions, the full written breakdowns and more.</A>,
       },
       {
         q: "Do I need an account?",
         text: "account sign up guest",
-        a: <A>Not to browse. Without one you can try Forge and Ask KiqStat a couple of times ({ASK_GUEST_TOTAL} questions in total). An account (free, email or Google) lets you follow your leagues, save and track slips, and get more each day. <L href="/account/sign-up">Create one</L>.</A>,
+        a: <A>Not to browse. Without one you can try Forge and Ask KiqStat a couple of times ({ASK_GUEST_TOTAL} questions in total). An account (free, email or Google) lets you follow your leagues, save and track combos, and get more each day. <L href="/account/sign-up">Create one</L>.</A>,
       },
       {
         q: "How do I choose my leagues?",
@@ -100,7 +100,7 @@ const GROUPS: FaqGroup[] = [
       {
         q: "How are the predictions made?",
         text: "model how predictions work statistics",
-        a: <A>From a statistical model fitted on thousands of real results: team ratings, a chance for every scoreline, and every market from that. No tipsters. The full story is in <L href="/how-it-works">How our picks work</L>.</A>,
+        a: <A>From a statistical model fitted on thousands of real results: team ratings, a chance for every scoreline, and every prediction from that. No pundit hunches. The full story is in <L href="/how-it-works">How our picks work</L>.</A>,
       },
       {
         q: "Why does a game say “no pick”?",
@@ -109,13 +109,13 @@ const GROUPS: FaqGroup[] = [
       },
       {
         q: "What is a Strong pick?",
-        text: "strong pick star banker confident safest",
-        a: <A>Our most confident picks, about one game in six, marked ★ Strong before kick-off. In testing on past seasons they landed about 4 times in 5, against about 3 in 4 for all picks. They come at shorter odds, and they still lose sometimes. The <L href={sportPath("trackRecord")}>track record</L> shows the Strong record on its own, next to every pick.</A>,
+        text: "strong pick star confident safest",
+        a: <A>Our most confident picks, about one game in six, marked ★ Strong before kick-off. In testing on past seasons they landed about 4 times in 5, against about 3 in 4 for all picks. They come at shorter prices, and they are still wrong sometimes. The <L href={sportPath("trackRecord")}>track record</L> shows the Strong record on its own, next to every pick.</A>,
       },
       {
         q: "How accurate are you?",
         text: "accuracy track record win rate",
-        a: <A>Every pick is logged before kick-off and graded after. The <L href={sportPath("trackRecord")}>track record</L> shows all of it, by league and market, wins and losses alike.</A>,
+        a: <A>Every pick is logged before kick-off and graded after. The <L href={sportPath("trackRecord")}>track record</L> shows all of it, by league and prediction type, wins and losses alike.</A>,
       },
       {
         q: "What are model ratings?",
@@ -126,22 +126,22 @@ const GROUPS: FaqGroup[] = [
   },
   {
     id: "tools",
-    title: "Forge, slips and Ask KiqStat",
+    title: "Forge, combos and Ask KiqStat",
     items: [
       {
         q: "What is Forge?",
-        text: "forge slip builder accumulator",
-        a: <A>Tell it your style, the total odds you want and your markets; it picks the games and shows the chance of the whole slip landing. KiqStat doesn&apos;t take bets: copy the slip to your bookmaker.</A>,
+        text: "forge combo builder multiple picks",
+        a: <A>Tell it your style, the combined price you want and your prediction types; it picks the games and shows the chance of the whole combo landing.</A>,
       },
       {
-        q: "Can I place bets on KiqStat?",
-        text: "place bet stake bookmaker sportybet",
-        a: <A>No. KiqStat is analysis only. We show probabilities and prices; you place bets with your own bookmaker, if you choose to.</A>,
+        q: "Can I deposit or win money on KiqStat?",
+        text: "deposit money win cash wallet",
+        a: <A>No. KiqStat is analysis only. We show probabilities and prices; you cannot deposit money, place money on a match or win money on KiqStat.</A>,
       },
       {
-        q: "How do I track a slip?",
-        text: "track slip live my slips",
-        a: <A>Add games to your selections, then &ldquo;Track this slip&rdquo;. <L href={sportPath("trackedSlips")}>My slips</L> follows every leg live and marks each one won or lost.</A>,
+        q: "How do I track a combo?",
+        text: "track combo live my combos",
+        a: <A>Add games to your selections, then &ldquo;Track this combo&rdquo;. <L href={sportPath("trackedSlips")}>My combos</L> follows every pick live and marks each one right or wrong.</A>,
       },
       {
         q: "How many questions can I ask Ask KiqStat?",
@@ -152,12 +152,12 @@ const GROUPS: FaqGroup[] = [
   },
   {
     id: "safety",
-    title: "Safety and responsible gambling",
+    title: "Safety and responsible use",
     items: [
       {
-        q: "I'm worried about my gambling",
-        text: "addiction help problem gambling support",
-        a: <A>You&apos;re not alone and help is free. Our <L href="/responsible-gambling">responsible gambling page</L> lists support lines and tools to set limits or take a break.</A>,
+        q: "Is football taking up too much of my time or money?",
+        text: "addiction help problem support limits break",
+        a: <A>You&apos;re not alone and help is free. Our <L href="/responsible-use">responsible use page</L> lists support lines and tools to set limits or take a break.</A>,
       },
       {
         q: "Who can use KiqStat?",

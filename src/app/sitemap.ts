@@ -42,7 +42,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE}${sportPath("trackRecord")}`, lastModified: now, changeFrequency: "daily", priority: 0.6 },
     { url: `${SITE}${sportPath("valueAlerts")}`, lastModified: now, changeFrequency: "weekly", priority: 0.5 },
     { url: `${SITE}/pricing`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
-    { url: `${SITE}/responsible-gambling`, lastModified: now, changeFrequency: "monthly", priority: 0.5 },
+    { url: `${SITE}/responsible-use`, lastModified: now, changeFrequency: "monthly", priority: 0.5 },
   ];
 
   const leagues: MetadataRoute.Sitemap = LEAGUES.flatMap((l) => [

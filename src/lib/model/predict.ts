@@ -388,9 +388,9 @@ function rankPicks(
     mk("1x2:home", "Home Win", "Match Result", m.home),
     mk("1x2:draw", "Draw", "Match Result", m.draw),
     mk("1x2:away", "Away Win", "Match Result", m.away),
-    mk("dc:home-draw", "Home or Draw (1X)", "Double Chance", m.doubleChance.homeOrDraw),
-    mk("dc:away-draw", "Away or Draw (X2)", "Double Chance", m.doubleChance.awayOrDraw),
-    mk("dc:home-away", "Home or Away (12)", "Double Chance", m.doubleChance.homeOrAway),
+    mk("dc:home-draw", "Home or Draw", "Double Chance", m.doubleChance.homeOrDraw),
+    mk("dc:away-draw", "Away or Draw", "Double Chance", m.doubleChance.awayOrDraw),
+    mk("dc:home-away", "Home or Away", "Double Chance", m.doubleChance.homeOrAway),
     mk("btts:yes", "Both Teams To Score", "Both Teams To Score", m.bttsYes),
     mk("btts:no", "Both Teams To Score - No", "Both Teams To Score", m.bttsNo),
   ];

@@ -115,7 +115,7 @@ export function navFor(sport: SportId): { tabs: NavTab[]; tools: NavLink[] } {
         links: [
           { label: "For You", desc: "Picks from your leagues and markets", href: p("forYou") },
           { label: "Today", desc: "Every game we rate today", href: p("predictions") },
-          { label: "Value Alerts", desc: "When the bookie price beats ours", href: p("valueAlerts"), badge: { text: "VIP", tone: "amber" } },
+          { label: "Value Alerts", desc: "When the market price beats ours", href: p("valueAlerts"), badge: { text: "VIP", tone: "amber" } },
         ],
       },
       {
@@ -126,9 +126,9 @@ export function navFor(sport: SportId): { tabs: NavTab[]; tools: NavLink[] } {
     ],
     feature: {
       kicker: "KiqStat Forge",
-      title: "Tell us how you bet. We'll build the slip.",
-      body: "Pick your style, total odds and markets. Forge picks the games and shows the chance of the slip winning.",
-      cta: { label: "Build a slip", href: p("forge") },
+      title: "Tell us how you like to pick. We'll build the combo.",
+      body: "Pick your style, combined price and prediction types. Forge picks the games and shows the chance of the whole combo landing.",
+      cta: { label: "Build a combo", href: p("forge") },
       tone: "brand",
     },
   };
@@ -153,7 +153,7 @@ export function navFor(sport: SportId): { tabs: NavTab[]; tools: NavLink[] } {
         links: [
           { label: "Trends", desc: "Streaks worth knowing before kick-off", href: p("trends") },
           { label: "Team form", desc: "Last 10, home and away", href: p("teamForm") },
-          { label: "Goals stats", desc: "Over/under and GG rates by team", href: p("goals") },
+          { label: "Goals stats", desc: "Over/under and both-teams-scoring rates by team", href: p("goals") },
           { label: "Model ratings", desc: "Every team rated 1 to 10", href: p("ratings"), badge: { text: "New", tone: "brand" } },
         ],
       },
@@ -175,15 +175,15 @@ export function navFor(sport: SportId): { tabs: NavTab[]; tools: NavLink[] } {
       {
         title: "Build and check",
         links: [
-          { label: "Forge", desc: "Build a slip from how you like to bet", href: p("forge"), badge: { text: "New", tone: "brand" } },
-          { label: "My slips", desc: "Track your slips live", href: p("trackedSlips") },
+          { label: "Forge", desc: "Build a combo from how you like to pick", href: p("forge"), badge: { text: "New", tone: "brand" } },
+          { label: "My combos", desc: "Track your combos live", href: p("trackedSlips") },
         ],
       },
     ],
     feature: {
       kicker: "Ask KiqStat",
       title: "Ask anything about a match",
-      body: "“Is Over 2.5 a good bet in Arsenal v Brighton?” Answers use the same model as our picks.",
+      body: "“How likely is Over 2.5 in Arsenal v Brighton?” Answers use the same model as our picks.",
       cta: { label: "Open Ask KiqStat", href: "#ask", action: "ask" },
       tone: "brand",
     },
@@ -192,14 +192,14 @@ export function navFor(sport: SportId): { tabs: NavTab[]; tools: NavLink[] } {
   const more: NavMenu = {
     id: "more",
     label: "More",
-    match: [p("trackRecord"), "/responsible-gambling", "/how-it-works", "/guides", "/help", "/about"],
+    match: [p("trackRecord"), "/responsible-use", "/how-it-works", "/guides", "/help", "/about"],
     columns: [
       {
         title: "KiqStat",
         links: [
           { label: "Track record", desc: "Every pick we've published, graded", href: p("trackRecord") },
           { label: "How our picks work", desc: "The model, in plain words", href: "/how-it-works" },
-          { label: "Guides", desc: "Markets and staking, explained", href: "/guides" },
+          { label: "Guides", desc: "Predictions and probabilities, explained", href: "/guides" },
           { label: "About KiqStat", desc: "Who we are and what we do", href: "/about" },
         ],
       },
@@ -209,7 +209,7 @@ export function navFor(sport: SportId): { tabs: NavTab[]; tools: NavLink[] } {
           { label: "Your account", href: "/account" },
           { label: "Help centre", desc: "Answers to common questions", href: "/help" },
           { label: "Chat with support", desc: "Message Oma, our support team", href: "/help", action: "support" },
-          { label: "Responsible gambling", desc: "Limits, breaks and support", href: "/responsible-gambling" },
+          { label: "Responsible use", desc: "Limits, breaks and support", href: "/responsible-use" },
         ],
       },
     ],
@@ -232,7 +232,7 @@ export function navFor(sport: SportId): { tabs: NavTab[]; tools: NavLink[] } {
       { kind: "menu", menu: more },
     ],
     tools: [
-      { label: "Forge", desc: "Build a slip from how you bet", href: p("forge") },
+      { label: "Forge", desc: "Build a combo from how you pick", href: p("forge") },
       { label: "Ask KiqStat", desc: "Ask anything about a match", href: "#ask", action: "ask" },
     ],
   };

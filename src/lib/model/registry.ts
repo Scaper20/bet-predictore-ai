@@ -116,7 +116,7 @@ const MODELS: Record<ModelId, ModelDescriptor> = {
     pickTypes: ["1x2", "dc"],
     status: "development",
     blurb:
-      "A specialist for match result and double chance, aimed at fixtures where the " +
+      "A specialist for match result and two results, aimed at fixtures where the " +
       "scoreline distribution is well fitted but the outcome split is not.",
   },
   "value-v1": {
@@ -130,7 +130,7 @@ const MODELS: Record<ModelId, ModelDescriptor> = {
     status: "development",
     blurb:
       "Compares a fitted fair price against the price actually offered. Blocked on a " +
-      "live odds feed, which the product does not have today.",
+      "live price feed, which the product does not have today.",
   },
   "hoops-v1": {
     id: "hoops-v1",

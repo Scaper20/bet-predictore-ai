@@ -14,8 +14,8 @@ import { matchPath } from "@/lib/routes";
 export const metadata: Metadata = {
   title: "Value-Shift Alerts",
   description:
-    "VIP alerts for the rare moments a SportyBet price moves above fair value, measured against " +
-    "the bookmaker consensus with the margin taken out.",
+    "VIP alerts for the rare moments a local market price moves above fair value, measured against " +
+    "the market consensus with the margin taken out.",
   alternates: { canonical: "/football/value-alerts" },
 };
 
@@ -84,10 +84,10 @@ async function AlertsBody() {
       )}
 
       <p className="max-w-2xl text-xs leading-relaxed text-ink-dim">
-        &ldquo;Vs market&rdquo; means SportyBet&apos;s price is longer than what the bookmaker consensus
-        makes it once their margin is removed. That needs no faith in our model. &ldquo;Vs model&rdquo;
+        &ldquo;Vs market&rdquo; means the local price is longer than what the market consensus
+        makes it once the margin is removed. That needs no faith in our model. &ldquo;Vs model&rdquo;
         appears only where no consensus exists, and only for edges above the model&apos;s own error
-        bars. Prices move constantly; confirm the price before you stake. You can turn the email off
+        bars. Prices move constantly, so treat each alert as a snapshot. You can turn the email off
         from your <Link href="/account" className="underline underline-offset-2">account</Link>.
       </p>
     </>
@@ -110,7 +110,7 @@ function AlertCard({ alert: a }: { alert: ValueAlert }) {
         <div>
           <p className="text-base font-bold text-brand">{a.label}</p>
           <p className="tnum text-xs text-ink-muted">
-            SportyBet {odds(a.localPrice)} · model {percent(a.probability)}
+            Local price {odds(a.localPrice)} · model {percent(a.probability)}
           </p>
         </div>
         <div className="text-right">
@@ -129,8 +129,8 @@ function Upsell({ signedIn }: { signedIn: boolean }) {
       <span className="text-3xl" aria-hidden>🔔</span>
       <h2 className="font-display text-xl font-bold">Get told when a price goes long</h2>
       <p className="text-sm leading-relaxed text-ink-muted">
-        We scan SportyBet&apos;s prices on every modelled fixture in the next two days against the
-        consensus of up to 25 bookmakers. When one moves above fair value, VIP members see it here and
+        We scan local market prices on every modelled fixture in the next two days against the
+        consensus of up to 25 price sources. When one moves above fair value, VIP members see it here and
         get it by email the next morning.
       </p>
       <div className="flex flex-wrap justify-center gap-3">

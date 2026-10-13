@@ -98,7 +98,7 @@ export function PickAction({
     <button
       type="button"
       aria-pressed={onSlip}
-      aria-label={onSlip ? `Remove ${pick.label} from slip` : `Add ${pick.label} to slip`}
+      aria-label={onSlip ? `Remove ${pick.label} from combo` : `Add ${pick.label} to combo`}
       onClick={() =>
         onSlip
           ? remove(match.id)
@@ -119,7 +119,7 @@ export function PickAction({
         onSlip ? "border border-brand/40 bg-brand/10 text-brand" : "bg-brand text-brand-ink hover:bg-brand-strong"
       } ${className}`}
     >
-      {onSlip ? "✓ On slip" : "+ Slip"}
+      {onSlip ? "✓ In combo" : "+ Combo"}
     </button>
   );
 }

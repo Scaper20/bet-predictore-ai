@@ -39,8 +39,8 @@ describe("dailyPayload", () => {
     const p = dailyPayload({ picks, record: { won: 7, lost: 3 }, topics: BOTH })!;
     expect(p.title).toBe("Today's 3 picks are ready");
     expect(p.body.split("\n")).toEqual([
-      "Arsenal v Chelsea: Over 2.5 @ 1.85",
-      "Real Madrid v Getafe: Home Win @ 1.45",
+      "Arsenal v Chelsea: Over 2.5 at 1.85",
+      "Real Madrid v Getafe: Home Win at 1.45",
       "+1 more",
       "Yesterday 7 of 10 won (70%).",
     ]);
@@ -48,10 +48,10 @@ describe("dailyPayload", () => {
     expect(p.tag).toBe("daily");
   });
 
-  it("quotes fair odds when there is no SportyBet price", () => {
+  it("quotes the fair price when there is no market price", () => {
     const p = dailyPayload({ picks: [pick({ bookPrice: null, fairOdds: 2 })], record: null, topics: BOTH })!;
     expect(p.title).toBe("Today's pick is ready");
-    expect(p.body).toBe("Arsenal v Chelsea: Over 2.5 @ 2.00");
+    expect(p.body).toBe("Arsenal v Chelsea: Over 2.5 at 2.00");
   });
 
   it("reports a bad day exactly like a good one", () => {
@@ -84,7 +84,7 @@ describe("valueAlertsPayload", () => {
     expect(valueAlertsPayload([])).toBeNull();
     expect(valueAlertsPayload([alert])).toMatchObject({
       title: "New value price",
-      body: "Lyon v Nice: Over 2.5 @ 2.10 on SportyBet",
+      body: "Lyon v Nice: Over 2.5 at 2.10",
       url: "/football/value-alerts",
     });
     expect(valueAlertsPayload([alert, alert, alert])!.title).toBe("3 new value prices");

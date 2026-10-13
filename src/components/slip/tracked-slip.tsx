@@ -150,13 +150,13 @@ export function SlipStatusPill({ status, size = "md" }: { status: SlipStatus; si
     case "won":
       return (
         <Pill tone="brand-solid" size={size}>
-          <CheckIcon /> Slip won
+          <CheckIcon /> Combo landed
         </Pill>
       );
     case "lost":
       return (
         <Pill tone="rose" size={size}>
-          <CrossIcon /> Slip lost
+          <CrossIcon /> Combo missed
         </Pill>
       );
     case "live":
@@ -300,7 +300,7 @@ function Headline({ view }: { view: SlipView }) {
           landed.
         </h2>
         <p className="mt-3 text-sm leading-relaxed text-ink-muted sm:text-base">
-          The model gave this slip a {chance} combined chance. This time it came in.
+          The model gave this combo a {chance} combined chance. This time it came in.
         </p>
       </>
     );
@@ -326,8 +326,8 @@ function Headline({ view }: { view: SlipView }) {
       {view.status === "live"
         ? "Scores update straight from the live feed. Nothing to refresh."
         : view.status === "void"
-          ? "Every selection on this slip was voided."
-          : `The model gave this slip a ${chance} combined chance.`}
+          ? "Every selection in this combo was voided."
+          : `The model gave this combo a ${chance} combined chance.`}
     </p>
   );
 }
@@ -360,7 +360,7 @@ export function TrackedSlipCard({ view }: { view: SlipView }) {
       </header>
 
       <p className="mt-6 font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-brand">
-        Selection slip · {n} {n === 1 ? "leg" : "legs"}
+        Combo · {n} {n === 1 ? "pick" : "picks"}
       </p>
       <Headline view={view} />
 
@@ -391,7 +391,7 @@ export function TrackedSlipCard({ view }: { view: SlipView }) {
       <footer className="mt-6 flex items-center justify-between gap-4 border-t border-line pt-4">
         <div className="min-w-0">
           <p className="text-sm font-semibold text-ink">Built on kiqstat.app</p>
-          <p className="mt-0.5 text-xs text-ink-dim">Probabilities, not guarantees. Bet responsibly.</p>
+          <p className="mt-0.5 text-xs text-ink-dim">Probabilities, not guarantees. Use responsibly.</p>
         </div>
         <span className="shrink-0 rounded-md border border-line-strong px-2 py-1 text-xs font-bold text-ink-muted">
           18+
@@ -430,11 +430,11 @@ export function TrackedSlipRow({ view, onOpen, onShare }: { view: SlipView; onOp
       type="button"
       onClick={onOpen}
       className="block w-full min-w-0 p-4 pb-3 text-left sm:p-5 sm:pb-3"
-      aria-label={`Open slip with ${n} ${n === 1 ? "selection" : "selections"}`}
+      aria-label={`Open combo with ${n} ${n === 1 ? "selection" : "selections"}`}
     >
       <div className="flex items-center justify-between gap-3">
         <p className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.16em] text-brand">
-          {n} {n === 1 ? "leg" : "legs"} · {pct(view.combined)}
+          {n} {n === 1 ? "pick" : "picks"} · {pct(view.combined)}
         </p>
         <SlipStatusPill status={view.status} size="sm" />
       </div>

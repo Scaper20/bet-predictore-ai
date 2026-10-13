@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/football/trends" },
   title: "Football Trends and Streaks",
   description:
-    "The streaks worth knowing before kick-off: winning runs, over 2.5 and GG streaks, clean sheets and slumps " +
+    "The streaks worth knowing before kick-off: winning runs, over 2.5 and both-teams-scoring streaks, clean sheets and slumps " +
     "for every team playing in the next three days.",
 };
 

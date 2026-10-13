@@ -23,8 +23,6 @@ import { CLUB_LEAGUES, INTERNATIONAL_LEAGUES } from "@/lib/leagues";
 import { useSlip, type SlipLeg } from "@/lib/slip";
 import { trackSlip } from "@/lib/tracked-slips";
 import { LocalTime } from "@/components/ui/local-time";
-import { formatMoney, marketFor } from "@/lib/payments/markets";
-import { useCountry } from "@/lib/use-visitor";
 import { sportPath } from "@/lib/routes";
 import { Spinner } from "@/components/ui/primitives";
 import { BuildProgress, useBuildProgress } from "@/components/forge/build-progress";
@@ -217,9 +215,9 @@ export function ForgeStudio() {
     asSlipLegs(slip.legs).forEach(add);
     setToast(
       <>
-        {slip.legs.length} {slip.legs.length === 1 ? "game" : "games"} added to your slip.{" "}
+        {slip.legs.length} {slip.legs.length === 1 ? "game" : "games"} added to your combo.{" "}
         <button type="button" onClick={openSlipSheet} className="font-semibold text-brand underline-offset-2 hover:underline">
-          View slip
+          View combo
         </button>
       </>,
     );
@@ -234,7 +232,7 @@ export function ForgeStudio() {
     if (!slip?.legs.length) return;
     const t = slipTotals(slip.legs, 1);
     const text = [
-      `My KiqStat Forge slip · total odds ${t.odds.toFixed(2)}`,
+      `My KiqStat Forge combo · combined price ${t.odds.toFixed(2)}`,
       ...slip.legs.map((l) => `• ${l.fixture}: ${l.label} @ ${legOdds(l).toFixed(2)}`),
       `Built on kiqstat.app — probabilities, not guarantees. 18+`,
     ].join("\n");
@@ -242,7 +240,7 @@ export function ForgeStudio() {
       if (navigator.share) await navigator.share({ text });
       else {
         await navigator.clipboard.writeText(text);
-        setToast("Slip copied. Paste it into WhatsApp or anywhere.");
+        setToast("Combo copied. Paste it into WhatsApp or anywhere.");
       }
     } catch {
       // Share sheet dismissed.
@@ -305,38 +303,6 @@ export function ForgeStudio() {
   );
 }
 
-/**
- * Forge doesn't take bets or stakes, so there is no stake box: a field for
- * money reads as if the slip could be placed here. What a slip pays is
- * still worth knowing, so it is shown on one fixed example amount.
- */
-function ReturnInsight({ odds, probability }: { odds: number; probability: number }) {
-  // An everyday stake in the visitor's currency: ₦1,000, KSh 100, $10.
-  const market = marketFor(useCountry());
-  const stake = market.stake;
-  const money = (n: number) => formatMoney(Math.round(n), market.currency);
-  const returns = Math.round(stake * odds);
-  return (
-    <div className="mt-4 flex items-start gap-3 rounded-xl border border-brand/20 bg-brand/[0.06] px-4 py-3.5">
-      <span className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-full bg-brand/15 text-brand" aria-hidden>
-        <svg viewBox="0 0 20 20" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8">
-          <path d="M10 3v14M6.5 6.5h5a2.5 2.5 0 0 1 0 5h-3a2.5 2.5 0 0 0 0 5H14" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </span>
-      <p className="text-sm leading-relaxed text-ink-muted">
-        If you placed <span className="font-semibold text-ink">{money(stake)}</span> on this slip with your bookmaker, it
-        would pay <span className="tnum font-bold text-brand">{money(returns)}</span>{" "}
-        <span className="text-ink-dim">({money(returns - stake)} profit)</span> if every pick lands
-        {probability > 0 && probability < 1 ? (
-          <>, which a slip like this does {oneIn(probability)}{1 / probability >= 1.15 ? " times" : ""}.</>
-        ) : (
-          "."
-        )}
-      </p>
-    </div>
-  );
-}
-
 /* --------------------------------------------------------------- settings */
 
 function SettingsPanel({
@@ -370,15 +336,15 @@ function SettingsPanel({
 
   const paid = allowance?.paid ?? false;
   const picksHelp: Record<1 | 2 | 3, string> = {
-    1: "One selection per game — the classic accumulator.",
+    1: "One selection per game — the classic combo.",
     2: 'Up to 2 lets Forge pair picks in one game, like "Arsenal & Over 1.5". Both come from the same scoreline model, so the combined chance is exact, not guessed.',
-    3: "Up to 3 adds a third line to the same game (result, goals and GG/NG). Bigger odds per game, fewer games needed.",
+    3: "Up to 3 adds a third line to the same game (result, goals and both teams to score). Bigger price per game, fewer games needed.",
   };
 
   return (
     <div className="card p-5 sm:p-6">
       <div className="space-y-6">
-        <Section title="How do you like to bet?">
+        <Section title="How do you like to pick?">
           <div className="grid grid-cols-3 gap-2.5">
             {(Object.keys(RISK_PRESETS) as ForgeRisk[]).map((r) => {
               const active = settings.risk === r;
@@ -401,7 +367,7 @@ function SettingsPanel({
         </Section>
 
         <div className="grid grid-cols-2 gap-3">
-          <Section title="Total odds you want">
+          <Section title="Combined price you want">
             <label className="flex items-center gap-2 rounded-xl border border-line bg-surface-2 px-3.5 py-3 focus-within:border-brand/50">
               <input
                 inputMode="decimal"
@@ -413,7 +379,7 @@ function SettingsPanel({
                   else setOddsText(settings.targetOdds.toFixed(2));
                 }}
                 className="tnum w-full min-w-0 bg-transparent font-mono text-lg font-bold text-ink outline-none"
-                aria-label="Total odds you want"
+                aria-label="Combined price you want"
               />
               <span className="shrink-0 text-[11px] font-medium text-ink-dim">{oneIn(1 / settings.targetOdds)}</span>
             </label>
@@ -450,7 +416,7 @@ function SettingsPanel({
           <p className="mt-2 text-xs leading-relaxed text-ink-dim">{picksHelp[settings.picksPerGame]}</p>
         </Section>
 
-        <Section title="Markets">
+        <Section title="Prediction types">
           <div className="flex flex-wrap gap-2">
             {FORGE_MARKETS.map((m) => {
               const lockedOut = m.paid && !paid;
@@ -524,7 +490,7 @@ function SettingsPanel({
           disabled={busy}
           className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand py-4 text-base font-bold text-brand-ink transition-colors hover:bg-brand-strong disabled:opacity-60"
         >
-          {busy ? "Building your slip…" : "Generate slip"}
+          {busy ? "Building your combo…" : "Generate combo"}
         </button>
         {progress !== null ? (
           <BuildProgress pct={progress} className="mt-3" />
@@ -541,10 +507,10 @@ function AllowanceLine({ allowance, remaining }: { allowance: Allowance | null; 
   return (
     <p className="mt-2.5 text-center text-[11px] text-ink-dim">
       {allowance.paid
-        ? "Unlimited slips with your plan"
+        ? "Unlimited combos with your plan"
         : !allowance.signedIn
-          ? `${remaining ?? FORGE_GUEST_TOTAL} of ${FORGE_GUEST_TOTAL} free slips without an account`
-          : `${remaining ?? FORGE_FREE_DAILY} of ${FORGE_FREE_DAILY} slips left today`}
+          ? `${remaining ?? FORGE_GUEST_TOTAL} of ${FORGE_GUEST_TOTAL} free combos without an account`
+          : `${remaining ?? FORGE_FREE_DAILY} of ${FORGE_FREE_DAILY} combos left today`}
       {!allowance.paid && (
         <>
           {" · "}
@@ -614,7 +580,7 @@ function ResultPanel({
 
       <div className="hidden flex-wrap items-center justify-between gap-3 lg:flex">
         <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-ink-muted">
-          Your slip · {style} · {slip.legs.length} {slip.legs.length === 1 ? "game" : "games"}
+          Your combo · {style} · {slip.legs.length} {slip.legs.length === 1 ? "game" : "games"}
         </p>
         <div className="flex flex-wrap gap-2">
           <ActionButton onClick={onAgain} disabled={busy}>
@@ -622,7 +588,7 @@ function ResultPanel({
           </ActionButton>
           <ActionButton onClick={onShare}>Share</ActionButton>
           <ActionButton onClick={onAdd} primary>
-            Add to my slip
+            Add to my combo
           </ActionButton>
         </div>
       </div>
@@ -630,15 +596,14 @@ function ResultPanel({
       {/* totals */}
       <div className="card p-5 sm:p-6">
         <div className="grid grid-cols-2 gap-3">
-          <Total label="Total odds" value={t.odds.toFixed(2)} />
-          <Total label="Chance to win" value={pct(t.probability)} hint={oneIn(t.probability)} />
+          <Total label="Combined price" value={t.odds.toFixed(2)} />
+          <Total label="Chance it lands" value={pct(t.probability)} hint={oneIn(t.probability)} />
         </div>
-        <ReturnInsight odds={t.odds} probability={t.probability} />
         <p className="mt-4 text-xs leading-relaxed text-ink-dim">
           {t.picks} {t.picks === 1 ? "pick" : "picks"} across {slip.legs.length} {slip.legs.length === 1 ? "game" : "games"}.{" "}
           {t.priced > 0
-            ? `SportyBet odds as of ${pricedTime}${t.priced === slip.legs.length ? "" : ` on ${t.priced} of ${slip.legs.length} games`}. Odds change before kick-off.`
-            : "Estimated odds; your bookmaker's will differ."}
+            ? `Market prices as of ${pricedTime}${t.priced === slip.legs.length ? "" : ` on ${t.priced} of ${slip.legs.length} games`}. Prices change before kick-off.`
+            : "Fair prices from the model; market prices will differ."}
           {off && ` Closest the card allows to the ${target.toFixed(2)} you asked for.`}
         </p>
         {error && <p className="mt-2 text-xs text-rose">{error.message}</p>}
@@ -662,7 +627,7 @@ function ResultPanel({
       <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
         <p className="text-xs text-ink-dim">&ldquo;Keep&rdquo; holds a game when you generate again. Probabilities, not guarantees. 18+</p>
         <button type="button" onClick={onTrack} className="text-xs font-semibold text-violet hover:underline">
-          Track this slip live →
+          Track this combo live →
         </button>
       </div>
 
@@ -679,12 +644,12 @@ function ResultPanel({
             {busy ? <Spinner className="size-3.5" /> : null} Generate again
           </ActionButton>
           <ActionButton onClick={onAdd} primary>
-            Add to my slip
+            Add to my combo
           </ActionButton>
         </div>
         {allowance && !allowance.paid && remaining !== null && (
           <p className="mt-1.5 text-center text-[10.5px] text-ink-dim">
-            {remaining} {allowance.signedIn ? "left today" : "free slips left"}
+            {remaining} {allowance.signedIn ? "left today" : "free combos left"}
           </p>
         )}
       </div>
@@ -735,7 +700,7 @@ function LegCard({
           </span>
         ))}
         <span className="ml-auto font-mono text-xs text-ink-muted">
-          {pct(leg.probability)} chance · {leg.price ? "SportyBet" : "fair"}
+          {pct(leg.probability)} chance · {leg.price ? "market" : "fair"}
         </span>
       </div>
       {leg.reason && <p className="mt-2.5 line-clamp-2 text-xs leading-relaxed text-ink-muted">{leg.reason}</p>}
@@ -761,13 +726,13 @@ function LegCard({
 
 function EmptyResult() {
   const steps = [
-    ["Tell Forge how you bet", "Safe, balanced or risky; the odds you're after; how many games."],
-    ["Generate", "Forge reads every modelled fixture in your window and builds the slip that best fits."],
-    ["Make it yours", "Keep the games you like, swap the rest, then add it to your slip or track it live."],
+    ["Tell Forge how you like to pick", "Safe, balanced or risky; the combined price you're after; how many games."],
+    ["Generate", "Forge reads every modelled fixture in your window and builds the combo that best fits."],
+    ["Make it yours", "Keep the games you like, swap the rest, then add it to your combo or track it live."],
   ];
   return (
     <div className="card flex min-h-[28rem] flex-col justify-center p-8">
-      <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-brand">Your slip appears here</p>
+      <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-brand">Your combo appears here</p>
       <ol className="mt-6 space-y-5">
         {steps.map(([title, text], i) => (
           <li key={title} className="flex gap-4">
@@ -782,7 +747,7 @@ function EmptyResult() {
         ))}
       </ol>
       <p className="mt-8 text-xs text-ink-dim">
-        Every pick comes from the KiqStat model, with SportyBet prices where they list it. Probabilities, not guarantees. 18+
+        Every pick comes from the KiqStat model, with market prices where they are listed. Probabilities, not guarantees. 18+
       </p>
     </div>
   );
@@ -793,10 +758,10 @@ function GuestGate({ onClose }: { onClose: () => void }) {
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-canvas/60 p-5 backdrop-blur-md">
       <div className="w-full max-w-sm rounded-2xl border border-line bg-shell p-6 text-center shadow-2xl">
         <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-brand">KiqStat Forge</p>
-        <p className="mt-3 font-display text-2xl font-bold">Keep forging slips</p>
+        <p className="mt-3 font-display text-2xl font-bold">Keep forging combos</p>
         <p className="mt-2 text-sm leading-relaxed text-ink-muted">
-          You&apos;ve used your {FORGE_GUEST_TOTAL} free slips. Create a free account for {FORGE_FREE_DAILY} a day. Your
-          settings and last slip stay right here.
+          You&apos;ve used your {FORGE_GUEST_TOTAL} free combos. Create a free account for {FORGE_FREE_DAILY} a day. Your
+          settings and last combo stay right here.
         </p>
         <div className="mt-5 space-y-2.5">
           <Link

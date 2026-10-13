@@ -127,11 +127,11 @@ export function MegaNav({ tabs }: { tabs: NavTab[] }) {
           })}
           <div className="flex-1" />
           <Link
-            href="/responsible-gambling"
+            href="/responsible-use"
             className="flex items-center gap-2 self-center text-xs text-ink-dim transition-colors hover:text-ink-muted"
           >
             <span className="rounded-md border border-line-strong px-1.5 py-px font-mono text-[10.5px]">18+</span>
-            Bet responsibly
+            Use responsibly
           </Link>
         </Container>
       </nav>

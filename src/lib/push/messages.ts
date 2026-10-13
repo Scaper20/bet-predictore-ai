@@ -28,7 +28,7 @@ export interface DayRecord {
 const PICKS_NAMED = 2;
 
 function pickLine(p: PersonalizedPick): string {
-  return `${p.homeTeam} v ${p.awayTeam}: ${p.label} @ ${odds(quotedPrice(p).price)}`;
+  return `${p.homeTeam} v ${p.awayTeam}: ${p.label} at ${odds(quotedPrice(p).price)}`;
 }
 
 function recordLine(r: DayRecord): string {
@@ -90,10 +90,10 @@ export function valueAlertsPayload(alerts: AlertForPush[]): PushPayload | null {
   if (alerts.length === 0) return null;
   const n = alerts.length;
   const [first] = alerts;
-  const lead = `${first.homeName} v ${first.awayName}: ${first.label} @ ${odds(first.localPrice)} on SportyBet`;
+  const lead = `${first.homeName} v ${first.awayName}: ${first.label} at ${odds(first.localPrice)}`;
   return {
     title: n === 1 ? "New value price" : `${n} new value prices`,
-    body: n === 1 ? lead : `${lead}\n+${n - 1} more. Prices move, check before you stake.`,
+    body: n === 1 ? lead : `${lead}\n+${n - 1} more. Prices move quickly.`,
     url: sportPath("valueAlerts"),
     tag: "value-alerts",
   };

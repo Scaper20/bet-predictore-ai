@@ -52,10 +52,10 @@ export function digestPick(p: Prediction): Pick | null {
   );
 }
 
-/** The price to quote: SportyBet's where we have it, otherwise our fair odds. */
-export function quotedPrice(p: PersonalizedPick): { price: number; source: "SportyBet" | "fair" } {
+/** The price to quote: the local market's where we have it, otherwise our fair price. */
+export function quotedPrice(p: PersonalizedPick): { price: number; source: "market" | "fair" } {
   return p.bookPrice && p.bookPrice > 1
-    ? { price: p.bookPrice, source: "SportyBet" }
+    ? { price: p.bookPrice, source: "market" }
     : { price: p.fairOdds, source: "fair" };
 }
 
@@ -167,13 +167,13 @@ export function formatPicksMessage(picks: PersonalizedPick[]): string {
     return (
       `${isStrong(p) ? "⭐ STRONG PICK · " : "⚽ "}${p.league.shortName}\n` +
       `${p.homeTeam} vs ${p.awayTeam} — ${kickoffTime(p.kickoff)}\n` +
-      `*${p.label}* @${odds(q.price)}${q.source === "SportyBet" ? " on SportyBet" : " (est.)"}\n` +
+      `*${p.label}* at ${odds(q.price)}${q.source === "market" ? " (market)" : " (est.)"}\n` +
       `${percent(p.probability)} chance · based on ${p.matchesUsed} matches`
     );
   });
 
   const overflow = picks.length - shown.length;
-  const header = `*KiqStat — Today's Picks*\n${shown.length} pick${shown.length === 1 ? "" : "s"} for the next 24 hours, all at odds of ${odds(DIGEST_MIN_ODDS)} or longer.`;
+  const header = `*KiqStat — Today's Picks*\n${shown.length} pick${shown.length === 1 ? "" : "s"} for the next 24 hours, all at a price of ${odds(DIGEST_MIN_ODDS)} or longer.`;
   const footer =
     overflow > 0 ? `+${overflow} more at ${SITE_URL}/football/predictions` : `${SITE_URL}/football/predictions`;
 
@@ -182,11 +182,11 @@ export function formatPicksMessage(picks: PersonalizedPick[]): string {
 
 export function formatAccaMessage(acca: DigestAcca): string {
   const legLines = acca.legs.map(
-    (l, i) => `${i + 1}. ${l.fixture} (${l.league}) — *${l.selection}*${l.bookPrice ? ` @${odds(l.bookPrice)}` : ""}`,
+    (l, i) => `${i + 1}. ${l.fixture} (${l.league}) — *${l.selection}*${l.bookPrice ? ` at ${odds(l.bookPrice)}` : ""}`,
   );
   const headline = acca.combinedBookPrice
-    ? `*${acca.label} acca — @${odds(acca.combinedBookPrice)} on SportyBet*`
-    : `*${acca.label} acca — @${odds(acca.combinedFairOdds)} (est.)*`;
+    ? `*${acca.label} combo — ${odds(acca.combinedBookPrice)} (market)*`
+    : `*${acca.label} combo — ${odds(acca.combinedFairOdds)} (est.)*`;
   return [
     headline,
     ...legLines,
@@ -196,7 +196,7 @@ export function formatAccaMessage(acca: DigestAcca): string {
 
 export const NO_PICK_MESSAGE = [
   "*KiqStat — Today's Picks*",
-  "Nothing in the next 24 hours clears our bar — enough history, odds of 1.40 or longer. We'd rather send nothing than guess.",
+  "Nothing in the next 24 hours clears our bar — enough history, a price of 1.40 or longer. We'd rather send nothing than guess.",
   `Live scores anyway → ${SITE_URL}`,
 ].join("\n\n");
 

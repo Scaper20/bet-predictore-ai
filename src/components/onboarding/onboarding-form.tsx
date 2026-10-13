@@ -81,8 +81,8 @@ export function OnboardingForm({
           <ChoiceCard
             name="usageIntent"
             value="accas"
-            label="Building accumulators"
-            description="True combined probability across several legs, not the bookmaker's version."
+            label="Building combos"
+            description="True combined probability across several picks, not the market's version."
             defaultChecked={preferences.usageIntent === "accas"}
           />
         </ChoiceGroup>

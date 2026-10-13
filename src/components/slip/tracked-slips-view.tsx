@@ -37,11 +37,11 @@ export function TrackedSlipsView() {
     return (
       <EmptyState
         icon="🧾"
-        title="No slips tracked yet"
-        description="Build a slip, then tap “Track this slip”."
+        title="No combos tracked yet"
+        description="Build a combo, then tap “Track this combo”."
         action={
           <Button variant="secondary" onClick={openSlipSheet}>
-            Open your slip
+            Open your combo
           </Button>
         }
       />
@@ -115,7 +115,7 @@ function SlipOverlay({ view, onClose, onRemove, onShare }: { view: SlipView; onC
         ref={containerRef}
         role="dialog"
         aria-modal="true"
-        aria-label="Tracked slip"
+        aria-label="Tracked combo"
         className="mx-auto w-full max-w-lg px-4 pb-10"
         style={{ paddingTop: "max(1.5rem, env(safe-area-inset-top))" }}
       >
@@ -137,10 +137,10 @@ function SlipOverlay({ view, onClose, onRemove, onShare }: { view: SlipView; onC
             variant="ghost"
             className="px-3 py-2 text-xs"
             onClick={() => {
-              if (window.confirm("Stop tracking this slip? It will be removed from this device.")) onRemove();
+              if (window.confirm("Stop tracking this combo? It will be removed from this device.")) onRemove();
             }}
           >
-            Stop tracking this slip
+            Stop tracking this combo
           </Button>
         </div>
       </div>

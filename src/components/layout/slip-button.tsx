@@ -31,8 +31,8 @@ export function SlipButton({ sport }: { sport: SportId }) {
     <Link
       href={sportPath("trackedSlips", sport)}
       className="relative grid size-10 place-items-center rounded-lg text-ink-muted transition-colors hover:bg-surface-2 hover:text-ink"
-      aria-label={count > 0 ? `My slips (${count} being tracked)` : "My slips"}
-      title="My slips"
+      aria-label={count > 0 ? `My combos (${count} being tracked)` : "My combos"}
+      title="My combos"
     >
       <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2">
         <path strokeLinecap="round" strokeLinejoin="round" d="M4 5h16v14l-3-2-2 2-2-2-2 2-2-2-3 2V5Z" />

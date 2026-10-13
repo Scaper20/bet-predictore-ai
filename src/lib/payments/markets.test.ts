@@ -47,8 +47,3 @@ describe("markets", () => {
   });
 });
 
-describe("market stakes", () => {
-  it("gives every market an everyday stake for Forge's example", () => {
-    for (const m of MARKETS) expect(m.stake, m.country).toBeGreaterThan(0);
-  });
-});

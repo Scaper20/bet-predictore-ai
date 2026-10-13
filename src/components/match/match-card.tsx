@@ -89,9 +89,9 @@ export function MatchCard({ match, prediction }: { match: Match; prediction?: Pr
               const top = Math.max(home, draw, away);
               return (
                 <>
-                  <Outcome label="1" value={home} isTop={home === top} />
-                  <Outcome label="X" value={draw} isTop={draw === top} />
-                  <Outcome label="2" value={away} isTop={away === top} />
+                  <Outcome label="Home" value={home} isTop={home === top} />
+                  <Outcome label="Draw" value={draw} isTop={draw === top} />
+                  <Outcome label="Away" value={away} isTop={away === top} />
                 </>
               );
             })()}

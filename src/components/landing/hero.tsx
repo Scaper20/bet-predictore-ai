@@ -46,7 +46,7 @@ export function Hero({ liveCount, board }: { liveCount: number; board: ReactNode
 
           <p className="mt-6 max-w-xl text-lg leading-relaxed text-ink-muted">
             Every prediction on this site is fitted to <strong className="text-ink">real completed
-            matches</strong> — not vibes, not recycled tipster picks. See the probability, see the
+            matches</strong> — not vibes, not recycled pundit picks. See the probability, see the
             sample size behind it, then decide for yourself.
           </p>
 
@@ -66,7 +66,7 @@ export function Hero({ liveCount, board }: { liveCount: number; board: ReactNode
           <dl className="mt-12 grid max-w-lg grid-cols-3 gap-6">
             <Stat value={`${LEAGUES.length}`} label="Competitions covered" />
             <Stat value="Free" label="No card required" />
-            <Stat value="18+" label="Bet responsibly" />
+            <Stat value="18+" label="Use responsibly" />
           </dl>
         </div>
       </Container>

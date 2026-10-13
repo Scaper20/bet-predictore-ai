@@ -25,11 +25,11 @@ const FAQ: { q: string; a: string }[] = [
   },
   {
     q: "Is KiqStat a scam?",
-    a: "No. KiqStat never takes bets, never holds your money and never promises wins. Most of the site is free with no card required, and paid plans are optional subscriptions paid through Paystack.",
+    a: "No. KiqStat never holds your money and never promises results. Most of the site is free with no card required, and paid plans are optional subscriptions paid through Paystack.",
   },
   {
-    q: "Is KiqStat a betting company or a bookmaker?",
-    a: "No. KiqStat is not a bookmaker and is not affiliated with any. You can't place a bet or deposit money on KiqStat. It shows data and probabilities; what you do with them, and where, is up to you.",
+    q: "What kind of company is KiqStat?",
+    a: "KiqStat is an independent sports analytics company. You cannot deposit money, place money on a match or win money on KiqStat. It shows data and probabilities, and what you do with them is up to you.",
   },
   {
     q: "Who owns KiqStat?",
@@ -134,9 +134,9 @@ export default function AboutPage() {
                   do their own reading.
                 </li>
                 <li>
-                  <strong className="text-ink">Forge and Ask KiqStat.</strong> Forge builds a slip from the
-                  model&apos;s own numbers to the risk and odds you choose; Ask KiqStat answers questions about any
-                  match. Both are free to try, and paid plans add more of each plus deeper markets and value alerts.{" "}
+                  <strong className="text-ink">Forge and Ask KiqStat.</strong> Forge builds a combo from the
+                  model&apos;s own numbers to the risk level and price you choose; Ask KiqStat answers questions about any
+                  match. Both are free to try, and paid plans add more of each plus deeper prediction types and value alerts.{" "}
                   <Link href="/pricing" className="text-brand hover:underline">See plans</Link>.
                 </li>
               </ul>
@@ -147,7 +147,7 @@ export default function AboutPage() {
             title: "What we don't do",
             body: (
               <ul className="list-disc space-y-1.5 pl-5">
-                <li>We are <strong className="text-ink">not a bookmaker</strong> and are not affiliated with any. You can&apos;t bet or deposit money on KiqStat.</li>
+                <li>We are <strong className="text-ink">analytics only.</strong> You can&apos;t deposit money, place money on a match or win money on KiqStat.</li>
                 <li>We <strong className="text-ink">never promise wins</strong> and never sell &ldquo;fixed&rdquo; or &ldquo;sure&rdquo; matches. Anyone who does is lying.</li>
                 <li>We <strong className="text-ink">don&apos;t hide the losses.</strong> Where the model has too little data to trust, it says so and publishes no pick.</li>
                 <li>We <strong className="text-ink">don&apos;t take your card details.</strong> Payments are handled by Paystack.</li>
@@ -156,12 +156,12 @@ export default function AboutPage() {
           },
           {
             id: "responsible",
-            title: "Responsible play",
+            title: "Responsible use",
             body: (
               <p>
-                KiqStat is for adults, 18 and over. Predictions are estimates, not certainties: never stake money you
-                can&apos;t afford to lose. If betting stops being fun,{" "}
-                <Link href="/responsible-gambling" className="text-brand hover:underline">get help here</Link>.
+                KiqStat is for adults, 18 and over. Predictions are estimates, not certainties: never spend money you
+                can&apos;t afford to lose because of one. If it stops being fun,{" "}
+                <Link href="/responsible-use" className="text-brand hover:underline">get help here</Link>.
               </p>
             ),
           },

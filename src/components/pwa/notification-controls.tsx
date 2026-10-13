@@ -13,7 +13,7 @@ const TOPIC_ROWS: { key: keyof PushTopics; label: string; description: string; v
   {
     key: "valueAlerts",
     label: "Value alerts",
-    description: "When SportyBet prices a pick above fair value.",
+    description: "When the local market prices a pick above fair value.",
     vipOnly: true,
   },
 ];

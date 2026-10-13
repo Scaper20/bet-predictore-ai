@@ -63,7 +63,7 @@ export function ProMarkets() {
         <span className="rounded-full bg-violet/15 px-2.5 py-0.5 text-[10.5px] font-bold uppercase tracking-[0.14em] text-violet">
           Pro
         </span>
-        <p className="mt-2 font-display text-lg font-bold leading-snug text-ink">Half-time markets, half-by-half goals and Asian handicap</p>
+        <p className="mt-2 font-display text-lg font-bold leading-snug text-ink">Half-time predictions, half-by-half goals and winning margins</p>
         <Link
           href={UPGRADE_HREF}
           className="glow-brand mt-4 inline-flex items-center gap-1.5 rounded-lg bg-brand px-5 py-2.5 text-sm font-bold text-brand-ink transition-colors hover:bg-brand-strong"

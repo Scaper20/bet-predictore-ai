@@ -4,11 +4,10 @@ import type { ReactNode } from "react";
  * A block of commercial or legal small print.
  *
  * Separate from the footer's 18+ block on purpose. That one is a site-wide
- * regulatory notice — Nigeria's NLRC, like regulators elsewhere, expects it
- * visible on anything betting-adjacent — and it appears on every page. This is contextual terms
+ * notice and it appears on every page. This is contextual terms
  * for whatever it sits under: what you are buying, what happens when it
  * expires, how to get out of it. Repeating the 18+ wording here would train
- * people to skip both, so this cross-links to /responsible-gambling instead.
+ * people to skip both, so this cross-links to /responsible-use instead.
  *
  * `<aside>` with a label rather than a bare div, so a screen-reader user can
  * find it as "Important information" and skip past it when they don't want it.
@@ -17,7 +16,7 @@ import type { ReactNode } from "react";
  * ~320px of a 390px screen, and nobody reads it on the way to a decision —
  * but it must still be one tap away and still in the DOM, so this is a
  * <details>, not a link somewhere else. The one line people genuinely need —
- * not a bookmaker, no guaranteed return — stays visible either way.
+ * analytics only, no guaranteed result — stays visible either way.
  *
  * Above sm the terms render open and unchanged, which is why `children`
  * appears in two branches rather than in one <details> switched by a media
@@ -29,7 +28,7 @@ import type { ReactNode } from "react";
  */
 export function LegalNote({
   title = "Important information",
-  summary = "KiqStat is an analytics product, not a bookmaker. No plan guarantees a return.",
+  summary = "KiqStat is a sports analytics product. No plan guarantees any result.",
   children,
 }: {
   title?: string;

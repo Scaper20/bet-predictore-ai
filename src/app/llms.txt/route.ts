@@ -35,13 +35,13 @@ export function GET() {
 
 > KiqStat is a football prediction and analytics site for football fans across Africa and the world, built in Nigeria by ${COMPANY.legalName}. Every prediction comes from a statistical goal model (time-weighted Dixon-Coles Poisson) fitted on real completed matches, and every pick shows the sample size and data quality behind it. When the history is too thin, KiqStat publishes no pick rather than guessing.
 
-KiqStat is an analytics product, not a bookmaker: it takes no bets and holds no funds. Prices are shown in the visitor's own currency: naira in Nigeria, the local currency in Ghana, Kenya, Uganda, Tanzania, Rwanda, Zambia, Cameroon, Côte d'Ivoire, Senegal and South Africa, and US dollars elsewhere. Kickoff times are shown in the visitor's own time zone. For adults only (18+, or older where local law requires).
+KiqStat is a sports analytics product: it holds no customer funds, and no money is ever placed on a match through it. Prices are shown in the visitor's own currency: naira in Nigeria, the local currency in Ghana, Kenya, Uganda, Tanzania, Rwanda, Zambia, Cameroon, Côte d'Ivoire, Senegal and South Africa, and US dollars elsewhere. Kickoff times are shown in the visitor's own time zone. For adults only (18+, or older where local law requires).
 
 ## How the predictions work
 
 - Team attack and defence ratings, home advantage and a low-score correction are fitted by maximum likelihood on each competition's completed results (goals blended with shots on target where recorded), with recent matches weighted more heavily.
 - A headline pick is published only when the competition has at least 200 completed matches in the data.
-- The two expected goal rates expand into a full scoreline distribution. 1X2, double chance, over/under, both teams to score, correct score and Asian handicap are all read off that one distribution, so they never contradict each other.
+- The two expected goal rates expand into a full scoreline distribution. The match result, two-outcome results, over/under goals, both teams to score, correct score and winning margins are all read off that one distribution, so they never contradict each other.
 - Picks are ranked by their edge over what that competition normally does, not by raw probability.
 - National teams are rated on every international in their confederation, and tournament finals are modelled at a neutral venue.
 - Every match page lists the evidence behind the read: strength rankings, the key attack-versus-defence mismatch, home and away splits, form against season rate.
@@ -55,13 +55,13 @@ KiqStat is an analytics product, not a bookmaker: it takes no bets and holds no 
 - [Results](${SITE}${sportPath("results")}): final scores by day, with how each published pick did
 - [League tables](${SITE}${sportPath("tables")}): standings, updated live while games are in play
 - [Head-to-head](${SITE}${sportPath("h2h")}): every meeting between any two teams
-- [Team form](${SITE}${sportPath("teamForm")}) and [goals stats](${SITE}${sportPath("goals")}): last ten games, over/under and GG rates by team
+- [Team form](${SITE}${sportPath("teamForm")}) and [goals stats](${SITE}${sportPath("goals")}): last ten games, over/under and both-teams-to-score rates by team
 - [Model ratings](${SITE}${sportPath("ratings")}): every team rated 1 to 10 from its results
 - [Trends](${SITE}${sportPath("trends")}): streaks for every team playing in the next three days
 - [How our picks work](${SITE}/how-it-works), [guides](${SITE}/guides) and [help](${SITE}/help)
 - [Track record](${SITE}${sportPath("trackRecord")}): every settled pick and how it did
 - [Pricing](${SITE}/pricing)
-- [Responsible gambling](${SITE}/responsible-gambling)
+- [Responsible use](${SITE}/responsible-use)
 
 ## Competitions covered
 

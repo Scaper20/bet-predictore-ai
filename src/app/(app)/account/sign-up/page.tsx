@@ -52,7 +52,7 @@ export default async function SignUpPage({
           </h1>
 
           <p className="text-base leading-relaxed text-ink-muted">
-            Join sports fans and data analysts using AI-driven insights to analyze odds and track performance.
+            Join sports fans and data analysts using AI-driven insights to analyze matches and track performance.
           </p>
 
           <div className="card space-y-4 bg-grid p-6">

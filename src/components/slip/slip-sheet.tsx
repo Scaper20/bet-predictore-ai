@@ -13,14 +13,14 @@ import { OPEN_SLIP_EVENT } from "@/components/layout/nav-actions";
 import { clampPoint, snapToEdge, type Bounds, type Point } from "@/components/slip/fab-position";
 
 /**
- * The slip, as an overlay over whatever page you're on, the way a bookmaker's
- * betslip works: a floating button, always there, with the count once the
- * slip has something on it (it took the support chat's corner, and can be
- * dragged to any edge), and a sheet that slides up over the page. No page
- * title or explainer; people know what a betslip is.
+ * The combo, as an overlay over whatever page you're on: a floating button,
+ * always there, with the count once the combo has something on it (it took
+ * the support chat's corner, and can be dragged to any edge), and a sheet that
+ * slides up over the page.
  *
- * Opens from the button, from OPEN_SLIP_EVENT (menus, Forge, My slips), and
- * from a link ending in #slip (the old /slip page redirects to one).
+ * Opens from the button, from OPEN_SLIP_EVENT (menus, Forge, My combos), and
+ * from a link ending in #combo (the /combo page redirects to one). #slip is
+ * still honoured for links shared before the rename.
  */
 export function SlipSheet() {
   const { legs, clear } = useSlip();
@@ -34,7 +34,7 @@ export function SlipSheet() {
     const onOpen = () => setOpen(true);
     window.addEventListener(OPEN_SLIP_EVENT, onOpen);
     const t = window.setTimeout(() => {
-      if (window.location.hash === "#slip") {
+      if (window.location.hash === "#combo" || window.location.hash === "#slip") {
         setOpen(true);
         history.replaceState(null, "", window.location.pathname + window.location.search);
       }
@@ -60,18 +60,18 @@ export function SlipSheet() {
 
       {open && (
         <div className="fixed inset-0 z-[60]" role="presentation">
-          <button type="button" aria-label="Close slip" tabIndex={-1} onClick={close} className="slip-fade absolute inset-0 bg-black/55" />
+          <button type="button" aria-label="Close combo" tabIndex={-1} onClick={close} className="slip-fade absolute inset-0 bg-black/55" />
           <div
             ref={containerRef}
             role="dialog"
             aria-modal="true"
-            aria-label="Your slip"
+            aria-label="Your combo"
             className="slip-rise absolute inset-x-0 bottom-0 flex max-h-[88dvh] flex-col rounded-t-2xl border-t border-line bg-shell shadow-2xl lg:inset-y-0 lg:left-auto lg:right-0 lg:max-h-none lg:w-[26rem] lg:rounded-none lg:border-l lg:border-t-0"
           >
             <div className="mx-auto mt-2 h-1 w-10 rounded-full bg-line-strong lg:hidden" aria-hidden />
             <div className="flex items-center gap-3 border-b border-line px-4 py-3">
               <p className="flex items-center gap-2 font-display text-lg font-bold">
-                Slip
+                Combo
                 {count > 0 && <span className="tnum rounded-full bg-brand px-2 py-0.5 text-xs font-bold text-brand-ink">{count}</span>}
               </p>
               <div className="ml-auto flex items-center gap-1">
@@ -84,7 +84,7 @@ export function SlipSheet() {
                   ref={initialFocusRef}
                   type="button"
                   onClick={close}
-                  aria-label="Close slip"
+                  aria-label="Close combo"
                   className="grid size-9 place-items-center rounded-lg text-ink-muted hover:bg-surface-2 hover:text-ink"
                 >
                   <svg viewBox="0 0 20 20" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
@@ -121,7 +121,7 @@ function SheetFooter({ onDone }: { onDone: () => void }) {
         onClick={onDone}
         className="grid place-items-center rounded-xl border border-line px-4 py-3 text-sm font-semibold text-ink-muted hover:text-ink"
       >
-        My slips
+        My combos
       </Link>
       {existing ? (
         <Link
@@ -144,7 +144,7 @@ function SheetFooter({ onDone }: { onDone: () => void }) {
           }}
           className="flex-1 rounded-xl bg-brand py-3 text-sm font-bold text-brand-ink hover:bg-brand-strong"
         >
-          Track this slip
+          Track this combo
         </button>
       )}
     </div>
@@ -255,7 +255,7 @@ function SlipFab({ count, onOpen }: { count: number; onOpen: () => void }) {
         }
         onOpen();
       }}
-      aria-label={count > 0 ? `Open slip, ${count} ${count === 1 ? "selection" : "selections"}` : "Open slip"}
+      aria-label={count > 0 ? `Open combo, ${count} ${count === 1 ? "selection" : "selections"}` : "Open combo"}
       style={{ left: pos.x, top: pos.y, touchAction: "none" }}
       className={`fixed z-50 grid size-14 place-items-center rounded-full bg-brand text-brand-ink shadow-lg glow-brand select-none ${
         dragging ? "scale-110 cursor-grabbing" : "transition-[left,top,transform] duration-200 ease-out hover:scale-105"

@@ -31,7 +31,7 @@ export function DataHealthView({ h }: { h: DataHealth }) {
         <h1 className="font-display text-2xl font-bold">Data health</h1>
         <p className="mt-1 max-w-3xl text-sm text-ink-muted">
           Scheduled jobs (GitHub Actions and a Supabase cron) bring every competition&rsquo;s fixtures, results,
-          tables and odds into the database. This page shows how fresh each one is, what failed, and which club
+          tables and prices into the database. This page shows how fresh each one is, what failed, and which club
           names no rule could place.
         </p>
       </div>

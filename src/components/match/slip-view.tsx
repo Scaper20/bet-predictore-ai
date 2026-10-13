@@ -155,8 +155,8 @@ export function SlipView({ variant = "page" }: { variant?: "page" | "sheet" }) {
     if (sheet) {
       return (
         <div className="px-1 py-10 text-center">
-          <p className="text-sm font-semibold">Your slip is empty</p>
-          <p className="mt-1 text-xs text-ink-dim">Tap + Slip on any pick to add it here.</p>
+          <p className="text-sm font-semibold">Your combo is empty</p>
+          <p className="mt-1 text-xs text-ink-dim">Tap + Combo on any pick to add it here.</p>
           <div className="mt-5 flex justify-center gap-2">
             <ButtonLink href={sportPath("predictions")} className="px-4 py-2 text-xs">Browse picks</ButtonLink>
             <ButtonLink href={sportPath("forge")} variant="secondary" className="px-4 py-2 text-xs">Let Forge build one</ButtonLink>
@@ -168,7 +168,7 @@ export function SlipView({ variant = "page" }: { variant?: "page" | "sheet" }) {
       <EmptyState
         icon="🧾"
         title="No selections yet"
-        description="Tap + Slip on any pick to add it here."
+        description="Tap + Combo on any pick to add it here."
         action={
           <div className="flex flex-wrap justify-center gap-2">
             <ButtonLink href={sportPath("forge")}>Let Forge build one</ButtonLink>
@@ -234,7 +234,7 @@ export function SlipView({ variant = "page" }: { variant?: "page" | "sheet" }) {
                   <span className="truncate text-sm text-brand">{l.label}</span>
                   {sportyPrice(l) && (
                     <span className="tnum rounded bg-surface-2 px-1.5 py-0.5 text-[11px] text-ink-muted">
-                      SportyBet <span className="font-semibold text-ink">{odds(sportyPrice(l)!)}</span>
+                      Market <span className="font-semibold text-ink">{odds(sportyPrice(l)!)}</span>
                     </span>
                   )}
                   {rating && <Badge tone={rating.tone}>{rating.label}</Badge>}
@@ -257,7 +257,7 @@ export function SlipView({ variant = "page" }: { variant?: "page" | "sheet" }) {
 
         {!sheet && (
           <Button variant="secondary" onClick={clear} className="w-full py-2.5">
-            Clear slip
+            Clear combo
           </Button>
         )}
       </div>
@@ -293,7 +293,7 @@ export function SlipView({ variant = "page" }: { variant?: "page" | "sheet" }) {
               </div>
               <div>
                 <dt className="text-[10px] uppercase tracking-wider text-ink-dim">
-                  Expected return
+                  Value vs fair
                 </dt>
                 <dd
                   className={`tnum mt-0.5 text-lg font-bold ${
@@ -308,7 +308,7 @@ export function SlipView({ variant = "page" }: { variant?: "page" | "sheet" }) {
             )}
 
             {fetchedAny && (
-              <p className="text-[11px] leading-relaxed text-ink-dim">Prices read from SportyBet just now.</p>
+              <p className="text-[11px] leading-relaxed text-ink-dim">Market prices read just now.</p>
             )}
           </div>
 
@@ -316,13 +316,13 @@ export function SlipView({ variant = "page" }: { variant?: "page" | "sheet" }) {
           <div className="mt-5 space-y-3 border-t border-line pt-5">
             {state === "loading" && !usingRealOdds ? (
               <p className="text-[11px] leading-relaxed text-ink-dim">
-                Reading SportyBet&apos;s current prices for these selections…
+                Reading current market prices for these selections…
               </p>
             ) : !usingRealOdds ? null : (
               worst &&
               worst.verdict.rating === "no-bet" && (
                 <div className="rounded-lg border border-rose/25 bg-rose/5 p-3">
-                  <Badge tone="rose">Worst leg</Badge>
+                  <Badge tone="rose">Weakest pick</Badge>
                   <p className="mt-2 text-[11px] leading-relaxed text-ink-muted">
                     <strong className="font-semibold text-ink">{worst.leg.label}</strong> on{" "}
                     {worst.leg.fixture} is priced too short.
@@ -333,10 +333,10 @@ export function SlipView({ variant = "page" }: { variant?: "page" | "sheet" }) {
 
             {correlated && (
               <div className="rounded-lg border border-amber/25 bg-amber/5 p-3">
-                <Badge tone="amber">Correlated legs</Badge>
+                <Badge tone="amber">Linked picks</Badge>
                 <p className="mt-2 text-[11px] leading-relaxed text-ink-muted">
                   Two or more of these are in the same competition on the same day. The maths here
-                  assumes legs are independent, so the real chance of them all landing differs from
+                  assumes picks are independent, so the real chance of them all landing differs from
                   the number above.
                 </p>
               </div>
@@ -346,9 +346,9 @@ export function SlipView({ variant = "page" }: { variant?: "page" | "sheet" }) {
               <div className="rounded-lg border border-rose/25 bg-rose/5 p-3">
                 <Badge tone="rose">Long combo</Badge>
                 <p className="mt-2 text-[11px] leading-relaxed text-ink-muted">
-                  At {legs.length} legs this lands roughly {percent(acc.probability, 2)} of the
-                  time. Long combined picks are where margin compounds hardest against you — the
-                  payout looks big because it almost never pays.
+                  At {legs.length} picks this lands roughly {percent(acc.probability, 2)} of the
+                  time. Every pick you add multiplies the chance of the combo going wrong, so a long
+                  combo looks exciting because it almost never lands.
                 </p>
               </div>
             )}

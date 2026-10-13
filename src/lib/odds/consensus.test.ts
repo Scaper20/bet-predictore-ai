@@ -142,7 +142,7 @@ describe("ratePrice", () => {
     margin: 0.053,
   };
 
-  it("does not label every real price a losing bet", () => {
+  it("does not label every real price a poor one", () => {
     // The reason this function exists. Every offered price on every book sits
     // below fair value -- that gap is the margin, and a rating that fires on
     // all of them carries no information. SportyBet's 2.18 here matched the
@@ -150,7 +150,7 @@ describe("ratePrice", () => {
     const v = ratePrice(2.18, NEWCASTLE_HOME)!;
     expect(v.rating).toBe("best");
     expect(v.vsFair).toBeLessThan(0);
-    expect(v.reason).toContain("25 books");
+    expect(v.reason).toContain("25 price sources");
   });
 
   it("separates prices a user would actually choose between", () => {

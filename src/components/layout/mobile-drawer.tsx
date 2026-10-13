@@ -181,7 +181,7 @@ export function MobileDrawer({
             </ButtonLink>
           </div>
         )}
-        <p className="text-center text-[11px] text-ink-dim">18+ only. Bet responsibly.</p>
+        <p className="text-center text-[11px] text-ink-dim">18+ only. Use responsibly.</p>
       </div>
     </div>
   );

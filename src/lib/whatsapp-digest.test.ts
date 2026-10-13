@@ -137,10 +137,10 @@ describe("digest selection", () => {
     expect(digestEligible(prediction({ league: "American USL Championship", code: undefined, matchesUsed: 240 }))).toBe(true);
   });
 
-  it("quotes SportyBet's price when it has one, and never calls a pick value", () => {
+  it("quotes the market price when it has one, and never calls a pick value", () => {
     const msg = formatPicksMessage([pick({ bookPrice: 1.72 }), pick({ id: "m2", fairOdds: 1.55, bookPrice: null })]);
-    expect(msg).toContain("@1.72 on SportyBet");
-    expect(msg).toContain("@1.55 (est.)");
+    expect(msg).toContain("at 1.72 (market)");
+    expect(msg).toContain("at 1.55 (est.)");
     expect(msg.toLowerCase()).not.toContain("value");
   });
 });

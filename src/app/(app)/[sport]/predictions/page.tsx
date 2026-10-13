@@ -38,7 +38,7 @@ export async function generateMetadata({
     return {
       title: "Today's Football Predictions",
       description:
-        "Football predictions fitted on real completed matches: 1X2, over/under, BTTS and " +
+        "Football predictions fitted on real completed matches: match result, over/under, both teams to score and " +
         "correct score probabilities with the sample size behind every number.",
       alternates: { canonical: base },
     };
@@ -47,7 +47,7 @@ export async function generateMetadata({
     title: `${def.name} Predictions Today`,
     description:
       `${def.name} predictions from a statistical model fitted on real results: win, draw, ` +
-      `over/under 2.5, BTTS and correct score probabilities, with the sample size behind each.`,
+      `over/under 2.5, both teams to score and correct score probabilities, with the sample size behind each.`,
     alternates: { canonical: `${base}?league=${def.code}` },
   };
 }

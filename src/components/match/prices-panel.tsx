@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/primitives";
 import { odds } from "@/lib/format";
-import { LOCAL_BOOK, priceSelections, type SelectionPricing } from "@/lib/odds";
+import { priceSelections, type SelectionPricing } from "@/lib/odds";
 import { isQuotable } from "@/lib/odds/markets";
 import type { Prediction } from "@/lib/model/predict";
 import type { PriceRating } from "@/lib/odds/consensus";
@@ -50,13 +50,13 @@ export async function PricesPanel({ prediction }: { prediction: Prediction }) {
     <section className="card p-5 sm:p-7">
       <div className="mb-1 flex items-baseline justify-between gap-3">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-ink-muted">
-          What you are offered
+          Market prices
         </h2>
         <span className="shrink-0 text-xs text-ink-dim">
-          {anyLocal ? LOCAL_BOOK : "Market only"}
+          {anyLocal ? "Local and global" : "Global only"}
         </span>
       </div>
-      <p className="mb-5 text-xs text-ink-dim">Live {LOCAL_BOOK} prices, rated for you.</p>
+      <p className="mb-5 text-xs text-ink-dim">Live local market prices, rated against the model.</p>
 
       <div className="space-y-3">
         {priced.map((row) => (
@@ -102,7 +102,7 @@ function PriceRow({ row }: { row: SelectionPricing }) {
               <span className="tnum font-semibold text-ink-muted">
                 {odds(1 / row.consensus.fairProbability)}
               </span>{" "}
-              <span className="text-ink-dim">({row.consensus.books} books)</span>
+              <span className="text-ink-dim">({row.consensus.books} sources)</span>
             </span>
             <span>
               Best{" "}
@@ -112,7 +112,7 @@ function PriceRow({ row }: { row: SelectionPricing }) {
             </span>
             {row.consensus.sharp && (
               <span>
-                Pinnacle{" "}
+                Sharpest{" "}
                 <span className="tnum font-semibold text-ink-muted">
                   {odds(row.consensus.sharp.price)}
                 </span>
@@ -133,7 +133,7 @@ export function PricesPanelSkeleton() {
     <section className="card p-5 sm:p-7">
       <div className="mb-5 flex items-baseline justify-between gap-3">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-ink-muted">
-          What you are offered
+          Market prices
         </h2>
         <span className="shrink-0 text-xs text-ink-dim">Reading prices…</span>
       </div>

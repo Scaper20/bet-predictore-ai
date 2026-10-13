@@ -72,7 +72,7 @@ function DigestMessages({
     <div className="space-y-3">
       <MessageCard title={digest.hasPicks ? "Today's picks" : "No pick today"} text={digest.picksMessage} />
       {digest.accaMessages.map((msg, i) => (
-        <MessageCard key={i} title={`Acca message ${i + 1}`} text={msg} />
+        <MessageCard key={i} title={`Combo message ${i + 1}`} text={msg} />
       ))}
     </div>
   );

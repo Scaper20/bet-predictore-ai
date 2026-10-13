@@ -63,7 +63,7 @@ export default async function LoginPage({
               <div>
                 <h4 className="text-sm font-semibold text-ink">Tailored Match Intelligence</h4>
                 <p className="mt-0.5 text-xs text-ink-muted">
-                  Custom data density for the leagues and betting markets you care about most.
+                  Custom data density for the leagues and prediction types you care about most.
                 </p>
               </div>
             </div>
@@ -75,7 +75,7 @@ export default async function LoginPage({
               <div>
                 <h4 className="text-sm font-semibold text-ink">Real-time Value Signals</h4>
                 <p className="mt-0.5 text-xs text-ink-muted">
-                  Algorithmic odds discrepancy detection across global bookmakers.
+                  Algorithmic price gap detection across global markets.
                 </p>
               </div>
             </div>
@@ -87,7 +87,7 @@ export default async function LoginPage({
               <div>
                 <h4 className="text-sm font-semibold text-ink">Verified Track Record</h4>
                 <p className="mt-0.5 text-xs text-ink-muted">
-                  100% transparent historical outcome tracking and ROI stats.
+                  100% transparent historical outcome tracking and accuracy stats.
                 </p>
               </div>
             </div>

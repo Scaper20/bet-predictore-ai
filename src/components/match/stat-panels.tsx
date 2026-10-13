@@ -153,9 +153,9 @@ export function GoalExtrasPanel({ goals, match }: { goals: GoalMarkets; match: M
 
       <Label>Result and both teams to score</Label>
       <div className="space-y-2.5">
-        <Row label={`${match.home.shortName} & GG`} value={goals.resultBtts.homeYes} />
-        <Row label="Draw & GG" value={goals.resultBtts.drawYes} />
-        <Row label={`${match.away.shortName} & GG`} value={goals.resultBtts.awayYes} />
+        <Row label={`${match.home.shortName} & both score`} value={goals.resultBtts.homeYes} />
+        <Row label="Draw & both score" value={goals.resultBtts.drawYes} />
+        <Row label={`${match.away.shortName} & both score`} value={goals.resultBtts.awayYes} />
       </div>
 
       <Label>Result and over 2.5</Label>
@@ -167,7 +167,7 @@ export function GoalExtrasPanel({ goals, match }: { goals: GoalMarkets; match: M
 
       <Label>Goal ranges and specials</Label>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <Tile label="GG2+ (both 2+)" value={percent(goals.gg2)} />
+        <Tile label="Both teams 2+ goals" value={percent(goals.gg2)} />
         <Tile label="1-3 goals" value={percent(goals.multiGoal["1-3"])} />
         <Tile label="2-3 goals" value={percent(goals.multiGoal["2-3"])} />
         <Tile label="Odd total" value={percent(goals.odd)} />
@@ -177,7 +177,7 @@ export function GoalExtrasPanel({ goals, match }: { goals: GoalMarkets; match: M
           <Tile key={k} label={`${k} goal${k === "1" ? "" : "s"}`} value={percent(v)} />
         ))}
       </div>
-      <Note>Goal ranges, exact total, GG2+ and odd/even are close to a coin flip: even the bookmakers&apos; closing prices barely beat the league average on them.</Note>
+      <Note>Goal ranges, exact total, both teams 2+ goals and odd/even are close to a coin flip: even closing market prices barely beat the league average on them.</Note>
     </Section>
   );
 }
@@ -228,7 +228,7 @@ export function HalfExtrasPanel({ prediction }: { prediction: Prediction }) {
         <Tile label="Goal in both halves" value={percent(g.bothHalvesOver05)} />
         <Tile label="Both teams score 2nd half" value={percent(g.bttsSecondHalf)} />
       </div>
-      <Note>A goal in both halves and second-half GG are close to a coin flip; the rest beat the league average clearly in testing.</Note>
+      <Note>A goal in both halves and both teams scoring in the second half are close to a coin flip; the rest beat the league average clearly in testing.</Note>
     </Section>
   );
 }
