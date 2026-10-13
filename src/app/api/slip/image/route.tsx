@@ -82,7 +82,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const legs = parseLegs(searchParams.get("legs"));
   if (legs.length === 0) {
-    return new Response("No slip legs provided", { status: 400 });
+    return new Response("No combo picks provided", { status: 400 });
   }
 
   const combined = legs.reduce((p, l) => p * l.probability, 1);
@@ -103,7 +103,7 @@ export async function GET(request: Request) {
           {/* eslint-disable-next-line @next/next/no-img-element -- satori renders plain <img> */}
           <img src={LOCKUP_SRC} width={Math.round(LOCKUP_H * LOCKUP_ASPECT)} height={LOCKUP_H} alt="KiqStat" />
           <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", color: C.brandInk }}>
-            <div style={{ display: "flex", fontSize: 26, fontWeight: 700 }}>Betslip</div>
+            <div style={{ display: "flex", fontSize: 26, fontWeight: 700 }}>Combo</div>
             <div style={{ display: "flex", fontSize: 22 }}>{lagos(now, { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })}</div>
           </div>
         </div>
@@ -118,7 +118,7 @@ export async function GET(request: Request) {
             <div style={{ display: "flex", fontSize: 30, fontWeight: 700, color: C.ink }}>
               {legs.length} {legs.length === 1 ? "selection" : "selections"}
             </div>
-            <div style={{ display: "flex", fontSize: 26, color: C.muted }}>Fair odds {fairOdds.toFixed(2)}</div>
+            <div style={{ display: "flex", fontSize: 26, color: C.muted }}>Fair price {fairOdds.toFixed(2)}</div>
           </div>
         </div>
 

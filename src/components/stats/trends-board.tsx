@@ -24,9 +24,9 @@ const META: Record<StreakKind, { tone: string; market: string; icon: string }> =
   losing: { tone: "rose", market: "Against them", icon: "📉" },
   winless: { tone: "rose", market: "Against them", icon: "🥶" },
   over25: { tone: "amber", market: "Over 2.5", icon: "⚽" },
-  btts: { tone: "cyan", market: "GG", icon: "↔" },
-  cleanSheets: { tone: "violet", market: "Under / NG", icon: "🧱" },
-  noGoals: { tone: "rose", market: "Under / NG", icon: "🚫" },
+  btts: { tone: "cyan", market: "Both score", icon: "↔" },
+  cleanSheets: { tone: "violet", market: "Under / not both", icon: "🧱" },
+  noGoals: { tone: "rose", market: "Under / not both", icon: "🚫" },
 };
 
 const TONE: Record<string, { text: string; bg: string; pip: string; ring: string }> = {

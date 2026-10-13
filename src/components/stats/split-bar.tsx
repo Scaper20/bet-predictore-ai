@@ -21,9 +21,9 @@ export function SplitBar({
   const top = Math.max(home, draw, away);
   const h = size === "lg" ? "h-2.5" : size === "sm" ? "h-1.5" : "h-2";
   const parts = [
-    { key: "1", v: home, tone: home === top ? "bg-brand" : "bg-ink-dim/45" },
-    { key: "X", v: draw, tone: draw === top ? "bg-brand" : "bg-ink-dim/25" },
-    { key: "2", v: away, tone: away === top ? "bg-brand" : "bg-ink-dim/45" },
+    { key: "Home", v: home, tone: home === top ? "bg-brand" : "bg-ink-dim/45" },
+    { key: "Draw", v: draw, tone: draw === top ? "bg-brand" : "bg-ink-dim/25" },
+    { key: "Away", v: away, tone: away === top ? "bg-brand" : "bg-ink-dim/45" },
   ];
   return (
     <div className="w-full">

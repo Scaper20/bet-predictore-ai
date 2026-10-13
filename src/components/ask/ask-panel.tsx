@@ -89,7 +89,7 @@ function AskPanelInner({ page }: { page: { matchId: string; label: string } | nu
   const pathname = usePathname();
   const { entitlement } = useEntitlement();
   const { legs } = useSlip();
-  const onSlipPage = /^\/[a-z]+\/slip\/?$/.test(pathname);
+  const onSlipPage = /^\/[a-z]+\/combo\/?$/.test(pathname);
   const onMatchPage = Boolean(page) && pathname.includes("/match/");
 
   const [messages, setMessages] = useState<ChatMessage[]>(() => loadHistory());
@@ -166,7 +166,7 @@ function AskPanelInner({ page }: { page: { matchId: string; label: string } | nu
       setDraft("");
       setBusy(true);
 
-      const about = matchContext?.label ?? (slipContext ? `Your slip · ${slipContext.length} legs` : undefined);
+      const about = matchContext?.label ?? (slipContext ? `Your combo · ${slipContext.length} picks` : undefined);
       const userMsg: ChatMessage = { id: uid(), role: "user", parts: [{ type: "text", text: question }], about };
       const reply: ChatMessage = { id: uid(), role: "assistant", parts: [], pending: true, status: "Thinking…" };
       const history = [...messages, userMsg];
@@ -304,8 +304,8 @@ function AskPanelInner({ page }: { page: { matchId: string; label: string } | nu
 
   const suggestions = useMemo(() => {
     if (matchContext) return ["Best pick for this game", "Is over 2.5 worth it?", "Compare their form", "Explain this prediction"];
-    if (slipContext) return ["Check my slip", "Which leg is weakest?", "Is my slip good value?", "Make it safer"];
-    return ["Safest picks today", "Best value tonight", "3-leg acca for the weekend", "What's live right now?"];
+    if (slipContext) return ["Check my combo", "Which pick is weakest?", "Is my combo good value?", "Make it safer"];
+    return ["Safest picks today", "Best value tonight", "3-pick combo for the weekend", "What's live right now?"];
   }, [matchContext, slipContext]);
 
   // A signed-out visitor who has used their questions sees the overlay when
@@ -314,7 +314,7 @@ function AskPanelInner({ page }: { page: { matchId: string; label: string } | nu
   const subtitle = matchContext
     ? `Knows this page: ${matchContext.label}`
     : slipContext
-      ? `Knows your slip · ${slipContext.length} ${slipContext.length === 1 ? "leg" : "legs"}`
+      ? `Knows your combo · ${slipContext.length} ${slipContext.length === 1 ? "pick" : "picks"}`
       : "Answers from the model only";
 
   return (
@@ -364,7 +364,7 @@ function AskPanelInner({ page }: { page: { matchId: string; label: string } | nu
         {(matchContext || slipContext) && (
           <div className="flex">
             <span className="inline-flex max-w-full items-center gap-2 rounded-lg bg-brand/10 px-3 py-1.5 text-xs font-medium text-brand">
-              <span className="truncate">About: {matchContext?.label ?? `your slip (${slipContext?.length} legs)`}</span>
+              <span className="truncate">About: {matchContext?.label ?? `your combo (${slipContext?.length} picks)`}</span>
               <button
                 type="button"
                 onClick={() => setUseContextPage(false)}
@@ -504,8 +504,8 @@ function EmptyIntro({ context }: { context: boolean }) {
         {context ? "Ask about this, or anything" : "Ask about any match"}
       </p>
       <p className="mx-auto mt-2 max-w-xs text-sm leading-relaxed text-ink-muted">
-        Picks, prices, form, accas. Every answer comes from the KiqStat model and live SportyBet prices, and you can add
-        what it suggests straight to your slip.
+        Picks, prices, form, combos. Every answer comes from the KiqStat model and live market prices, and you can add
+        what it suggests straight to your combo.
       </p>
       <p className="mx-auto mt-3 max-w-xs text-[11px] text-ink-dim">
         It never invents injuries, line-ups or news. Probabilities, not promises. 18+.
@@ -676,7 +676,7 @@ function PickCards({ picks }: { picks: AskPickCard[] }) {
             </div>
             <div className="shrink-0 text-right">
               <p className="tnum font-mono text-sm font-bold text-ink">{(c.price ?? c.fairOdds).toFixed(2)}</p>
-              <p className="text-[9.5px] uppercase tracking-wider text-ink-dim">{c.price ? "SportyBet" : "Fair"}</p>
+              <p className="text-[9.5px] uppercase tracking-wider text-ink-dim">{c.price ? "Market" : "Fair"}</p>
             </div>
             <button
               type="button"
@@ -686,7 +686,7 @@ function PickCards({ picks }: { picks: AskPickCard[] }) {
                 added ? "border-brand/30 bg-brand/10 text-brand" : "border-line-strong text-ink hover:border-brand/50 hover:text-brand"
               }`}
             >
-              {added ? "✓ Added" : "+ Slip"}
+              {added ? "✓ Added" : "+ Combo"}
             </button>
           </div>
         );
@@ -694,7 +694,7 @@ function PickCards({ picks }: { picks: AskPickCard[] }) {
       {picks.length > 1 && (
         <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
           <p className="text-xs text-ink-muted">
-            Together: odds <span className="tnum font-semibold text-ink">{combinedOdds.toFixed(2)}</span>, about{" "}
+            Together: price <span className="tnum font-semibold text-ink">{combinedOdds.toFixed(2)}</span>, about{" "}
             <span className="tnum font-semibold text-ink">{pct(combinedP)}</span> chance.
           </p>
           <button
@@ -703,7 +703,7 @@ function PickCards({ picks }: { picks: AskPickCard[] }) {
             onClick={() => picks.filter((c) => !onSlip(c)).forEach(addCard)}
             className="text-xs font-semibold text-brand disabled:text-ink-dim"
           >
-            {allAdded ? "All on your slip" : "Add all to slip"}
+            {allAdded ? "All in your combo" : "Add all to combo"}
           </button>
         </div>
       )}

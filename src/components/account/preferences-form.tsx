@@ -67,8 +67,8 @@ export function PreferencesForm({
           <ChoiceCard
             name="usageIntent"
             value="accas"
-            label="Building accumulators"
-            description="True combined probability across several legs."
+            label="Building combos"
+            description="True combined probability across several picks."
             defaultChecked={preferences.usageIntent === "accas"}
           />
         </ChoiceGroup>

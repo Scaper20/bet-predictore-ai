@@ -185,7 +185,7 @@ export async function writeAnalysis(p: Prediction): Promise<Analysis> {
           "- Use ONLY the numbers provided. Never invent a statistic, injury, " +
           "lineup, transfer, or news event. You have no information beyond this brief.\n" +
           "- Never promise a result or imply an outcome is guaranteed.\n" +
-          "- Write plainly. No hype, no emoji, no tipster cliches.\n" +
+          "- Write plainly. No hype, no emoji, no pundit cliches.\n" +
           "- Plain, everyday English is the register: direct and unfussy.\n\n" +
           "- Keep it short: people skim this on a phone. Lead with the call, " +
           "then the one or two numbers behind it.\n\n" +

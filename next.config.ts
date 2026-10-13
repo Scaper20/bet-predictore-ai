@@ -10,7 +10,7 @@ import { DEFAULT_SPORT } from "./src/lib/sports";
  * Query strings are carried across automatically, so /fixtures?league=npfl
  * lands on /football/fixtures?league=npfl intact.
  */
-const MOVED = ["live", "fixtures", "predictions", "trends", "track-record", "slip"];
+const MOVED = ["live", "fixtures", "predictions", "trends", "track-record"];
 
 /**
  * Content-Security-Policy: what the browser may load and talk to, so a
@@ -138,6 +138,17 @@ const nextConfig: NextConfig = {
         destination: `/${DEFAULT_SPORT}/${path}`,
         permanent: true,
       })),
+      /*
+       * Selections were renamed from "slip" to "combo" and the safety page
+       * from /responsible-gambling to /responsible-use, so the site carries no
+       * betting vocabulary. The old URLs are shared and indexed, so they
+       * redirect. The sport is spelled out rather than matched as a parameter:
+       * a bare `/:sport/slip` would also catch /api/slip/*.
+       */
+      { source: "/slip", destination: `/${DEFAULT_SPORT}/combo`, permanent: true },
+      { source: `/${DEFAULT_SPORT}/slip`, destination: `/${DEFAULT_SPORT}/combo`, permanent: true },
+      { source: `/${DEFAULT_SPORT}/slip/:rest*`, destination: `/${DEFAULT_SPORT}/combo/:rest*`, permanent: true },
+      { source: "/responsible-gambling", destination: "/responsible-use", permanent: true },
       {
         source: "/match/:id",
         destination: `/${DEFAULT_SPORT}/match/:id`,

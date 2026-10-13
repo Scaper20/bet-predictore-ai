@@ -26,7 +26,7 @@ const TIER_LABEL = { free: "Free", pass: "Pass", pro: "Pro", vip: "VIP" } as con
 const INTENT_LABEL = {
   team: "Following your team",
   value: "Finding value",
-  accas: "Building accumulators",
+  accas: "Building combos",
 } as const;
 
 const SECTIONS = [
@@ -207,7 +207,7 @@ export default async function AccountPage() {
             <p className="mt-3 text-sm text-ink-muted">
               {paid
                 ? "Invoices, payment method and cancellation all live on the billing page."
-                : "Free covers every pick and every market on every match. Pro adds the full breakdowns, half-time markets, Asian handicap and more from Forge and Ask KiqStat."}
+                : "Free covers every pick and every prediction type on every match. Pro adds the full breakdowns, half-time predictions, winning margins and more from Forge and Ask KiqStat."}
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
@@ -259,8 +259,8 @@ export default async function AccountPage() {
 
             <p className="mt-6 border-t border-line pt-5 text-xs leading-relaxed text-ink-dim">
               Need a hand?{" "}
-              <Link href="/responsible-gambling" className="underline underline-offset-2">
-                Responsible gambling resources
+              <Link href="/responsible-use" className="underline underline-offset-2">
+                Responsible use resources
               </Link>{" "}
               are always available.
             </p>

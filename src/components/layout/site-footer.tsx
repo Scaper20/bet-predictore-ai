@@ -46,7 +46,7 @@ const COLUMNS = [
       { href: "/how-it-works", label: "How Our Picks Work" },
       { href: "/guides", label: "Guides" },
       { href: "/help", label: "Help Centre" },
-      { href: "/responsible-gambling", label: "Responsible Gambling" },
+      { href: "/responsible-use", label: "Responsible Use" },
     ],
   },
 ];
@@ -71,10 +71,8 @@ export function SiteFooter() {
         </div>
 
         {/*
-          Nigeria's National Lottery Regulatory Commission (KiqStat is a
-          Nigerian company) expects a visible 18+ notice on anything
-          betting-adjacent, as regulators elsewhere do. It is also just the
-          right thing to put in front of this audience, wherever they are.
+          A visible 18+ notice and a reminder that predictions are estimates:
+          the right thing to put in front of this audience, wherever they are.
         */}
         <div className="mt-8 rounded-2xl sm:mt-12 border border-amber/20 bg-amber/5 p-5">
           <div className="flex flex-wrap items-center gap-3">
@@ -82,10 +80,10 @@ export function SiteFooter() {
               18+
             </span>
             <p className="min-w-[16rem] flex-1 text-sm text-ink-muted">
-              <strong className="text-ink">Bet responsibly.</strong> Predictions are statistical
-              estimates, not certainties. Only bet where it is legal for you, and never stake money
-              you cannot afford to lose. If gambling stops being fun, take a break.{" "}
-              <Link href="/responsible-gambling" className="text-amber underline underline-offset-2">
+              <strong className="text-ink">Use KiqStat responsibly.</strong> Predictions are statistical
+              estimates, not certainties. Never spend money you cannot afford to lose because of a
+              prediction, and take a break if it stops being fun.{" "}
+              <Link href="/responsible-use" className="text-amber underline underline-offset-2">
                 Get help
               </Link>
               .
@@ -96,15 +94,13 @@ export function SiteFooter() {
         {/*
           The data-provider credit that used to sit here is gone — naming the
           upstream feeds told visitors nothing they could act on and pinned the
-          product to a particular set of suppliers. "Not affiliated with any
-          bookmaker" stays: that one is a positioning statement, and the thing
-          this audience actually needs to know.
+          product to a particular set of suppliers.
         */}
         <div className="mt-6 flex flex-col gap-3 border-t border-line pt-6 sm:mt-8 sm:pt-8 text-xs text-ink-dim sm:flex-row sm:items-center sm:justify-between">
           <p>
             © {new Date().getFullYear()} {COMPANY.legalName}. Built in Nigeria, for Africa and the world.
           </p>
-          <p>Not affiliated with any bookmaker.</p>
+          <p>Independent sports analytics.</p>
         </div>
       </Container>
     </footer>

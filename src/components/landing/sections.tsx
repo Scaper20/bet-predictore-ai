@@ -26,9 +26,9 @@ const FEATURES = [
   },
   {
     icon: "🎯",
-    title: "Every market from one distribution",
+    title: "Every prediction from one distribution",
     body:
-      "1X2, over/under, BTTS, double chance and correct score all read off the same scoreline " +
+      "Match result, over/under, both teams to score, two results and correct score all read off the same scoreline " +
       "grid — so the numbers can never contradict each other.",
   },
   {
@@ -238,7 +238,7 @@ export const FAQS = [
   },
   {
     q: "Is this legal where I live?",
-    a: "KiqStat is an analytics product. We do not take bets, hold funds or act as a bookmaker, so using it is not betting. Betting itself is regulated differently in every country: only bet where it is legal for you, and never under your country's legal age (18 in Nigeria and most countries, higher in some).",
+    a: "KiqStat is a sports analytics product. It holds no customer funds, and no money can be placed on a match or won through it. You need to be 18 or older to use it (older where local law requires).",
   },
 ];
 
@@ -283,8 +283,8 @@ export function FinalCta() {
             <span className="text-gradient-brand">Start reading the numbers.</span>
           </h2>
           <p className="mx-auto mt-5 max-w-xl text-base text-ink-muted">
-            Every pick on every match is free. Go Pro for the full breakdowns, half-time markets,
-            Asian handicap and more from Forge and Ask KiqStat.
+            Every pick on every match is free. Go Pro for the full breakdowns, half-time predictions,
+            winning margins and more from Forge and Ask KiqStat.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             <ButtonLink href={sportPath("predictions")}>Open today&apos;s predictions</ButtonLink>

@@ -80,7 +80,7 @@ export async function POST(request: Request) {
         {
           error: paid
             ? "You've hit today's fair-use limit for Forge. Try again tomorrow."
-            : `That's your ${FORGE_FREE_DAILY} free slips for today. Pro makes Forge unlimited.`,
+            : `That's your ${FORGE_FREE_DAILY} free combos for today. Pro makes Forge unlimited.`,
           code: "limit",
         },
         429,
@@ -106,7 +106,7 @@ export async function POST(request: Request) {
     if (!claim.allowed) {
       return json(
         {
-          error: `You've used your ${FORGE_GUEST_TOTAL} free slips. Create a free account for ${FORGE_FREE_DAILY} a day.`,
+          error: `You've used your ${FORGE_GUEST_TOTAL} free combos. Create a free account for ${FORGE_FREE_DAILY} a day.`,
           code: "guest_limit",
         },
         429,

@@ -102,7 +102,7 @@ export function PredictionCard({ prediction, morph = true }: { prediction: Predi
             <div className="flex flex-wrap gap-1.5">
               <Chip label="xG" value={markets.expectedGoals.total.toFixed(1)} />
               <Chip label="Over 2.5" value={percent(markets.over["2.5"])} hot={markets.over["2.5"] >= 0.6} />
-              <Chip label="GG" value={percent(markets.bttsYes)} hot={markets.bttsYes >= 0.6} />
+              <Chip label="Both score" value={percent(markets.bttsYes)} hot={markets.bttsYes >= 0.6} />
             </div>
           )}
           {publishable && sufficiency.level === "limited" && (

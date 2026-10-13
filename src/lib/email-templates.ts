@@ -157,7 +157,7 @@ export function valueAlertsEmail(opts: {
         <td style="padding:10px 0;border-top:1px solid #e1e4da;">
           <a href="${SITE_URL}${matchPath(a.matchId)}" style="color:#1a1f1c;font-weight:700;text-decoration:none;">${escapeHtml(a.homeName)} vs ${escapeHtml(a.awayName)}</a>
           <div style="font-size:12px;color:#6b7670;">${escapeHtml(a.leagueName)} · ${when} WAT</div>
-          <div style="font-size:14px;margin-top:4px;">${escapeHtml(a.label)} @ <strong>${a.localPrice.toFixed(2)}</strong> on SportyBet</div>
+          <div style="font-size:14px;margin-top:4px;">${escapeHtml(a.label)} at <strong>${a.localPrice.toFixed(2)}</strong></div>
         </td>
         <td style="padding:10px 0;border-top:1px solid #e1e4da;text-align:right;white-space:nowrap;vertical-align:top;">
           <strong style="color:#4f6b00;">+${(a.edge * 100).toFixed(1)}%</strong>
@@ -167,16 +167,16 @@ export function valueAlertsEmail(opts: {
     })
     .join("");
   return {
-    subject: `${n} value ${n === 1 ? "price" : "prices"} on SportyBet right now`,
+    subject: `${n} value ${n === 1 ? "price" : "prices"} right now`,
     html: emailLayout(`
       <p style="margin:0 0 12px;font-size:17px;font-weight:700;">Value-shift alert</p>
       <p style="margin:0 0 16px;">${n === 1 ? "One price has" : `${n} prices have`} moved above fair value since our last scan.
-      "vs market" means SportyBet is longer than the bookmaker consensus with the margin taken out; "vs model"
-      appears only where no consensus exists. Prices move — check before you stake.</p>
+      "vs market" means the local price is longer than the market consensus with the margin taken out; "vs model"
+      appears only where no consensus exists. Prices move quickly.</p>
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;">${rows}</table>
       ${button(`${SITE_URL}${sportPath("valueAlerts")}`, "See every live alert")}
       <p style="margin:24px 0 0;font-size:12px;color:#6b7670;">You get this because you're a KiqStat VIP member.
-      <a href="${opts.settingsUrl}" style="color:#6b7670;">Turn these emails off</a> — the alerts page keeps working either way. 18+, bet responsibly.</p>
+      <a href="${opts.settingsUrl}" style="color:#6b7670;">Turn these emails off</a> — the alerts page keeps working either way. 18+, use responsibly.</p>
     `),
   };
 }
@@ -301,7 +301,7 @@ export function whatsappCommunityAnnouncementEmail(opts: { communityUrl: string;
       <p style="margin:0 0 16px;">Hey — Scaper here.</p>
       <p style="margin:0 0 16px;">Quick one: we just launched a KiqStat WhatsApp community. Once a day, before
       kickoff, everyone in it gets that day's value picks — individual picks plus safe/balanced/risky
-      accumulator combos — in one message. Only picks that clear our sample-size bar, same standard as the
+      combos — in one message. Only picks that clear our sample-size bar, same standard as the
       site.</p>
       <p style="margin:0 0 16px;">Free, no spam, leave anytime.</p>
       ${button(opts.communityUrl, "Join the WhatsApp community")}

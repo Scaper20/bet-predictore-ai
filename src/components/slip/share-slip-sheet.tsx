@@ -48,14 +48,14 @@ export function ShareSlipSheet({ view, onClose }: { view: SlipView; onClose: () 
     };
   }, [src]);
 
-  const file = img.status === "ready" ? new File([img.blob], "kiqstat-slip.png", { type: "image/png" }) : null;
+  const file = img.status === "ready" ? new File([img.blob], "kiqstat-combo.png", { type: "image/png" }) : null;
   const canShareFile = typeof navigator !== "undefined" && !!file && !!navigator.canShare?.({ files: [file] });
 
   const download = () => {
     if (img.status !== "ready") return;
     const a = document.createElement("a");
     a.href = img.url;
-    a.download = "kiqstat-slip.png";
+    a.download = "kiqstat-combo.png";
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -65,7 +65,7 @@ export function ShareSlipSheet({ view, onClose }: { view: SlipView; onClose: () 
   const share = async () => {
     if (!file) return;
     try {
-      await navigator.share({ files: [file], title: "My KiqStat slip", text: "My slip on KiqStat · kiqstat.app" });
+      await navigator.share({ files: [file], title: "My KiqStat combo", text: "My combo on KiqStat · kiqstat.app" });
     } catch (err) {
       // Closing the share sheet isn't a failure.
       if (err instanceof Error && err.name !== "AbortError") setNote("Couldn't open sharing here. Download the image instead.");
@@ -79,12 +79,12 @@ export function ShareSlipSheet({ view, onClose }: { view: SlipView; onClose: () 
         ref={containerRef}
         role="dialog"
         aria-modal="true"
-        aria-label="Share slip"
+        aria-label="Share combo"
         className="slip-rise absolute inset-x-0 bottom-0 flex max-h-[92dvh] flex-col rounded-t-2xl border-t border-line bg-shell shadow-2xl lg:inset-x-auto lg:bottom-auto lg:left-1/2 lg:top-1/2 lg:w-[30rem] lg:-translate-x-1/2 lg:-translate-y-1/2 lg:rounded-2xl lg:border"
       >
         <div className="mx-auto mt-2 h-1 w-10 rounded-full bg-line-strong lg:hidden" aria-hidden />
         <div className="flex items-center justify-between gap-3 px-4 py-3">
-          <p className="font-display text-lg font-bold">Share slip</p>
+          <p className="font-display text-lg font-bold">Share combo</p>
           <button
             ref={initialFocusRef}
             type="button"
@@ -104,7 +104,7 @@ export function ShareSlipSheet({ view, onClose }: { view: SlipView; onClose: () 
             {img.status === "failed" && <p className="px-6 py-10 text-center text-sm text-ink-muted">Couldn&apos;t make the image. Close and try again.</p>}
             {img.status === "ready" && (
               // eslint-disable-next-line @next/next/no-img-element -- a blob: URL, which next/image can't optimise
-              <img src={img.url} alt="Your KiqStat slip" className="block w-full" />
+              <img src={img.url} alt="Your KiqStat combo" className="block w-full" />
             )}
           </div>
         </div>

@@ -217,7 +217,7 @@ export function ratePrice(offered: number, quote: MarketQuote): PriceVerdict | n
       vsBest,
       vsSharp,
       reason:
-        `At ${offered.toFixed(2)} this is longer than the ${books} books here make it ` +
+        `At ${offered.toFixed(2)} this is longer than the ${books} price sources here make it ` +
         `(${(1 / quote.fairProbability).toFixed(2)} with the margin taken out). That is a real ` +
         "edge, and it does not depend on our model being right about anything.",
     };
@@ -233,8 +233,8 @@ export function ratePrice(offered: number, quote: MarketQuote): PriceVerdict | n
       vsBest,
       vsSharp,
       reason:
-        `${offered.toFixed(2)} matches the longest price of the ${books} books here. You are ` +
-        "not leaving anything on the table on this one.",
+        `${offered.toFixed(2)} matches the longest price of the ${books} price sources here. ` +
+        "Nothing better is on offer for this one.",
     };
   }
 
@@ -245,7 +245,7 @@ export function ratePrice(offered: number, quote: MarketQuote): PriceVerdict | n
       vsBest,
       vsSharp,
       reason:
-        `Within ${Math.abs(vsBest * 100).toFixed(1)}% of the best of ${books} books ` +
+        `Within ${Math.abs(vsBest * 100).toFixed(1)}% of the best of ${books} price sources ` +
         `(${quote.best.price.toFixed(2)}). A normal price, fairly priced.`,
     };
   }
@@ -258,8 +258,7 @@ export function ratePrice(offered: number, quote: MarketQuote): PriceVerdict | n
       vsSharp,
       reason:
         `${Math.abs(vsBest * 100).toFixed(1)}% short of the ${quote.best.price.toFixed(2)} ` +
-        `available elsewhere. Over a season that gap is most of what separates a winning ` +
-        "record from a losing one.",
+        `available elsewhere. Over a season, gaps like that add up.`,
     };
   }
 

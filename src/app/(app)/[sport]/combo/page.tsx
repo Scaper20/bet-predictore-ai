@@ -9,5 +9,5 @@ import type { SportId } from "@/lib/sports";
  */
 export default async function SlipPage({ params }: { params: Promise<{ sport: string }> }) {
   const { sport } = await params;
-  redirect(`${sportPath("trackedSlips", sport as SportId)}#slip`);
+  redirect(`${sportPath("trackedSlips", sport as SportId)}#combo`);
 }

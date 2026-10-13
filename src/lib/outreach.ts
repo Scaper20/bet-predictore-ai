@@ -28,9 +28,9 @@ export interface SurveyQuestion {
 
 const USE_CASE_OPTIONS = [
   { value: "team", label: "Following my team" },
-  { value: "value", label: "Finding value bets" },
-  { value: "accas", label: "Building accumulators" },
-  { value: "live", label: "Live scores & live odds" },
+  { value: "value", label: "Finding value picks" },
+  { value: "accas", label: "Building combos" },
+  { value: "live", label: "Live scores & live prices" },
 ];
 
 /** ~6 questions, mostly single-tap — aimed at under 3 minutes end to end. */
@@ -64,7 +64,7 @@ export const SURVEY_QUESTIONS: Record<SurveyType, SurveyQuestion[]> = {
     },
     {
       id: "other_services",
-      prompt: "Do you also use another prediction site or tipster alongside KiqStat? If so, which?",
+      prompt: "Do you also use another prediction site or pundit alongside KiqStat? If so, which?",
       type: "text",
       required: false,
       placeholder: "e.g. none, or the name of the other service",
@@ -74,7 +74,7 @@ export const SURVEY_QUESTIONS: Record<SurveyType, SurveyQuestion[]> = {
       prompt: "What's the one thing that would make your subscription more worth it?",
       type: "text",
       required: false,
-      placeholder: "More leagues, better accas, clearer stats…",
+      placeholder: "More leagues, better combos, clearer stats…",
     },
     {
       id: "anything_else",
@@ -93,7 +93,7 @@ export const SURVEY_QUESTIONS: Record<SurveyType, SurveyQuestion[]> = {
         { value: "price", label: "Price" },
         { value: "unproven", label: "Not sure it's worth it yet" },
         { value: "free_enough", label: "The free picks are enough for me" },
-        { value: "low_frequency", label: "I don't bet often enough to need more" },
+        { value: "low_frequency", label: "I don't follow football often enough to need more" },
         { value: "other", label: "Something else" },
       ],
     },

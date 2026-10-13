@@ -15,7 +15,7 @@ type Key = "over15" | "over25" | "over35" | "btts" | "cleanSheets" | "failedToSc
 
 const COLS: { key: Key; label: string; short: string; pct: boolean; hint: string }[] = [
   { key: "over25", label: "Over 2.5", short: "O2.5", pct: true, hint: "Games with three or more goals" },
-  { key: "btts", label: "Both scored", short: "GG", pct: true, hint: "Games where both teams scored" },
+  { key: "btts", label: "Both scored", short: "BS", pct: true, hint: "Games where both teams scored" },
   { key: "over15", label: "Over 1.5", short: "O1.5", pct: true, hint: "Games with two or more goals" },
   { key: "over35", label: "Over 3.5", short: "O3.5", pct: true, hint: "Games with four or more goals" },
   { key: "cleanSheets", label: "Clean sheets", short: "CS", pct: true, hint: "Games without conceding" },

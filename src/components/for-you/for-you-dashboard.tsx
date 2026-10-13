@@ -17,6 +17,7 @@ import { useLivePicks } from "@/components/for-you/use-live-picks";
 import { isLockedPick } from "@/lib/access";
 import { LockedSelection, ProTag } from "@/components/entitlements/locked-pick";
 import type { Pick } from "@/lib/model/predict";
+import { groupLabel } from "@/lib/market-labels";
 import { isStaleInPlay } from "@/lib/match-status";
 import type { LegScore } from "@/lib/slip-tracker";
 import { useTickingMinute } from "@/components/match/use-live-clock";
@@ -386,7 +387,7 @@ function PickRow({
             variant={added ? "secondary" : "primary"}
             className="ml-auto px-3.5 py-1.5 text-xs"
           >
-            {added ? "✓ On slip" : "+ Slip"}
+            {added ? "✓ In combo" : "+ Combo"}
           </Button>
         )}
       </div>
@@ -426,7 +427,7 @@ function AccaCard({
   if (!acca) {
     return (
       <div className="card p-6">
-        <h3 className="text-sm font-semibold">Suggested multiple</h3>
+        <h3 className="text-sm font-semibold">Suggested combo</h3>
         <p className="mt-3 text-xs leading-relaxed text-ink-muted">
           There aren&apos;t enough publishable picks in your competitions to build one today. We
           won&apos;t pad it out with fixtures you didn&apos;t ask for.
@@ -444,7 +445,7 @@ function AccaCard({
     <div className="card space-y-4 p-6">
       <div>
         <h3 className="text-sm font-semibold">
-          Suggested {acca.legs.length}-leg multiple
+          Suggested {acca.legs.length}-pick combo
         </h3>
         <p className="mt-1 text-xs text-ink-muted">
           The highest-confidence picks from your competitions.
@@ -462,7 +463,7 @@ function AccaCard({
                 {leg.fixture}
               </Link>
               <p className="text-ink-muted">
-                {leg.group}: <span className="font-medium text-brand">{leg.selection}</span>
+                {groupLabel(leg.group)}: <span className="font-medium text-brand">{leg.selection}</span>
               </p>
             </div>
             <span className="tnum shrink-0 rounded border border-line bg-surface-2 px-2 py-0.5 font-mono font-semibold">
@@ -489,7 +490,7 @@ function AccaCard({
         variant={added ? "secondary" : "primary"}
         className="w-full py-2.5"
       >
-        {added ? "✓ Added to slip" : `Add all ${acca.legs.length} to slip`}
+        {added ? "✓ Added to combo" : `Add all ${acca.legs.length} to combo`}
       </Button>
     </div>
   );
@@ -516,7 +517,7 @@ function SignedOutBanner() {
           </h2>
           <p className="text-sm leading-relaxed text-ink-muted">
             This page is showing our default set. With a free account it shows only the leagues
-            you pick and keeps your selection slip across devices.
+            you pick and keeps your combo across devices.
           </p>
         </div>
 

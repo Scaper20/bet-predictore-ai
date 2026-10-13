@@ -14,7 +14,7 @@ export function OutcomePanel({ prediction }: { prediction: Prediction }) {
   const best = Math.max(m.home, m.draw, m.away);
 
   return (
-    <Panel title="Match result" hint="1X2">
+    <Panel title="Match result" hint="Home, draw, away">
       <div className="space-y-4">
         {rows.map((r) => (
           <div key={r.key}>
@@ -65,7 +65,7 @@ export function BttsPanel({ prediction }: { prediction: Prediction }) {
   const { markets: m, match } = prediction;
 
   return (
-    <Panel title="Both teams to score" hint="BTTS">
+    <Panel title="Both teams to score" hint="Yes or no">
       <div className="grid grid-cols-2 gap-3">
         <BigStat label="Yes" value={percent(m.bttsYes)} highlight={m.bttsYes > 0.5} />
         <BigStat label="No" value={percent(m.bttsNo)} highlight={m.bttsNo > 0.5} />
@@ -93,13 +93,12 @@ export function DoubleChancePanel({ prediction }: { prediction: Prediction }) {
   ];
 
   return (
-    <Panel title="Double chance" hint="Two outcomes covered">
+    <Panel title="Two results" hint="Two outcomes covered">
       <div className="space-y-4">
         {rows.map((r) => (
           <div key={r.tag}>
             <div className="mb-1.5 flex items-baseline justify-between gap-3">
               <span className="min-w-0 truncate text-sm text-ink-muted">
-                <span className="mr-2 font-mono text-xs text-ink-dim">{r.tag}</span>
                 {r.label}
               </span>
               <span className="flex shrink-0 items-baseline gap-3">
@@ -154,7 +153,7 @@ export function AsianHandicapPanel({
   const core = lines.filter((l) => Math.abs(l.line) <= 1.5);
 
   return (
-    <Panel title="Asian handicap" hint={`${match.home.shortName} line`}>
+    <Panel title="Winning margin" hint={`${match.home.shortName} line`}>
       <div className="space-y-3">
         {core.map((l) => (
           <div key={l.line} className="grid grid-cols-[3.5rem_1fr_1fr] items-center gap-3">
@@ -166,7 +165,7 @@ export function AsianHandicapPanel({
           </div>
         ))}
       </div>
-      <Footnote>Line applies to {match.home.shortName}. Whole lines can push (stake refunded).</Footnote>
+      <Footnote>Line applies to {match.home.shortName}. On whole lines a result exactly on the line counts as level.</Footnote>
     </Panel>
   );
 }
@@ -241,7 +240,7 @@ export function FormPanel({ prediction }: { prediction: Prediction }) {
                     <span className="tnum text-ink-muted">{f.goalsAgainst}</span> conceded
                   </span>
                   <span>
-                    <span className="tnum text-ink-muted">{percent(f.bttsRate)}</span> BTTS
+                    <span className="tnum text-ink-muted">{percent(f.bttsRate)}</span> both scored
                   </span>
                   <span>
                     <span className="tnum text-ink-muted">{f.cleanSheets}</span> clean sheets

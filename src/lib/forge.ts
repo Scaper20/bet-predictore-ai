@@ -20,11 +20,11 @@ export type ForgeWhen = Extract<KickoffWindow, "today" | "tonight" | "tomorrow" 
 
 /** Free plan: 1X2 and double chance; every other market is Pro. */
 export const FORGE_MARKETS: { id: ForgeMarket; label: string; paid?: boolean }[] = [
-  { id: "result", label: "1X2" },
-  { id: "double_chance", label: "Double chance" },
+  { id: "result", label: "Match result" },
+  { id: "double_chance", label: "Two results" },
   { id: "goals", label: "Over/Under", paid: true },
-  { id: "btts", label: "GG/NG", paid: true },
-  { id: "handicap", label: "Handicap", paid: true },
+  { id: "btts", label: "Both teams to score", paid: true },
+  { id: "handicap", label: "Winning margin", paid: true },
 ];
 
 /** The markets a settings object may use on this plan; never empty. */
@@ -44,9 +44,9 @@ export const FORGE_WHEN: { id: ForgeWhen; label: string }[] = [
 
 /** What each style fills in when tapped; the user can still change any of it. */
 export const RISK_PRESETS: Record<ForgeRisk, { targetOdds: number; games: number; label: string; blurb: string }> = {
-  safe: { targetOdds: 2.5, games: 3, label: "Safe", blurb: "Low odds, games we're most sure of" },
+  safe: { targetOdds: 2.5, games: 3, label: "Safe", blurb: "Short prices, games we're most sure of" },
   balanced: { targetOdds: 5, games: 4, label: "Balanced", blurb: "A mix, the default" },
-  risky: { targetOdds: 20, games: 5, label: "Risky", blurb: "Bigger odds, fewer wins" },
+  risky: { targetOdds: 20, games: 5, label: "Risky", blurb: "Bigger prices, lands less often" },
 };
 
 /** Per-leg fair-odds bounds and the least likely leg each style will take. */

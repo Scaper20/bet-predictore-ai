@@ -43,8 +43,8 @@ export function AsianHandicapClient({ matchId }: { matchId: string }) {
     };
   }, [matchId]);
 
-  if (state === "loading") return <GatedPanelSkeleton title="Asian handicap" rows={4} />;
-  if (state === "error" || !data) return <GatedPanelUnavailable label="Asian handicap lines" />;
+  if (state === "loading") return <GatedPanelSkeleton title="Winning margin" rows={4} />;
+  if (state === "error" || !data) return <GatedPanelUnavailable label="Winning margin lines" />;
   // Trust the server's answer, not the fact that Gate already let this
   // mount — a lapsed entitlement between page load and this fetch should
   // still see nothing here, not a stale "unlocked" view.

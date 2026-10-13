@@ -48,8 +48,8 @@ export function stageFor(pct: number): string {
   if (pct >= 100) return "Done";
   if (pct < 25) return "Reading the fixtures";
   if (pct < 55) return "Scoring every pick";
-  if (pct < 80) return "Fitting your odds and games";
-  return "Checking SportyBet prices";
+  if (pct < 80) return "Fitting your price and games";
+  return "Checking market prices";
 }
 
 export function useBuildProgress(busy: boolean): number | null {
@@ -86,7 +86,7 @@ export function BuildProgress({ pct, className = "" }: { pct: number | null; cla
   if (pct === null) return null;
   const shown = Math.round(pct);
   return (
-    <div className={className} role="progressbar" aria-label="Building your slip" aria-valuemin={0} aria-valuemax={100} aria-valuenow={shown}>
+    <div className={className} role="progressbar" aria-label="Building your combo" aria-valuemin={0} aria-valuemax={100} aria-valuenow={shown}>
       <div className="flex items-baseline justify-between gap-3 text-[11px]">
         <span className="font-medium text-ink-muted">{stageFor(pct)}</span>
         <span className="tnum font-bold text-brand">{shown}%</span>

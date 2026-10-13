@@ -160,7 +160,7 @@ export function contextPreamble(context: AskContext, now: Date): string {
     );
   }
   if (context.slip?.length) {
-    lines.push("The user's current slip:");
+    lines.push("The user's current combo:");
     for (const l of context.slip) {
       const price = l.bookmakerOdds ? `, their price ${l.bookmakerOdds.toFixed(2)}` : "";
       lines.push(

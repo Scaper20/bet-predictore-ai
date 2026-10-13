@@ -32,11 +32,11 @@ export interface ModelPerformanceRow {
 
 const MARKET_LABELS: Record<string, string> = {
   "1x2": "Match result",
-  dc: "Double chance",
+  dc: "Two results",
   ou: "Over / under",
   btts: "Both teams to score",
   cs: "Correct score",
-  ah: "Asian handicap",
+  ah: "Winning margin",
 };
 
 export function ScalableModelPerformance({ rows }: { rows: ModelPerformanceRow[] }) {

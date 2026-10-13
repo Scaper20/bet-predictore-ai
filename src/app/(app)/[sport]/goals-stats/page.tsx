@@ -17,7 +17,7 @@ export async function generateMetadata({ searchParams }: { searchParams: Promise
   const { league } = await searchParams;
   const def = leagueByCode(pickLeague(league));
   return {
-    title: `${def?.name ?? "League"} Goals Stats: Over/Under and GG`,
+    title: `${def?.name ?? "League"} Goals Stats: Over/Under and Both Teams Scoring`,
     description: `Over 1.5, 2.5 and 3.5, both teams to score, clean sheets and goals per game for every ${def?.name ?? ""} club.`,
     alternates: { canonical: `${sportPath("goals")}?league=${def?.code ?? ""}` },
   };

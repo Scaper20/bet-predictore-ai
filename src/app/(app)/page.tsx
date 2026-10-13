@@ -115,7 +115,7 @@ export default async function HomePage() {
           "NPFL + CAF covered",
           "Sample size on every pick",
           "Naira pricing",
-          "18+ bet responsibly",
+          "18+ use responsibly",
         ]}
       />
 

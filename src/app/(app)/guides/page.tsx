@@ -4,28 +4,28 @@ import { DocPage, DocCard, Example } from "@/components/guides/doc-page";
 import { sportPath } from "@/lib/routes";
 
 export const metadata: Metadata = {
-  title: "Betting Guides: Markets, Odds and Staking Explained",
+  title: "Football Prediction Guides: Probabilities and Prediction Types Explained",
   description:
-    "What 1X2, double chance, over/under, GG/NG, draw no bet, Asian handicap and correct score mean; how odds become a probability; why accumulators are hard; and sensible staking.",
+    "What match result, two results, over/under, both teams to score, draw excluded, winning margin and correct score predictions mean; how a price becomes a probability; why combos are hard; and how to read a match page.",
   alternates: { canonical: "/guides" },
 };
 
-const MARKETS: { name: string; also?: string; what: string; example: string }[] = [
-  { name: "1X2", also: "Match result", what: "Home win (1), draw (X) or away win (2) after 90 minutes plus stoppage time. Extra time and penalties don't count.", example: "Arsenal v Chelsea ends 2-2: X wins, 1 and 2 lose." },
-  { name: "Double chance", also: "1X, 12, X2", what: "Two of the three results in one bet. Safer than 1X2, so the odds are shorter.", example: "1X (home or draw) wins on any Arsenal win or any draw." },
-  { name: "Over / Under goals", also: "O2.5, U2.5", what: "Total goals in the game above or below a line. Over 2.5 needs three or more goals; under 2.5 needs two or fewer.", example: "A 2-1 finish: over 2.5 wins (three goals), under 2.5 loses." },
-  { name: "GG / NG", also: "Both teams to score", what: "GG: both teams score at least once. NG: at least one team doesn't score.", example: "1-0: NG wins. 1-1: GG wins." },
-  { name: "Draw no bet", what: "Back a team to win; if the game is drawn your stake comes back.", example: "Home draw no bet at 1.70, game ends 0-0: you get your stake back." },
-  { name: "Asian handicap", what: "One team starts with a goal head start or deficit, so the bet is about the margin. Half lines (−0.5, +1.5) can't be refunded; whole lines (−1) refund on exact margins.", example: "Home −1.5 needs the home side to win by two or more." },
-  { name: "Correct score", what: "The exact final score. Big odds, because even the likeliest score usually happens only about one game in eight.", example: "Backing 1-1 at 6.50 pays only on exactly 1-1." },
+const TYPES: { name: string; also?: string; what: string; example: string }[] = [
+  { name: "Match result", also: "Home, draw, away", what: "Home win, draw or away win after 90 minutes plus stoppage time. Extra time and penalties don't count.", example: "Arsenal v Chelsea ends 2-2: the draw is right, home and away are wrong." },
+  { name: "Two results", also: "Home or draw, away or draw, either team", what: "Two of the three results together. More likely than any single result, so the price is shorter.", example: "Home or draw is right on any Arsenal win or any draw." },
+  { name: "Over / Under goals", also: "O2.5, U2.5", what: "Total goals in the game above or below a line. Over 2.5 needs three or more goals; under 2.5 needs two or fewer.", example: "A 2-1 finish: over 2.5 is right (three goals), under 2.5 is wrong." },
+  { name: "Both teams to score", also: "Yes / No", what: "Yes: both teams score at least once. No: at least one team doesn't score.", example: "1-0: No is right. 1-1: Yes is right." },
+  { name: "Draw excluded", what: "Which team wins if the game has a winner. A draw makes the pick void, neither right nor wrong.", example: "Home, draw excluded, game ends 0-0: the pick is void." },
+  { name: "Winning margin", also: "Goal handicap", what: "One team starts with a goal head start or deficit, so the prediction is about the margin. Half lines (−0.5, +1.5) always settle; whole lines (−1) are void on an exact margin.", example: "Home −1.5 needs the home side to win by two or more." },
+  { name: "Correct score", what: "The exact final score. Rarely right, because even the likeliest score usually happens only about one game in eight.", example: "A 1-1 pick is right only on exactly 1-1." },
 ];
 
 export default function GuidesPage() {
   return (
     <DocPage
       eyebrow="Guides"
-      title="Markets, odds and staking, without the jargon"
-      intro={<>Everything you need to read a KiqStat page and a betting slip with confidence, with a worked example for each idea.</>}
+      title="Predictions and probabilities, without the jargon"
+      intro={<>Everything you need to read a KiqStat page with confidence, with a worked example for each idea.</>}
       aside={
         <>
           <DocCard title="How we build the numbers" href="/how-it-works" cta="How our picks work">
@@ -38,11 +38,11 @@ export default function GuidesPage() {
       }
       sections={[
         {
-          id: "markets",
-          title: "The markets",
+          id: "types",
+          title: "The prediction types",
           body: (
             <div className="grid gap-3 sm:grid-cols-2">
-              {MARKETS.map((m, i) => (
+              {TYPES.map((m, i) => (
                 <div key={m.name} className="card p-4" style={{ ["--i" as string]: i }}>
                   <p className="font-display text-lg font-bold text-ink">
                     {m.name}
@@ -56,71 +56,69 @@ export default function GuidesPage() {
           ),
         },
         {
-          id: "odds",
-          title: "Odds are a probability in disguise",
+          id: "prices",
+          title: "A price is a probability in disguise",
           body: (
             <>
               <p>
-                Decimal odds tell you what each unit you stake returns (₦1, $1, KSh 1), stake included. Turn them into the chance the bookmaker
-                is implying by dividing 1 by the odds.
+                The decimal prices quoted for a match are a probability written another way. Turn a price into the
+                chance it implies by dividing 1 by it.
               </p>
-              <Example>Odds of 2.50 → 1 ÷ 2.50 = 40%. Odds of 1.25 → 80%.</Example>
+              <Example>A price of 2.50 → 1 ÷ 2.50 = 40%. A price of 1.25 → 80%.</Example>
               <p>
-                Add up the implied chances of every outcome in a market and you get more than 100%. The extra is the
-                bookmaker&apos;s margin, how they make money whatever happens. A 1X2 market priced 2.10 / 3.40 / 3.60
-                adds up to about 105%: a 5% margin.
+                Add up the implied chances of every outcome and you get more than 100%. The extra is the margin built
+                into the prices. A match result priced 2.10 / 3.40 / 3.60 adds up to about 105%: a 5% margin.
               </p>
             </>
           ),
         },
         {
           id: "value",
-          title: "Value: when a price is worth taking",
+          title: "Value: when a price is generous",
           body: (
             <>
               <p>
-                A bet is good value when its odds are longer than the true chance deserves. Enter your
-                bookmaker&apos;s price on a slip and KiqStat rates it for you.
+                A price is good value when it is longer than the true chance deserves. Enter a price on a combo and
+                KiqStat rates it for you.
               </p>
               <p>
                 The best pick isn&apos;t the likeliest one, it&apos;s the one priced most generously. A sure-looking
-                bet at a poor price loses money over time.
+                pick at a poor price is still poor value.
               </p>
             </>
           ),
         },
         {
-          id: "accumulators",
-          title: "Why accumulators are hard",
+          id: "combos",
+          title: "Why combos are hard",
           body: (
             <>
               <p>
-                In an accumulator every leg has to land, so the chances multiply. Odds grow quickly, but the chance of
-                winning shrinks faster than most people expect.
+                In a combo every pick has to be right, so the chances multiply. The combined price grows quickly, but
+                the chance of the whole combo landing shrinks faster than most people expect.
               </p>
               <Example>
-                Five legs at 70% each: 0.7 × 0.7 × 0.7 × 0.7 × 0.7 ≈ <strong>17%</strong>. Even five strong picks win
-                together only about one time in six.
+                Five picks at 70% each: 0.7 × 0.7 × 0.7 × 0.7 × 0.7 ≈ <strong>17%</strong>. Even five strong picks are
+                all right together only about one time in six.
               </Example>
               <p>
-                Forge shows that combined chance for every slip it builds, so you can see the trade-off before you
-                bet. Fewer, better-priced legs usually beat long slips.
+                Forge shows that combined chance for every combo it builds, so you can see the trade-off up front.
+                Fewer, stronger picks usually beat long combos.
               </p>
             </>
           ),
         },
         {
-          id: "staking",
-          title: "Staking without regret",
+          id: "using-predictions",
+          title: "Using predictions well",
           body: (
             <ul className="list-disc space-y-2 pl-5">
-              <li><strong className="text-ink">Set a budget first</strong> and treat it as spent. Never bet money meant for rent, food or school fees.</li>
-              <li><strong className="text-ink">Stake the same small share each time</strong>, for example 1-2% of your budget per bet. One bad day then can&apos;t wipe you out.</li>
-              <li><strong className="text-ink">Never chase losses.</strong> Doubling up after a loss is how budgets disappear.</li>
-              <li><strong className="text-ink">Keep a record.</strong> &ldquo;My slips&rdquo; on KiqStat tracks your bets live, so you see honestly how you are doing.</li>
+              <li><strong className="text-ink">Read every number as a chance, not a promise.</strong> A 70% pick is wrong three times in ten, by design.</li>
+              <li><strong className="text-ink">Check the evidence.</strong> Every match page shows the sample size and data quality behind the read.</li>
+              <li><strong className="text-ink">Keep a record.</strong> &ldquo;My combos&rdquo; on KiqStat follows your picks live, so you see honestly how they do.</li>
               <li>
                 <strong className="text-ink">Take breaks.</strong> If it stops being fun, stop.{" "}
-                <Link href="/responsible-gambling" className="font-semibold text-brand hover:underline">Get support</Link>.
+                <Link href="/responsible-use" className="font-semibold text-brand hover:underline">Get support</Link>.
               </li>
             </ul>
           ),
@@ -133,7 +131,7 @@ export default function GuidesPage() {
               <ul className="list-disc space-y-2 pl-5">
                 <li><strong className="text-ink">The split bar</strong> under the score is our home / draw / away chance. The green segment is the outcome we favour.</li>
                 <li><strong className="text-ink">Overview</strong>: our strongest read, its chance and the price it needs, plus form and a written analysis.</li>
-                <li><strong className="text-ink">Markets</strong>: every market from the same scoreline model, and live bookmaker prices where we have them.</li>
+                <li><strong className="text-ink">Predictions</strong>: every prediction type from the same scoreline model, and live market prices where we have them.</li>
                 <li><strong className="text-ink">Stats</strong>: both teams side by side over their last ten games, with their 1-10 model rating.</li>
                 <li><strong className="text-ink">Table and Head-to-head</strong>: the live league table with both clubs picked out, and their past meetings.</li>
               </ul>

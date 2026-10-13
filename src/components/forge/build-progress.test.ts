@@ -11,7 +11,7 @@ describe("Forge build progress", () => {
 
   it("names the step for each part of the bar", () => {
     expect(stageFor(10)).toBe("Reading the fixtures");
-    expect(stageFor(90)).toBe("Checking SportyBet prices");
+    expect(stageFor(90)).toBe("Checking market prices");
     expect(stageFor(100)).toBe("Done");
   });
 });

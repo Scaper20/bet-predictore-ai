@@ -60,8 +60,8 @@ export const ASK_TOOLS: Anthropic.Beta.BetaTool[] = [
   {
     name: "get_prediction",
     description:
-      "The model's full read on one fixture: 1X2, double chance, goal lines, BTTS, likely scores, expected goals, " +
-      "its ranked selections with fair odds, recent form, head-to-head and how much data backs it.",
+      "The model's full read on one fixture: match result, two results, goal lines, both teams to score, likely scores, " +
+      "expected goals, its ranked selections with fair prices, recent form, head-to-head and how much data backs it.",
     eager_input_streaming: true,
     input_schema: {
       type: "object",
@@ -72,7 +72,7 @@ export const ASK_TOOLS: Anthropic.Beta.BetaTool[] = [
   {
     name: "get_prices",
     description:
-      "SportyBet's current price for selections on one fixture, next to the model's break-even price and, " +
+      "The local market's current price for selections on one fixture, next to the model's break-even price and, " +
       "where the wider market prices it, a verdict on the price. Market ids come from get_prediction.",
     eager_input_streaming: true,
     input_schema: {
@@ -88,7 +88,7 @@ export const ASK_TOOLS: Anthropic.Beta.BetaTool[] = [
     name: "top_picks",
     description:
       "Scan the upcoming slate and return the strongest selection per fixture that meets the filters, highest " +
-      "probability first. Use for 'safe picks', 'best picks today', accumulator building and similar.",
+      "probability first. Use for 'safe picks', 'top picks today', combo building and similar.",
     eager_input_streaming: true,
     input_schema: {
       type: "object",
@@ -97,13 +97,13 @@ export const ASK_TOOLS: Anthropic.Beta.BetaTool[] = [
         count: { type: "integer", minimum: 1, maximum: 8, description: "How many picks. Defaults to 3." },
         min_fair_odds: {
           type: "number",
-          description: "Skip selections whose fair odds are shorter than this, e.g. 1.25 to avoid near-certainties.",
+          description: "Skip selections whose fair price is shorter than this, e.g. 1.25 to avoid near-certainties.",
         },
         max_fair_odds: { type: "number", description: "Skip selections longer than this." },
         markets: {
           type: "array",
           items: { type: "string", enum: ["result", "double_chance", "goals", "btts"] },
-          description: "Restrict to these market types. Defaults to all four.",
+          description: "Restrict to these prediction types. Defaults to all four.",
         },
         league: { type: "string", description: "Only this competition." },
       },
@@ -121,7 +121,7 @@ export const ASK_TOOLS: Anthropic.Beta.BetaTool[] = [
   {
     name: "show_picks",
     description:
-      "Show selections as tappable cards under your answer, each with its odds and an add-to-slip button. " +
+      "Show selections as tappable cards under your answer, each with its price and an add-to-combo button. " +
       "Call this whenever you recommend specific selections. Each pick is a match_id plus a market id " +
       "taken from get_prediction or top_picks.",
     eager_input_streaming: true,
@@ -174,10 +174,10 @@ function visiblePicks(p: Prediction, ctx: ToolContext): Pick[] {
 }
 
 const PRO_NOTE =
-  "This user is on the free plan: the match result (1X2) market is open to them, and so is the headline pick on " +
+  "This user is on the free plan: the match result prediction is open to them, and so is the headline pick on " +
   "today's six free picks. Other goals, both teams to score, " +
-  "double chance, correct score and Asian handicap are Pro. Do not estimate or hint at those numbers; say they are " +
-  "part of Pro and offer the 1X2 view.";
+  "two results, correct score and winning margin are Pro. Do not estimate or hint at those numbers; say they are " +
+  "part of Pro and offer the match result view.";
 
 async function slate(): Promise<Match[]> {
   return cached("ask:slate", 5 * 60_000, async () => (await upcomingFeed(7)).matches);
@@ -305,7 +305,7 @@ function predictionSummary(p: Prediction, ctx: ToolContext) {
         : null,
     selections: visiblePicks(p, ctx)
       .slice(0, 14)
-      .map((pk) => ({ market: pk.market, label: pk.label, pct: pct(pk.probability), fair_odds: odds2(pk.fairOdds) })),
+      .map((pk) => ({ market: pk.market, label: pk.label, pct: pct(pk.probability), fair_price: odds2(pk.fairOdds) })),
     form: free
       ? { [p.match.home.name]: { last: form("home").last, points: form("home").points, of: form("home").of },
           [p.match.away.name]: { last: form("away").last, points: form("away").points, of: form("away").of } }
@@ -350,7 +350,7 @@ async function getPrices(input: Record<string, unknown>, ctx: ToolContext): Prom
         label: s.label,
         model_pct: pct(s.probability),
         break_even: odds2(s.breakEven),
-        sportybet: s.local,
+        market_price: s.local,
         market_fair_pct: s.consensus ? pct(s.consensus.fairProbability) : null,
         best_price_anywhere: s.consensus?.best.price ?? null,
         verdict: s.priceVerdict?.reason ?? s.modelVerdict?.reason ?? null,
@@ -419,8 +419,8 @@ async function topPicks(input: Record<string, unknown>, ctx: ToolContext): Promi
         market: pick.market,
         label: pick.label,
         pct: pct(pick.probability),
-        fair_odds: odds2(pick.fairOdds),
-        sportybet: priced[i],
+        fair_price: odds2(pick.fairOdds),
+        market_price: priced[i],
         data_quality: Math.round(p.model.dataQuality),
       })),
     }),
@@ -497,7 +497,7 @@ export function toolStatus(name: string, input: Record<string, unknown>): string
     case "get_prediction":
       return "Reading the model…";
     case "get_prices":
-      return "Checking SportyBet prices…";
+      return "Checking market prices…";
     case "top_picks":
       return "Scanning the slate…";
     case "get_live_scores":

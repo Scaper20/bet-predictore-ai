@@ -18,7 +18,7 @@ export default function HowItWorksPage() {
       title="From real results to a probability"
       intro={
         <>
-          No tipsters, no gut feel. Every number on KiqStat comes from one statistical model fitted on thousands of
+          No pundit hunches, no gut feel. Every number on KiqStat comes from one statistical model fitted on thousands of
           finished games, and every pick it publishes is graded in public. Here is the whole process in plain words.
         </>
       }
@@ -27,8 +27,8 @@ export default function HowItWorksPage() {
           <DocCard title="See it graded" href={sportPath("trackRecord")} cta="Track record">
             Every published pick is logged before kick-off and marked won or lost after the final whistle.
           </DocCard>
-          <DocCard title="New to betting terms?" href="/guides" cta="Read the guides">
-            What 1X2, GG and double chance mean, with examples.
+          <DocCard title="New to prediction terms?" href="/guides" cta="Read the guides">
+            What match result, both teams to score and two results mean, with examples.
           </DocCard>
         </>
       }
@@ -83,7 +83,7 @@ export default function HowItWorksPage() {
               </p>
               <ScorelineGrid />
               <p>
-                Every market is read off that one grid. That is why our 1X2, over/under, GG and correct-score numbers
+                Every prediction is read off that one grid. That is why our match result, over/under, both-teams-to-score and correct-score numbers
                 always agree with each other, and why Forge can price two picks in the same game exactly instead of
                 guessing.
               </p>
@@ -165,9 +165,9 @@ export default function HowItWorksPage() {
                 starting point, not the last word.
               </p>
               <p>
-                Probabilities are not promises: a 70% pick loses three times in ten, by design. Bet only what you can
-                afford to lose.{" "}
-                <Link href="/responsible-gambling" className="font-semibold text-brand hover:underline">Responsible gambling</Link>.
+                Probabilities are not promises: a 70% pick is wrong three times in ten, by design. Never spend what you
+                can&apos;t afford to lose because of a prediction.{" "}
+                <Link href="/responsible-use" className="font-semibold text-brand hover:underline">Responsible use</Link>.
               </p>
             </>
           ),

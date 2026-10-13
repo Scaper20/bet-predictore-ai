@@ -107,7 +107,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
 
   const tabs: MatchTab[] = [
     { key: "overview", label: "Overview", panel: <Overview match={match} prediction={prediction} analysis={analysis} ctx={ctx} live={live} label={label} /> },
-    { key: "markets", label: "Markets", panel: <Markets prediction={prediction} extra={extra} /> },
+    { key: "markets", label: "Predictions", panel: <Markets prediction={prediction} extra={extra} /> },
     { key: "stats", label: "Stats", panel: <MatchStats match={match} home={ctx.home} away={ctx.away} /> },
     ...(ctx.table
       ? [{
@@ -315,7 +315,7 @@ function Overview({
         <AddToSlip prediction={prediction} />
         <AskAboutMatch label={label} />
         <p className="px-1 text-[11px] leading-relaxed text-ink-dim">
-          Model estimates, not facts. 18+, bet responsibly.{" "}
+          Model estimates, not facts. 18+, use responsibly.{" "}
           <Link href={sportPath("trackRecord")} className="text-ink-muted underline-offset-2 hover:underline">See our record</Link>
         </p>
       </aside>
@@ -355,7 +355,7 @@ function Markets({ prediction, extra }: { prediction: Prediction; extra: Fixture
       {/* The only numbers here a bookmaker produced; streamed, because two
           metered providers sit behind it. DepthGate is a conversion wall:
           both providers are fetched a competition at a time and cached. */}
-      <DepthGate reason="Is the bookie's price worth it?">
+      <DepthGate reason="Is the market price worth it?">
         <Suspense fallback={<PricesPanelSkeleton />}>
           <PricesPanel prediction={prediction} />
         </Suspense>

@@ -38,7 +38,7 @@ export function AddToSlip({ prediction: shared }: { prediction: Prediction }) {
     <section className="card p-5 sm:p-7">
       <div className="mb-4 flex items-baseline justify-between gap-3">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-ink-muted">Selections</h2>
-        {existing && <span className="text-xs text-brand">On your slip</span>}
+        {existing && <span className="text-xs text-brand">In your combo</span>}
       </div>
 
       <label className="block">

@@ -106,7 +106,7 @@ export function assessValue(
       rating: "no-bet",
       reason:
         `${offeredPrice.toFixed(2)} is too short for the chance it has` +
-        (market ? ", and other books pay more." : "."),
+        (market ? ", and other markets price it longer." : "."),
     };
   }
 
@@ -125,8 +125,8 @@ export function assessValue(
     breakEven,
     rating: "value",
     reason:
-      `${offeredPrice.toFixed(2)} pays more than the chance it has` +
-      (market ? ", and more than other books." : "."),
+      `${offeredPrice.toFixed(2)} is longer than the chance it has deserves` +
+      (market ? ", and longer than other markets." : "."),
   };
 }
 
