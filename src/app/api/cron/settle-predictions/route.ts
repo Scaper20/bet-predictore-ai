@@ -4,6 +4,7 @@ import { upcomingFeed, predictBatch } from "@/lib/service";
 import { runSettlementPass } from "@/lib/settlement-runner";
 import { modelIdForMarket } from "@/lib/model/router";
 import { pickTier } from "@/lib/model/tiers";
+import { leagueByCode } from "@/lib/leagues";
 
 // Runs the football providers and Supabase's service-role client — both
 // Node-only. Proxy (src/proxy.ts) doesn't touch /api/ at all, so no session
@@ -57,11 +58,11 @@ async function logUpcomingPicks(admin: ReturnType<typeof supabaseAdmin>): Promis
     .filter((p) => p.sufficiency.publishable && p.topPick)
     .map((p) => ({
       match_id: p.match.id,
-      league: p.match.league.name,
-      // The name is kept for display; the code is what every aggregate groups
-      // on. They are not interchangeable — the name is whichever string the
-      // answering provider used, and the three feeds disagree about all of
-      // them. See 0013_league_code.sql.
+      // The catalogue's own name wherever the code is known, so one league is
+      // spelled one way on the record whichever feed answered. The code is
+      // still what every aggregate groups on (0013_league_code.sql); the
+      // feed's name is only the fallback for a league outside the catalogue.
+      league: (p.match.league.code && leagueByCode(p.match.league.code)?.name) || p.match.league.name,
       league_code: p.match.league.code ?? null,
       home_name: p.match.home.name,
       away_name: p.match.away.name,
