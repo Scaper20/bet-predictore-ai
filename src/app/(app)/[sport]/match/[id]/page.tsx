@@ -27,6 +27,7 @@ import { LiveMatchProvider, LiveProgress, LiveScore, LiveStatusBadge } from "@/c
 import { Gate } from "@/components/entitlements/gate";
 import { DepthGate } from "@/components/entitlements/depth-gate";
 import { JsonLd } from "@/components/seo/json-ld";
+import { matchJsonLd } from "@/lib/seo/match-jsonld";
 import { fixtureStatMarkets, type FixtureStatMarkets } from "@/lib/stat-markets-service";
 import { GoalExtrasPanel, StatPanel } from "@/components/match/stat-panels";
 import { freeViewer, matchDetail } from "@/lib/service";
@@ -38,67 +39,6 @@ import { LocalTime } from "@/components/ui/local-time";
 import type { Match } from "@/lib/types";
 import type { Prediction } from "@/lib/model/predict";
 import { containerClass } from "@/components/ui/container";
-
-/**
- * SportsEvent structured data — schema.org's real, documented vocabulary
- * for this (homeTeam/awayTeam/location all confirmed against schema.org
- * directly, not assumed). This produces valid structured data; it is not a
- * guarantee of a visible Google rich-result, since Google's specific rich-
- * result support for this type isn't something either party can confirm
- * from here.
- */
-function matchJsonLd(match: Match, prediction: Prediction) {
-  const url = `${SITE}${matchPath(match.id)}`;
-  const m = prediction.markets;
-  const predictionsUrl = `${SITE}${sportPath("predictions")}`;
-  return {
-    "@context": "https://schema.org",
-    "@graph": [
-      {
-        "@type": "SportsEvent",
-        name: `${match.home.name} vs ${match.away.name}`,
-        // The canonical sport-scoped URL — /match/:id is a 308 to it, and
-        // structured data should never point at a redirect.
-        url,
-        startDate: match.kickoff,
-        eventStatus: "https://schema.org/EventScheduled",
-        sport: "Football",
-        description:
-          `${match.league.name}: ${match.home.name} vs ${match.away.name}. Model probabilities ` +
-          `${percent(m.home)} home win, ${percent(m.draw)} draw, ${percent(m.away)} away win.`,
-        homeTeam: { "@type": "SportsTeam", name: match.home.name },
-        awayTeam: { "@type": "SportsTeam", name: match.away.name },
-        competitor: [
-          { "@type": "SportsTeam", name: match.home.name },
-          { "@type": "SportsTeam", name: match.away.name },
-        ],
-        superEvent: { "@type": "SportsEvent", name: match.league.name },
-        ...(match.venue ? { location: { "@type": "Place", name: match.venue } } : {}),
-      },
-      {
-        "@type": "BreadcrumbList",
-        itemListElement: [
-          { "@type": "ListItem", position: 1, name: "Home", item: SITE },
-          { "@type": "ListItem", position: 2, name: "Predictions", item: predictionsUrl },
-          ...(match.league.code
-            ? [{
-                "@type": "ListItem",
-                position: 3,
-                name: match.league.name,
-                item: `${predictionsUrl}?league=${match.league.code}`,
-              }]
-            : []),
-          {
-            "@type": "ListItem",
-            position: match.league.code ? 4 : 3,
-            name: `${match.home.name} vs ${match.away.name}`,
-            item: url,
-          },
-        ],
-      },
-    ],
-  };
-}
 
 /** What the scoreboard starts from, stamped with when this render read it: the
  * cached page can be served minutes later, and the clock counts on from here. */
@@ -204,7 +144,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
 
   return (
     <>
-      <JsonLd data={matchJsonLd(match, prediction)} />
+      <JsonLd data={matchJsonLd(match, prediction.markets, SITE)} />
       <AskPageContext matchId={match.id} label={label} />
 
       {/* ------------------------------------------------------ Scoreboard */}

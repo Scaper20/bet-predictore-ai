@@ -63,7 +63,6 @@ export function SiteFooter() {
               Data-driven football insight for fans across Africa and the world. Real fixtures,
               real results, and a model that shows its working.
             </p>
-            <p className="mt-2 text-xs text-ink-dim">Formerly BetriX.</p>
           </div>
 
           {COLUMNS.map((col) => (
