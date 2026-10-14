@@ -373,7 +373,7 @@ function LiveRow({ match, goal }: { match: Match; goal?: GoalFlash }) {
 
   return (
     <Link
-      href={matchPath(match.id)}
+      href={matchPath(match.id)} prefetch={false}
       className={`group grid grid-cols-[3.25rem_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 transition-colors sm:px-5 ${
         goal ? "bg-brand/[0.07] hover:bg-brand/10" : "hover:bg-surface-2/60"
       }`}

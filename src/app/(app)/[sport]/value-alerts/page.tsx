@@ -96,7 +96,7 @@ async function AlertsBody() {
 
 function AlertCard({ alert: a }: { alert: ValueAlert }) {
   return (
-    <Link href={matchPath(a.matchId)} className="card card-hover block p-5">
+    <Link href={matchPath(a.matchId)} prefetch={false} className="card card-hover block p-5">
       <div className="flex items-center justify-between gap-3 text-xs text-ink-dim">
         <span className="truncate">{a.leagueName}</span>
         <span className="shrink-0">

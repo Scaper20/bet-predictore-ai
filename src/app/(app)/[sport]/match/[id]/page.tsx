@@ -52,14 +52,15 @@ function liveSnapshot(match: Match) {
   };
 }
 
-export const revalidate = 60;
-
-// Nothing prerendered at build — fixtures change daily — but declaring the
-// list makes each match page cacheable for `revalidate` once first requested,
-// instead of re-rendering (and re-calling the feeds) on every visit.
-export function generateStaticParams() {
-  return [];
-}
+/*
+ * Rendered per request, not cached as ISR. Each match page gets few visits,
+ * so a cached copy was almost never reused (about 1% of requests were cache
+ * hits), yet every regeneration wrote ~90 KB to the ISR store: those writes
+ * were the largest line on the Vercel bill. The data underneath is already
+ * cached in memory (matchDetail, training rows, stored analyses), and the
+ * live score updates on the client, so rendering on demand costs less.
+ */
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({
   params,

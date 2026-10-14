@@ -48,7 +48,7 @@ export function FixtureRow({
 
   return (
     <Link
-      href={matchPath(match.id)}
+      href={matchPath(match.id)} prefetch={false}
       style={{ ["--i" as string]: index }}
       className="group grid grid-cols-[3.25rem_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-2/60 sm:px-5"
     >

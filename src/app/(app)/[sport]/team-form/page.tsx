@@ -159,7 +159,7 @@ function Spot({
       <div className="mt-3"><FormPips letters={row.form.letters.slice(0, 5)} size="sm" index={i} /></div>
       <p className="mt-2 text-xs text-ink-muted">{note}</p>
       {last && (
-        <Link href={matchPath(last.publicId)} className="mt-1 block truncate text-[11px] text-ink-dim hover:text-ink">
+        <Link href={matchPath(last.publicId)} prefetch={false} className="mt-1 block truncate text-[11px] text-ink-dim hover:text-ink">
           Last: {last.goalsFor}-{last.goalsAgainst} {last.isHome ? "v" : "at"} {last.opponentName}
         </Link>
       )}

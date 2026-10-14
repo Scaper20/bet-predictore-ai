@@ -228,23 +228,27 @@ function mergeResults(a: ResultRow[], b: ResultRow[]): ResultRow[] {
 }
 
 export async function matchDetail(id: string): Promise<MatchDetail | null> {
-  const match = await getMatch(id);
-  if (!match) return null;
+  // The match page renders per request, and generateMetadata plus the page
+  // both ask for this: a minute in memory serves both and any quick revisit.
+  return cached(`detail:${id}`, 60_000, async () => {
+    const match = await getMatch(id);
+    if (!match) return null;
 
-  const [training, h2h] = await Promise.all([trainingRows(match), getH2H(match)]);
-  const prediction = buildPrediction(match, training.rows, h2h, modelOptions(match, training));
-  const analysis = await writeAnalysis(prediction);
+    const [training, h2h] = await Promise.all([trainingRows(match), getH2H(match)]);
+    const prediction = buildPrediction(match, training.rows, h2h, modelOptions(match, training));
+    const analysis = await writeAnalysis(prediction);
 
-  return {
-    match,
-    prediction,
-    analysis,
-    trainedOn: {
-      leagueName: training.leagueName,
-      curated: training.curated,
-      rows: training.rows.length,
-    },
-  };
+    return {
+      match,
+      prediction,
+      analysis,
+      trainedOn: {
+        leagueName: training.leagueName,
+        curated: training.curated,
+        rows: training.rows.length,
+      },
+    };
+  });
 }
 
 /**

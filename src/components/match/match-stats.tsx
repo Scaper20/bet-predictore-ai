@@ -175,7 +175,7 @@ function ResultsList({ team, side }: { team: Match["home"]; side: SideStats }) {
             const o = outcome(r);
             return (
               <li key={r.matchId}>
-                <Link href={matchPath(r.publicId)} className="flex items-center gap-2.5 px-3 py-2 text-xs transition-colors hover:bg-surface-2/60">
+                <Link href={matchPath(r.publicId)} prefetch={false} className="flex items-center gap-2.5 px-3 py-2 text-xs transition-colors hover:bg-surface-2/60">
                   <span className="tnum w-12 shrink-0 text-ink-dim">
                     {new Date(r.kickoff).toLocaleDateString("en-NG", { day: "numeric", month: "short" })}
                   </span>

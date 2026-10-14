@@ -99,7 +99,7 @@ function TrendCard({ t, index }: { t: StreakTrend; index: number }) {
   const tone = TONE[meta.tone];
   return (
     <Link
-      href={matchPath(t.fixture.id)}
+      href={matchPath(t.fixture.id)} prefetch={false}
       style={{ ["--i" as string]: index }}
       className={`card card-hover group flex min-w-0 flex-col p-5 ${tone.ring}`}
     >

@@ -212,7 +212,7 @@ function Row({
           </span>
           {live && (
             <Link
-              href={matchPath(live.matchId)}
+              href={matchPath(live.matchId)} prefetch={false}
               className="flex shrink-0 items-center gap-1 rounded-md bg-rose/12 px-1.5 py-0.5 font-mono text-[10px] font-bold text-rose hover:bg-rose/20"
               title="In play — tap for the match"
             >

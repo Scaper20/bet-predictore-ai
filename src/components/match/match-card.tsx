@@ -15,7 +15,7 @@ export function MatchCard({ match, prediction }: { match: Match; prediction?: Pr
 
   return (
     <Link
-      href={matchPath(match.id)}
+      href={matchPath(match.id)} prefetch={false}
       className="card card-hover block min-w-0 p-4 sm:p-5"
     >
       <div className="flex items-center gap-3">
