@@ -33,7 +33,7 @@ export function PredictionCard({ prediction, morph = true }: { prediction: Predi
     // min-w-0: a grid item defaults to its min-content width, which let a
     // long club name push a 320px screen sideways.
     <article className="card card-hover group flex min-w-0 flex-col overflow-hidden">
-      <Link href={matchPath(match.id)} className="block flex-1">
+      <Link href={matchPath(match.id)} prefetch={false} className="block flex-1">
         <div className="flex items-center gap-2 px-4 pt-4 sm:px-5">
           {match.league.logo ? <Crest src={match.league.logo} name={match.league.name} size={16} /> : null}
           <span className="min-w-0 truncate text-xs font-medium text-ink-muted">{match.league.name}</span>
@@ -53,7 +53,7 @@ export function PredictionCard({ prediction, morph = true }: { prediction: Predi
       <div className="flex items-center gap-3 border-t border-line bg-surface-2/40 px-4 py-3 sm:px-5">
         {publishable ? (
           <>
-            <Link href={matchPath(match.id)} className="flex min-w-0 flex-1 items-center justify-between gap-3">
+            <Link href={matchPath(match.id)} prefetch={false} className="flex min-w-0 flex-1 items-center justify-between gap-3">
               <div className="min-w-0">
                 <p className="flex items-center gap-2 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-ink-dim">
                   Our pick {isStrong(topPick) && <StrongBadge />}

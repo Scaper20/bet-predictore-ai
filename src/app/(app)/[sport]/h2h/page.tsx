@@ -176,7 +176,7 @@ function MeetingRow({ g, a }: { g: Meeting; a: TeamRef }) {
   const aWon = g.homeId === a.id ? g.homeGoals > g.awayGoals : g.awayGoals > g.homeGoals;
   const draw = g.homeGoals === g.awayGoals;
   return (
-    <Link href={matchPath(g.publicId)} className="grid grid-cols-[4.5rem_minmax(0,1fr)_auto] items-center gap-3 px-5 py-3 text-sm transition-colors hover:bg-surface-2/60">
+    <Link href={matchPath(g.publicId)} prefetch={false} className="grid grid-cols-[4.5rem_minmax(0,1fr)_auto] items-center gap-3 px-5 py-3 text-sm transition-colors hover:bg-surface-2/60">
       <span className="text-xs text-ink-dim">
         <span className="tnum block">{new Date(g.kickoff).toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "2-digit" })}</span>
         <span className="block truncate">{leagueByCode(g.leagueCode)?.shortName ?? g.leagueCode}</span>

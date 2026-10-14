@@ -686,7 +686,7 @@ function LegCard({
         )}
       </div>
       <div className="mt-1.5 flex items-baseline justify-between gap-3">
-        <Link href={`/football/match/${encodeURIComponent(leg.matchId)}`} className="min-w-0 truncate text-base font-bold text-ink hover:text-brand">
+        <Link href={`/football/match/${encodeURIComponent(leg.matchId)}`} prefetch={false} className="min-w-0 truncate text-base font-bold text-ink hover:text-brand">
           {leg.fixture}
         </Link>
         <span className="shrink-0 text-right">

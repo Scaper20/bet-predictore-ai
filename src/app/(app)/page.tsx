@@ -16,11 +16,12 @@ import type { FreeSlot } from "@/lib/free-picks";
 import { matchPath, sportPath } from "@/lib/routes";
 
 /*
- * Revalidate every minute. The landing page shows real live scores, so it
- * cannot be fully static, but it also must not hammer the upstream feeds on
- * every visit — the provider cache plus this window keeps both true.
+ * Revalidate every five minutes. Live scores on the landing page update in
+ * the browser (featured-board polls /api/live), so the server copy only needs
+ * the day's fixtures and picks; each regeneration is an ISR write, which
+ * Vercel bills per write.
  */
-export const revalidate = 60;
+export const revalidate = 300;
 
 export const metadata: Metadata = { alternates: { canonical: "/" } };
 
