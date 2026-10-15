@@ -105,7 +105,7 @@ export default async function PredictionsPage({
       <PageHeader
         eyebrow="Predictions"
         title={def ? `${def.name} picks` : "Picks"}
-        description="Data insights from analyzed football matches."
+        description="Data insights from analysed football matches."
       />
 
       <div className={`${containerClass()} space-y-7 py-7 sm:py-10`}>

@@ -305,7 +305,6 @@ function PickRow({
         <div className="flex items-center gap-2 text-xs text-ink-muted">
           {badge && <Badge tone="brand">{badge}</Badge>}
           {isStrong(pick) && <StrongBadge />}
-          <RiskBadge pick={pick} />
           <span aria-hidden>{pick.league.flag}</span>
           <span className="truncate">{pick.league.shortName}</span>
           <span aria-hidden>·</span>
@@ -355,7 +354,10 @@ function PickRow({
           ) : (
             <>
               <span className="min-w-0 truncate text-sm font-semibold text-brand">{pick.label}</span>
-              <span className="tnum shrink-0 text-sm font-bold">{percent(pick.probability, 1)}</span>
+              <span className="flex shrink-0 items-center gap-2">
+                <RiskBadge pick={pick} />
+                <span className="tnum text-sm font-bold">{percent(pick.probability, 1)}</span>
+              </span>
             </>
           )}
         </div>
@@ -480,8 +482,9 @@ function AccaCard({
           <p className="text-[11px] uppercase tracking-wider text-ink-muted">
             Combined probability
           </p>
-          <p className="tnum font-mono tracking-tight text-xl font-medium text-brand">
-            {percent(acca.combinedProbability, 1)}
+          <p className="flex items-center gap-2.5">
+            <span className="tnum font-mono tracking-tight text-xl font-medium text-brand">{percent(acca.combinedProbability, 1)}</span>
+            <RiskBadge pick={{ market: "combo", probability: acca.combinedProbability }} />
           </p>
         </div>
       </div>

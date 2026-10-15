@@ -267,7 +267,7 @@ export function SlipView({ variant = "page" }: { variant?: "page" | "sheet" }) {
       <aside className={sheet ? "min-w-0" : "min-w-0 lg:sticky lg:top-[calc(var(--header-h)+1rem)] lg:self-start"}>
         <div className={sheet ? "rounded-xl border border-line bg-surface-2/50 p-4" : "card p-5 sm:p-7"}>
           {!sheet && (
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-ink-muted">
+            <h2 className="font-sans text-sm font-semibold uppercase tracking-wider text-ink-muted">
               Combined pick
             </h2>
           )}

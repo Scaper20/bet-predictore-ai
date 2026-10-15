@@ -367,7 +367,7 @@ function SettingsPanel({
           </div>
         </Section>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 items-end gap-3">
           <Section title="Combined price you want">
             <label className="flex items-center gap-2 rounded-xl border border-line bg-surface-2 px-3.5 py-3 focus-within:border-brand/50">
               <input

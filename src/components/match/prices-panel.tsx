@@ -49,7 +49,7 @@ export async function PricesPanel({ prediction }: { prediction: Prediction }) {
   return (
     <section className="card p-5 sm:p-7">
       <div className="mb-1 flex items-baseline justify-between gap-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-ink-muted">
+        <h2 className="font-sans text-sm font-semibold uppercase tracking-wider text-ink-muted">
           Market prices
         </h2>
         <span className="shrink-0 text-xs text-ink-dim">
@@ -132,7 +132,7 @@ export function PricesPanelSkeleton() {
   return (
     <section className="card p-5 sm:p-7">
       <div className="mb-5 flex items-baseline justify-between gap-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-ink-muted">
+        <h2 className="font-sans text-sm font-semibold uppercase tracking-wider text-ink-muted">
           Market prices
         </h2>
         <span className="shrink-0 text-xs text-ink-dim">Reading prices…</span>

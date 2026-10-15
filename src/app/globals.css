@@ -174,10 +174,19 @@
   .card-hover {
     transition: border-color .2s var(--ease-out-expo), transform .2s var(--ease-out-expo), box-shadow .2s var(--ease-out-expo);
   }
-  .card-hover:hover {
-    border-color: var(--color-line-strong);
-    transform: translateY(-2px);
-    box-shadow: 0 18px 40px -20px rgb(0 0 0 / 0.9);
+  /* Lift only where there is a real pointer: on a phone a tap leaves :hover
+     stuck on, and the card would sit raised until the next tap elsewhere. */
+  @media (hover: hover) {
+    .card-hover:hover {
+      border-color: var(--color-line-strong);
+      transform: translateY(-2px);
+      box-shadow: 0 18px 40px -20px rgb(0 0 0 / 0.9);
+    }
+  }
+  /* A press you can feel on touch: the card gives a little under the finger. */
+  .card-hover:active {
+    transform: scale(0.985);
+    transition-duration: .08s;
   }
 
   /* Subtle grid backdrop for hero sections */
@@ -208,6 +217,10 @@
   100% { box-shadow: 0 0 0 0 transparent; }
 }
 .live-dot { animation: pulse-ring 1.8s ease-out infinite; }
+
+/* Buttons sink a touch when pressed, so a tap registers before the page answers. */
+.press { transition-property: color, background-color, border-color, box-shadow, transform; }
+.press:active { transform: scale(0.97); transition-duration: .08s; }
 
 @keyframes rise {
   from { opacity: 0; transform: translateY(14px); }
@@ -330,7 +343,8 @@
 @media (prefers-reduced-motion: reduce) {
   .animate-marquee, .live-dot, .animate-rise, .bar-fill { animation: none !important; }
   .animate-overlay-in, .animate-dialog-in, .animate-drawer-in, .animate-menu-in, .animate-sheet-in { animation: none !important; }
-  .card-hover:hover { transform: none; }
+  .card-hover:hover, .card-hover:active { transform: none; }
+  .press:active { transform: none; }
 }
 
 /* ============================================================

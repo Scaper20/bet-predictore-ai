@@ -84,7 +84,7 @@ export function SlidingTabs({
             data-key={t.key}
             onClick={() => onChange(t.key)}
             className={`relative z-10 flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap font-medium transition-colors duration-300 ${
-              underline ? "px-3.5 pb-3 pt-2 text-sm" : "rounded-lg px-3.5 py-2 text-sm"
+              underline ? "px-2.5 pb-3 pt-2 text-sm min-[380px]:px-3 min-[400px]:px-3.5" : "rounded-lg px-3.5 py-2 text-sm"
             } ${on ? "text-ink" : "text-ink-muted hover:text-ink"}`}
           >
             {t.label}
