@@ -154,17 +154,21 @@ export function Leagues() {
           ] as const
         ).map(([label, group]) => (
           <div key={label} className="mt-8 first-of-type:mt-10">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-ink-dim">{label}</h3>
-            <div className="mt-3 flex flex-wrap gap-2.5">
+            <h3 className="font-sans text-xs font-semibold uppercase tracking-wider text-ink-dim">{label}</h3>
+            {/* An even grid rather than wrapped pills: with forty-odd
+                competitions, ragged rows ran three screens on a phone. */}
+            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-2.5 lg:grid-cols-5">
               {group.map((l) => (
                 <Link
                   key={l.code}
                   href={`${sportPath("fixtures")}?league=${l.code}`}
-                  className="card card-hover flex items-center gap-2.5 px-4 py-3"
+                  className="card card-hover flex min-w-0 items-center gap-2.5 px-3 py-2.5 sm:px-4 sm:py-3"
                 >
-                  <span className="text-lg" aria-hidden>{l.flag}</span>
-                  <span className="text-sm font-medium">{l.shortName}</span>
-                  <span className="text-xs text-ink-dim">{l.country}</span>
+                  <span className="shrink-0 text-lg" aria-hidden>{l.flag}</span>
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-medium">{l.shortName}</span>
+                    <span className="block truncate text-[11px] text-ink-dim">{l.country}</span>
+                  </span>
                 </Link>
               ))}
             </div>
@@ -286,7 +290,7 @@ export function FinalCta() {
             Every pick on every match is free. Go Pro for the full breakdowns, half-time predictions,
             winning margins and more from Forge and Ask KiqStat.
           </p>
-          <div className="mt-8 flex flex-wrap justify-center gap-3">
+          <div className="mx-auto mt-8 grid max-w-xs gap-3 sm:flex sm:max-w-none sm:justify-center">
             <ButtonLink href={sportPath("predictions")}>Open today&apos;s predictions</ButtonLink>
             <ButtonLink href={sportPath("trackRecord")} variant="secondary">
               See the settled record

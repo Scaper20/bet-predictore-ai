@@ -6,6 +6,8 @@ import { SlidingTabs } from "@/components/motion/sliding-tabs";
 export interface MatchTab {
   key: string;
   label: string;
+  /** Shown instead of `label` on phones. */
+  short?: string;
   panel: ReactNode;
 }
 
@@ -62,7 +64,18 @@ export function MatchTabs({ tabs }: { tabs: MatchTab[] }) {
           value={active}
           onChange={choose}
           className="border-b-0"
-          tabs={tabs.map((t) => ({ key: t.key, label: t.label }))}
+          tabs={tabs.map((t) => ({
+            key: t.key,
+            // A shorter name on phones, so all five tabs fit without scrolling.
+            label: t.short ? (
+              <>
+                <span className="sm:hidden">{t.short}</span>
+                <span className="hidden sm:inline">{t.label}</span>
+              </>
+            ) : (
+              t.label
+            ),
+          }))}
         />
       </div>
       {tabs.map((t) => (

@@ -63,7 +63,7 @@ export function Button({
   return (
     <button
       {...props}
-      className={`inline-flex items-center justify-center gap-2 rounded-lg px-5 py-3 text-sm transition-colors disabled:opacity-50 disabled:pointer-events-none ${BUTTONS[variant]} ${className}`}
+      className={`press inline-flex items-center justify-center gap-2 rounded-lg px-5 py-3 text-sm transition-colors disabled:opacity-50 disabled:pointer-events-none ${BUTTONS[variant]} ${className}`}
     />
   );
 }
@@ -91,7 +91,7 @@ export function ButtonLink({
     <Link
       href={href}
       onClick={onClick}
-      className={`inline-flex items-center justify-center gap-2 rounded-lg px-5 py-3 text-sm transition-colors ${BUTTONS[variant]} ${className}`}
+      className={`press inline-flex items-center justify-center gap-2 rounded-lg px-5 py-3 text-sm transition-colors ${BUTTONS[variant]} ${className}`}
     >
       {children}
     </Link>
@@ -118,7 +118,7 @@ export function ExternalButtonLink({
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className={`inline-flex items-center justify-center gap-2 rounded-lg px-5 py-3 text-sm transition-colors ${BUTTONS[variant]} ${className}`}
+      className={`press inline-flex items-center justify-center gap-2 rounded-lg px-5 py-3 text-sm transition-colors ${BUTTONS[variant]} ${className}`}
     >
       {children}
     </a>

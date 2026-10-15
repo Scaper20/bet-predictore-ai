@@ -40,7 +40,7 @@ export default async function ModelPerformancePage() {
       <BreakdownSection title="By league" data={perf.byLeague} />
 
       <section className="card p-5 sm:p-6">
-        <h2 className="mb-1 text-sm font-semibold uppercase tracking-wider text-ink-muted">
+        <h2 className="mb-1 font-sans text-sm font-semibold uppercase tracking-wider text-ink-muted">
           Calibration
         </h2>
         <p className="mb-5 max-w-2xl text-xs leading-relaxed text-ink-dim">
@@ -73,7 +73,7 @@ function BreakdownSection({ title, data }: { title: string; data: Record<string,
 
   return (
     <section className="card p-5 sm:p-6">
-      <h2 className="mb-5 text-sm font-semibold uppercase tracking-wider text-ink-muted">{title}</h2>
+      <h2 className="mb-5 font-sans text-sm font-semibold uppercase tracking-wider text-ink-muted">{title}</h2>
       <div className="space-y-3">
         {entries.map(([key, breakdown]) => {
           const pct = breakdown.winRate ?? 0;

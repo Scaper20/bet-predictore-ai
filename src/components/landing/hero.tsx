@@ -34,8 +34,11 @@ export function Hero({ liveCount, board }: { liveCount: number; board: ReactNode
         </div>
 
         <div>
-          <Badge tone="brand" className="mb-6">
-            🌍 Built in Nigeria, for football fans across Africa and the world
+          <Badge tone="brand" className="mb-6 max-w-full">
+            <span className="truncate">
+              🌍 Built in Nigeria<span className="hidden sm:inline">, for football fans across Africa and the world</span>
+              <span className="sm:hidden"> for Africa and the world</span>
+            </span>
           </Badge>
 
           <h1 className="font-display text-[2.75rem] leading-[1.05] font-extrabold sm:text-6xl lg:text-[4.2rem]">

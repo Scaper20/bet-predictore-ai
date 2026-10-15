@@ -8,7 +8,7 @@ export default function Loading() {
       <PageHeader
         eyebrow="Predictions"
         title="Picks"
-        description="Data insights from analyzed football matches."
+        description="Data insights from analysed football matches."
       />
       <div className={`${containerClass()} space-y-6 py-7 sm:py-10`}>
         <div className="h-10" />

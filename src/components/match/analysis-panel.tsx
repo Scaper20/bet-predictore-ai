@@ -23,7 +23,7 @@ export function AnalysisPanel({ analysis, matchId }: { analysis: Analysis; match
   return (
     <section className="card p-5 sm:p-7">
       <div className="mb-4 flex items-baseline justify-between gap-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-ink-muted">
+        <h2 className="font-sans text-sm font-semibold uppercase tracking-wider text-ink-muted">
           Match analysis
         </h2>
         <Badge tone={isAiWritten ? "violet" : "neutral"}>

@@ -126,7 +126,7 @@ async function Comparison({ a, b }: { a: TeamRef; b: TeamRef }) {
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] lg:items-start">
         <section className="card overflow-hidden">
-          <h2 className="border-b border-line px-5 py-3.5 text-sm font-semibold uppercase tracking-wider text-ink-muted">Every meeting</h2>
+          <h2 className="border-b border-line px-5 py-3.5 font-sans text-sm font-semibold uppercase tracking-wider text-ink-muted">Every meeting</h2>
           <ul className="stagger divide-y divide-line">
             {games.map((g, i) => (
               <li key={g.publicId} style={{ ["--i" as string]: i }}>
@@ -136,7 +136,7 @@ async function Comparison({ a, b }: { a: TeamRef; b: TeamRef }) {
           </ul>
         </section>
         <section className="card p-5">
-          <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-ink-muted">Current form</h2>
+          <h2 className="mb-4 font-sans text-sm font-semibold uppercase tracking-wider text-ink-muted">Current form</h2>
           <div className="space-y-4">
             {[a, b].map((t) => (
               <div key={t.id} className="flex items-center justify-between gap-3">
@@ -209,14 +209,14 @@ async function Suggestions() {
   if (games.length === 0) return null;
   return (
     <section>
-      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-ink-muted">Coming up this week</h2>
+      <h2 className="mb-3 font-sans text-sm font-semibold uppercase tracking-wider text-ink-muted">Coming up this week</h2>
       <div className="stagger grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {games.map((m, i) => (
           <Link
             key={m.id}
             href={`${sportPath("h2h")}?a=${m.home.id}&b=${m.away.id}`}
             style={{ ["--i" as string]: i }}
-            className="card card-hover flex items-center gap-3 p-4"
+            className="card card-hover flex min-w-0 items-center gap-3 p-4"
           >
             <span className="flex -space-x-2">
               <Crest src={m.home.crest} name={m.home.name} size={30} />
@@ -226,7 +226,7 @@ async function Suggestions() {
               <span className="block truncate text-sm font-semibold">{m.home.name} v {m.away.name}</span>
               <span className="block truncate text-xs text-ink-dim">{leagueByCode(m.league.code!)?.shortName} · <LocalTime iso={m.kickoff} kind="relative" /> <LocalTime iso={m.kickoff} /></span>
             </span>
-            <span className="text-xs font-semibold text-brand">Compare</span>
+            <span className="shrink-0 text-xs font-semibold text-brand">Compare</span>
           </Link>
         ))}
       </div>

@@ -42,7 +42,7 @@ export default async function AdminTrafficPage() {
       </div>
 
       <section className="space-y-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-ink-muted">
+        <h2 className="font-sans text-sm font-semibold uppercase tracking-wider text-ink-muted">
           Recent signups — exact source
         </h2>
         {traffic.recentSignups.length === 0 ? (
@@ -126,7 +126,7 @@ function ChannelSection({
   const max = Math.max(1, ...data.map((d) => d.count));
   return (
     <section className="card p-5 sm:p-6">
-      <h2 className="text-sm font-semibold uppercase tracking-wider text-ink-muted">{title}</h2>
+      <h2 className="font-sans text-sm font-semibold uppercase tracking-wider text-ink-muted">{title}</h2>
       <p className="mt-1 mb-5 text-xs text-ink-dim">{description}</p>
       {data.length === 0 ? (
         <p className="text-sm text-ink-dim">No data yet.</p>

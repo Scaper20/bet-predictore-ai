@@ -10,6 +10,7 @@ import { percent } from "@/lib/format";
 import { LocalTime } from "@/components/ui/local-time";
 import { sportPath } from "@/lib/routes";
 import { LockIcon } from "@/components/entitlements/locked-pick";
+import { RiskBadge } from "@/components/ui/risk-badge";
 import { useTickingMinute } from "@/components/match/use-live-clock";
 import { rebase, type Reading } from "@/lib/live-clock";
 
@@ -226,6 +227,7 @@ export function FeaturedBoard({ rows, renderedAt }: { rows: FeaturedRow[]; rende
                     ) : (
                       <span className="truncate font-semibold text-brand">{row.pick.label}</span>
                     )}
+                    <RiskBadge pick={row.pick} className="self-center" />
                   </p>
                 )}
               </Link>

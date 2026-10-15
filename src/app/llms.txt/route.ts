@@ -41,7 +41,7 @@ KiqStat is a sports analytics product: it holds no customer funds, and no money 
 
 - Team attack and defence ratings, home advantage and a low-score correction are fitted by maximum likelihood on each competition's completed results (goals blended with shots on target where recorded), with recent matches weighted more heavily.
 - A headline pick is published only when the competition has at least 200 completed matches in the data.
-- The two expected goal rates expand into a full scoreline distribution. The match result, two-outcome results, over/under goals, both teams to score, correct score and winning margins are all read off that one distribution, so they never contradict each other.
+- The two expected goal rates expand into a full scoreline distribution. The match result (1X2), two-outcome results (double chance), over/under goals, both teams to score (BTTS, GG/NG), correct score and winning margins (Asian handicap) are all read off that one distribution, so they never contradict each other.
 - Picks are ranked by their edge over what that competition normally does, not by raw probability.
 - National teams are rated on every international in their confederation, and tournament finals are modelled at a neutral venue.
 - Every match page lists the evidence behind the read: strength rankings, the key attack-versus-defence mismatch, home and away splits, form against season rate.

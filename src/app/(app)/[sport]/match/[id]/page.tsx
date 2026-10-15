@@ -6,6 +6,7 @@ import { Badge, ButtonLink, LiveDot } from "@/components/ui/primitives";
 import { Crest } from "@/components/ui/crest";
 import { isStrong } from "@/lib/model/tiers";
 import { StrongBadge } from "@/components/ui/strong-badge";
+import { RiskBadge } from "@/components/ui/risk-badge";
 import { matchPath, sportPath } from "@/lib/routes";
 import { BttsPanel, CorrectScorePanel, DoubleChancePanel, GoalsPanel, H2HPanel, OutcomePanel } from "@/components/match/market-panels";
 import { AddToSlip } from "@/components/match/add-to-slip";
@@ -80,7 +81,7 @@ export async function generateMetadata({
     description:
       `Model probabilities for ${match.home.name} vs ${match.away.name} in the ${match.league.name}: ` +
       `${percent(prediction.markets.home)} home, ${percent(prediction.markets.draw)} draw, ` +
-      `${percent(prediction.markets.away)} away.`,
+      `${percent(prediction.markets.away)} away, plus over/under, BTTS (GG/NG), double chance and correct score.`,
     alternates: { canonical: matchPath(match.id) },
     openGraph: { title, type: "article" },
   };
@@ -108,7 +109,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
 
   const tabs: MatchTab[] = [
     { key: "overview", label: "Overview", panel: <Overview match={match} prediction={prediction} analysis={analysis} ctx={ctx} live={live} label={label} /> },
-    { key: "markets", label: "Predictions", panel: <Markets prediction={prediction} extra={extra} /> },
+    { key: "markets", label: "Predictions", short: "Picks", panel: <Markets prediction={prediction} extra={extra} /> },
     { key: "stats", label: "Stats", panel: <MatchStats match={match} home={ctx.home} away={ctx.away} /> },
     ...(ctx.table
       ? [{
@@ -117,7 +118,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
           panel: (
             <section className="card overflow-hidden">
               <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3 sm:px-5">
-                <h2 className="text-sm font-semibold uppercase tracking-wider text-ink-muted">{match.league.name}</h2>
+                <h2 className="font-sans text-sm font-semibold uppercase tracking-wider text-ink-muted">{match.league.name}</h2>
                 <Link href={`${sportPath("tables")}?league=${match.league.code}`} className="text-xs font-medium text-brand hover:underline">
                   Full table →
                 </Link>
@@ -130,6 +131,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
     {
       key: "h2h",
       label: "Head-to-head",
+      short: "H2H",
       panel: (
         <div className="space-y-4">
           <H2HPanel prediction={prediction} />
@@ -176,9 +178,9 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
               </span>
             </div>
 
-            <div className="mt-5 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 sm:mt-7 sm:gap-8">
+            <div className="mt-5 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-3 sm:mt-7 sm:gap-8">
               <TeamBlock team={match.home} matchId={match.id} side="home" />
-              <div className="text-center">
+              <div className="pt-2.5 text-center sm:pt-0">
                 {live ? (
                   <LiveScore className="tnum font-mono tracking-tighter text-3xl font-medium leading-none sm:text-5xl" />
                 ) : match.status === "finished" ? (
@@ -270,8 +272,8 @@ function Overview({
 
         {pick && prediction.sufficiency.publishable ? (
           <section className="orbit-border card rounded-2xl p-5 sm:p-6">
-            <p className="flex items-center gap-2 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-ink-dim">
-              Our pick {isStrong(pick) && <StrongBadge />}
+            <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-ink-dim">
+              <span className="whitespace-nowrap">Our pick</span> {isStrong(pick) && <StrongBadge />} <RiskBadge pick={pick} />
             </p>
             <div className="mt-2 flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
               <p className="font-display text-2xl font-bold text-ink sm:text-3xl">{pick.label}</p>
@@ -299,7 +301,7 @@ function Overview({
         {(homeForm.length > 0 || awayForm.length > 0) && (
           <section className="card p-5">
             <div className="mb-3 flex items-baseline justify-between gap-3">
-              <h2 className="text-sm font-semibold uppercase tracking-wider text-ink-muted">Form</h2>
+              <h2 className="font-sans text-sm font-semibold uppercase tracking-wider text-ink-muted">Form</h2>
               <a href="#stats" className="text-xs font-medium text-brand hover:underline">Full stats →</a>
             </div>
             <div className="space-y-3">

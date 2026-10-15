@@ -27,7 +27,7 @@ export default async function AdminWhatsappDigestPage() {
       </div>
 
       <section>
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-ink-muted">Today</h2>
+        <h2 className="mb-3 font-sans text-sm font-semibold uppercase tracking-wider text-ink-muted">Today</h2>
         {!todays ? (
           <EmptyState
             icon="🗓️"
@@ -41,7 +41,7 @@ export default async function AdminWhatsappDigestPage() {
 
       {history.length > 0 && (
         <section className="space-y-4">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-ink-muted">Recent history</h2>
+          <h2 className="font-sans text-sm font-semibold uppercase tracking-wider text-ink-muted">Recent history</h2>
           {history.map((d) => (
             <details key={d.id} className="card p-4 sm:p-5">
               <summary className="flex cursor-pointer items-center justify-between gap-3">

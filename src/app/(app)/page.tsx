@@ -115,7 +115,7 @@ export default async function HomePage() {
           "Value after the vig",
           "NPFL + CAF covered",
           "Sample size on every pick",
-          "Naira pricing",
+          "Local-currency pricing",
           "18+ use responsibly",
         ]}
       />

@@ -73,7 +73,7 @@ export default async function AdminDashboardPage() {
 
       <section className="card p-5 sm:p-6">
         <div className="mb-5 flex items-baseline justify-between gap-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-ink-muted">Revenue, last 30 days</h2>
+          <h2 className="font-sans text-sm font-semibold uppercase tracking-wider text-ink-muted">Revenue, last 30 days</h2>
           <span className="tnum text-xs text-ink-dim">
             {naira(kpis.revenueTrend.reduce((s, d) => s + d.kobo, 0) / 100)} total
           </span>
@@ -97,7 +97,7 @@ export default async function AdminDashboardPage() {
       </section>
 
       <section className="card p-5 sm:p-6">
-        <h2 className="mb-5 text-sm font-semibold uppercase tracking-wider text-ink-muted">
+        <h2 className="mb-5 font-sans text-sm font-semibold uppercase tracking-wider text-ink-muted">
           Published picks settled
         </h2>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
@@ -185,7 +185,7 @@ function RecentPanel({
   return (
     <section className="card p-5 sm:p-6">
       <div className="mb-2 flex items-center justify-between gap-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-ink-muted">{title}</h2>
+        <h2 className="font-sans text-sm font-semibold uppercase tracking-wider text-ink-muted">{title}</h2>
         <Link href={viewAllHref} className="text-xs text-ink-dim underline underline-offset-2 hover:text-ink">
           View all
         </Link>

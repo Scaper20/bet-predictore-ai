@@ -7,6 +7,7 @@ import { LocalTime } from "@/components/ui/local-time";
 import { matchPath } from "@/lib/routes";
 import { isStrong } from "@/lib/model/tiers";
 import { StrongBadge } from "@/components/ui/strong-badge";
+import { RiskBadge } from "@/components/ui/risk-badge";
 import { LockedSelection, ProTag } from "@/components/entitlements/locked-pick";
 import type { ViewedPrediction } from "@/lib/access";
 import { PickAction } from "@/components/match/pick-action";
@@ -59,7 +60,10 @@ export function BestBetOfDay({ prediction }: { prediction: Prediction | ViewedPr
           ) : (
             <p className="mt-1 text-base font-bold text-ink sm:text-lg">{topPick.label}</p>
           )}
-          {isStrong(topPick) && <StrongBadge className="mt-1.5" />}
+          <span className="mt-1.5 flex flex-wrap gap-1.5">
+            {isStrong(topPick) && <StrongBadge />}
+            <RiskBadge pick={topPick} />
+          </span>
         </Link>
         <div className="flex flex-col items-end gap-2 sm:mt-3">
           {locked ? (

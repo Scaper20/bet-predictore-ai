@@ -47,7 +47,7 @@ export function MatchStats({ match, home, away }: { match: Match; home: SideStat
       {(h.rating !== null || a.rating !== null) && (
         <section className="card p-5 sm:p-6">
           <div className="mb-4 flex items-baseline justify-between gap-3">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-ink-muted">Model rating</h2>
+            <h2 className="font-sans text-sm font-semibold uppercase tracking-wider text-ink-muted">Model rating</h2>
             <Link href={`${sportPath("ratings")}?league=${match.league.code ?? ""}`} className="text-xs font-medium text-brand hover:underline">
               All ratings →
             </Link>
@@ -73,7 +73,7 @@ export function MatchStats({ match, home, away }: { match: Match; home: SideStat
       </section>
 
       <section className="card p-5 sm:p-6">
-        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-ink-muted">Recent results</h2>
+        <h2 className="mb-4 font-sans text-sm font-semibold uppercase tracking-wider text-ink-muted">Recent results</h2>
         <div className="grid gap-6 md:grid-cols-2">
           <ResultsList team={match.home} side={h} />
           <ResultsList team={match.away} side={a} />

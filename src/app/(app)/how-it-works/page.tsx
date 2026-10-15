@@ -3,6 +3,9 @@ import Link from "next/link";
 import { DocPage, DocCard } from "@/components/guides/doc-page";
 import { scoreMatrix } from "@/lib/model/poisson";
 import { sportPath } from "@/lib/routes";
+import { LOW_RISK_FROM, MEDIUM_RISK_FROM } from "@/lib/model/risk";
+
+const pct = (p: number) => `${Math.round(p * 100)}%`;
 
 export const metadata: Metadata = {
   title: "How Our Picks Work",
@@ -141,8 +144,36 @@ export default function HowItWorksPage() {
           ),
         },
         {
+          id: "risk",
+          title: "6. Risk labels",
+          body: (
+            <>
+              <p>
+                Every pick carries a risk label, set by its chance and checked against how our graded picks have
+                actually done, not picked as a round number.
+              </p>
+              <div className="overflow-hidden rounded-xl border border-line">
+                <table className="w-full text-sm">
+                  <thead className="bg-surface-2 text-left text-xs text-ink-dim">
+                    <tr><th className="px-3 py-2 font-semibold">Label</th><th className="px-3 py-2 font-semibold">Model chance</th><th className="px-3 py-2 font-semibold">How often they landed</th></tr>
+                  </thead>
+                  <tbody className="divide-y divide-line">
+                    <tr><td className="px-3 py-2 font-semibold text-brand">Low risk</td><td className="tnum px-3 py-2">{pct(LOW_RISK_FROM)} and up</td><td className="px-3 py-2">About 7 in 10</td></tr>
+                    <tr><td className="px-3 py-2 font-semibold text-amber">Medium risk</td><td className="tnum px-3 py-2">{pct(MEDIUM_RISK_FROM)} to {pct(LOW_RISK_FROM)}</td><td className="px-3 py-2">About 6 in 10</td></tr>
+                    <tr><td className="px-3 py-2 font-semibold text-rose">High risk</td><td className="tnum px-3 py-2">Below {pct(MEDIUM_RISK_FROM)}</td><td className="px-3 py-2">About half</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <p>
+                Low risk is not no risk: about three in ten of those still miss. A combo&apos;s chance is every pick&apos;s
+                chance multiplied together, so most combos of three or more are high risk however safe each pick looks.
+              </p>
+            </>
+          ),
+        },
+        {
           id: "honesty",
-          title: "6. Keeping ourselves honest",
+          title: "7. Keeping ourselves honest",
           body: (
             <>
               <p>
@@ -156,7 +187,7 @@ export default function HowItWorksPage() {
         },
         {
           id: "limits",
-          title: "7. What the model doesn't know",
+          title: "8. What the model doesn't know",
           body: (
             <>
               <p>
