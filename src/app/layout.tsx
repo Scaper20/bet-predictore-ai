@@ -74,6 +74,8 @@ export const metadata: Metadata = {
     "football predictions Nigeria", "football predictions Africa", "soccer predictions",
     "NPFL predictions", "Premier League predictions", "football prediction model", "live scores",
     "over 2.5 goals prediction", "both teams to score predictions", "football statistics",
+    "1X2 predictions", "BTTS predictions", "GG NG predictions", "double chance predictions",
+    "football odds", "soccer prediction tips", "accumulator tips", "correct score predictions",
   ],
   openGraph: {
     type: "website",

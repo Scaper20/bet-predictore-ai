@@ -14,7 +14,7 @@ export function OutcomePanel({ prediction }: { prediction: Prediction }) {
   const best = Math.max(m.home, m.draw, m.away);
 
   return (
-    <Panel title="Match result" hint="Home, draw, away">
+    <Panel title="Match result" hint="1X2">
       <div className="space-y-4">
         {rows.map((r) => (
           <div key={r.key}>
@@ -65,7 +65,7 @@ export function BttsPanel({ prediction }: { prediction: Prediction }) {
   const { markets: m, match } = prediction;
 
   return (
-    <Panel title="Both teams to score" hint="Yes or no">
+    <Panel title="Both teams to score" hint="BTTS · GG/NG">
       <div className="grid grid-cols-2 gap-3">
         <BigStat label="Yes" value={percent(m.bttsYes)} highlight={m.bttsYes > 0.5} />
         <BigStat label="No" value={percent(m.bttsNo)} highlight={m.bttsNo > 0.5} />
@@ -93,7 +93,7 @@ export function DoubleChancePanel({ prediction }: { prediction: Prediction }) {
   ];
 
   return (
-    <Panel title="Two results" hint="Two outcomes covered">
+    <Panel title="Two results" hint="Double chance">
       <div className="space-y-4">
         {rows.map((r) => (
           <div key={r.tag}>
@@ -153,7 +153,7 @@ export function AsianHandicapPanel({
   const core = lines.filter((l) => Math.abs(l.line) <= 1.5);
 
   return (
-    <Panel title="Winning margin" hint={`${match.home.shortName} line`}>
+    <Panel title="Winning margin" hint={`Asian handicap · ${match.home.shortName} line`}>
       <div className="space-y-3">
         {core.map((l) => (
           <div key={l.line} className="grid grid-cols-[3.5rem_1fr_1fr] items-center gap-3">

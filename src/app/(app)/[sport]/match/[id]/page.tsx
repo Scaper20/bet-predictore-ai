@@ -80,7 +80,7 @@ export async function generateMetadata({
     description:
       `Model probabilities for ${match.home.name} vs ${match.away.name} in the ${match.league.name}: ` +
       `${percent(prediction.markets.home)} home, ${percent(prediction.markets.draw)} draw, ` +
-      `${percent(prediction.markets.away)} away.`,
+      `${percent(prediction.markets.away)} away, plus over/under, BTTS (GG/NG), double chance and correct score.`,
     alternates: { canonical: matchPath(match.id) },
     openGraph: { title, type: "article" },
   };
