@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { legTeams, useSlip, type SlipLeg } from "@/lib/slip";
 import { accumulator } from "@/lib/model/odds";
+import { RiskBadge } from "@/components/ui/risk-badge";
 import { Badge, Button, ButtonLink, EmptyState, ProbabilityBar } from "@/components/ui/primitives";
 import { odds, percent } from "@/lib/format";
 import { LocalTime } from "@/components/ui/local-time";
@@ -238,6 +239,7 @@ export function SlipView({ variant = "page" }: { variant?: "page" | "sheet" }) {
                     </span>
                   )}
                   {rating && <Badge tone={rating.tone}>{rating.label}</Badge>}
+                  <RiskBadge pick={l} />
                 </div>
               </div>
               <span className="tnum shrink-0 text-sm font-bold">{percent(l.probability)}</span>
@@ -272,8 +274,9 @@ export function SlipView({ variant = "page" }: { variant?: "page" | "sheet" }) {
 
           <div className={`${sheet ? "" : "mt-5"} space-y-4`}>
             <div>
-              <p className="text-[10px] uppercase tracking-wider text-ink-dim">
+              <p className="flex items-center justify-between gap-2 text-[10px] uppercase tracking-wider text-ink-dim">
                 Chance all {legs.length} land
+                <RiskBadge pick={{ market: "combo", probability: acc.probability }} />
               </p>
               <p className={`tnum mt-1 font-mono tracking-tighter font-semibold text-brand ${sheet ? "text-2xl" : "text-3xl"}`}>
                 {percent(acc.probability, acc.probability < 0.1 ? 2 : 1)}

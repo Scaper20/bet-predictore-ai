@@ -12,6 +12,7 @@ import { sportPath } from "@/lib/routes";
 import { Crest } from "@/components/ui/crest";
 import { isStrong } from "@/lib/model/tiers";
 import { StrongBadge } from "@/components/ui/strong-badge";
+import { RiskBadge } from "@/components/ui/risk-badge";
 import { CommentThread, LoveButton, useSocialCounts } from "@/components/for-you/pick-social";
 import { useLivePicks } from "@/components/for-you/use-live-picks";
 import { isLockedPick } from "@/lib/access";
@@ -304,6 +305,7 @@ function PickRow({
         <div className="flex items-center gap-2 text-xs text-ink-muted">
           {badge && <Badge tone="brand">{badge}</Badge>}
           {isStrong(pick) && <StrongBadge />}
+          <RiskBadge pick={pick} />
           <span aria-hidden>{pick.league.flag}</span>
           <span className="truncate">{pick.league.shortName}</span>
           <span aria-hidden>·</span>

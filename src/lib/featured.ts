@@ -307,7 +307,7 @@ export interface FeaturedRow {
   away: { name: string; crest?: string; score: number | null };
   probabilities: { home: number; draw: number; away: number };
   /** `locked`: a Pro pick shown to a free viewer, label empty (lib/access.ts). */
-  pick: { label: string; fairOdds: number; locked?: boolean } | null;
+  pick: { label: string; fairOdds: number; market: string; probability: number; locked?: boolean } | null;
 }
 
 export function toFeaturedRow(featured: FeaturedMatch, href: string): FeaturedRow {
@@ -323,7 +323,9 @@ export function toFeaturedRow(featured: FeaturedMatch, href: string): FeaturedRo
     home: { name: match.home.name, crest: match.home.crest, score: match.score.home },
     away: { name: match.away.name, crest: match.away.crest, score: match.score.away },
     probabilities: { home: markets.home, draw: markets.draw, away: markets.away },
-    pick: topPick ? { label: topPick.label, fairOdds: topPick.fairOdds, locked: topPick.market === "locked" } : null,
+    pick: topPick
+      ? { label: topPick.label, fairOdds: topPick.fairOdds, market: topPick.market, probability: topPick.probability, locked: topPick.market === "locked" }
+      : null,
   };
 }
 

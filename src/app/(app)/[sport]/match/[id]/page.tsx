@@ -6,6 +6,7 @@ import { Badge, ButtonLink, LiveDot } from "@/components/ui/primitives";
 import { Crest } from "@/components/ui/crest";
 import { isStrong } from "@/lib/model/tiers";
 import { StrongBadge } from "@/components/ui/strong-badge";
+import { RiskBadge } from "@/components/ui/risk-badge";
 import { matchPath, sportPath } from "@/lib/routes";
 import { BttsPanel, CorrectScorePanel, DoubleChancePanel, GoalsPanel, H2HPanel, OutcomePanel } from "@/components/match/market-panels";
 import { AddToSlip } from "@/components/match/add-to-slip";
@@ -271,7 +272,7 @@ function Overview({
         {pick && prediction.sufficiency.publishable ? (
           <section className="orbit-border card rounded-2xl p-5 sm:p-6">
             <p className="flex items-center gap-2 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-ink-dim">
-              Our pick {isStrong(pick) && <StrongBadge />}
+              Our pick {isStrong(pick) && <StrongBadge />} <RiskBadge pick={pick} />
             </p>
             <div className="mt-2 flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
               <p className="font-display text-2xl font-bold text-ink sm:text-3xl">{pick.label}</p>

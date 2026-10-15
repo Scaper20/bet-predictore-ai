@@ -27,6 +27,7 @@ import { sportPath } from "@/lib/routes";
 import { Spinner } from "@/components/ui/primitives";
 import { BuildProgress, useBuildProgress } from "@/components/forge/build-progress";
 import { openSlipSheet } from "@/components/layout/nav-actions";
+import { RiskBadge } from "@/components/ui/risk-badge";
 
 /* ------------------------------------------------------------------ state */
 
@@ -599,6 +600,7 @@ function ResultPanel({
           <Total label="Combined price" value={t.odds.toFixed(2)} />
           <Total label="Chance it lands" value={pct(t.probability)} hint={oneIn(t.probability)} />
         </div>
+        <RiskBadge pick={{ market: "combo", probability: t.probability }} className="mt-3" />
         <p className="mt-4 text-xs leading-relaxed text-ink-dim">
           {t.picks} {t.picks === 1 ? "pick" : "picks"} across {slip.legs.length} {slip.legs.length === 1 ? "game" : "games"}.{" "}
           {t.priced > 0
@@ -699,7 +701,8 @@ function LegCard({
             {p.label}
           </span>
         ))}
-        <span className="ml-auto font-mono text-xs text-ink-muted">
+        <span className="ml-auto flex items-center gap-2 font-mono text-xs text-ink-muted">
+          <RiskBadge pick={{ market: "leg", probability: leg.probability }} />
           {pct(leg.probability)} chance · {leg.price ? "market" : "fair"}
         </span>
       </div>
