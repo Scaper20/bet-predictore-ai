@@ -196,7 +196,7 @@ export default async function AccountPage() {
             <p className="mt-3 text-sm text-ink-muted">
               {paid
                 ? "Invoices, payment method and cancellation all live on the billing page."
-                : "Free covers every match, and every pick and prediction type in 27 competitions. Pro adds picks in the 15 Pro leagues before kick-off, the full breakdowns, half-time predictions, winning margins and more from Forge and Ask KiqStat."}
+                : "Free covers every match, and every pick in 27 competitions. Pro adds picks in the 15 Pro leagues before kick-off, corners, cards and shots predictions, Strong pick alerts, the full breakdowns, half-time predictions, winning margins and more from Forge and Ask KiqStat."}
             </p>
           </div>
           <div className="flex flex-wrap gap-3">

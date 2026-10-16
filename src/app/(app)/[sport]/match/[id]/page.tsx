@@ -34,7 +34,7 @@ import { GoalExtrasPanel, StatPanel } from "@/components/match/stat-panels";
 import { matchDetail } from "@/lib/service";
 import { getViewer } from "@/lib/viewer";
 import { isProLeague } from "@/lib/pro-leagues";
-import { ProLeagueAfterKickoff, ProLeagueMarketsLock, ProLeaguePickLock } from "@/components/entitlements/pro-league-lock";
+import { ProLeagueAfterKickoff, ProLeagueMarketsLock, ProLeaguePickLock, ProStatsLock } from "@/components/entitlements/pro-league-lock";
 import { LockedNumber } from "@/components/entitlements/locked-pick";
 import { viewPrediction, type ViewedPrediction } from "@/lib/access";
 import { MatchAccessProvider, ProMarkets } from "@/components/match/match-access";
@@ -107,8 +107,9 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   const [ctx, extra] = await Promise.all([
     matchContext(match).catch((): MatchContext => ({ teamIds: { home: null, away: null }, home: null, away: null, table: null })),
     // Corners, cards, shots and more goal markets; the referee where one is
-    // named (the English divisions, about a week ahead).
-    fixtureStatMarkets(match, detail.prediction).catch(() => null),
+    // named (the English divisions, about a week ahead). Pro only: not even
+    // computed for a free viewer, so none of it can reach their page.
+    viewer.paid ? fixtureStatMarkets(match, detail.prediction).catch(() => null) : Promise.resolve(null),
   ]);
   const referee = extra?.referee ?? null;
   const live = isLive(match);
@@ -116,7 +117,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
 
   const tabs: MatchTab[] = [
     { key: "overview", label: "Overview", panel: <Overview match={match} prediction={prediction} analysis={analysis} ctx={ctx} live={live} label={label} proLeagueOpened={proLeagueOpened} /> },
-    { key: "markets", label: "Predictions", short: "Picks", panel: <Markets prediction={prediction} extra={proLocked ? null : extra} /> },
+    { key: "markets", label: "Predictions", short: "Picks", panel: <Markets prediction={prediction} extra={proLocked ? null : extra} statsLocked={!viewer.paid} /> },
     { key: "stats", label: "Stats", panel: <MatchStats match={match} home={ctx.home} away={ctx.away} /> },
     ...(ctx.table
       ? [{
@@ -369,7 +370,15 @@ function FormLine({ team, letters }: { team: Match["home"]; letters: Outcome[] }
 
 /* -------------------------------------------------------------- Markets */
 
-function Markets({ prediction, extra }: { prediction: ViewedPrediction; extra: FixtureStatMarkets | null }) {
+function Markets({
+  prediction,
+  extra,
+  statsLocked,
+}: {
+  prediction: ViewedPrediction;
+  extra: FixtureStatMarkets | null;
+  statsLocked: boolean;
+}) {
   if (prediction.locked.proLeague) {
     return (
       <div className="space-y-5">
@@ -406,6 +415,7 @@ function Markets({ prediction, extra }: { prediction: ViewedPrediction; extra: F
             const m = extra.stats[kind];
             return m ? <StatPanel key={kind} kind={kind} markets={m} match={prediction.match} referee={extra.referee} /> : null;
           })}
+        {statsLocked && <ProStatsLock />}
       </DepthGate>
       {/* Pro: half-time markets and Asian handicap, fetched after the plan check. */}
       <ProMarkets />

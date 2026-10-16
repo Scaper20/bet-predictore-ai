@@ -73,3 +73,25 @@ export function ProLeagueAfterKickoff() {
     </p>
   );
 }
+
+/** Corners, cards, shots and the extra goal markets: Pro on every match. */
+export function ProStatsLock() {
+  return (
+    <section className="card p-5 sm:p-6">
+      <p className="flex items-center gap-2 text-sm font-semibold text-ink">
+        <ProTag /> Corners, cards and shots, plus both teams 2+ goals, goal ranges and more
+      </p>
+      <p className="mt-2 text-sm text-ink-muted">
+        Predicted from each team&apos;s own corner, card and shot history, with the referee where one is named.
+      </p>
+      <div className="mt-4 flex justify-end">
+        <Link
+          href={UPGRADE_HREF}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-sm font-bold text-brand-ink hover:bg-brand-strong"
+        >
+          Unlock with Pro
+        </Link>
+      </div>
+    </section>
+  );
+}

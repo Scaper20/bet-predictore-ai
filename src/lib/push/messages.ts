@@ -84,7 +84,7 @@ export function dailyPayload(opts: {
 
 export const TEST_PAYLOAD: PushPayload = {
   title: "Notifications are on",
-  body: "This is how KiqStat will reach you: today's picks each morning, Strong picks before kick-off, and how they did.",
+  body: "This is how KiqStat will reach you: today's picks each morning and how yesterday's did. Pro members also get Strong pick alerts at kick-off and full time.",
   url: sportPath("predictions"),
   tag: "test",
 };

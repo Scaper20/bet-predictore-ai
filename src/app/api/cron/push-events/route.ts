@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
-import { proLeagueLocked } from "@/lib/access";
 import { paidUserIds } from "@/lib/paid-users";
-import { freeViewer } from "@/lib/service";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { strongKickoffPayload, strongResultPayload, type PushPayload, type StrongPickEvent } from "@/lib/push/messages";
 import { pushConfigured, sendPushBatch, summarise } from "@/lib/push/send";
@@ -24,9 +22,8 @@ const RESULT_WINDOW_MS = 3 * 3_600_000;
  * Vercel's Hobby crons run once a day, too seldom for this. Each event is
  * sent once: push_events_sent holds its key.
  *
- * Every subscribed device hears about every Strong pick, except that a
- * Pro-league pick before kick-off (lib/pro-leagues.ts) goes only to paid
- * members' devices, unless it is one of today's free picks. Results go to all.
+ * A Pro feature: only devices signed in to a paid account hear these
+ * (lib/pricing.ts). The morning push stays for everyone.
  */
 export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET;
@@ -64,12 +61,10 @@ export async function GET(request: Request) {
     kickoff: r.kickoff, result: r.result, score: { home: r.actual_home_goals, away: r.actual_away_goals },
   });
 
-  const viewer = await freeViewer();
-  const events: { key: string; topic: "picks" | "results"; event: StrongPickEvent; payload: PushPayload; paidOnly?: boolean }[] = [];
+  const events: { key: string; topic: "picks" | "results"; event: StrongPickEvent; payload: PushPayload }[] = [];
   for (const r of (soon ?? []) as Row[]) {
     const e = toEvent(r);
-    const paidOnly = proLeagueLocked({ id: r.match_id, kickoff: r.kickoff, league: { code: r.league_code } }, viewer, now);
-    events.push({ key: `kickoff:${r.match_id}`, topic: "picks", event: e, payload: strongKickoffPayload(e), paidOnly });
+    events.push({ key: `kickoff:${r.match_id}`, topic: "picks", event: e, payload: strongKickoffPayload(e) });
   }
   for (const r of (graded ?? []) as Row[]) {
     const e = toEvent(r);
@@ -88,15 +83,12 @@ export async function GET(request: Request) {
   const todo = events.filter((e) => fresh.has(e.key));
   if (todo.length === 0) return NextResponse.json({ events: events.length, sent: 0, note: "already sent" });
 
-  const [devices, paidUsers] = await Promise.all([
-    loadSubscriptions(admin),
-    todo.some((t) => t.paidOnly) ? paidUserIds(admin) : Promise.resolve(new Set<string>()),
-  ]);
+  const [devices, paidUsers] = await Promise.all([loadSubscriptions(admin), paidUserIds(admin)]);
 
   const items = todo.flatMap((t) =>
     devices
       .filter((d) => (t.topic === "picks" ? d.picks : d.results))
-      .filter((d) => !t.paidOnly || (d.userId !== null && paidUsers.has(d.userId)))
+      .filter((d) => d.userId !== null && paidUsers.has(d.userId))
       .map((d) => ({ id: d.id, target: d, payload: t.payload })),
   );
 
