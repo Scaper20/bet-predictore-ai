@@ -8,6 +8,7 @@
  * the over/under numbers can never contradict the correct-score numbers.
  */
 
+import { isPausedPick, PAUSED_PICK_MARKETS } from "./paused";
 import type { Match, ResultRow } from "@/lib/types";
 import { leagueByCode, type LeagueDef } from "@/lib/leagues";
 import {
@@ -548,7 +549,7 @@ export const FAMILY_RELIABILITY: Record<string, number> = {
 export const HEADLINE_MAX_PROBABILITY = 0.8;
 
 /** Specific selections barred from the headline; see headlineEligible. */
-export const HEADLINE_EXCLUDED: string[] = [];
+export const HEADLINE_EXCLUDED: string[] = [...PAUSED_PICK_MARKETS];
 
 /**
  * Markets a headline pick may come from. Both teams to score, correct score
@@ -558,6 +559,7 @@ export const HEADLINE_EXCLUDED: string[] = [];
  */
 export function headlineEligible(p: Pick): boolean {
   if (p.probability > HEADLINE_MAX_PROBABILITY) return false;
+  if (isPausedPick(p.market)) return false;
   const [family, , line] = p.market.split(":");
   if (family === "1x2" || family === "dc") return true;
   return family === "ou" && (line === "1.5" || line === "2.5" || line === "3.5");

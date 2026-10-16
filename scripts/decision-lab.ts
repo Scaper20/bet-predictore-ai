@@ -12,9 +12,13 @@
  *   2. under/over    the model's over/under 2.5 chance against the closing
  *                    market's (de-vigged), and who was right when they disagree;
  *   3. digest        the WhatsApp digest's rule (digestPick) replayed;
- *   4. code hub      the day's hub rebuilt from every fixture of the day with
- *                    the production builder, plus variants that change how many
- *                    games a code uses and which markets it may use.
+ *   4. code hub      the day's hub rebuilt with the production builder (the
+ *                    four-day codes from that day and the next three), against
+ *                    the first hub and variants without some markets;
+ *   5. headline      the published pick with unders paused;
+ *   6. digest        variants of the digest's pick rule and combo lengths.
+ *
+ * --round=1 also prints sections 1-3 (calibration, over/under, the old digest).
  *
  * Codes are graded at the model's fair odds: the source has no SportyBet
  * prices, and at fair odds a calibrated combo lands about 1 in its odds
@@ -24,12 +28,13 @@
  *   npx tsx scripts/decision-lab.ts --days=180 --only=E0,SP1
  */
 
-import { buildPrediction, headlineEligible, type Prediction } from "../src/lib/model/predict";
+import { buildPrediction, headlineEligible, type Pick, type Prediction } from "../src/lib/model/predict";
 import { fitLeague } from "../src/lib/model/fit";
 import { evaluatePick } from "../src/lib/settlement";
 import { deVig } from "../src/lib/model/backtest";
-import { candidatesFor, forge, type ForgeMarket, type ForgeRisk, type PoolEntry } from "../src/lib/forge";
-import { bookablePool, daySeed, HUB_TIERS } from "../src/lib/code-hub";
+import { candidatesFor, forge, type ForgeRisk, type PoolEntry } from "../src/lib/forge";
+import { buildHub, daySeed, hubMarketAllowed, hubTier, HUB_FORGE_MARKETS, HUB_TIERS, withHandicap } from "../src/lib/code-hub";
+import { isQuotable } from "../src/lib/odds/markets";
 import { digestPick } from "../src/lib/whatsapp-digest";
 import { csv, parse, toMatch, toResultRow, type Row } from "./lib/football-data-uk";
 
@@ -240,151 +245,280 @@ function digest(all: Graded[]) {
   console.log(`  digest pick is the fixture's own top pick: ${same}; a fallback past the price floor: ${fallback}`);
 }
 
-/* --------------------------------------------------------------- code hub */
+/* ------------------------------------------------------- pick selection */
 
-interface Variant {
-  name: string;
-  markets: ForgeMarket[];
-  tiers: { target: number; games: number; risk: ForgeRisk }[];
-  /** Pick legs by chance first, then stop at the target (the digest's way). */
-  chanceFirst?: boolean;
+const isUnder = (m: string) => m.startsWith("ou:under");
+const isHalfAh = (m: string) => m.startsWith("ah:") && Math.abs((Number(m.split(":")[2]) * 2) % 2) === 1;
+
+interface PickRule {
+  noUnder?: boolean;
+  /** Half-goal Asian handicap lines (60-80%) when nothing else qualifies. */
+  ah?: boolean;
+  floor?: number;
+  minProb?: number;
 }
 
-const BASE_MARKETS: ForgeMarket[] = ["result", "double_chance", "goals", "btts"];
+/** The headline order (prediction.picks) with the rule's exclusions, handicap as a fallback. */
+function choose(p: Prediction, rule: PickRule, bar?: (m: string) => boolean): Pick | null {
+  const ok = (x: Pick) =>
+    x.probability >= (rule.minProb ?? 0.4) &&
+    x.fairOdds >= (rule.floor ?? 1) &&
+    !(rule.noUnder && isUnder(x.market)) &&
+    !bar?.(x.market);
+  const main = p.picks.find((x) => headlineEligible(x) && ok(x));
+  if (main) return main;
+  if (!rule.ah) return null;
+  return p.picks.filter((x) => isHalfAh(x.market) && x.probability >= 0.6 && x.probability <= 0.8 && ok(x)).sort((a, b) => b.probability - a.probability)[0] ?? null;
+}
 
-const VARIANTS: Variant[] = [
-  { name: "current hub", markets: BASE_MARKETS, tiers: HUB_TIERS.map((t) => ({ target: t.target, games: t.games, risk: t.risk })) },
-  {
-    name: "more, shorter legs",
-    markets: BASE_MARKETS,
-    tiers: [
-      { target: 2, games: 3, risk: "safe" },
-      { target: 3, games: 4, risk: "safe" },
-      { target: 5, games: 6, risk: "safe" },
-      { target: 10, games: 8, risk: "balanced" },
-      { target: 20, games: 10, risk: "balanced" },
-    ],
-  },
-  {
-    name: "fewer, longer legs",
-    markets: BASE_MARKETS,
-    tiers: [
-      { target: 2, games: 1, risk: "balanced" },
-      { target: 3, games: 2, risk: "balanced" },
-      { target: 5, games: 3, risk: "balanced" },
-      { target: 10, games: 3, risk: "risky" },
-      { target: 20, games: 4, risk: "risky" },
-    ],
-  },
-  { name: "results only (no goals/BTTS)", markets: ["result", "double_chance"], tiers: HUB_TIERS.map((t) => ({ target: t.target, games: t.games, risk: t.risk })) },
-  {
-    name: "results only, 1.5/2/3/5/10",
-    markets: ["result", "double_chance"],
-    tiers: [
-      { target: 1.5, games: 1, risk: "safe" },
-      { target: 2, games: 2, risk: "safe" },
-      { target: 3, games: 3, risk: "safe" },
-      { target: 5, games: 4, risk: "balanced" },
-      { target: 10, games: 5, risk: "balanced" },
-    ],
-  },
-  { name: "chance-first, all markets", markets: BASE_MARKETS, tiers: HUB_TIERS.map((t) => ({ target: t.target, games: 0, risk: t.risk })), chanceFirst: true },
-  { name: "chance-first, results only", markets: ["result", "double_chance"], tiers: HUB_TIERS.map((t) => ({ target: t.target, games: 0, risk: t.risk })), chanceFirst: true },
+function grade(pk: Pick, r: Row): boolean | null {
+  const g = won(pk.market, r);
+  if (!g || g === "push") return null;
+  return g === "win";
+}
+
+function headline(all: Graded[]) {
+  // headlineEligible skips unders since 16 Oct 2026 (model/paused.ts); before
+  // the pause this replay gave 75.9% landed (74.0% stated, average 1.36) with
+  // unders, against the 75.4% (73.0%, 1.38) of the paused rule below.
+  console.log("\n5. PUBLISHED PICK WITH UNDERS PAUSED");
+  const rules: [string, PickRule][] = [
+    ["unders paused (live rule)", { noUnder: true }],
+    ["unders paused, handicap fallback", { noUnder: true, ah: true }],
+  ];
+  for (const [name, rule] of rules) {
+    const t = new Tally();
+    const fam = new Map<string, Tally>();
+    let none = 0, price = 0;
+    for (const g of all) {
+      const pk = choose(g.p, rule);
+      if (!pk) { none++; continue; }
+      const w = grade(pk, g.row);
+      if (w === null) continue;
+      t.add(w, pk.probability);
+      price += pk.fairOdds;
+      const k = family(pk.market);
+      (fam.get(k) ?? fam.set(k, new Tally()).get(k)!).add(w, pk.probability);
+    }
+    console.log("  " + t.line(name) + `  avg price ${(price / Math.max(1, t.n)).toFixed(2)}  no pick ${none}`);
+    if (rule.noUnder) for (const [k, v] of [...fam].sort()) if (v.n >= 30) console.log("      " + v.line(k, 30));
+  }
+  // Handicap lines on their own, for reference.
+  const ah = new Map<string, Tally>();
+  for (const g of all) for (const pk of g.p.picks) {
+    if (!isHalfAh(pk.market) || pk.probability < 0.5 || pk.probability > 0.85) continue;
+    const w = grade(pk, g.row);
+    if (w === null) continue;
+    const [, side, line] = pk.market.split(":");
+    const k = `ah ${side} ${Number(line) > 0 ? "+" : ""}${line} @ ${band(pk.probability)}`;
+    (ah.get(k) ?? ah.set(k, new Tally()).get(k)!).add(w, pk.probability);
+  }
+  console.log("\n  half-goal handicap lines rated 50-85% (every fixture)");
+  for (const [k, v] of [...ah].sort()) if (v.n >= 80) console.log("  " + v.line(k));
+}
+
+function digest2(all: Graded[]) {
+  console.log("\n6. WHATSAPP DIGEST VARIANTS (one pick per fixture; combos from each day's top 8)");
+  const byDay = new Map<number, Graded[]>();
+  for (const g of all) byDay.set(g.day, [...(byDay.get(g.day) ?? []), g]);
+  const rules: [string, PickRule][] = [
+    ["1.40 floor, no unders, handicap fallback", { floor: 1.4, noUnder: true, ah: true }],
+    ["1.30 floor, no unders, handicap fallback", { floor: 1.3, noUnder: true, ah: true }],
+    ["best read, no floor, no unders, handicap fallback", { noUnder: true, ah: true }],
+  ];
+  const comboSets: [string, number[], number][] = [
+    ["combos 2 / 5 / 10 (before)", [2, 5, 10], 12],
+    ["combos 2 / 3 / 5, max 6 legs (live)", [2, 3, 5], 6],
+  ];
+  for (const [name, rule] of rules) {
+    const t = new Tally();
+    let price = 0;
+    const perDay: { prob: number; conf: number; won: boolean }[][] = [];
+    for (const day of [...byDay.keys()].sort((a, b) => a - b)) {
+      const chosen: { prob: number; conf: number; won: boolean }[] = [];
+      for (const g of byDay.get(day)!) {
+        const pk = choose(g.p, rule);
+        if (!pk) continue;
+        const w = grade(pk, g.row);
+        if (w === null) continue;
+        chosen.push({ prob: pk.probability, conf: pk.confidence, won: w });
+      }
+      chosen.sort((a, b) => b.conf - a.conf);
+      const top = chosen.slice(0, 8);
+      for (const c of top) { t.add(c.won, c.prob); price += 1 / c.prob; }
+      perDay.push(top);
+    }
+    console.log(`\n  ${name}`);
+    console.log("    " + t.line("singles (top 8 a day)", 30) + `  avg fair price ${(price / Math.max(1, t.n)).toFixed(2)}`);
+    for (const [cname, targets, maxLegs] of comboSets) {
+      const res = targets.map(() => ({ built: 0, landed: 0, legs: 0, expected: 0 }));
+      for (const day of perDay) {
+        let lastKey = "";
+        targets.forEach((target, ti) => {
+          let legs: typeof day = [];
+          for (let n = 2; n <= Math.min(maxLegs, day.length); n++) {
+            const sub = day.slice(0, n);
+            legs = sub;
+            if (1 / sub.reduce((a, c) => a * c.prob, 1) >= target) break;
+          }
+          if (legs.length < 2 || 1 / legs.reduce((a, c) => a * c.prob, 1) < target * 0.9) return;
+          const key = String(legs.length);
+          if (key === lastKey) return;
+          lastKey = key;
+          const r = res[ti];
+          r.built++;
+          r.legs += legs.length;
+          r.expected += legs.reduce((a, c) => a * c.prob, 1);
+          if (legs.every((c) => c.won)) r.landed++;
+        });
+      }
+      console.log(`    ${cname}: ` + targets.map((tg, i) => {
+        const r = res[i];
+        return r.built ? `${tg}-odds landed ${((100 * r.landed) / r.built).toFixed(0)}% of ${r.built} (exp ${((100 * r.expected) / r.built).toFixed(0)}%, ${(r.legs / r.built).toFixed(1)} legs)` : `${tg}-odds —`;
+      }).join("  |  "));
+    }
+  }
+}
+
+/* --------------------------------------------------------------- code hub */
+
+interface HubVariant {
+  name: string;
+  allow: (market: string) => boolean;
+}
+
+const HUB_VARIANTS: HubVariant[] = [
+  { name: "v2 as built: result, double chance, over 1.5", allow: hubMarketAllowed },
+  { name: "v2 plus half-goal handicap", allow: withHandicap },
+  { name: "v2 result and double chance only", allow: (m) => m.startsWith("1x2") || m.startsWith("dc") },
 ];
 
-/** Strongest legs first, one per game, until the combined fair price reaches the target. */
-function chanceFirst(pool: PoolEntry[], target: number, avoid: Set<string>): (PoolEntry["candidates"][number] & { matchId: string })[] {
-  const best = pool
-    .map((e) => ({ e, c: [...e.candidates].filter((c) => c.fairOdds >= 1.12).sort((a, b) => b.probability - a.probability)[0] }))
-    .filter((x) => x.c)
-    .sort((a, b) => (avoid.has(a.e.prediction.match.id) ? 1 : 0) - (avoid.has(b.e.prediction.match.id) ? 1 : 0) || b.c.probability - a.c.probability);
-  const legs: (PoolEntry["candidates"][number] & { matchId: string })[] = [];
-  let odds = 1;
-  for (const x of best) {
-    if (odds >= target * 0.95) break;
-    legs.push({ ...x.c, matchId: x.e.prediction.match.id });
-    odds *= x.c.fairOdds;
+/** The first hub (16 Oct), for comparison: four markets, no floor, five tiers. */
+const V1_TIERS: { target: number; games: number; risk: ForgeRisk }[] = [
+  { target: 2, games: 2, risk: "safe" },
+  { target: 3, games: 3, risk: "safe" },
+  { target: 5, games: 4, risk: "balanced" },
+  { target: 10, games: 5, risk: "balanced" },
+  { target: 20, games: 6, risk: "risky" },
+];
+
+function gradeLegs(legs: { market: string; matchId: string; probability: number }[], rows: Map<string, Row>) {
+  let all = true, wins = 0;
+  for (const l of legs) {
+    const r = won(l.market, rows.get(l.matchId)!);
+    if (r === "win" || r === "push") wins++;
+    else all = false;
   }
-  return odds >= target * 0.95 ? legs : [];
+  return { all, wins };
 }
 
 function hub(all: Graded[]) {
   const byDay = new Map<number, Graded[]>();
   for (const g of all) byDay.set(g.day, [...(byDay.get(g.day) ?? []), g]);
   const days = [...byDay.keys()].sort((a, b) => a - b);
-
+  const rows = new Map(all.map((g) => [g.p.match.id, g.row]));
   console.log(`\n4. CODE HUB REPLAYED (${days.length} days with games, fair odds)`);
-  for (const v of VARIANTS) {
-    const stats = v.tiers.map(() => ({ built: 0, landed: 0, expected: 0, legs: 0, legProb: 0, legWins: 0, legN: 0 }));
-    let anyLanded = 0, builtDays = 0;
+
+  // v1 for reference.
+  {
+    const s = V1_TIERS.map(() => ({ built: 0, landed: 0, expected: 0 }));
+    let anyDays = 0, built = 0;
     for (const day of days) {
-      const games = byDay.get(day)!;
-      const rowById = new Map(games.map((g) => [g.p.match.id, g.row]));
-      const pool: PoolEntry[] = bookablePool(
-        games.map((g) => ({ prediction: g.p, candidates: candidatesFor(g.p, { markets: v.markets, picksPerGame: 1, allowHandicap: false }) })),
-      );
+      const pool: PoolEntry[] = byDay.get(day)!.map((g) => ({
+        prediction: g.p,
+        candidates: candidatesFor(g.p, { markets: ["result", "double_chance", "goals", "btts"], picksPerGame: 1, allowHandicap: false }).filter((c) => isQuotable(c.market) && !c.market.startsWith("ah:")),
+      })).filter((e) => e.candidates.length > 0);
       if (pool.length < 2) continue;
-      builtDays++;
+      built++;
       const used = new Set<string>();
-      let dayLanded = false;
-      v.tiers.forEach((t, ti) => {
-        let legs: { market: string; probability: number; fairOdds: number; matchId: string }[];
-        if (v.chanceFirst) {
-          legs = chanceFirst(pool, t.target, used);
-        } else {
-          const res = forge(pool, { risk: t.risk, targetOdds: t.target, games: t.games, picksPerGame: 1, markets: v.markets, when: "today", leagues: "all", stake: 1000 }, {
-            locked: [], removed: [], avoid: [...used], seed: daySeed(String(day)) + ti,
-          });
-          legs = res.legs.length >= t.games ? res.legs : [];
-        }
-        if (legs.length === 0) return;
-        for (const l of legs) used.add(l.matchId);
-        const s = stats[ti];
-        s.built++;
-        const prob = legs.reduce((a, l) => a * l.probability, 1);
-        s.expected += prob;
-        s.legs += legs.length;
-        let all = true;
-        for (const l of legs) {
-          const r = won(l.market, rowById.get(l.matchId)!);
-          const win = r === "win" || r === "push";
-          s.legN++;
-          s.legProb += l.probability;
-          if (win) s.legWins++;
-          else all = false;
-        }
-        if (all) {
-          s.landed++;
-          dayLanded = true;
-        }
+      let any = false;
+      V1_TIERS.forEach((t, ti) => {
+        const { legs } = forge(pool, { risk: t.risk, targetOdds: t.target, games: t.games, picksPerGame: 1, markets: ["result", "double_chance", "goals", "btts"], when: "today", leagues: "all", stake: 1000 }, { locked: [], removed: [], avoid: [...used], seed: daySeed(String(day)) + ti });
+        if (legs.length < t.games) return;
+        legs.forEach((l) => used.add(l.matchId));
+        s[ti].built++;
+        s[ti].expected += legs.reduce((a, l) => a * l.probability, 1);
+        if (gradeLegs(legs, rows).all) { s[ti].landed++; any = true; }
       });
-      if (dayLanded) anyLanded++;
+      if (any) anyDays++;
     }
-    console.log(`\n  ${v.name}: at least one code landed on ${((100 * anyLanded) / Math.max(1, builtDays)).toFixed(0)}% of ${builtDays} days`);
-    console.log("    target   built  landed  expected  avg legs  leg landed  leg stated");
-    v.tiers.forEach((t, ti) => {
-      const s = stats[ti];
-      if (!s.built) return;
+    console.log(`\n  v1 (16 Oct hub): at least one code landed on ${((100 * anyDays) / Math.max(1, built)).toFixed(0)}% of ${built} days`);
+    console.log("    " + V1_TIERS.map((t, i) => `${t.target}: ${s[i].built ? ((100 * s[i].landed) / s[i].built).toFixed(1) : "—"}% (exp ${s[i].built ? ((100 * s[i].expected) / s[i].built).toFixed(1) : "—"}%)`).join("   "));
+  }
+
+  for (const v of HUB_VARIANTS) {
+    const stats = new Map(HUB_TIERS.map((t) => [t.id, { built: 0, landed: 0, expected: 0, legs: 0, legN: 0, legWins: 0, legProb: 0, span: 0 }]));
+    const mix = new Map<string, number>();
+    let anyDays = 0, builtDays = 0, dailyAny = 0;
+    for (const day of days) {
+      const toPool = (gs: Graded[]): PoolEntry[] => gs.map((g) => ({
+        prediction: g.p,
+        candidates: candidatesFor(g.p, { markets: HUB_FORGE_MARKETS, picksPerGame: 1, allowHandicap: true }),
+      }));
+      const today = toPool(byDay.get(day)!);
+      const ahead = toPool(days.filter((d) => d >= day && d < day + 4 * DAY).flatMap((d) => byDay.get(d)!));
+      const codes = buildHub(today, String(day), ahead, v.allow);
+      // Days counted are days with at least one daily code, as for v1.
+      if (!codes.some((c) => hubTier(c.tier)!.days === 1)) continue;
+      builtDays++;
+      let any = false, anyDaily = false;
+      for (const c of codes) {
+        const s = stats.get(c.tier)!;
+        s.built++;
+        s.expected += c.legs.reduce((a, l) => a * l.probability, 1);
+        s.legs += c.legs.length;
+        const ks = c.legs.map((l) => Date.parse(l.kickoff));
+        s.span += (Math.max(...ks) - Math.min(...ks)) / DAY;
+        const g = gradeLegs(c.legs, rows);
+        s.legN += c.legs.length;
+        s.legWins += g.wins;
+        s.legProb += c.legs.reduce((a, l) => a + l.probability, 0);
+        for (const l of c.legs) {
+          const f = l.market.startsWith("ah:") ? "handicap" : l.market.startsWith("ou:") ? "over 1.5" : l.market.startsWith("dc") ? "double chance" : "match result";
+          mix.set(f, (mix.get(f) ?? 0) + 1);
+        }
+        if (g.all) {
+          s.landed++;
+          any = true;
+          if (hubTier(c.tier)!.days === 1) anyDaily = true;
+        }
+      }
+      if (any) anyDays++;
+      if (anyDaily) dailyAny++;
+    }
+    const totalLegs = [...mix.values()].reduce((a, b) => a + b, 0);
+    console.log(`\n  ${v.name}`);
+    console.log(`    at least one daily code (2-20) landed on ${((100 * dailyAny) / Math.max(1, builtDays)).toFixed(0)}% of ${builtDays} days; any code incl. 50/100 on ${((100 * anyDays) / Math.max(1, builtDays)).toFixed(0)}%`);
+    console.log(`    legs: ${[...mix].map(([k, n]) => `${k} ${((100 * n) / totalLegs).toFixed(0)}%`).join(", ")}`);
+    console.log("    target   built  landed  expected  avg legs  leg landed  leg stated  span (days)");
+    for (const t of HUB_TIERS) {
+      const s = stats.get(t.id)!;
+      if (!s.built) continue;
       console.log(
-        `    ${String(t.target).padStart(5)}   ${String(s.built).padStart(5)}  ${((100 * s.landed) / s.built).toFixed(1).padStart(5)}%   ${((100 * s.expected) / s.built).toFixed(1).padStart(5)}%    ${(s.legs / s.built).toFixed(1).padStart(4)}      ${((100 * s.legWins) / s.legN).toFixed(1).padStart(5)}%     ${((100 * s.legProb) / s.legN).toFixed(1).padStart(5)}%`,
+        `    ${t.id.padStart(5)}   ${String(s.built).padStart(5)}  ${((100 * s.landed) / s.built).toFixed(1).padStart(5)}%   ${((100 * s.expected) / s.built).toFixed(1).padStart(5)}%    ${(s.legs / s.built).toFixed(1).padStart(4)}      ${((100 * s.legWins) / s.legN).toFixed(1).padStart(5)}%     ${((100 * s.legProb) / s.legN).toFixed(1).padStart(5)}%      ${(s.span / s.built).toFixed(1)}`,
       );
-    });
+    }
   }
 }
 
 async function main() {
   const days = Number(arg("days") ?? 365);
   const only = arg("only")?.split(",");
+  const round = arg("round") ?? "2";
   const all: Graded[] = [];
   for (const d of DIVS.filter((x) => !only || only.includes(x.div))) {
     process.stderr.write(`${d.div}… `);
     all.push(...walk(d, await load(d.div), days));
   }
   process.stderr.write(`\n${all.length} publishable fixtures\n`);
-  calibration(all);
-  overUnder(all);
-  digest(all);
+  if (round === "1") {
+    calibration(all);
+    overUnder(all);
+    digest(all);
+  }
   hub(all);
+  headline(all);
+  digest2(all);
 }
 
 main().catch((e) => {

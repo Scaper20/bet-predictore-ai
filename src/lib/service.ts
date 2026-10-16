@@ -12,7 +12,8 @@ import {
   providerHealth, hasFullCoverage,
 } from "@/lib/providers";
 import { cached } from "@/lib/providers/cache";
-import { buildPrediction, type ModelOptions, type Prediction } from "@/lib/model/predict";
+import { buildPrediction, HEADLINE_EXCLUDED, type ModelOptions, type Prediction } from "@/lib/model/predict";
+import { clubKeys, hostGuard, TOP_FIVE_LEAGUES, UEFA_CUP_CODES } from "@/lib/cup-guard";
 import { after } from "next/server";
 import { archivedResults, storeResults } from "@/lib/archive/history-store";
 import { leagueClubTies } from "@/lib/archive/cup-ties";
@@ -79,7 +80,14 @@ export interface MatchDetail {
  * live path stays as the fallback for competitions not yet backfilled, and for
  * any deployment with no Supabase configured at all.
  */
-type Training = { rows: ResultRow[]; leagueName: string; curated: boolean; book?: NameBook };
+type Training = {
+  rows: ResultRow[];
+  leagueName: string;
+  curated: boolean;
+  book?: NameBook;
+  /** UEFA cups only: clubs in the five biggest leagues, for the host guard (lib/cup-guard.ts). */
+  topFive?: ReadonlySet<string>;
+};
 
 /**
  * Training rows per competition, cached for half an hour. Assembling them
@@ -89,7 +97,19 @@ type Training = { rows: ResultRow[]; leagueName: string; curated: boolean; book?
 async function trainingRows(match: Match): Promise<Training> {
   const code = match.league.code;
   if (!code) return getTrainingResults(match);
-  return cached(`training:${code}`, 30 * 60_000, () => assembleTraining(match, code));
+  const training = await cached(`training:${code}`, 30 * 60_000, () => assembleTraining(match, code));
+  if (!(UEFA_CUP_CODES as readonly string[]).includes(code)) return training;
+  const topFive = await topFiveClubs().catch(() => undefined);
+  return topFive ? { ...training, topFive } : training;
+}
+
+/** Every club in the last 400 days of the five biggest leagues, shared for 12 hours. */
+function topFiveClubs(): Promise<ReadonlySet<string>> {
+  return cached("cup-guard:top-five", 12 * 3600_000, async () => {
+    const from = Date.now() - 400 * 86_400_000;
+    const parts = await Promise.all(TOP_FIVE_LEAGUES.map((c) => archivedResults(c).catch(() => [] as ResultRow[])));
+    return clubKeys(parts.flat().filter((r) => r.date >= from));
+  });
 }
 
 async function assembleTraining(match: Match, code: string): Promise<Training> {
@@ -142,12 +162,24 @@ async function assembleTraining(match: Match, code: string): Promise<Training> {
  * its own way ("Norwich City FC" for "Norwich") has to be looked up the same
  * way, or the model finds no history for a club with years of it.
  */
-function modelOptions(match: Match, training: { rows: ResultRow[]; book?: NameBook }): ModelOptions {
+function modelOptions(match: Match, training: { rows: ResultRow[]; book?: NameBook; topFive?: ReadonlySet<string> }): ModelOptions {
   const prefit = sharedFit(match, training.rows);
   const book = training.book;
-  if (!book || book.canonical.size === 0) return { prefit };
-  const name = (n: string) => book.canonical.get(looseKey(n)) ?? n;
-  return { prefit, ratingNames: { home: name(match.home.name), away: name(match.away.name) } };
+  const ratingNames = book && book.canonical.size > 0
+    ? { home: book.canonical.get(looseKey(match.home.name)) ?? match.home.name, away: book.canonical.get(looseKey(match.away.name)) ?? match.away.name }
+    : undefined;
+  // UEFA cups: no pick on the host's side against a bigger-league visitor.
+  const barred = hostGuard(
+    match.league.code,
+    [match.home.name, ratingNames?.home ?? match.home.name],
+    [match.away.name, ratingNames?.away ?? match.away.name],
+    training.topFive,
+  );
+  return {
+    prefit,
+    ...(ratingNames ? { ratingNames } : {}),
+    ...(barred.length ? { excludeHeadline: [...HEADLINE_EXCLUDED, ...barred] } : {}),
+  };
 }
 
 /**

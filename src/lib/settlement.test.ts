@@ -51,8 +51,14 @@ describe("evaluatePick", () => {
     expect(evaluatePick("cs:2-1", 1, 2)).toBe("lose");
   });
 
-  it("returns null for markets it does not grade, e.g. Asian Handicap", () => {
-    expect(evaluatePick("ah:home:-1", 2, 1)).toBeNull();
+  it("grades Asian handicap lines, a whole-line tie as a push", () => {
+    expect(evaluatePick("ah:home:-1.5", 2, 0)).toBe("win");
+    expect(evaluatePick("ah:home:-1.5", 2, 1)).toBe("lose");
+    expect(evaluatePick("ah:away:1.5", 2, 1)).toBe("win");
+    expect(evaluatePick("ah:home:-1", 2, 1)).toBe("push");
+  });
+
+  it("returns null for markets it does not grade", () => {
     expect(evaluatePick("something:unknown", 2, 1)).toBeNull();
   });
 });

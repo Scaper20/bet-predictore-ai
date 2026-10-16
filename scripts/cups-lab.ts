@@ -19,7 +19,7 @@
  *   set -a; . ./.env.local; set +a; npx tsx scripts/cups-lab.ts
  */
 
-import { buildPrediction, type Prediction } from "../src/lib/model/predict";
+import { buildPrediction, headlineEligible, type Pick, type Prediction } from "../src/lib/model/predict";
 import { fitLeague, normaliseKey } from "../src/lib/model/fit";
 import { evaluatePick } from "../src/lib/settlement";
 import type { Match, ResultRow } from "../src/lib/types";
@@ -143,6 +143,44 @@ class Score {
   }
 }
 
+const isUnder = (m: string) => m.startsWith("ou:under");
+const isHalfAh = (m: string) => m.startsWith("ah:") && Math.abs((Number(m.split(":")[2]) * 2) % 2) === 1;
+/** A pick that needs the host to avoid defeat or win. */
+const hostSide = (m: string) => m === "1x2:home" || m === "dc:home-draw" || m.startsWith("ah:home:");
+
+function choose(p: Prediction, o: { noUnder?: boolean; guard?: boolean; ah?: boolean }, guarded: boolean): Pick | null {
+  const ok = (x: Pick) => x.probability >= 0.4 && !(o.noUnder && isUnder(x.market)) && !(o.guard && guarded && hostSide(x.market));
+  const main = p.picks.find((x) => headlineEligible(x) && ok(x));
+  if (main || !o.ah) return main ?? null;
+  return p.picks.filter((x) => isHalfAh(x.market) && x.probability >= 0.6 && x.probability <= 0.8 && ok(x)).sort((a, b) => b.probability - a.probability)[0] ?? null;
+}
+
+/** The published pick under each rule, on the production cup model (A). */
+function pickRules(rows: { p: Prediction; row: ResultRow; ht: boolean; at: boolean }[]) {
+  const rules: [string, { noUnder?: boolean; guard?: boolean; ah?: boolean }][] = [
+    ["today", {}],
+    ["unders paused", { noUnder: true }],
+    ["unders paused + host guard", { noUnder: true, guard: true }],
+    ["unders paused + host guard + handicap fallback", { noUnder: true, guard: true, ah: true }],
+  ];
+  console.log("\nPublished pick rules on the production cup model (A):");
+  for (const [name, o] of rules) {
+    let n = 0, w = 0, gn = 0, gw = 0, none = 0;
+    for (const x of rows) {
+      if (!x.p.sufficiency.publishable) continue;
+      const guarded = !x.ht && x.at;
+      const pk = choose(x.p, o, guarded);
+      if (!pk) { none++; continue; }
+      const g = evaluatePick(pk.market, x.row.homeGoals, x.row.awayGoals);
+      if (!g || g === "push") continue;
+      n++; if (g === "win") w++;
+      if (guarded) { gn++; if (g === "win") gw++; }
+    }
+    const pc = (a: number, b: number) => (b ? `${((100 * a) / b).toFixed(1)}%` : "—");
+    console.log(`  ${name.padEnd(48)} landed ${pc(w, n)} of ${n}   in guarded games ${pc(gw, gn)} of ${gn}   no pick ${none}`);
+  }
+}
+
 async function main() {
   const days = Number(arg("days") ?? 365);
   const since = new Date(Date.now() - (days + 760) * DAY).toISOString();
@@ -171,6 +209,7 @@ async function main() {
   const fitsA = new Map<number, ReturnType<typeof fitLeague>>();
   const fitsB = new Map<number, ReturnType<typeof fitLeague>>();
   const showcase: string[] = [];
+  const kept: { p: Prediction; row: ResultRow; ht: boolean; at: boolean }[] = [];
   const WATCH = /salzburg|lech|viking|sabah|inter milan|club brugge|bod/i;
 
   for (const t of targets) {
@@ -190,6 +229,7 @@ async function main() {
     const pc = buildPrediction(m, pooled, [], { prefit: fc });
     const ht = top5.has(t.row.homeName), at = top5.has(t.row.awayName);
     A.add(pa, t.row, ht, at);
+    kept.push({ p: pa, row: t.row, ht, at });
     B.add(pb, t.row, ht, at);
     C.add(pc, t.row, ht, at);
     if (WATCH.test(`${t.row.homeName} ${t.row.awayName}`) && t.row.date > end - 30 * DAY) {
@@ -201,6 +241,7 @@ async function main() {
   A.print("A  PRODUCTION: rated on the UEFA cups only");
   B.print("B  POOLED: UEFA cups plus the catalogued European leagues");
   C.print("C  POOLED RATINGS, CUP HOME ADVANTAGE AND SCORING LEVEL");
+  pickRules(kept);
   if (showcase.length) {
     console.log("\nRecent games (home/draw/away %):");
     console.log(showcase.join("\n"));

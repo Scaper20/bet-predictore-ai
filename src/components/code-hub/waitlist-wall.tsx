@@ -12,9 +12,9 @@ export function WaitlistWall({ email, joined }: { email: string | null; joined: 
           Ready-made combos, with the code to load them
         </h2>
         <p className="mt-4 text-sm leading-relaxed text-ink-muted sm:text-base">
-          Every morning the model builds five combos, from about 2 to 20 odds. Each one comes with a SportyBet booking
-          code and the model&apos;s honest chance of it landing. Every code stays on the page afterwards with its
-          result.
+          Every morning the model builds codes from 2 to 100 odds: five from the day&apos;s games and two that run up
+          to four days. Each one comes with a SportyBet booking code and the model&apos;s honest chance of it landing.
+          Every code stays on the page afterwards with its result.
         </p>
         <ul className="mt-5 space-y-2 text-sm text-ink-muted">
           <li>• One 2-odds code a day free; every code with Pro</li>
@@ -31,13 +31,13 @@ export function WaitlistWall({ email, joined }: { email: string | null; joined: 
       </div>
 
       <div className="relative" aria-hidden>
-        {/* Right padding holds the staircase: each card steps 6px right. */}
+        {/* Right padding holds the staircase: each card steps 4px right. */}
         <div className="space-y-3 pr-6">
           {HUB_TIERS.map((t, i) => (
             <div
               key={t.id}
               className="card flex items-center justify-between px-5 py-4"
-              style={{ opacity: 1 - i * 0.14, transform: `translateX(${i * 6}px)` }}
+              style={{ opacity: 1 - i * 0.1, transform: `translateX(${i * 4}px)` }}
             >
               <div>
                 <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-brand">{t.name}</p>

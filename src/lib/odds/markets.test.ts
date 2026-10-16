@@ -25,11 +25,18 @@ describe("toSportyBet", () => {
     });
   });
 
+  it("maps Asian handicap to Betradar market 16 with the home line", () => {
+    expect(toSportyBet("ah:home:-1.5")).toEqual({ marketId: "16", outcomeId: "1714", specifier: "hcp=-1.5" });
+    expect(toSportyBet("ah:away:1.5")).toEqual({ marketId: "16", outcomeId: "1715", specifier: "hcp=-1.5" });
+    expect(toSportyBet("ah:away:-0.5")).toEqual({ marketId: "16", outcomeId: "1715", specifier: "hcp=0.5" });
+  });
+
   it("refuses a market it cannot address confidently", () => {
     // Correct score exists on SportyBet but its per-scoreline outcome ids were
     // never verified, and a guess would price the wrong scoreline.
     expect(toSportyBet("cs:2-1")).toBeNull();
-    expect(toSportyBet("ah:home:-1.5")).toBeNull();
+    expect(toSportyBet("ah:middle:-1.5")).toBeNull();
+    expect(toSportyBet("ah:home:x")).toBeNull();
     expect(toSportyBet("1x2:nonsense")).toBeNull();
     expect(toSportyBet("ou:over:")).toBeNull();
     expect(toSportyBet("ou:sideways:2.5")).toBeNull();

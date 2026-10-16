@@ -9,16 +9,15 @@ import { isStrong } from "@/lib/model/tiers";
 /**
  * The shortest price a digest single may carry.
  *
- * The site's headline pick is tuned to land as often as possible and
- * averages 1.32; posted to a betting community that reads as not worth the
- * stake. Walk-forward over two seasons of the top five leagues, the best pick
- * at fair odds of 1.40 or longer landed 63-64% of the time at an average of
- * 1.55. Raising the floor further buys price with win rate and no extra
- * return: at bookmaker prices every floor tested (1.40-1.60) lost a few
- * percent to the margin, so this is about picks worth posting, not a promise
- * of profit — and the message never claims "value".
+ * Was 1.40, which meant 77% of digest picks were a fixture's second or third
+ * choice, reached for because the top read was shorter (replay,
+ * scripts/decision-lab.ts). Live, those landed 65% and the goals ones 50%.
+ * Replayed over 12 months, each day's top eight at 1.40 or longer landed
+ * 71.0% at an average 1.50; at 1.30 or longer, 76.8% at 1.36, close to the
+ * best read with no floor at all (77.6% at 1.32). The floor still keeps the
+ * near-certainties (over 0.5 goals and the like) out.
  */
-export const DIGEST_MIN_ODDS = 1.4;
+export const DIGEST_MIN_ODDS = 1.3;
 /** Below this the selection is a long shot, not a pick. */
 const DIGEST_MIN_PROBABILITY = 0.4;
 export const DIGEST_MAX_SINGLES = 8;
@@ -45,11 +44,21 @@ export function digestEligible(p: Prediction): boolean {
  * already ordered by that rule, so this is the first one past the floor.
  */
 export function digestPick(p: Prediction): Pick | null {
-  return (
-    p.picks.find(
-      (x) => headlineEligible(x) && x.fairOdds >= DIGEST_MIN_ODDS && x.probability >= DIGEST_MIN_PROBABILITY,
-    ) ?? null
+  const main = p.picks.find(
+    (x) => headlineEligible(x) && x.fairOdds >= DIGEST_MIN_ODDS && x.probability >= DIGEST_MIN_PROBABILITY,
   );
+  if (main) return main;
+  // Nothing else fits: a half-goal Asian handicap line the model rates 60-80%.
+  return (
+    p.picks
+      .filter((x) => isHalfGoalHandicap(x.market) && x.probability >= 0.6 && x.probability <= 0.8 && x.fairOdds >= DIGEST_MIN_ODDS)
+      .sort((a, b) => b.probability - a.probability)[0] ?? null
+  );
+}
+
+function isHalfGoalHandicap(market: string): boolean {
+  const [family, , line] = market.split(":");
+  return family === "ah" && Math.abs((Number(line) * 2) % 2) === 1;
 }
 
 /** The price to quote: the local market's where we have it, otherwise our fair price. */
@@ -93,11 +102,18 @@ export interface DigestAcca {
   combinedBookPrice: number | null;
 }
 
+/**
+ * Combos at 2, 3 and 5 odds, never more than six legs. Were 2, 5 and 10:
+ * live, the 5- and 10-odds combos (up to seven legs) landed 1 of 22 times,
+ * as their odds said they would, which reads as losing every day in a group.
+ * Replayed, the 3- and 5-odds combos landed 36% and 27% of days.
+ */
 const TIERS: { tier: DigestAcca["tier"]; label: string; targetOdds: number }[] = [
   { tier: "safe", label: "Safe", targetOdds: 2 },
-  { tier: "balanced", label: "Balanced", targetOdds: 5 },
-  { tier: "risky", label: "Risky", targetOdds: 10 },
+  { tier: "balanced", label: "Balanced", targetOdds: 3 },
+  { tier: "risky", label: "Risky", targetOdds: 5 },
 ];
+export const DIGEST_COMBO_MAX_LEGS = 6;
 
 /**
  * Walks the day's picks, highest-confidence first, adding one leg at a time
@@ -118,13 +134,17 @@ export function buildAccaTiers(picks: PersonalizedPick[]): DigestAcca[] {
 
   for (const { tier, label, targetOdds } of TIERS) {
     let legs = sorted.slice(0, Math.min(2, sorted.length));
-    for (let n = 2; n <= sorted.length; n++) {
+    let reached = false;
+    for (let n = 2; n <= Math.min(sorted.length, DIGEST_COMBO_MAX_LEGS); n++) {
       const subset = sorted.slice(0, n);
       const combinedProbability = subset.reduce((acc, p) => acc * p.probability, 1);
       legs = subset;
-      if (combinedProbability > 0 && 1 / combinedProbability >= targetOdds) break;
+      if (combinedProbability > 0 && 1 / combinedProbability >= targetOdds) {
+        reached = true;
+        break;
+      }
     }
-    if (legs.length < 2) continue;
+    if (legs.length < 2 || !reached) continue;
 
     const key = legs.map((l) => l.id).join(",");
     if (key === lastKey) continue;
@@ -202,7 +222,7 @@ export function formatAccaMessage(acca: DigestAcca): string {
 
 export const NO_PICK_MESSAGE = [
   "*KiqStat — Today's Picks*",
-  "Nothing in the next 24 hours clears our bar — enough history, a price of 1.40 or longer. We'd rather send nothing than guess.",
+  `Nothing in the next 24 hours clears our bar — enough history, a price of ${odds(DIGEST_MIN_ODDS)} or longer. We'd rather send nothing than guess.`,
   `Live scores anyway → ${SITE_URL}`,
 ].join("\n\n");
 

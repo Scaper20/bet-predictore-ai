@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Badge, type Tone } from "@/components/ui/primitives";
 import { LocalTime } from "@/components/ui/local-time";
 import { CodeBox } from "@/components/code-hub/code-box";
-import { odds, percent } from "@/lib/format";
+import { APP_TIMEZONE, odds, percent } from "@/lib/format";
 import { oneIn } from "@/lib/forge";
 import {
   hubLegOdds,
@@ -43,6 +43,12 @@ const RESULT_DOT: Record<HubLegResult, string> = {
   pending: "bg-line-strong",
 };
 
+/** "3 days": calendar days (Lagos) a code's games fall on. */
+function daySpan(legs: HubLeg[]): string {
+  const days = new Set(legs.map((l) => new Date(l.kickoff).toLocaleDateString("en-CA", { timeZone: APP_TIMEZONE })));
+  return days.size === 1 ? "1 day" : `${days.size} days`;
+}
+
 export function HubCard(props: HubCardProps) {
   const tier = hubTier(props.tier)!;
   const status = STATUS[props.status];
@@ -63,7 +69,8 @@ export function HubCard(props: HubCardProps) {
 
       <div className="flex flex-wrap items-center gap-2 px-5 pt-4 text-xs text-ink-muted">
         <span>
-          {props.legs.length} games · model chance <strong className="text-ink">{percent(props.probability)}</strong>{" "}
+          {props.legs.length} games{tier.days > 1 && <> over {daySpan(props.legs)}</>} · model chance{" "}
+          <strong className="text-ink">{percent(props.probability)}</strong>{" "}
           <span className="text-ink-dim">({oneIn(props.probability)})</span>
         </span>
         {status && <Badge tone={status.tone}>{status.text}</Badge>}
@@ -78,7 +85,7 @@ export function HubCard(props: HubCardProps) {
                 <p className="truncate text-sm font-semibold text-ink">{locked ? "Hidden pick" : leg.label}</p>
                 <p className="truncate text-xs text-ink-dim">
                   {locked ? "Home v Away" : `${leg.homeName} v ${leg.awayName}`} ·{" "}
-                  <LocalTime iso={leg.kickoff} kind="time" />
+                  <LocalTime iso={leg.kickoff} kind={tier.days > 1 ? "dayTime" : "time"} />
                 </p>
               </div>
               <span className="shrink-0 font-mono text-sm text-ink-muted">{locked ? "1.00" : odds(hubLegOdds(leg))}</span>

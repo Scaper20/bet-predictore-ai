@@ -59,18 +59,6 @@ export type SlipStatus = "pending" | "live" | "won" | "lost" | "void";
  * Quarter lines split the stake across the two neighbouring half-lines; a
  * half that pushes leaves the other half to decide.
  */
-function gradeHandicap(side: "home" | "away", line: number, home: number, away: number): PickResult {
-  const quarter = Math.abs((line * 4) % 2) === 1;
-  if (quarter) {
-    const a = gradeHandicap(side, line - 0.25, home, away);
-    const b = gradeHandicap(side, line + 0.25, home, away);
-    if (a === b) return a;
-    return a === "push" ? b : b === "push" ? a : "push";
-  }
-  const margin = (side === "home" ? home - away : away - home) + line;
-  return margin > 0 ? "win" : margin < 0 ? "lose" : "push";
-}
-
 /** Grades a market against a score — final, or the current one for a live game. */
 /** Same-game combos from Forge are stored as "combo:<market>+<market>…". */
 export const COMBO_PREFIX = "combo:";
@@ -86,8 +74,6 @@ export function gradeMarket(market: string, home: number, away: number): PickRes
     if (grades.includes("lose")) return "lose";
     return grades.includes("win") ? "win" : "push";
   }
-  const ah = market.match(/^ah:(home|away):(-?\d+(?:\.\d+)?)$/);
-  if (ah) return gradeHandicap(ah[1] as "home" | "away", Number(ah[2]), home, away);
   return evaluatePick(market, home, away);
 }
 

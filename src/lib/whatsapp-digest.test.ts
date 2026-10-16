@@ -46,7 +46,7 @@ describe("buildAccaTiers", () => {
     expect(legCounts[1]).toBeLessThan(legCounts[2]);
     for (const t of tiers) {
       expect(t.combinedFairOdds).toBeGreaterThanOrEqual(
-        { safe: 2, balanced: 5, risky: 10 }[t.tier],
+        { safe: 2, balanced: 3, risky: 5 }[t.tier],
       );
     }
   });
@@ -89,7 +89,7 @@ describe("buildAccaTiers", () => {
   });
 
   it("omits a tier it cannot reach even using every available leg", () => {
-    // Two picks at long odds already clear "risky" (10x) together, but there
+    // Two picks at long odds already clear "risky" (5x) together, but there
     // are no more legs to build anything beyond that single combo with.
     const picks = [
       pick({ id: "a", probability: 0.25, confidence: 60 }),
@@ -122,6 +122,22 @@ describe("digest selection", () => {
 
   it("never reaches for a market the headline rule excludes", () => {
     expect(digestPick(prediction({ picks: [mk("dc:home-draw", 0.8), mk("btts:yes", 0.6)] }))).toBeNull();
+  });
+
+  it("skips unders, which are paused as picks", () => {
+    expect(digestPick(prediction({ picks: [mk("ou:under:2.5", 0.62), mk("1x2:home", 0.55)] }))?.market).toBe("1x2:home");
+  });
+
+  it("falls back to a half-goal handicap line when nothing else fits", () => {
+    expect(digestPick(prediction({ picks: [mk("dc:home-draw", 0.82), mk("ah:away:1.5", 0.7), mk("ah:home:-1", 0.6)] }))?.market).toBe("ah:away:1.5");
+  });
+
+  it("caps a combo at six legs and leaves out a tier it cannot reach", () => {
+    const picks = Array.from({ length: 9 }, (_, i) => pick({ id: `s${i}`, probability: 0.8, confidence: 90 - i }));
+    // 0.8^6 = 0.26 -> 3.8 odds: safe and balanced fit in six legs, 5-odds does not.
+    const tiers = buildAccaTiers(picks);
+    expect(tiers.map((t) => t.tier)).toEqual(["safe", "balanced"]);
+    expect(Math.max(...tiers.map((t) => t.legs.length))).toBeLessThanOrEqual(6);
   });
 
   it("keeps youth and reserve football out of the community", () => {

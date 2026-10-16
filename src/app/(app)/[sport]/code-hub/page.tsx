@@ -27,7 +27,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/football/code-hub" },
   title: "Code Hub: Today's Ready-Made Combos",
   description:
-    "Five combos a day from the KiqStat model, from about 2 to 20 odds, each with a SportyBet booking code and the model's chance of it landing.",
+    "Ready-made codes every day from the KiqStat model, from 2 to 100 odds, each with a SportyBet booking code and the model's chance of it landing.",
 };
 
 // Per viewer: which codes are open depends on the plan.
@@ -63,7 +63,7 @@ export default async function CodeHubPage() {
       <PageHeader
         eyebrow="Code Hub"
         title="Today's codes"
-        description="Ready-made combos from the model, about 2 to 20 odds, each with a SportyBet code."
+        description="Ready-made codes from 2 to 100 odds, each with a SportyBet code."
         actions={
           !open ? (
             <Badge tone="amber">Admin view: visitors see the waitlist</Badge>
