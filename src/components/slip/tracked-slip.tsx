@@ -440,7 +440,7 @@ export function TrackedSlipRow({ view, onOpen, onShare }: { view: SlipView; onOp
       </div>
 
       <ul className="mt-3 space-y-2">
-        {view.legs.slice(0, 3).map(({ leg, state }) => (
+        {view.legs.map(({ leg, state }) => (
           <li key={leg.matchId} className="flex min-w-0 items-start gap-2">
             <span className={`mt-1.5 size-1.5 shrink-0 rounded-full ${SEGMENT[legTone(state)]}`} aria-hidden />
             {/* Fixture over pick, each on its own line: side by side, two long
@@ -457,7 +457,6 @@ export function TrackedSlipRow({ view, onOpen, onShare }: { view: SlipView; onOp
             </span>
           </li>
         ))}
-        {n > 3 && <li className="pl-3.5 text-xs text-ink-dim">+{n - 3} more</li>}
       </ul>
 
       <div className="mt-4">
