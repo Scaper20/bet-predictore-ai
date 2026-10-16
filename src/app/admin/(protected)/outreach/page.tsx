@@ -32,6 +32,12 @@ const CAMPAIGNS: { type: CampaignType; label: string; description: string }[] = 
     label: "BetriX is now KiqStat",
     description: "One-off note to everyone: the new name and address, nothing else changes, and why we renamed.",
   },
+  {
+    type: "checkout_reminder",
+    label: "Unfinished checkout",
+    description:
+      "For people who opened checkout and never paid: what their plan unlocks, the latest winning picks, and a link back. Skips anyone reminded in the last 30 days. Queue again any time to pick up new people.",
+  },
 ];
 
 export default async function AdminOutreachPage() {

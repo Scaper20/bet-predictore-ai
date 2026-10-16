@@ -57,7 +57,7 @@ export function codeHubWaitlistEmail(): { subject: string; html: string } {
  * (lib/checkout-recovery.ts). No discount: the plan is the plan. It names
  * what they were buying, says no money was taken, and offers the way back.
  */
-export function unfinishedCheckoutEmail(opts: { tier: "pro" | "vip"; nigeria: boolean }): {
+export function unfinishedCheckoutEmail(opts: { tier: "pro" | "vip"; nigeria: boolean; unsubscribeUrl?: string }): {
   subject: string;
   html: string;
 } {
@@ -83,12 +83,19 @@ export function unfinishedCheckoutEmail(opts: { tier: "pro" | "vip"; nigeria: bo
       <p style="margin:0;">You started upgrading to KiqStat ${name} but the payment wasn't finished, so no money was
       taken. Your place is still there. Here's what ${name} unlocks:</p>
       <ul style="margin:12px 0 0;padding-left:20px;">${perks.map((p) => `<li style="margin:4px 0;">${p}</li>`).join("")}</ul>
+      <p style="margin:20px 0 8px;font-weight:700;">What the model got right lately</p>
+      <a href="${SITE_URL}${sportPath("trackRecord")}" style="text-decoration:none;">
+        <img src="${SITE_URL}/api/og/recent-wins" width="496" alt="KiqStat's most recent winning picks" style="display:block;width:100%;max-width:496px;height:auto;border:0;border-radius:10px;">
+      </a>
+      <p style="margin:8px 0 0;font-size:12px;color:#6b7670;">Winning picks only. Every pick, won or lost, is on the
+      <a href="${SITE_URL}${sportPath("trackRecord")}" style="color:#4f6b00;">track record</a>.</p>
       ${button(`${SITE_URL}/account/billing?plan=${opts.tier}`, `Finish upgrading to ${name}`)}
       <p style="margin:20px 0 0;font-size:13px;color:#6b7670;">${
         opts.nigeria
           ? "Card declined? Some banks block online payments until you allow them in your banking app, or you can try another card."
           : "Mobile money and cards both work on the payment page."
       } If something went wrong at checkout, message us from the Help page and we'll sort it out.</p>
+      ${opts.unsubscribeUrl ? unsubscribeFooter(opts.unsubscribeUrl) : ""}
     `),
   };
 }
