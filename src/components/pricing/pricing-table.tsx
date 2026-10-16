@@ -71,7 +71,7 @@ export function PricingTable({
             } ${current ? "border-brand/40" : ""}`}
           >
             {(plan.badge || current) && (
-              <Badge tone={current ? "neutral" : "brand"} className="absolute -top-3 left-5 sm:left-7">
+              <Badge tone={current ? "neutral" : "brand"} className="absolute top-0 left-5 -translate-y-1/2 sm:left-7">
                 {current ? "Your plan" : plan.badge}
               </Badge>
             )}

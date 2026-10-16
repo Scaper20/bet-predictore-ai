@@ -42,61 +42,86 @@ export function LeaguePerformance({
     return b.record.sample - a.record.sample;
   });
 
+  const rated = ordered.filter((r) => isPublishable(r.record));
+  const best = rated[0];
+
+  // Folded by default: a long grid of thin rows pushed the rest of the page a
+  // screen down. <details> rather than state, so it stays a Server Component
+  // and opens with no JavaScript.
   return (
-    <section className="space-y-4">
-      <div className="border-b border-line pb-3">
-        <h2 className="font-display text-xl font-bold tracking-tight">By competition</h2>
-        <p className="mt-1 text-xs text-ink-muted">
-          Where the settled picks came from. No rate is shown until a competition has{" "}
-          {MIN_PUBLISHABLE_SAMPLE} graded picks of its own.
-        </p>
-      </div>
+    <details className="group">
+      <summary className="flex cursor-pointer list-none items-start justify-between gap-4 border-b border-line pb-3 [&::-webkit-details-marker]:hidden">
+        <div className="min-w-0">
+          <h2 className="font-display text-xl font-bold tracking-tight">By competition</h2>
+          <p className="mt-1 text-xs text-ink-muted">
+            {ordered.length} {ordered.length === 1 ? "competition" : "competitions"}
+            {best && (
+              <>
+                {" "}· best: {leagueByCode(best.code)?.shortName ?? best.code}{" "}
+                <span className="tnum font-mono text-ink">{percent(best.record.winRate ?? 0)}</span>
+              </>
+            )}
+            <span className="hidden group-open:inline">
+              {" "}· no rate until a competition has {MIN_PUBLISHABLE_SAMPLE} graded picks of its own.
+            </span>
+          </p>
+        </div>
+        <span className="mt-1 inline-flex shrink-0 items-center gap-1.5 rounded-full border border-line px-3 py-1.5 text-xs font-semibold text-ink-muted transition-colors group-hover:text-ink">
+          <span className="group-open:hidden">Show all</span>
+          <span className="hidden group-open:inline">Hide</span>
+          <svg viewBox="0 0 20 20" className="size-3.5 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+            <path d="M5 8l5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </span>
+      </summary>
 
-      <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-        {ordered.map(({ code, record }) => {
-          const league = leagueByCode(code);
-          const publishable = isPublishable(record);
-          return (
-            <li
-              key={code}
-              className="card flex items-center justify-between gap-3 px-4 py-3"
-            >
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-ink">
-                  {league?.flag && (
-                    <span className="mr-1.5" aria-hidden>
-                      {league.flag}
-                    </span>
-                  )}
-                  {league?.shortName ?? code}
-                </p>
-                <p className="tnum mt-0.5 text-xs text-ink-muted">
-                  {record.wins}–{record.losses}
-                  {record.pushes > 0 && <span>–{record.pushes}</span>}{" "}
-                  <span>from {record.sample} graded</span>
-                </p>
-              </div>
-
-              <span
-                className={`tnum shrink-0 font-mono text-base font-extrabold ${
-                  publishable ? "text-ink" : "text-ink-dim"
-                }`}
+      <div className="mt-4 space-y-4">
+        <ul className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+          {ordered.map(({ code, record }) => {
+            const league = leagueByCode(code);
+            const publishable = isPublishable(record);
+            return (
+              <li
+                key={code}
+                className="card flex items-center justify-between gap-3 px-4 py-3"
               >
-                {publishable ? percent(record.winRate ?? 0) : "—"}
-              </span>
-            </li>
-          );
-        })}
-      </ul>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-ink">
+                    {league?.flag && (
+                      <span className="mr-1.5" aria-hidden>
+                        {league.flag}
+                      </span>
+                    )}
+                    {league?.shortName ?? code}
+                  </p>
+                  <p className="tnum mt-0.5 text-xs text-ink-muted">
+                    {record.wins}–{record.losses}
+                    {record.pushes > 0 && <span>–{record.pushes}</span>}{" "}
+                    <span>from {record.sample} graded</span>
+                  </p>
+                </div>
 
-      {uncatalogued.sample > 0 && (
-        <p className="text-xs leading-relaxed text-ink-muted">
-          A further {uncatalogued.sample} graded {uncatalogued.sample === 1 ? "pick" : "picks"} (
-          {uncatalogued.wins}–{uncatalogued.losses}) came from competitions outside our tracked
-          list — the feeds carry far more football than we catalogue. They count towards the
-          overall record above and simply have no competition of their own to sit under.
-        </p>
-      )}
-    </section>
+                <span
+                  className={`tnum shrink-0 font-mono text-base font-extrabold ${
+                    publishable ? "text-ink" : "text-ink-dim"
+                  }`}
+                >
+                  {publishable ? percent(record.winRate ?? 0) : "—"}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+
+        {uncatalogued.sample > 0 && (
+          <p className="text-xs leading-relaxed text-ink-muted">
+            A further {uncatalogued.sample} graded {uncatalogued.sample === 1 ? "pick" : "picks"} (
+            {uncatalogued.wins}–{uncatalogued.losses}) came from competitions outside our tracked
+            list — the feeds carry far more football than we catalogue. They count towards the
+            overall record above and simply have no competition of their own to sit under.
+          </p>
+        )}
+      </div>
+    </details>
   );
 }

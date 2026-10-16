@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { LEAGUES } from "@/lib/leagues";
 import { readBoard, writeBoard } from "@/lib/odds/boards";
-import { fetchUpcomingPage, PAGE_SIZE, sportyBetBoardKey } from "@/lib/odds/sportybet";
+import { PAGE_SIZE, sportyBetBoard } from "@/lib/odds/sportybet";
+import { parsebotLive } from "@/lib/odds/parsebot";
 import { fetchBoard, oddsApiBoardKey, oddsApiQuota, ODDS_API_BOARDS } from "@/lib/odds/the-odds-api";
 import { oddsApiBoardDue } from "@/lib/odds/snapshot-pacing";
 
@@ -20,9 +21,12 @@ export const maxDuration = 120;
  * - The Odds API (free, 500 credits a month): paced by oddsApiBoardDue so the
  *   month's credits last the month, and only for competitions with games in
  *   the next three days.
- * - SportyBet via parse.bot (metered): OFF unless SPORTYBET_SNAPSHOTS=on.
- *   Hourly snapshots of every catalogued competition cost about 720 parse.bot
- *   credits a day; turn it on only once the parse.bot plan covers that.
+ * - SportyBet via parse.bot (metered): OFF unless SPORTYBET_SNAPSHOTS=on AND
+ *   PARSEBOT_LIVE=on. Even then a board is only refetched once it is stale for
+ *   how close its next game is (src/lib/odds/parsebot-budget.ts), and every
+ *   call is charged against the credit ledger's caps. Without it, boards are
+ *   refreshed on demand by the pages that need them, which on the
+ *   1,000-credit plan is the cheaper choice.
  */
 export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET;
@@ -51,23 +55,23 @@ export async function GET(request: Request) {
   const active = new Set((upcoming ?? []).map((r) => r.league_code as string));
   const hasUpcoming = (code: string) => !anyMatches || active.has(code);
 
-  if (process.env.SPORTYBET_SNAPSHOTS === "on") {
+  if (process.env.SPORTYBET_SNAPSHOTS !== "on") {
+    report.sportybet.skipped = "SPORTYBET_SNAPSHOTS is not on";
+  } else if (!parsebotLive()) {
+    report.sportybet.skipped = "PARSEBOT_LIVE is not on";
+  } else {
     for (const league of LEAGUES) {
       const tid = league.ids.sportyBet;
       if (!tid || !hasUpcoming(league.code)) continue;
       try {
-        const events = await fetchUpcomingPage(1, PAGE_SIZE, tid);
-        if (events.length) {
-          await writeBoard(sportyBetBoardKey(1, PAGE_SIZE, tid), "odds", events, { league: league.code });
-          report.sportybet.boards++;
-          report.sportybet.events += events.length;
-        }
+        // Fresh boards are answered from storage at no cost; only stale ones call out.
+        const events = await sportyBetBoard(1, PAGE_SIZE, tid, true);
+        report.sportybet.boards++;
+        report.sportybet.events += events.length;
       } catch (err) {
         errors.push(`sportybet ${league.code}: ${String(err)}`);
       }
     }
-  } else {
-    report.sportybet.skipped = "SPORTYBET_SNAPSHOTS is not on";
   }
 
   // Credits left, as last reported and stored with a board.

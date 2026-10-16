@@ -56,7 +56,7 @@ export function PredictionCard({ prediction, morph = true }: { prediction: Predi
           <>
             <Link href={matchPath(match.id)} prefetch={false} className="flex min-w-0 flex-1 items-center justify-between gap-3">
               <div className="min-w-0">
-                <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-ink-dim">
+                <p className="flex min-h-5 flex-wrap items-center gap-x-2 gap-y-1 text-[10.5px] font-semibold uppercase leading-none tracking-[0.12em] text-ink-dim">
                   <span className="whitespace-nowrap">Our pick</span> {isStrong(topPick) && <StrongBadge />}
                   <RiskBadge pick={topPick} />
                 </p>

@@ -218,8 +218,8 @@ export function FeaturedBoard({ rows, renderedAt }: { rows: FeaturedRow[]; rende
                 </p>
 
                 {row.pick && (
-                  <p className="mt-2 flex items-baseline gap-1.5 text-[11px]">
-                    <span className="text-ink-dim">Model pick</span>
+                  <p className="mt-2 flex min-w-0 items-center gap-1.5 text-[11px] leading-none">
+                    <span className="shrink-0 text-ink-dim">Model pick</span>
                     {row.pick.locked ? (
                       <span className="inline-flex items-center gap-1 font-semibold text-violet">
                         <LockIcon className="size-3" /> Pro pick
@@ -227,7 +227,7 @@ export function FeaturedBoard({ rows, renderedAt }: { rows: FeaturedRow[]; rende
                     ) : (
                       <span className="truncate font-semibold text-brand">{row.pick.label}</span>
                     )}
-                    <RiskBadge pick={row.pick} className="self-center" />
+                    <RiskBadge pick={row.pick} />
                   </p>
                 )}
               </Link>

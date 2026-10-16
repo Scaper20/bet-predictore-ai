@@ -23,7 +23,7 @@ export function RiskBadge({ pick, className = "" }: { pick: { market: string; pr
   return (
     <span
       title={`${record} Based on every pick we have graded.`}
-      className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-semibold normal-case tracking-normal ${TONE[level]} ${className}`}
+      className={`inline-flex shrink-0 items-center gap-1.5 h-5 rounded-full border px-2 text-[10px] font-semibold leading-none normal-case tracking-normal ${TONE[level]} ${className}`}
     >
       <span aria-hidden className={`size-1.5 rounded-full ${DOT[level]}`} />
       {label}
