@@ -2,7 +2,7 @@
 export function StrongBadge({ className = "" }: { className?: string }) {
   return (
     <span
-      className={`inline-flex shrink-0 items-center gap-1 rounded-full bg-amber/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber ${className}`}
+      className={`inline-flex shrink-0 items-center gap-1 h-5 rounded-full bg-amber/15 px-2 text-[10px] leading-none font-bold uppercase tracking-wider text-amber ${className}`}
     >
       <span aria-hidden>★</span> Strong
     </span>

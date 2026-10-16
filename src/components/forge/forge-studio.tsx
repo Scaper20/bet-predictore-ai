@@ -367,9 +367,9 @@ function SettingsPanel({
           </div>
         </Section>
 
-        <div className="grid grid-cols-2 items-end gap-3">
-          <Section title="Combined price you want">
-            <label className="flex items-center gap-2 rounded-xl border border-line bg-surface-2 px-3.5 py-3 focus-within:border-brand/50">
+        <div className="grid grid-cols-2 items-start gap-3">
+          <Section title="Combined price">
+            <label className="flex h-14 items-center gap-2 rounded-xl border border-line bg-surface-2 px-3.5 focus-within:border-brand/50">
               <input
                 inputMode="decimal"
                 value={oddsText}
@@ -386,7 +386,7 @@ function SettingsPanel({
             </label>
           </Section>
           <Section title="Number of games">
-            <div className="flex items-center justify-between rounded-xl border border-line bg-surface-2 px-2 py-1.5">
+            <div className="flex h-14 items-center justify-between rounded-xl border border-line bg-surface-2 px-2">
               <StepButton label="Fewer games" onClick={() => patch({ games: Math.max(1, settings.games - 1) })}>
                 −
               </StepButton>
@@ -793,7 +793,7 @@ function GuestGate({ onClose }: { onClose: () => void }) {
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div>
-      <p className="mb-2 text-sm font-semibold text-ink">{title}</p>
+      <p className="mb-2 truncate text-sm font-semibold text-ink">{title}</p>
       {children}
     </div>
   );

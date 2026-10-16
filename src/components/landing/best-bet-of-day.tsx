@@ -60,7 +60,7 @@ export function BestBetOfDay({ prediction }: { prediction: Prediction | ViewedPr
           ) : (
             <p className="mt-1 text-base font-bold text-ink sm:text-lg">{topPick.label}</p>
           )}
-          <span className="mt-1.5 flex flex-wrap gap-1.5">
+          <span className="mt-1.5 flex flex-wrap items-center gap-1.5 sm:justify-end">
             {isStrong(topPick) && <StrongBadge />}
             <RiskBadge pick={topPick} />
           </span>
