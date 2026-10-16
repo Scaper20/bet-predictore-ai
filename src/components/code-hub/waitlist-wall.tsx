@@ -31,7 +31,8 @@ export function WaitlistWall({ email, joined }: { email: string | null; joined: 
       </div>
 
       <div className="relative" aria-hidden>
-        <div className="space-y-3">
+        {/* Right padding holds the staircase: each card steps 6px right. */}
+        <div className="space-y-3 pr-6">
           {HUB_TIERS.map((t, i) => (
             <div
               key={t.id}
