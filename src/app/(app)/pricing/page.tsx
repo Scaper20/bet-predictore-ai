@@ -182,10 +182,6 @@ export default async function PricingPage({ searchParams }: PageProps<"/pricing"
                 {sellsAbroad ? " Outside Nigeria, each payment buys a fixed period and nothing renews." : ""}
               </p>
               <p>
-                Value-shift alerts depend on market prices that move constantly; an alert
-                reflects the price when we last checked it, and on most days there are few or none.
-              </p>
-              <p>
                 18+ only. If it stops being fun,{" "}
                 <Link
                   href="/responsible-use"

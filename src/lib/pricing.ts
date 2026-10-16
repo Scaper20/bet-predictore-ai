@@ -86,11 +86,10 @@ export const PLANS: PlanDefinition[] = [
   {
     id: "vip",
     name: "VIP",
-    description: "Live edges, alerts and priority help.",
+    description: "Live win probability, the most questions and priority help.",
     features: [
       "Everything in Pro",
       "Live in-play win probability, updating as the match unfolds",
-      "Value-shift alerts: local market prices that move above fair value, live and by email",
       "Ask KiqStat: 100 questions a day",
       "Priority support: your messages go to the front of the queue",
       "Pay monthly, every 3 months (save 10%) or yearly (save 20%)",
@@ -176,7 +175,6 @@ export const PLAN_MATRIX: MatrixGroup[] = [
     rows: [
       { label: "Morning picks notification", values: { free: true, pro: true, vip: true } },
       { label: "Strong pick alerts, kick-off and result", values: { free: true, pro: true, vip: true } },
-      { label: "Value-shift alerts, live and by email", values: { free: false, pro: false, vip: true } },
       { label: "Priority support", values: { free: false, pro: false, vip: true } },
     ],
   },

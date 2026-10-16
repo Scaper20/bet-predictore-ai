@@ -10,8 +10,8 @@ describe("mobile menu sections", () => {
     expect(menus[1].columns.flatMap((c) => c.links).map((l) => l.label)).toContain("Trends");
   });
 
-  it("keeps Value Alerts reachable, under Tools", () => {
+  it("groups Code Hub, Forge and My combos under Tools", () => {
     const tools = menus.find((m) => m.id === "tools")!;
-    expect(tools.columns.flatMap((c) => c.links).map((l) => l.label)).toContain("Value Alerts");
+    expect(tools.columns.flatMap((c) => c.links).map((l) => l.label)).toEqual(["Code Hub", "Forge", "My combos"]);
   });
 });

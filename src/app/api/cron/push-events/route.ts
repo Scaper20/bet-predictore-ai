@@ -82,7 +82,7 @@ export async function GET(request: Request) {
   if (todo.length === 0) return NextResponse.json({ events: events.length, sent: 0, note: "already sent" });
 
   // Every pick is free (lib/access.ts), so every subscribed device hears every Strong pick.
-  const devices = await loadSubscriptions(admin, { daily: true });
+  const devices = await loadSubscriptions(admin);
 
   const items = todo.flatMap((t) =>
     devices

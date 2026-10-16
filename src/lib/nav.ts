@@ -108,13 +108,12 @@ export function navFor(sport: SportId): { tabs: NavTab[]; tools: NavLink[]; tool
   const predictions: NavMenu = {
     id: "predictions",
     label: "Predictions",
-    match: [p("predictions"), p("valueAlerts")],
+    match: [p("predictions")],
     columns: [
       {
         title: "Picks",
         links: [
           { label: "Today", desc: "Every game we rate today", href: p("predictions") },
-          { label: "Value Alerts", desc: "When the market price beats ours", href: p("valueAlerts"), badge: { text: "VIP", tone: "amber" } },
         ],
       },
       {
@@ -300,14 +299,11 @@ export function drawerMenus(sport: SportId): NavMenu[] {
 /**
  * The mobile menu's sections, from the desktop menus.
  *
- * Phones already reach Fixtures and Picks from the bottom bar, so the
+ * Phones already reach Picks and Live from the bottom bar, so the
  * Predictions section is dropped there; Matches leads, and Insights gets
- * its own section instead of sitting under Matches. Value Alerts, the one
- * Predictions link with no bottom-bar home, moves to Tools.
+ * its own section instead of sitting under Matches.
  */
 export function mobileMenus(menus: NavMenu[]): NavMenu[] {
-  const predictions = menus.find((m) => m.id === "predictions");
-  const extra = predictions?.columns.flatMap((c) => c.links).filter((l) => l.label === "Value Alerts") ?? [];
   return menus.flatMap((m): NavMenu[] => {
     if (m.id === "predictions") return [];
     if (m.id === "matches" && m.columns.length > 1) {
@@ -317,10 +313,6 @@ export function mobileMenus(menus: NavMenu[]): NavMenu[] {
         { ...m, columns: [main], match: main.links.map((l) => l.href) },
         { ...m, id: "insights", label: "Insights", columns: rest, match: insightLinks.map((l) => l.href) },
       ];
-    }
-    if (m.id === "tools" && extra.length) {
-      const [first, ...rest] = m.columns;
-      return [{ ...m, columns: [{ ...first, links: [...first.links, ...extra] }, ...rest], match: [...m.match, ...extra.map((l) => l.href)] }];
     }
     return [m];
   });

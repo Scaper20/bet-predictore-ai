@@ -21,12 +21,10 @@ const initialState: AccountActionState = { error: null, message: null };
 export function PreferencesForm({
   leagues,
   preferences,
-  valueAlertsEmail = null,
 }: {
   leagues: LeagueDef[];
   preferences: UserPreferences;
   /** VIP members only; null hides the control. */
-  valueAlertsEmail?: boolean | null;
 }) {
   const [state, formAction, pending] = useActionState(updatePreferences, initialState);
 
@@ -97,26 +95,6 @@ export function PreferencesForm({
           />
         </ChoiceGroup>
 
-        {valueAlertsEmail !== null && (
-          <fieldset className="space-y-2">
-            <legend className="text-sm font-semibold">VIP value-shift alerts</legend>
-            <input type="hidden" name="valueAlertsField" value="1" />
-            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-line bg-surface p-4 text-sm">
-              <input
-                type="checkbox"
-                name="valueAlertsEmail"
-                defaultChecked={valueAlertsEmail}
-                className="mt-0.5 size-4 accent-[var(--color-brand)]"
-              />
-              <span>
-                <span className="font-medium">Email me new value prices each morning</span>
-                <span className="mt-0.5 block text-xs text-ink-muted">
-                  The alerts page keeps working either way.
-                </span>
-              </span>
-            </label>
-          </fieldset>
-        )}
 
         {state.error && <p className="text-sm text-rose">{state.error}</p>}
         {state.message && <p className="text-sm text-brand">{state.message}</p>}

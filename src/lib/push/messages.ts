@@ -78,27 +78,6 @@ export function dailyPayload(opts: {
   return null;
 }
 
-export interface AlertForPush {
-  homeName: string;
-  awayName: string;
-  label: string;
-  localPrice: number;
-}
-
-/** VIP value-shift alerts, same set the morning email carries. */
-export function valueAlertsPayload(alerts: AlertForPush[]): PushPayload | null {
-  if (alerts.length === 0) return null;
-  const n = alerts.length;
-  const [first] = alerts;
-  const lead = `${first.homeName} v ${first.awayName}: ${first.label} at ${odds(first.localPrice)}`;
-  return {
-    title: n === 1 ? "New value price" : `${n} new value prices`,
-    body: n === 1 ? lead : `${lead}\n+${n - 1} more. Prices move quickly.`,
-    url: sportPath("valueAlerts"),
-    tag: "value-alerts",
-  };
-}
-
 export const TEST_PAYLOAD: PushPayload = {
   title: "Notifications are on",
   body: "This is how KiqStat will reach you: today's picks each morning, Strong picks before kick-off, and how they did.",

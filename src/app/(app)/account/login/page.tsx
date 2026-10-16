@@ -52,7 +52,7 @@ export default async function LoginPage({
           </h1>
 
           <p className="text-base leading-relaxed text-ink-muted">
-            Access your personalized predictions, saved league feeds, value alerts, and premium analytics.
+            Access your predictions, saved leagues, tracked combos and premium analytics.
           </p>
 
           <div className="card space-y-4 bg-grid p-6">

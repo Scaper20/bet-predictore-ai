@@ -156,6 +156,8 @@ const nextConfig: NextConfig = {
       // 2026. The query (league, day, days) is carried over by Next.
       { source: "/:sport/fixtures", destination: "/:sport/live?view=fixtures", permanent: true },
       { source: "/:sport/results", destination: "/:sport/live?view=results", permanent: true },
+      // Value alerts were retired in October 2026.
+      { source: "/:sport/value-alerts", destination: "/:sport/predictions", permanent: true },
       {
         source: "/match/:id",
         destination: `/${DEFAULT_SPORT}/match/:id`,

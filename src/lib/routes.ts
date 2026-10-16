@@ -23,7 +23,6 @@ export const SPORT_ROUTES = {
   trackedSlips: "combo/tracked",
   forge: "forge",
   codeHub: "code-hub",
-  valueAlerts: "value-alerts",
   tables: "tables",
   h2h: "h2h",
   teamForm: "team-form",

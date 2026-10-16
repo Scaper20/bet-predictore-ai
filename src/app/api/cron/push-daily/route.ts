@@ -39,7 +39,7 @@ export async function GET(request: Request) {
   const [picks, record, devices] = await Promise.all([
     todaysQualifyingPicks(now).catch(() => []),
     yesterdayRecord(admin, now),
-    loadSubscriptions(admin, { daily: true }),
+    loadSubscriptions(admin),
   ]);
 
   // Every pick is free (lib/access.ts): every device hears the full list.

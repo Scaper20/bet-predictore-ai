@@ -27,23 +27,13 @@ const PAGE = 1000;
 const ID_CHUNK = 200;
 
 /**
- * Subscriptions for one kind of send, a page at a time:
- *  - `daily`: devices that want the morning picks or results;
- *  - `valueAlertsFor`: devices signed in to one of these (VIP) accounts that
- *    have the alerts on.
+ * Subscriptions for the daily send (devices that want the morning picks or
+ * results), a page at a time.
  */
-export async function loadSubscriptions(
-  admin: SupabaseClient,
-  where: { daily: true } | { valueAlertsFor: string[] },
-): Promise<StoredSubscription[]> {
-  if ("valueAlertsFor" in where && where.valueAlertsFor.length === 0) return [];
+export async function loadSubscriptions(admin: SupabaseClient): Promise<StoredSubscription[]> {
   const out: StoredSubscription[] = [];
   for (let from = 0; ; from += PAGE) {
-    let query = admin.from("push_subscriptions").select(COLUMNS);
-    query =
-      "daily" in where
-        ? query.or("picks.eq.true,results.eq.true")
-        : query.eq("value_alerts", true).in("user_id", where.valueAlertsFor);
+    const query = admin.from("push_subscriptions").select(COLUMNS).or("picks.eq.true,results.eq.true");
     const { data, error } = await query.order("id").range(from, from + PAGE - 1);
     if (error) throw error;
     for (const r of data ?? []) {

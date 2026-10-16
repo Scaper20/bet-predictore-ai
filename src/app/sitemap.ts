@@ -46,7 +46,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE}/guides`, changeFrequency: "monthly", priority: 0.5 },
     { url: `${SITE}/help`, changeFrequency: "monthly", priority: 0.4 },
     { url: `${SITE}${sportPath("trackRecord")}`, lastModified: now, changeFrequency: "daily", priority: 0.6 },
-    { url: `${SITE}${sportPath("valueAlerts")}`, changeFrequency: "weekly", priority: 0.5 },
     { url: `${SITE}/pricing`, changeFrequency: "monthly", priority: 0.8 },
     { url: `${SITE}/responsible-use`, changeFrequency: "monthly", priority: 0.5 },
   ];
