@@ -89,7 +89,7 @@ export interface NavMenu {
 
 export type NavTab =
   | { kind: "menu"; menu: NavMenu }
-  | { kind: "link"; id: string; label: string; href: string; live?: boolean };
+  | { kind: "link"; id: string; label: string; href: string; live?: boolean; badge?: Badge; tour?: string };
 
 const TOP_LEAGUES = ["premier-league", "npfl", "champions-league", "la-liga", "serie-a", "afcon-qualifiers"];
 
@@ -102,7 +102,7 @@ export function leagueLinks(sport: SportId): NavLink[] {
 }
 
 /** The desktop menus and the mobile menu's sections, for one sport. */
-export function navFor(sport: SportId): { tabs: NavTab[]; tools: NavLink[] } {
+export function navFor(sport: SportId): { tabs: NavTab[]; tools: NavLink[]; toolsMenu: NavMenu } {
   const p = (route: Parameters<typeof sportPath>[0]) => sportPath(route, sport);
 
   const predictions: NavMenu = {
@@ -147,6 +147,21 @@ export function navFor(sport: SportId): { tabs: NavTab[]; tools: NavLink[] } {
           { label: "Head-to-head", desc: "Any two teams, every meeting", href: p("h2h") },
         ],
       },
+    ],
+    feature: {
+      kicker: "Live now",
+      title: "Every game in play, grouped by league",
+      body: "Scores and the clock straight from the feed, with a goal flash when the score changes.",
+      cta: { label: "Open live scores", href: p("live") },
+      tone: "brand",
+    },
+  };
+
+  const insights: NavMenu = {
+    id: "insights",
+    label: "Insights",
+    match: [p("trends"), p("teamForm"), p("goals"), p("ratings")],
+    columns: [
       {
         title: "Insights",
         links: [
@@ -158,14 +173,16 @@ export function navFor(sport: SportId): { tabs: NavTab[]; tools: NavLink[] } {
       },
     ],
     feature: {
-      kicker: "Live now",
-      title: "Every game in play, grouped by league",
-      body: "Scores and the clock straight from the feed, with a goal flash when the score changes.",
-      cta: { label: "Open live scores", href: p("live") },
+      kicker: "Model ratings",
+      title: "Every team rated 1 to 10",
+      body: "Attack, defence and form in one number, from the same model as the picks.",
+      cta: { label: "See the ratings", href: p("ratings") },
       tone: "brand",
     },
   };
 
+  // Not a desktop menu any more: Forge, Code Hub and My combos sit in the
+  // bar itself so they are seen, not found. The phone menu still groups them.
   const tools: NavMenu = {
     id: "tools",
     label: "Tools",
@@ -226,12 +243,16 @@ export function navFor(sport: SportId): { tabs: NavTab[]; tools: NavLink[] } {
   return {
     tabs: [
       { kind: "menu", menu: predictions },
-      { kind: "link", id: "live", label: "Live", href: p("live"), live: true },
+      { kind: "link", id: "live", label: "Live", href: p("live"), live: true, tour: "scores" },
       { kind: "menu", menu: matches },
-      { kind: "menu", menu: tools },
+      { kind: "menu", menu: insights },
+      { kind: "link", id: "forge", label: "Forge", href: p("forge"), tour: "forge" },
+      { kind: "link", id: "code-hub", label: "Code Hub", href: p("codeHub"), tour: "code-hub", badge: { text: "New", tone: "brand" } },
+      { kind: "link", id: "combos", label: "My combos", href: p("trackedSlips"), tour: "combos" },
       { kind: "link", id: "pricing", label: "Pricing", href: "/pricing" },
       { kind: "menu", menu: more },
     ],
+    toolsMenu: tools,
     tools: [
       { label: "Forge", desc: "Build a combo from how you pick", href: p("forge") },
       { label: "Ask KiqStat", desc: "Ask anything about a match", href: "#ask", action: "ask" },
@@ -262,6 +283,18 @@ export function allLinks(sport: SportId): NavLink[] {
     seen.add(key);
     return true;
   });
+}
+
+/**
+ * The phone menu's sections: the desktop menus, with Tools put back in
+ * before More (on desktop its links sit in the bar itself).
+ */
+export function drawerMenus(sport: SportId): NavMenu[] {
+  const { tabs, toolsMenu } = navFor(sport);
+  const menus = tabs.flatMap((t) => (t.kind === "menu" ? [t.menu] : []));
+  const at = menus.findIndex((m) => m.id === "more");
+  menus.splice(at < 0 ? menus.length : at, 0, toolsMenu);
+  return mobileMenus(menus);
 }
 
 /**

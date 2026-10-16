@@ -10,9 +10,9 @@ import { OPEN_TOUR_EVENT, TOUR_DONE_KEY } from "@/lib/tour";
  * A first-visit walkthrough: a dimmed page with a spotlight on one real
  * control at a time, and a short card saying what it does.
  *
- * Steps point at elements by `data-tour` (or, on desktop, the Tools menu
- * button), so the tour shows the actual buttons rather than a picture of
- * them. A step whose element is missing or hidden on this screen size is
+ * Steps point at elements by `data-tour` (the bottom bar on phones, the
+ * top bar on desktop), so the tour shows the actual buttons rather than a
+ * picture of them. A step whose element is missing or hidden on this screen size is
  * skipped; the welcome and closing steps have no target and sit centred.
  *
  * Starts on its own once per browser, on the pages that have prediction cards
@@ -40,14 +40,24 @@ const STEPS: Step[] = [
     body: "Like a pick? Add it to your combo. We show the real chance of every pick in it landing together.",
   },
   {
-    targets: ['[data-tour="combo"]'],
+    targets: ['[data-tour="combo"]', '[data-tour="combos"]'],
     title: "My combos",
     body: "Track a combo and it lives here: every game followed live, and the result once the final whistle goes.",
   },
   {
-    targets: ['[data-tour="forge"]', '[data-menu="tools"]'],
+    targets: ['[data-tour="scores"]'],
+    title: "Live, fixtures and results",
+    body: "One place for every game: what's on now, what's coming up and how it finished, with how our picks did.",
+  },
+  {
+    targets: ['[data-tour="forge"]'],
     title: "Let Forge build one",
     body: "Choose safe, balanced or risky and how many games. Forge picks the matches from the model's own numbers.",
+  },
+  {
+    targets: ['[data-tour="code-hub"]'],
+    title: "Code Hub",
+    body: "Five ready-made combos a day, from about 2 to 20 odds, each with a SportyBet code. Coming soon: join the waitlist to hear first.",
   },
   {
     targets: ['[data-tour="ask"]'],

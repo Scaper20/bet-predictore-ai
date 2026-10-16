@@ -31,6 +31,9 @@ const LEFT: readonly Tab[] = [
 ];
 const RIGHT: readonly Tab[] = [{ route: "codeHub", label: "Code Hub", icon: "ticket" }];
 
+/** Hooks for the walkthrough (components/tour/tour-overlay.tsx). */
+const TOUR: Partial<Record<SportRoute, string>> = { live: "scores", codeHub: "code-hub" };
+
 export function BottomNav({ onOpenMenu, menuOpen }: { onOpenMenu: () => void; menuOpen: boolean }) {
   const pathname = usePathname();
   const sport = sportFromPathname(pathname);
@@ -43,7 +46,7 @@ export function BottomNav({ onOpenMenu, menuOpen }: { onOpenMenu: () => void; me
     const active = !menuOpen && isActive(pathname, href);
     return (
       <li key={t.route} className="contents">
-        <Link href={href} aria-current={active ? "page" : undefined} className={cell(active)}>
+        <Link href={href} aria-current={active ? "page" : undefined} className={cell(active)} data-tour={TOUR[t.route]}>
           <span className="relative">
             <Icon name={t.icon} active={active} />
             {t.route === "live" && live !== null && live > 0 && (

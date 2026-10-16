@@ -2,6 +2,8 @@
 
 import { getEntitlement } from "@/lib/entitlements";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { sendEmail } from "@/lib/email";
+import { codeHubWaitlistEmail } from "@/lib/email-templates";
 
 export type WaitlistState = { status: "idle" | "joined" | "error"; message: string | null };
 
@@ -31,6 +33,8 @@ export async function joinHubWaitlist(_prev: WaitlistState, formData: FormData):
   if (error && error.code !== "23505") {
     return { status: "error", message: "Couldn't add you just now. Try again in a moment." };
   }
+  // Only on a first join: a repeat click must not send a second email.
+  if (!error) await sendEmail({ to: email, ...codeHubWaitlistEmail() });
   return {
     status: "joined",
     message: error ? "You're already on the list." : "You're on the list. We'll email you the day it opens.",

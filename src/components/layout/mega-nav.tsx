@@ -82,9 +82,15 @@ export function MegaNav({ tabs }: { tabs: NavTab[] }) {
                   }}
                   className={tabClass(here, false)}
                   aria-current={here ? "page" : undefined}
+                  data-tour={tab.tour}
                 >
                   {tab.live && <span className="live-dot size-2 rounded-full bg-signal" aria-hidden />}
                   {tab.label}
+                  {tab.badge && (
+                    <span className="rounded-full bg-brand/14 px-1.5 text-[10px] font-semibold uppercase tracking-wide text-brand">
+                      {tab.badge.text}
+                    </span>
+                  )}
                   {tab.live && live !== null && live > 0 && (
                     <span className="tnum rounded-full bg-signal/14 px-1.5 font-mono text-[11px] text-signal">{live}</span>
                   )}

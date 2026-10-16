@@ -34,6 +34,24 @@ export function welcomeEmail(): { subject: string; html: string } {
   };
 }
 
+/** Sent once, when someone joins the Code Hub waitlist (src/app/actions/code-hub.ts). */
+export function codeHubWaitlistEmail(): { subject: string; html: string } {
+  return {
+    subject: "You're on the KiqStat Code Hub waitlist",
+    html: emailLayout(`
+      <p style="margin:0 0 12px;font-size:17px;font-weight:700;">You're on the list</p>
+      <p style="margin:0;">Thanks for joining the Code Hub waitlist. Each morning the model will build five
+      ready-made combos, from about 2 to 20 odds. Each one comes with a SportyBet booking code and the model's
+      chance of it landing.</p>
+      <p style="margin:12px 0 0;">We'll send you one more email, on the day it opens. Until then, today's
+      predictions are free to read.</p>
+      ${button(`${SITE_URL}${sportPath("predictions")}`, "See today's predictions")}
+      <p style="margin:24px 0 0;font-size:13px;color:#6b7670;">Every code we publish will stay on the page with its
+      result, landed or missed. KiqStat is for adults 18 and over.</p>
+    `),
+  };
+}
+
 export function passwordResetEmail(opts: { url: string }): { subject: string; html: string } {
   return {
     subject: "Reset your KiqStat password",
