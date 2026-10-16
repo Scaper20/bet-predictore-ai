@@ -47,6 +47,14 @@ export const PRO_LEAGUE_COUNT = PRO_LEAGUES.length;
 /** Pick hit rate across the Pro leagues in the replay, for copy ("77% of picks landed"). */
 export const PRO_LEAGUE_REPLAY_HIT = 0.774;
 
+/** Why a league is Pro, for a sentence that already names it ("77% of the model's picks landed…"). */
+export function proLeagueReason(code: string | null | undefined): string {
+  const hit = PRO_LEAGUES.find((l) => l.code === code)?.replayHit;
+  return hit
+    ? `${Math.round(hit * 100)}% of the model's picks here landed over the last year.`
+    : "Every cup and continental competition is a Pro league.";
+}
+
 /** One line for upgrade prompts on a Pro-league match. */
 export function proLeagueLine(code: string | null | undefined, name: string): string {
   const hit = PRO_LEAGUES.find((l) => l.code === code)?.replayHit;

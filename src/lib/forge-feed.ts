@@ -36,6 +36,8 @@ const PRICE_BUDGET_MS = 12_000;
 export interface ForgeResponse extends ForgeResult {
   scanned: number;
   pricedAt: string;
+  /** Games in the window and leagues asked for, left out because they are in a Pro league (free plan). */
+  proHeld: number;
 }
 
 export async function buildForgeSlip(
@@ -44,13 +46,14 @@ export async function buildForgeSlip(
   opts: { allowHandicap: boolean; leagueCodes: string[] | null; viewer?: Viewer | null },
 ): Promise<ForgeResponse> {
   const soon = Date.now() + 10 * 60_000;
-  const predictions = (await predictionsFor(settings.when)).filter(
+  const eligible = (await predictionsFor(settings.when)).filter(
     (p) =>
       p.sufficiency.publishable &&
       Date.parse(p.match.kickoff) > soon &&
-      !(opts.viewer && proLeagueLocked(p.match, opts.viewer)) &&
       (!opts.leagueCodes || opts.leagueCodes.includes(p.match.league.code ?? "")),
   );
+  const predictions = opts.viewer ? eligible.filter((p) => !proLeagueLocked(p.match, opts.viewer!)) : eligible;
+  const proHeld = eligible.length - predictions.length;
 
   const pool = predictions.map((prediction) => ({
     prediction,
@@ -87,5 +90,5 @@ export async function buildForgeSlip(
 
   const [legs, bench] = await Promise.all([Promise.all(result.legs.map(price)), Promise.all(result.bench.map(price))]);
   clearTimeout(timer);
-  return { legs, bench, dropped: result.dropped, scanned: pool.length, pricedAt: new Date().toISOString() };
+  return { legs, bench, dropped: result.dropped, scanned: pool.length, proHeld, pricedAt: new Date().toISOString() };
 }

@@ -45,7 +45,7 @@ export default async function CodeHubPage() {
   if (!open && !admin) {
     return (
       <>
-        <PageHeader eyebrow="Code Hub" title="Code Hub" description="Ready-made combos from the model, each with a SportyBet code." />
+        <PageHeader eyebrow="Code Hub" title="Code Hub" description="Ready-made combos with SportyBet codes." />
         <Container className="py-10 sm:py-14">
           <WaitlistWall email={entitlement.email} joined={await onWaitlist(entitlement.userId)} />
         </Container>
