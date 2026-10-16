@@ -169,12 +169,13 @@ export function navFor(sport: SportId): { tabs: NavTab[]; tools: NavLink[] } {
   const tools: NavMenu = {
     id: "tools",
     label: "Tools",
-    match: [p("forge"), p("slip"), p("trackedSlips")],
+    match: [p("forge"), p("codeHub"), p("slip"), p("trackedSlips")],
     columns: [
       {
         title: "Build and check",
         links: [
-          { label: "Forge", desc: "Build a combo from how you like to pick", href: p("forge"), badge: { text: "New", tone: "brand" } },
+          { label: "Code Hub", desc: "Today's ready-made combos, 2 to 20 odds", href: p("codeHub"), badge: { text: "New", tone: "brand" } },
+          { label: "Forge", desc: "Build a combo from how you like to pick", href: p("forge") },
           { label: "My combos", desc: "Track your combos live", href: p("trackedSlips") },
         ],
       },

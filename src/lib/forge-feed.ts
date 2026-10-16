@@ -17,7 +17,7 @@ import {
 } from "@/lib/forge";
 
 /** Every modelled fixture kicking off in a window, predicted once and shared for five minutes. */
-async function predictionsFor(when: ForgeWhen): Promise<Prediction[]> {
+export async function predictionsFor(when: ForgeWhen): Promise<Prediction[]> {
   return cached(`forge:pool:${when}`, 5 * 60_000, async () => {
     const { matches } = await upcomingFeed(7);
     const [from, to] = windowFor(when);
