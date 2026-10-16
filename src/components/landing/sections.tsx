@@ -287,8 +287,8 @@ export function FinalCta() {
             <span className="text-gradient-brand">Start reading the numbers.</span>
           </h2>
           <p className="mx-auto mt-5 max-w-xl text-base text-ink-muted">
-            Every pick on every match is free. Go Pro for the full breakdowns, half-time predictions,
-            winning margins and more from Forge and Ask KiqStat.
+            Every match and every pick in 27 competitions is free. Go Pro for picks in the 15 Pro leagues
+            before kick-off, the full breakdowns, half-time predictions and more from Forge and Ask KiqStat.
           </p>
           <div className="mx-auto mt-8 grid max-w-xs gap-3 sm:flex sm:max-w-none sm:justify-center">
             <ButtonLink href={sportPath("predictions")}>Open today&apos;s predictions</ButtonLink>

@@ -117,6 +117,20 @@ export function proLeagueLocked(
   return match.id !== viewer.freeStrongId && !viewer.freeIds.includes(match.id);
 }
 
+/**
+ * Picks a free audience may be told about now, and how many Pro-league
+ * picks were held back: for the messages that go to everyone at once (the
+ * WhatsApp digest, the morning push to free devices).
+ */
+export function splitForFree<T extends { id: string; kickoff: string; league: { code?: string | null } }>(
+  picks: readonly T[],
+  viewer: Viewer,
+  now = Date.now(),
+): { open: T[]; proHeld: number } {
+  const open = picks.filter((p) => !proLeagueLocked({ id: p.id, kickoff: p.kickoff, league: p.league }, viewer, now));
+  return { open, proHeld: picks.length - open.length };
+}
+
 /** A Pro-league match as a free viewer gets it before kick-off: the 1X2 split and nothing else. */
 function proLeagueView(p: Prediction): ViewedPrediction {
   const { halves: _halves, ...markets } = p.markets;

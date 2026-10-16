@@ -47,6 +47,8 @@ export function dailyPayload(opts: {
   picks: PersonalizedPick[];
   record: DayRecord | null;
   topics: { picks: boolean; results: boolean };
+  /** Pro-league picks held back from a free device (lib/pro-leagues.ts). */
+  proHeld?: number;
 }): PushPayload | null {
   const record = opts.topics.results && opts.record && opts.record.won + opts.record.lost > 0 ? opts.record : null;
   const picks = opts.topics.picks ? opts.picks : [];
@@ -57,6 +59,8 @@ export function dailyPayload(opts: {
     const more = n - named.length;
     const lines = [...named];
     if (more > 0) lines.push(`+${more} more`);
+    const held = opts.topics.picks ? (opts.proHeld ?? 0) : 0;
+    if (held > 0) lines.push(`🔒 +${held} in Pro leagues for Pro members`);
     if (record) lines.push(recordLine(record));
     return {
       title: n === 1 ? "Today's pick is ready" : `Today's ${n} picks are ready`,

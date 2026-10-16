@@ -67,7 +67,7 @@ const STEPS: Step[] = [
   {
     targets: [],
     title: "You're set",
-    body: "Every pick on every match is free to read. Every pick is graded after the final whistle on the track record. Replay this tour any time from Help.",
+    body: "Picks in 27 competitions are free. In the 15 Pro leagues, Pro members get the pick before kick-off and everyone sees it once the game starts. Every pick is graded on the track record. Replay this tour any time from Help.",
   },
 ];
 

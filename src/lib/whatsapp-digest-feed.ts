@@ -1,6 +1,8 @@
 import "server-only";
 
-import { upcomingFeed, predictBatch } from "@/lib/service";
+import { splitForFree } from "@/lib/access";
+
+import { upcomingFeed, predictBatch, freeViewer } from "@/lib/service";
 import { shortlist } from "@/lib/featured";
 import { toPersonalizedPick, type PersonalizedPick } from "@/lib/for-you";
 import { priceSelections } from "@/lib/odds";
@@ -72,7 +74,9 @@ export async function todaysQualifyingPicks(now = new Date()): Promise<Personali
     .sort((a, b) => Date.parse(a.kickoff) - Date.parse(b.kickoff));
 }
 
+/** The public digest: free-league picks in full, Pro-league picks as a count (lib/pro-leagues.ts). */
 export async function buildDailyDigest(now = new Date()): Promise<DailyDigest> {
-  const picks = await todaysQualifyingPicks(now);
-  return buildDigestFromPicks(picks);
+  const [picks, viewer] = await Promise.all([todaysQualifyingPicks(now), freeViewer()]);
+  const { open, proHeld } = splitForFree(picks, viewer, now.getTime());
+  return buildDigestFromPicks(open, proHeld);
 }

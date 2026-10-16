@@ -65,12 +65,14 @@ export function unfinishedCheckoutEmail(opts: { tier: "pro" | "vip"; nigeria: bo
   const perks =
     opts.tier === "vip"
       ? [
+          "Picks before kick-off in the 15 Pro leagues, including the Champions League and Serie A",
           "Live win probability during every match",
           "Every prediction type, half-time and winning margin included",
           "Forge with every prediction type and Ask KiqStat 100 times a day",
           "Priority support",
         ]
       : [
+          "Picks before kick-off in the 15 Pro leagues, including the Champions League and Serie A",
           "Every prediction type, half-time and winning margin included",
           "The full match breakdown on every game",
           "Forge with every prediction type, 100 combos a day",

@@ -49,11 +49,12 @@ export const PLANS: PlanDefinition[] = [
   {
     id: "free",
     name: "Free",
-    description: "Every pick on every match, free.",
+    description: "Every match, and every pick in 27 competitions, free.",
     features: [
       "Every match, live scores and fixtures 14 days ahead",
-      "Every pick and every Strong pick",
-      "Every prediction type: match result, over/under, both teams to score, two results, correct score",
+      "Every pick and every prediction type in 27 competitions",
+      "Pro leagues: the win/draw/loss split, and the pick at kick-off",
+      "Today's featured picks, Pro leagues included",
       "Corners, cards and shots predictions, plus both teams 2+ goals, goal ranges and more",
       "Strong pick alerts at kick-off and full time",
       "Forge: 5 combos a day, match result and two results",
@@ -67,9 +68,10 @@ export const PLANS: PlanDefinition[] = [
   {
     id: "pro",
     name: "Pro",
-    description: "The full breakdown, the extra predictions and the tools.",
+    description: "Pro-league picks before kick-off, the full breakdown, the extra predictions and the tools.",
     features: [
       "Everything in Free",
+      "Picks before kick-off in the 15 Pro leagues: Champions League, Serie A, Bundesliga and more",
       "Winning margin lines",
       "Half-time predictions and half-by-half goals",
       "Forge with every prediction type, 100 combos a day",
@@ -141,7 +143,8 @@ export const PLAN_MATRIX: MatrixGroup[] = [
   {
     group: "Picks and predictions",
     rows: [
-      { label: "Every pick and every Strong pick", values: { free: true, pro: true, vip: true } },
+      { label: "Every pick in the 27 free competitions", values: { free: true, pro: true, vip: true } },
+      { label: "Picks before kick-off in the 15 Pro leagues", values: { free: "At kick-off", pro: true, vip: true } },
       { label: "Match result", values: { free: true, pro: true, vip: true } },
       {
         label: "Over/under, both teams to score, two results, correct score",
