@@ -412,7 +412,7 @@ function gradeLegs(legs: { market: string; matchId: string; probability: number 
   return { all, wins };
 }
 
-function hub(all: Graded[]) {
+function hub(all: Graded[]): { day: number; tier: string; odds: number; chance: number; landed: boolean; legs: string[]; misses: number }[] {
   const byDay = new Map<number, Graded[]>();
   for (const g of all) byDay.set(g.day, [...(byDay.get(g.day) ?? []), g]);
   const days = [...byDay.keys()].sort((a, b) => a - b);
@@ -446,6 +446,8 @@ function hub(all: Graded[]) {
     console.log("    " + V1_TIERS.map((t, i) => `${t.target}: ${s[i].built ? ((100 * s[i].landed) / s[i].built).toFixed(1) : "—"}% (exp ${s[i].built ? ((100 * s[i].expected) / s[i].built).toFixed(1) : "—"}%)`).join("   "));
   }
 
+  type Example = { day: number; tier: string; odds: number; chance: number; landed: boolean; legs: string[]; misses: number };
+  const examples: Example[] = [];
   for (const v of HUB_VARIANTS) {
     const stats = new Map(HUB_TIERS.map((t) => [t.id, { built: 0, landed: 0, expected: 0, legs: 0, legN: 0, legWins: 0, legProb: 0, span: 0 }]));
     const mix = new Map<string, number>();
@@ -482,6 +484,22 @@ function hub(all: Graded[]) {
           any = true;
           if (hubTier(c.tier)!.days === 1) anyDaily = true;
         }
+        if (v === HUB_VARIANTS[0] && hubTier(c.tier)!.days === 4) {
+          examples.push({
+            day,
+            tier: c.tier,
+            odds: c.legs.reduce((a, l) => a * l.fairOdds, 1),
+            chance: c.legs.reduce((a, l) => a * l.probability, 1),
+            landed: g.all,
+            misses: c.legs.length - g.wins,
+            legs: [...c.legs].sort((a, b) => Date.parse(a.kickoff) - Date.parse(b.kickoff)).map((l) => {
+              const r = rows.get(l.matchId)!;
+              const res = won(l.market, r);
+              const mark = res === "win" ? "✓" : res === "push" ? "void" : "✗";
+              return `${new Date(l.kickoff).toISOString().slice(0, 10)}  ${l.homeName} ${r.homeGoals}-${r.awayGoals} ${l.awayName}  ${l.label} (${Math.round(l.probability * 100)}%)  ${mark}`;
+            }),
+          });
+        }
       }
       if (any) anyDays++;
       if (anyDaily) dailyAny++;
@@ -498,6 +516,24 @@ function hub(all: Graded[]) {
         `    ${t.id.padStart(5)}   ${String(s.built).padStart(5)}  ${((100 * s.landed) / s.built).toFixed(1).padStart(5)}%   ${((100 * s.expected) / s.built).toFixed(1).padStart(5)}%    ${(s.legs / s.built).toFixed(1).padStart(4)}      ${((100 * s.legWins) / s.legN).toFixed(1).padStart(5)}%     ${((100 * s.legProb) / s.legN).toFixed(1).padStart(5)}%      ${(s.span / s.built).toFixed(1)}`,
       );
     }
+  }
+  return examples;
+}
+
+function printExamples(examples: { day: number; tier: string; odds: number; chance: number; landed: boolean; legs: string[]; misses: number }[]) {
+  console.log("\n7. FOUR-DAY CODES: EVERY ONE THAT LANDED, AND SOME THAT MISSED");
+  for (const tier of ["50", "100"]) {
+    const ex = examples.filter((e) => e.tier === tier);
+    const won = ex.filter((e) => e.landed);
+    const byOne = ex.filter((e) => !e.landed && e.misses === 1);
+    console.log(`\n  ${tier}-odds: ${won.length} of ${ex.length} landed; ${byOne.length} missed by one leg`);
+    const show = (e: (typeof ex)[number]) => {
+      console.log(`\n    ${e.landed ? "LANDED" : `MISSED (${e.misses} leg${e.misses === 1 ? "" : "s"} lost)`}  built ${new Date(e.day).toISOString().slice(0, 10)}  odds ${e.odds.toFixed(2)}  model chance ${(100 * e.chance).toFixed(1)}%`);
+      for (const l of e.legs) console.log(`      ${l}`);
+    };
+    won.forEach(show);
+    byOne.slice(0, 2).forEach(show);
+    ex.filter((e) => !e.landed && e.misses >= 3).slice(0, 1).forEach(show);
   }
 }
 
@@ -516,9 +552,12 @@ async function main() {
     overUnder(all);
     digest(all);
   }
-  hub(all);
-  headline(all);
-  digest2(all);
+  const examples = hub(all);
+  printExamples(examples);
+  if (arg("examples") === undefined) {
+    headline(all);
+    digest2(all);
+  }
 }
 
 main().catch((e) => {

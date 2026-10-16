@@ -203,7 +203,12 @@ describe("codeState", () => {
   it("shows a stored code until the first kick-off", () => {
     const stored = { bookingCode: "ABC123", deadline: "2026-10-16T15:00:00Z" };
     expect(codeState(stored, first, first - 60_000)).toEqual({ state: "ready", bookingCode: "ABC123", deadline: first });
-    expect(codeState(stored, first, first)).toEqual({ state: "closed" });
+  });
+  it("keeps the code on the card once the games start", () => {
+    const stored = { bookingCode: "ABC123", deadline: "2026-10-16T15:00:00Z" };
+    expect(codeState(stored, first, first)).toEqual({ state: "started", bookingCode: "ABC123" });
+    expect(codeState(stored, first, first + 3 * 86_400_000)).toEqual({ state: "started", bookingCode: "ABC123" });
+    expect(codeState({ bookingCode: null, deadline: null }, first, first)).toEqual({ state: "closed" });
   });
   it("waits when no code has been booked", () => {
     expect(codeState({ bookingCode: null, deadline: null }, first, first - 60_000)).toEqual({ state: "waiting" });

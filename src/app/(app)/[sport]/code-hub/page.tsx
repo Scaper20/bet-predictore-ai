@@ -5,7 +5,7 @@ import { Container } from "@/components/ui/container";
 import { Badge, EmptyState } from "@/components/ui/primitives";
 import { HubCard } from "@/components/code-hub/hub-card";
 import { getEntitlement, meets } from "@/lib/entitlements";
-import { finishedScores, pastHub, todayHub } from "@/lib/code-hub-feed";
+import { finishedScores, pastHub, runningHub, todayHub } from "@/lib/code-hub-feed";
 import {
   codeState,
   hubAccess,
@@ -53,10 +53,12 @@ export default async function CodeHubPage() {
     );
   }
 
-  const [today, past, live] = await Promise.all([todayHub(), pastHub(7), parsebotLive()]);
+  const [today, running, past, live] = await Promise.all([todayHub(), runningHub(), pastHub(7), parsebotLive()]);
   const paid = meets(entitlement.tier, "pro");
   const now = today.now;
-  const scores = await finishedScores([...new Set(today.codes.flatMap((c) => c.legs.map((l) => l.matchId)))]);
+  // Today's codes, then earlier four-day codes whose games are still on.
+  const codes = [...today.codes, ...running];
+  const scores = await finishedScores([...new Set(codes.flatMap((c) => c.legs.map((l) => l.matchId)))]);
 
   return (
     <>
@@ -78,7 +80,7 @@ export default async function CodeHubPage() {
           <h2 id="today-heading" className="sr-only">
             Today&apos;s codes
           </h2>
-          {today.codes.length === 0 ? (
+          {codes.length === 0 ? (
             <EmptyState
               icon="⏱"
               title="No codes left for today"
@@ -86,11 +88,12 @@ export default async function CodeHubPage() {
             />
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {today.codes.map((c) => {
+              {codes.map((c) => {
                 const results = c.legs.map((l) => hubLegResult(l, scores[l.matchId]));
                 return (
                   <HubCard
-                    key={c.tier}
+                    key={`${c.day}-${c.tier}`}
+                    publishedOn={c.day === today.day ? undefined : shortDay(c.day)}
                     tier={c.tier}
                     legs={c.legs}
                     odds={c.odds}

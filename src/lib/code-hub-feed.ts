@@ -12,8 +12,10 @@ import { findOnBoard } from "@/lib/odds/sportybet";
 import { parsebotLive } from "@/lib/odds/parsebot";
 import type { BookingLeg } from "@/lib/odds/booking";
 import {
+  CODE_RUN_MS,
   HUB_FORGE_MARKETS,
   buildHub,
+  codeRunning,
   hubDay,
   hubTotals,
   toHubLeg,
@@ -284,6 +286,33 @@ function sortTiers(rows: HubCodeRow[]): HubCodeRow[] {
   return [...rows].sort((a, b) => TIER_ORDER.indexOf(a.tier) - TIER_ORDER.indexOf(b.tier));
 }
 
+/**
+ * Codes from the last few days whose games are still being played: the
+ * four-day codes, which outlive the day they were published on. They stay
+ * on the page beside today's until their last game ends.
+ */
+export async function runningHub(now = Date.now()): Promise<HubCodeRow[]> {
+  return cached(`code-hub:running:${hubDay()}:${Math.floor(now / 60_000)}`, 60_000, async () => {
+    try {
+      const db = await admin();
+      const since = hubDay(new Date(now - 4 * 86_400_000));
+      const { data, error } = await db
+        .from("code_hub_codes")
+        .select(COLUMNS)
+        .gte("day", since)
+        .lt("day", hubDay(new Date(now)))
+        .gt("last_kickoff", new Date(now - CODE_RUN_MS).toISOString())
+        .order("day", { ascending: false });
+      if (error || !data) return [];
+      const rows = (data as DbRow[]).map(fromDb);
+      bookMissing(rows);
+      return rows;
+    } catch {
+      return [];
+    }
+  });
+}
+
 export interface PastHubDay {
   day: string;
   codes: HubCodeRow[];
@@ -307,7 +336,8 @@ export async function pastHub(days = 7): Promise<{ days: PastHubDay[]; scores: R
         .gte("day", since)
         .order("day", { ascending: false });
       if (error || !data) return empty;
-      const rows = (data as DbRow[]).map(fromDb);
+      // Codes still in play are shown with today's (runningHub), not here.
+      const rows = (data as DbRow[]).map(fromDb).filter((r) => !codeRunning(r.lastKickoff));
 
       const ids = [...new Set(rows.flatMap((r) => r.legs.map((l) => l.matchId)))];
       const scores: Record<string, FinalScore> = {};

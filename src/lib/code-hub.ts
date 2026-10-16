@@ -270,12 +270,18 @@ export function hubStatus(results: HubLegResult[], firstKickoff: number, now = D
 /* ----------------------------------------------------------------- codes */
 
 /**
- * Where a code stands. "waiting" is the normal state before launch, and on
- * launch day until the morning booking has run: the combo is published, the
- * code is not out yet.
+ * Where a code stands.
+ *
+ * "waiting": published, the code is not out yet (before launch, or before
+ * the morning booking has run). "ready": the code loads on SportyBet.
+ * "started": the first game has kicked off; the code stays on the card,
+ * with its games and results, until the last game ends, so everyone can see
+ * what was published, though SportyBet stops loading it at the first
+ * kick-off. "closed": the games started and no code was ever booked.
  */
 export type CodeState =
   | { state: "ready"; bookingCode: string; deadline: number }
+  | { state: "started"; bookingCode: string }
   | { state: "waiting" }
   | { state: "closed" };
 
@@ -284,12 +290,21 @@ export function codeState(
   firstKickoff: number,
   now = Date.now(),
 ): CodeState {
-  if (now >= firstKickoff) return { state: "closed" };
+  if (now >= firstKickoff) return stored.bookingCode ? { state: "started", bookingCode: stored.bookingCode } : { state: "closed" };
   if (stored.bookingCode && stored.deadline) {
     const deadline = Date.parse(stored.deadline);
     if (deadline > now) return { state: "ready", bookingCode: stored.bookingCode, deadline };
+    return { state: "started", bookingCode: stored.bookingCode };
   }
   return { state: "waiting" };
+}
+
+/** How long after its last kick-off a code counts as running: a match plus stoppages and a margin. */
+export const CODE_RUN_MS = 2.5 * 3600_000;
+
+/** Whether a code's games may still be in play. */
+export function codeRunning(lastKickoff: number, now = Date.now()): boolean {
+  return now < lastKickoff + CODE_RUN_MS;
 }
 
 /** Lagos calendar day, YYYY-MM-DD: the hub's unit of publication. */
