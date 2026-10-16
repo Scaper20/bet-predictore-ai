@@ -23,7 +23,7 @@ export function LeagueFilter({ proTags = false }: { proTags?: boolean }) {
   };
 
   return (
-    <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
+    <div className="no-scrollbar relative -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
       <Chip href={href()} active={!active} label="All leagues" />
       {CLUB_LEAGUES.map((l) => (
         <Chip
@@ -79,8 +79,8 @@ function Chip({
       {flag && <span aria-hidden>{flag}</span>}
       {label}
       {pro && (
-        <span className="rounded-full bg-violet/15 px-1.5 py-0.5 text-[9.5px] font-bold tracking-wide text-violet">
-          PRO<span className="sr-only"> league</span>
+        <span title="Pro league" className="rounded-full bg-violet/15 px-1.5 py-0.5 text-[9.5px] font-bold tracking-wide text-violet">
+          PRO
         </span>
       )}
     </Link>
