@@ -13,7 +13,7 @@ import { FeaturedBoard } from "@/components/landing/featured-board";
 import { WhatsAppPromo } from "@/components/landing/whatsapp-promo";
 import { toFeaturedRow, type FeaturedReasonCode } from "@/lib/featured";
 import type { FreeSlot } from "@/lib/free-picks";
-import { matchPath, sportPath } from "@/lib/routes";
+import { matchPath, sportPath, scoresPath } from "@/lib/routes";
 
 /*
  * Revalidate every five minutes. Live scores on the landing page update in
@@ -159,7 +159,7 @@ function TodaysPicks({ previews, free }: { previews: Awaited<ReturnType<typeof p
             icon="⚽"
             title="No fixtures with enough history right now"
             description="Check back when the next fixtures are out."
-            action={<ButtonLink href={sportPath("fixtures")} variant="secondary">Browse all fixtures</ButtonLink>}
+            action={<ButtonLink href={scoresPath("fixtures")} variant="secondary">Browse all fixtures</ButtonLink>}
           />
         </div>
       ) : (

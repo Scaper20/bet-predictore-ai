@@ -17,6 +17,11 @@ import {
 } from "@/lib/code-hub";
 import { odds } from "@/lib/format";
 import { GENERATOR_ALLOWANCE } from "@/lib/code-hub-plans";
+import { checkAdmin } from "@/lib/admin";
+import { switchOn } from "@/lib/switches";
+import { parsebotLive } from "@/lib/odds/parsebot";
+import { supabaseAdmin } from "@/lib/supabase/admin";
+import { WaitlistWall } from "@/components/code-hub/waitlist-wall";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/football/code-hub" },
@@ -29,7 +34,26 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function CodeHubPage() {
-  const [entitlement, today, past] = await Promise.all([getEntitlement(), todayHub(), pastHub(7)]);
+  const [entitlement, open, admin] = await Promise.all([
+    getEntitlement(),
+    switchOn("code_hub_open"),
+    checkAdmin().then((g) => g.ok),
+  ]);
+
+  // Behind the waitlist until it opens from /admin/parsebot. Admins see
+  // through it, so the real page can be checked before launch.
+  if (!open && !admin) {
+    return (
+      <>
+        <PageHeader eyebrow="Code Hub" title="Code Hub" description="Ready-made combos from the model, each with a SportyBet code." />
+        <Container className="py-10 sm:py-14">
+          <WaitlistWall email={entitlement.email} joined={await onWaitlist(entitlement.userId)} />
+        </Container>
+      </>
+    );
+  }
+
+  const [today, past, live] = await Promise.all([todayHub(), pastHub(7), parsebotLive()]);
   const paid = meets(entitlement.tier, "pro");
   const now = today.now;
   const scores = await finishedScores([...new Set(today.codes.flatMap((c) => c.legs.map((l) => l.matchId)))]);
@@ -41,8 +65,8 @@ export default async function CodeHubPage() {
         title="Today's codes"
         description="Ready-made combos from the model, about 2 to 20 odds, each with a SportyBet code."
         actions={
-          !today.stored ? (
-            <Badge tone="amber">Preview: codes switch on at launch</Badge>
+          !open ? (
+            <Badge tone="amber">Admin view: visitors see the waitlist</Badge>
           ) : paid ? (
             <Badge tone="brand">All codes open</Badge>
           ) : null
@@ -76,7 +100,7 @@ export default async function CodeHubPage() {
                     status={hubStatus(results, c.firstKickoff, now)}
                     results={results}
                     code={codeState({ bookingCode: c.bookingCode, deadline: c.bookingDeadline }, c.firstKickoff, now)}
-                    preview={!today.stored}
+                    preview={!live}
                   />
                 );
               })}
@@ -106,6 +130,19 @@ export default async function CodeHubPage() {
       </Container>
     </>
   );
+}
+
+async function onWaitlist(userId: string | null): Promise<boolean> {
+  if (!userId) return false;
+  try {
+    const { count } = await supabaseAdmin()
+      .from("code_hub_waitlist")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId);
+    return (count ?? 0) > 0;
+  } catch {
+    return false;
+  }
 }
 
 function HowItem({ title, children }: { title: string; children: React.ReactNode }) {

@@ -169,10 +169,10 @@ async function readDay(day: string): Promise<StoreRead> {
  * rather than booked short.
  */
 function bookMissing(rows: HubCodeRow[]) {
-  if (!parsebotLive()) return;
   const due = rows.filter((r) => !r.bookingCode && r.firstKickoff - Date.now() > LEAD_MS);
   if (due.length === 0) return;
   after(async () => {
+    if (!(await parsebotLive())) return;
     for (const row of due) {
       const legs: BookingLeg[] = [];
       for (const leg of row.legs) {

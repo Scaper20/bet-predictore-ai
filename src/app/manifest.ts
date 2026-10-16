@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { sportPath } from "@/lib/routes";
+import { sportPath, scoresPath } from "@/lib/routes";
 
 /**
  * Web app manifest — what makes KiqStat installable to a phone's home screen.
@@ -51,7 +51,7 @@ export default function manifest(): MetadataRoute.Manifest {
       {
         name: "Fixtures",
         short_name: "Fixtures",
-        url: sportPath("fixtures"),
+        url: scoresPath("fixtures"),
         icons: [{ src: "/icons/shortcut-96.png", sizes: "96x96", type: "image/png" }],
       },
       {

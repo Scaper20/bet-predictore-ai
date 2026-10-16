@@ -10,8 +10,9 @@ import { useLiveCount } from "@/components/layout/use-live-count";
  * Primary navigation for a thumb.
  *
  * Not a miniature of the desktop nav: desktop navigation is a site map,
- * thumb navigation is a frequency ranking. Fixtures and Live sit under the
- * left thumb, Forge is the raised centre action, Picks and More on the right.
+ * thumb navigation is a frequency ranking. Picks and Live (scores: live,
+ * fixtures and results in one page) sit under the left thumb, Forge is the
+ * raised centre action, Code Hub and More on the right.
  * The slip moved up beside Ask KiqStat in the header, where it's visible on
  * every screen without spending a tab. Everything else is behind More.
  *
@@ -24,13 +25,11 @@ const HEIGHT_CLASS = "h-14"; // 56px — mirrors --bottom-nav-h in globals.css.
 type Tab = { route: SportRoute; label: string; icon: IconName };
 
 const LEFT: readonly Tab[] = [
-  { route: "fixtures", label: "Fixtures", icon: "calendar" },
-  { route: "live", label: "Live", icon: "live" },
-];
-const RIGHT: readonly Tab[] = [
   // "Predictions" does not fit under a 20px icon at this type size.
   { route: "predictions", label: "Picks", icon: "chart" },
+  { route: "live", label: "Live", icon: "live" },
 ];
+const RIGHT: readonly Tab[] = [{ route: "codeHub", label: "Code Hub", icon: "ticket" }];
 
 export function BottomNav({ onOpenMenu, menuOpen }: { onOpenMenu: () => void; menuOpen: boolean }) {
   const pathname = usePathname();
@@ -124,7 +123,7 @@ function Label({ active, children }: { active: boolean; children: string }) {
   );
 }
 
-type IconName = "calendar" | "live" | "chart" | "more";
+type IconName = "ticket" | "live" | "chart" | "more";
 
 function Icon({ name, active }: { name: IconName; active: boolean }) {
   const common = {
@@ -139,18 +138,18 @@ function Icon({ name, active }: { name: IconName; active: boolean }) {
   };
 
   switch (name) {
-    case "calendar":
-      return (
-        <svg {...common}>
-          <rect x="3.5" y="5" width="17" height="15" rx="2.5" />
-          <path d="M3.5 10h17M8 3v4M16 3v4" />
-        </svg>
-      );
     case "live":
       return (
         <svg {...common}>
           <circle cx="12" cy="12" r="3" />
           <path d="M6.2 6.2a8.2 8.2 0 000 11.6M17.8 6.2a8.2 8.2 0 010 11.6" />
+        </svg>
+      );
+    case "ticket":
+      return (
+        <svg {...common}>
+          <path d="M4 7.5A1.5 1.5 0 015.5 6h13A1.5 1.5 0 0120 7.5V10a2 2 0 000 4v2.5a1.5 1.5 0 01-1.5 1.5h-13A1.5 1.5 0 014 16.5V14a2 2 0 000-4z" />
+          <path d="M14 6.5v11" strokeDasharray="1.6 2" />
         </svg>
       );
     case "chart":

@@ -1,7 +1,7 @@
 import { LogoLockup } from "@/components/brand/logo";
 import Link from "next/link";
 import { Container } from "@/components/ui/container";
-import { sportPath } from "@/lib/routes";
+import { sportPath, scoresPath } from "@/lib/routes";
 import { COMPANY } from "@/lib/company";
 import { FooterColumn } from "@/components/layout/footer-column";
 
@@ -17,9 +17,9 @@ const COLUMNS = [
     title: "Product",
     links: [
       { href: sportPath("live"), label: "Live Scores" },
-      { href: sportPath("fixtures"), label: "Fixtures" },
+      { href: scoresPath("fixtures"), label: "Fixtures" },
       { href: sportPath("predictions"), label: "Predictions" },
-      { href: sportPath("results"), label: "Results" },
+      { href: scoresPath("results"), label: "Results" },
       { href: sportPath("tables"), label: "League Tables" },
       { href: sportPath("trends"), label: "Trends" },
       { href: sportPath("ratings"), label: "Model Ratings" },
@@ -29,12 +29,12 @@ const COLUMNS = [
   {
     title: "Leagues",
     links: [
-      { href: `${sportPath("fixtures")}?league=premier-league`, label: "Premier League" },
-      { href: `${sportPath("fixtures")}?league=npfl`, label: "NPFL" },
-      { href: `${sportPath("fixtures")}?league=champions-league`, label: "Champions League" },
-      { href: `${sportPath("fixtures")}?league=la-liga`, label: "La Liga" },
-      { href: `${sportPath("fixtures")}?league=caf-champions-league`, label: "CAF Champions League" },
-      { href: `${sportPath("fixtures")}?league=afcon`, label: "AFCON" },
+      { href: scoresPath("fixtures", { league: "premier-league" }), label: "Premier League" },
+      { href: scoresPath("fixtures", { league: "npfl" }), label: "NPFL" },
+      { href: scoresPath("fixtures", { league: "champions-league" }), label: "Champions League" },
+      { href: scoresPath("fixtures", { league: "la-liga" }), label: "La Liga" },
+      { href: scoresPath("fixtures", { league: "caf-champions-league" }), label: "CAF Champions League" },
+      { href: scoresPath("fixtures", { league: "afcon" }), label: "AFCON" },
     ],
   },
   {

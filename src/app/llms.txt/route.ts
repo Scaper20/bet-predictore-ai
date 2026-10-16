@@ -2,7 +2,7 @@ import { CLUB_LEAGUES, INTERNATIONAL_LEAGUES } from "@/lib/leagues";
 import { PLANS } from "@/lib/pricing";
 import { ELSEWHERE, formatMoney } from "@/lib/payments/markets";
 import { SITE_URL as SITE } from "@/lib/site-url";
-import { sportPath } from "@/lib/routes";
+import { sportPath, scoresPath } from "@/lib/routes";
 import { COMPANY } from "@/lib/company";
 
 /**
@@ -50,9 +50,9 @@ KiqStat is a sports analytics product: it holds no customer funds, and no money 
 ## Key pages
 
 - [Today's predictions](${SITE}${sportPath("predictions")}): every upcoming fixture with model probabilities
-- [Fixtures](${SITE}${sportPath("fixtures")}): upcoming matches, kickoff times in your own time zone
+- [Fixtures](${SITE}${scoresPath("fixtures")}): upcoming matches, kickoff times in your own time zone
 - [Live scores](${SITE}${sportPath("live")})
-- [Results](${SITE}${sportPath("results")}): final scores by day, with how each published pick did
+- [Results](${SITE}${scoresPath("results")}): final scores by day, with how each published pick did
 - [League tables](${SITE}${sportPath("tables")}): standings, updated live while games are in play
 - [Head-to-head](${SITE}${sportPath("h2h")}): every meeting between any two teams
 - [Team form](${SITE}${sportPath("teamForm")}) and [goals stats](${SITE}${sportPath("goals")}): last ten games, over/under and both-teams-to-score rates by team

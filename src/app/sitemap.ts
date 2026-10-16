@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { LEAGUES } from "@/lib/leagues";
 import { SITE_URL as SITE } from "@/lib/site-url";
-import { matchPath, sportPath } from "@/lib/routes";
+import { matchPath, sportPath, scoresPath } from "@/lib/routes";
 import { upcomingFeed } from "@/lib/service";
 
 /**
@@ -33,9 +33,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE}/`, lastModified: now, changeFrequency: "hourly", priority: 1 },
     { url: `${SITE}${sportPath("predictions")}`, lastModified: now, changeFrequency: "hourly", priority: 0.9 },
     { url: `${SITE}${sportPath("live")}`, lastModified: now, changeFrequency: "always", priority: 0.8 },
-    { url: `${SITE}${sportPath("fixtures")}`, lastModified: now, changeFrequency: "hourly", priority: 0.8 },
+    { url: `${SITE}${scoresPath("fixtures")}`, lastModified: now, changeFrequency: "hourly", priority: 0.8 },
     { url: `${SITE}${sportPath("trends")}`, lastModified: now, changeFrequency: "daily", priority: 0.7 },
-    { url: `${SITE}${sportPath("results")}`, lastModified: now, changeFrequency: "hourly", priority: 0.7 },
+    { url: `${SITE}${scoresPath("results")}`, lastModified: now, changeFrequency: "hourly", priority: 0.7 },
     { url: `${SITE}${sportPath("tables")}`, lastModified: now, changeFrequency: "hourly", priority: 0.7 },
     { url: `${SITE}${sportPath("h2h")}`, changeFrequency: "weekly", priority: 0.5 },
     { url: `${SITE}${sportPath("teamForm")}`, lastModified: now, changeFrequency: "daily", priority: 0.6 },
@@ -83,7 +83,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         }]),
     ...(withFixtures.has(l.code)
       ? [{
-          url: `${SITE}${sportPath("fixtures", l.sport)}?league=${l.code}`,
+          url: `${SITE}${scoresPath("fixtures", { league: l.code, sport: l.sport })}`,
           lastModified: now,
           changeFrequency: "daily" as const,
           priority: 0.6,
@@ -109,5 +109,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7,
   }));
 
-  return [...core, ...leagues, ...matches];
+  // Next writes <loc> verbatim, and the scores page's URLs carry two query
+  // parameters: a bare & would make the whole sitemap invalid XML.
+  return [...core, ...leagues, ...matches].map((e) => ({ ...e, url: e.url.replace(/&/g, "&amp;") }));
 }

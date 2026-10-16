@@ -22,7 +22,7 @@ export const maxDuration = 120;
  *   month's credits last the month, and only for competitions with games in
  *   the next three days.
  * - SportyBet via parse.bot (metered): OFF unless SPORTYBET_SNAPSHOTS=on AND
- *   PARSEBOT_LIVE=on. Even then a board is only refetched once it is stale for
+ *   the parse.bot switch is on (/admin/parsebot). Even then a board is only refetched once it is stale for
  *   how close its next game is (src/lib/odds/parsebot-budget.ts), and every
  *   call is charged against the credit ledger's caps. Without it, boards are
  *   refreshed on demand by the pages that need them, which on the
@@ -57,8 +57,8 @@ export async function GET(request: Request) {
 
   if (process.env.SPORTYBET_SNAPSHOTS !== "on") {
     report.sportybet.skipped = "SPORTYBET_SNAPSHOTS is not on";
-  } else if (!parsebotLive()) {
-    report.sportybet.skipped = "PARSEBOT_LIVE is not on";
+  } else if (!(await parsebotLive())) {
+    report.sportybet.skipped = "parse.bot switch is off";
   } else {
     for (const league of LEAGUES) {
       const tid = league.ids.sportyBet;

@@ -16,7 +16,6 @@ import { DEFAULT_SPORT, isSportId, type SportId } from "@/lib/sports";
 
 export const SPORT_ROUTES = {
   live: "live",
-  fixtures: "fixtures",
   predictions: "predictions",
   trends: "trends",
   trackRecord: "track-record",
@@ -25,7 +24,6 @@ export const SPORT_ROUTES = {
   forge: "forge",
   codeHub: "code-hub",
   valueAlerts: "value-alerts",
-  results: "results",
   tables: "tables",
   h2h: "h2h",
   teamForm: "team-form",
@@ -37,6 +35,27 @@ export type SportRoute = keyof typeof SPORT_ROUTES;
 
 export function sportPath(route: SportRoute, sport: SportId = DEFAULT_SPORT): string {
   return `/${sport}/${SPORT_ROUTES[route]}`;
+}
+
+/**
+ * The scores page's three views. Fixtures, live and results were three pages
+ * until October 2026; they are one page now, at /live, with the view in the
+ * query. The old /fixtures and /results URLs redirect here (next.config.ts).
+ */
+export type ScoresView = "live" | "fixtures" | "results";
+export const SCORES_VIEWS: readonly ScoresView[] = ["live", "fixtures", "results"];
+
+export function scoresPath(
+  view: ScoresView,
+  opts: { league?: string; day?: number; sport?: SportId } = {},
+): string {
+  const p = new URLSearchParams();
+  if (view !== "live") p.set("view", view);
+  if (opts.league) p.set("league", opts.league);
+  if (opts.day) p.set("day", String(opts.day));
+  const qs = p.toString();
+  const base = sportPath("live", opts.sport);
+  return qs ? `${base}?${qs}` : base;
 }
 
 export function matchPath(id: string, sport: SportId = DEFAULT_SPORT): string {

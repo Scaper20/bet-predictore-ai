@@ -7,7 +7,7 @@ import { Crest } from "@/components/ui/crest";
 import { isStrong } from "@/lib/model/tiers";
 import { StrongBadge } from "@/components/ui/strong-badge";
 import { RiskBadge } from "@/components/ui/risk-badge";
-import { matchPath, sportPath } from "@/lib/routes";
+import { matchPath, sportPath, scoresPath } from "@/lib/routes";
 import { BttsPanel, CorrectScorePanel, DoubleChancePanel, GoalsPanel, H2HPanel, OutcomePanel } from "@/components/match/market-panels";
 import { AddToSlip } from "@/components/match/add-to-slip";
 import { MatchTabs, type MatchTab } from "@/components/match/match-tabs";
@@ -161,7 +161,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
           <div className="mx-auto max-w-5xl">
             <div className="flex items-center gap-2.5">
               {match.league.logo && <Crest src={match.league.logo} name={match.league.name} size={18} />}
-              <Link href={`${sportPath("fixtures")}?league=${match.league.code ?? ""}`} className="min-w-0 truncate text-xs font-medium text-ink-muted hover:text-ink sm:text-sm">
+              <Link href={scoresPath("fixtures", { league: match.league.code ?? "" })} className="min-w-0 truncate text-xs font-medium text-ink-muted hover:text-ink sm:text-sm">
                 {match.league.name}
                 {match.round && <span className="text-ink-dim"> · {match.round}</span>}
               </Link>

@@ -5,7 +5,7 @@ import { flutterwaveConfigured } from "@/lib/flutterwave/client";
 import { Container, containerClass } from "@/components/ui/container";
 import { Reveal } from "@/components/ui/reveal";
 import { CLUB_LEAGUES, INTERNATIONAL_LEAGUES } from "@/lib/leagues";
-import { sportPath } from "@/lib/routes";
+import { sportPath, scoresPath } from "@/lib/routes";
 
 /* ---------------------------------------------------------------- Features */
 
@@ -161,7 +161,7 @@ export function Leagues() {
               {group.map((l) => (
                 <Link
                   key={l.code}
-                  href={`${sportPath("fixtures")}?league=${l.code}`}
+                  href={scoresPath("fixtures", { league: l.code })}
                   className="card card-hover flex min-w-0 items-center gap-2.5 px-3 py-2.5 sm:px-4 sm:py-3"
                 >
                   <span className="shrink-0 text-lg" aria-hidden>{l.flag}</span>

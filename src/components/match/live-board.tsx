@@ -5,7 +5,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState } from 
 import type { Match } from "@/lib/types";
 import { Crest } from "@/components/ui/crest";
 import { Badge, EmptyState, ButtonLink, LiveDot } from "@/components/ui/primitives";
-import { matchPath, sportPath } from "@/lib/routes";
+import { matchPath, scoresPath } from "@/lib/routes";
 import { groupLiveMatches, matchProgress, searchLiveGroups, type LiveGroup } from "@/lib/live-board";
 import { useTickingMinute } from "@/components/match/use-live-clock";
 import { rebase, type Reading } from "@/lib/live-clock";
@@ -123,7 +123,7 @@ export function LiveBoard({ initial, initialAt }: { initial: Match[]; initialAt:
         icon="⏱"
         title="No matches in play right now"
         description="Nothing in play right now."
-        action={<ButtonLink href={sportPath("fixtures")} variant="secondary">See upcoming fixtures</ButtonLink>}
+        action={<ButtonLink href={scoresPath("fixtures")} variant="secondary">See upcoming fixtures</ButtonLink>}
       />
     );
   }

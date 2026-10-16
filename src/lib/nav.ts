@@ -8,7 +8,7 @@
  */
 
 import { DEFAULT_SPORT, type SportId } from "@/lib/sports";
-import { sportPath } from "@/lib/routes";
+import { sportPath, scoresPath } from "@/lib/routes";
 import { CLUB_LEAGUES, INTERNATIONAL_LEAGUES } from "@/lib/leagues";
 
 /* ------------------------------------------------------------- features */
@@ -135,14 +135,14 @@ export function navFor(sport: SportId): { tabs: NavTab[]; tools: NavLink[] } {
   const matches: NavMenu = {
     id: "matches",
     label: "Matches",
-    match: [p("fixtures"), p("trends"), p("results"), p("tables"), p("h2h"), p("teamForm"), p("goals"), p("ratings")],
+    match: [p("trends"), p("tables"), p("h2h"), p("teamForm"), p("goals"), p("ratings")],
     columns: [
       {
         title: "Matches",
         links: [
-          { label: "Fixtures", desc: "The next two weeks, day by day", href: p("fixtures") },
+          { label: "Fixtures", desc: "The next two weeks, day by day", href: scoresPath("fixtures", { sport }) },
           { label: "Live scores", href: p("live"), badge: { text: "Live", tone: "rose" } },
-          { label: "Results", desc: "Every final score, day by day", href: p("results") },
+          { label: "Results", desc: "Every final score, day by day", href: scoresPath("results", { sport }) },
           { label: "League tables", desc: "Standings that move while games are on", href: p("tables"), badge: { text: "Live", tone: "rose" } },
           { label: "Head-to-head", desc: "Any two teams, every meeting", href: p("h2h") },
         ],

@@ -62,12 +62,14 @@ export function capsFrom(env: Record<string, string | undefined>): Caps {
 /**
  * Whether live parse.bot calls are switched on at all.
  *
- * Off unless PARSEBOT_LIVE is exactly "on" AND a key is set. A key alone is
- * not enough: the key can sit in Vercel ready for launch without a single
- * credit being spent.
+ * Three conditions, all required: the admin switch is on (app_switches,
+ * flipped from /admin/parsebot), a key is set, and PARSEBOT_LIVE is not
+ * "off". A key alone is not enough: it can sit in Vercel ready for launch
+ * without a single credit being spent. PARSEBOT_LIVE=off is the hard stop
+ * that no admin click can override, for when the key itself is in doubt.
  */
-export function liveEnabled(env: Record<string, string | undefined>): boolean {
-  return env.PARSEBOT_LIVE?.trim() === "on" && Boolean(env.PARSEBOT_API_KEY?.trim());
+export function liveEnabled(env: Record<string, string | undefined>, switchedOn: boolean): boolean {
+  return switchedOn && env.PARSEBOT_LIVE?.trim() !== "off" && Boolean(env.PARSEBOT_API_KEY?.trim());
 }
 
 const MINUTE = 60_000;

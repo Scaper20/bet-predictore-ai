@@ -8,7 +8,7 @@ import { Badge, ButtonLink, LiveDot, type Tone } from "@/components/ui/primitive
 import { Crest } from "@/components/ui/crest";
 import { percent } from "@/lib/format";
 import { LocalTime } from "@/components/ui/local-time";
-import { sportPath } from "@/lib/routes";
+import { scoresPath } from "@/lib/routes";
 import { LockIcon } from "@/components/entitlements/locked-pick";
 import { RiskBadge } from "@/components/ui/risk-badge";
 import { useTickingMinute } from "@/components/match/use-live-clock";
@@ -155,7 +155,7 @@ export function FeaturedBoard({ rows, renderedAt }: { rows: FeaturedRow[]; rende
             This board only shows real fixtures with enough completed history behind them, so it
             stays empty rather than filling itself.
           </p>
-          <ButtonLink href={sportPath("fixtures")} variant="secondary" className="mt-4 px-4 py-2">
+          <ButtonLink href={scoresPath("fixtures")} variant="secondary" className="mt-4 px-4 py-2">
             Browse all fixtures
           </ButtonLink>
         </div>
