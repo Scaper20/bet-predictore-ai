@@ -28,7 +28,7 @@ export function PredictionCard({ prediction, morph = true }: { prediction: Predi
   const publishable = sufficiency.publishable && topPick;
   // Free viewers get every match, but non-1X2 picks and markets arrive
   // already locked from the server (lib/access.ts); the card only shows it.
-  const locked = "locked" in prediction ? prediction.locked : { pick: false, markets: false };
+  const locked: ViewedPrediction["locked"] = "locked" in prediction ? prediction.locked : { pick: false, markets: false };
 
   return (
     // min-w-0: a grid item defaults to its min-content width, which let a
@@ -38,6 +38,9 @@ export function PredictionCard({ prediction, morph = true }: { prediction: Predi
         <div className="flex items-center gap-2 px-4 pt-4 sm:px-5">
           {match.league.logo ? <Crest src={match.league.logo} name={match.league.name} size={16} /> : null}
           <span className="min-w-0 truncate text-xs font-medium text-ink-muted">{match.league.name}</span>
+          {locked.proLeague && (
+            <span className="shrink-0 rounded-full bg-violet/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-violet">Pro league</span>
+          )}
           <span className="tnum ml-auto shrink-0 rounded-md bg-surface-2 px-2 py-0.5 text-[11px] font-semibold text-ink-muted">
             <LocalTime iso={match.kickoff} kind="relative" /> · <LocalTime iso={match.kickoff} />
           </span>
@@ -98,7 +101,7 @@ export function PredictionCard({ prediction, morph = true }: { prediction: Predi
           <SplitBar home={markets.home} draw={markets.draw} away={markets.away} />
           {locked.markets ? (
             <p className="flex items-center gap-2 text-[11px] text-ink-dim">
-              <ProTag /> Goals, both-teams-to-score and every other market
+              <ProTag /> {locked.proLeague ? "Pro league: every market opens at kick-off" : "Goals, both-teams-to-score and every other market"}
             </p>
           ) : (
             <div className="flex flex-wrap gap-1.5">

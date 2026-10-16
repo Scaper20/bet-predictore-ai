@@ -177,7 +177,9 @@ const PRO_NOTE =
   "This user is on the free plan: the match result prediction is open to them, and so is the headline pick on " +
   "today's six free picks. Other goals, both teams to score, " +
   "two results, correct score and winning margin are Pro. Do not estimate or hint at those numbers; say they are " +
-  "part of Pro and offer the match result view.";
+  "part of Pro and offer the match result view. In the Pro leagues (Primeira Liga, Serie A, Serie B, Eredivisie, " +
+  "Bundesliga, Belgian Pro League, Championship, League One and every cup and continental competition) even the " +
+  "pick is Pro until kick-off: give the result split only and say the pick opens at kick-off.";
 
 async function slate(): Promise<Match[]> {
   return cached("ask:slate", 5 * 60_000, async () => (await upcomingFeed(7)).matches);
@@ -299,7 +301,12 @@ function predictionSummary(p: Prediction, ctx: ToolContext) {
         }),
     top_pick:
       p.topPick && p.sufficiency.publishable
-        ? viewed?.locked.pick
+        ? viewed?.locked.proLeague
+          ? {
+              locked: true,
+              note: "Pro-league game: the pick and every market except the result split open for Pro members now and for everyone at kick-off.",
+            }
+          : viewed?.locked.pick
           ? { locked: true, note: "This pick is Pro." }
           : { market: p.topPick.market, label: p.topPick.label }
         : null,

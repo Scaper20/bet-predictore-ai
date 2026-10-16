@@ -8,7 +8,7 @@ import { MatchCard } from "@/components/match/match-card";
 import { SectionHeading, ButtonLink, EmptyState } from "@/components/ui/primitives";
 import { Container, containerClass } from "@/components/ui/container";
 import { liveFeed, upcomingFeed, predictBatch, bestBetOfDay, featuredFeed, freePickPredictions, freeViewer } from "@/lib/service";
-import { viewPrediction } from "@/lib/access";
+import { proLeagueLocked, viewPrediction } from "@/lib/access";
 import { FeaturedBoard } from "@/components/landing/featured-board";
 import { WhatsAppPromo } from "@/components/landing/whatsapp-promo";
 import { toFeaturedRow, type FeaturedReasonCode } from "@/lib/featured";
@@ -79,7 +79,9 @@ export default async function HomePage() {
       toFeaturedRow({ prediction: viewPrediction(prediction, viewer), score: 1, reason: SLOT_REASON[slot] }, matchPath(prediction.match.id)),
     ),
     ...featured
-      .filter((f) => !onBoard.has(f.prediction.match.id))
+      // This page is shared by everyone, so it tops up from games nobody
+      // sees locked: Pro-league games before kick-off stay off the board.
+      .filter((f) => !onBoard.has(f.prediction.match.id) && !proLeagueLocked(f.prediction.match, viewer))
       .slice(0, BOARD_SLOTS - boardFree.length)
       .map((f) => toFeaturedRow({ ...f, prediction: viewPrediction(f.prediction, viewer) }, matchPath(f.prediction.match.id))),
   ];

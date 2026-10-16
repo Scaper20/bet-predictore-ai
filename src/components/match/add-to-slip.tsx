@@ -20,6 +20,17 @@ export function AddToSlip({ prediction: shared }: { prediction: Prediction }) {
   const options = picks.slice(0, 8);
   const [selected, setSelected] = useState(existing?.market ?? options[0]?.market ?? "");
 
+  if ("locked" in prediction && (prediction as { locked?: { proLeague?: boolean } }).locked?.proLeague && picks.length === 0) {
+    return (
+      <section className="card p-5 sm:p-7">
+        <h2 className="font-sans text-sm font-semibold uppercase tracking-wider text-ink-muted">Selections</h2>
+        <p className="mt-3 text-xs leading-relaxed text-ink-dim">
+          This is a Pro-league game: its selections open for Pro members now and for everyone at kick-off.
+        </p>
+      </section>
+    );
+  }
+
   if (!sufficiency.publishable) {
     return (
       <section className="card p-5 sm:p-7">
