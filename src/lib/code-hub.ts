@@ -96,6 +96,12 @@ export function toHubLeg(l: ForgeLeg): HubLeg {
 export const HUB_LEG_MIN_PROBABILITY = 0.6;
 /** A game sits in at most this many codes, always with the same pick. */
 export const HUB_MAX_CODES_PER_GAME = 2;
+/**
+ * A code is published only at this share of its tier's odds or more. Without
+ * it the builder shipped whatever its game count added up to: replayed over
+ * twelve months, 88 of 199 "100" codes came in under 90 (the lowest 28.8).
+ */
+export const HUB_MIN_TARGET_SHARE = 0.9;
 
 /** The Forge markets the hub asks candidatesFor for; hubMarketAllowed narrows them. */
 export const HUB_FORGE_MARKETS: ForgeMarket[] = ["result", "double_chance", "goals", "handicap"];
@@ -177,8 +183,9 @@ export interface BuiltCode {
  * codes under two rules: at most HUB_MAX_CODES_PER_GAME codes, and always the
  * same pick, so one result never sinks every code and no two codes take
  * opposite sides of a game. Each tier is also steered away from games the
- * shorter ones used. A tier that cannot reach its game count is left out
- * rather than published short.
+ * shorter ones used. A tier that cannot reach its game count, or comes in
+ * under HUB_MIN_TARGET_SHARE of its odds, is left out rather than published
+ * short.
  */
 export function buildHub(
   today: PoolEntry[],
@@ -204,7 +211,7 @@ export function buildHub(
       avoid: [...uses.keys()],
       seed: seed + Number(tier.id),
     });
-    if (legs.length < tier.games) continue;
+    if (legs.length < tier.games || hubTotals(legs).odds < HUB_MIN_TARGET_SHARE * tier.target) continue;
     for (const l of legs) {
       const prev = uses.get(l.matchId);
       uses.set(l.matchId, { market: l.market, count: (prev?.count ?? 0) + 1 });

@@ -7,10 +7,12 @@ import {
   HUB_FORGE_MARKETS,
   HUB_LEG_MIN_PROBABILITY,
   HUB_MAX_CODES_PER_GAME,
+  HUB_MIN_TARGET_SHARE,
   HUB_TIERS,
   bookablePool,
   buildHub,
   hubMarketAllowed,
+  hubTotals,
   codeState,
   hubAccess,
   hubLegResult,
@@ -150,6 +152,18 @@ describe("buildHub rules", () => {
     const long = hub.filter((c) => HUB_TIERS.find((t) => t.id === c.tier)!.days === 4);
     expect(long.length).toBeGreaterThan(0);
     expect(long.some((c) => c.legs.some((l) => l.matchId.startsWith("later:")))).toBe(true);
+  });
+
+  it("publishes a code only within reach of its target odds", () => {
+    for (const code of hub) {
+      const tier = HUB_TIERS.find((t) => t.id === code.tier)!;
+      expect(hubTotals(code.legs).odds).toBeGreaterThanOrEqual(HUB_MIN_TARGET_SHARE * tier.target);
+    }
+    // Only short prices on offer: nine or eleven of them cannot make 50 or 100.
+    const short = [...today, ...later]
+      .map((e) => ({ ...e, candidates: e.candidates.filter((c) => c.fairOdds < 1.3) }))
+      .filter((e) => e.candidates.length > 0);
+    expect(buildHub(short, "2026-10-16", short).some((c) => c.tier === "50" || c.tier === "100")).toBe(false);
   });
 
   it("never offers a 1.5-odds code", () => {
