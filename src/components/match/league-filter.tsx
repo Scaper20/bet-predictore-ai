@@ -3,9 +3,13 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { CLUB_LEAGUES, INTERNATIONAL_LEAGUES } from "@/lib/leagues";
+import { isProLeague } from "@/lib/pro-leagues";
 
-/** Horizontal league chips; the active one is derived from the URL. */
-export function LeagueFilter() {
+/**
+ * Horizontal league chips; the active one is derived from the URL.
+ * `proTags` marks the Pro leagues, for a free viewer.
+ */
+export function LeagueFilter({ proTags = false }: { proTags?: boolean }) {
   const pathname = usePathname();
   const params = useSearchParams();
   const active = params.get("league");
@@ -28,6 +32,7 @@ export function LeagueFilter() {
           active={active === l.code}
           label={l.shortName}
           flag={l.flag}
+          pro={proTags && isProLeague(l.code)}
         />
       ))}
       <span className="flex shrink-0 items-center px-1 text-[11px] font-semibold uppercase tracking-wider text-ink-dim" aria-hidden>
@@ -51,11 +56,13 @@ function Chip({
   active,
   label,
   flag,
+  pro = false,
 }: {
   href: string;
   active: boolean;
   label: string;
   flag?: string;
+  pro?: boolean;
 }) {
   // py-2.5 over py-2 gives 42px rather than 38. These sit in a horizontally
   // scrolling row, where a tap landing slightly off is easy and costs a page
@@ -71,6 +78,11 @@ function Chip({
     >
       {flag && <span aria-hidden>{flag}</span>}
       {label}
+      {pro && (
+        <span className="rounded-full bg-violet/15 px-1.5 py-0.5 text-[9.5px] font-bold tracking-wide text-violet">
+          PRO<span className="sr-only"> league</span>
+        </span>
+      )}
     </Link>
   );
 }

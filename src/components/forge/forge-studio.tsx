@@ -19,7 +19,9 @@ import {
   type ForgeRisk,
   type ForgeSettings,
 } from "@/lib/forge";
-import { CLUB_LEAGUES, INTERNATIONAL_LEAGUES } from "@/lib/leagues";
+import { CLUB_LEAGUES, INTERNATIONAL_LEAGUES, leagueByCode } from "@/lib/leagues";
+import { PRO_LEAGUE_COUNT, isProLeague, proLeagueReason } from "@/lib/pro-leagues";
+import { ProTag } from "@/components/entitlements/locked-pick";
 import { useSlip, type SlipLeg } from "@/lib/slip";
 import { trackSlip } from "@/lib/tracked-slips";
 import { LocalTime } from "@/components/ui/local-time";
@@ -47,6 +49,8 @@ interface Slip {
   removed: string[];
   /** The settings it was built with, for the header line. */
   settings: ForgeSettings;
+  /** Games left out because they are in a Pro league (free plan). */
+  proHeld?: number;
 }
 
 const SETTINGS_KEY = "betrix.forge.settings.v1";
@@ -155,6 +159,7 @@ export function ForgeStudio() {
           pricedAt: body.pricedAt,
           removed: again && slip ? slip.removed : [],
           settings,
+          proHeld: typeof body.proHeld === "number" ? body.proHeld : 0,
         });
         setLocked((prev) => new Set([...prev].filter((id) => (body.legs as ForgeLeg[]).some((l) => l.matchId === id))));
         setAllowance((a) => (a ? { ...a, used: body.used ?? a.used, limit: body.limit ?? a.limit } : a));
@@ -264,7 +269,7 @@ export function ForgeStudio() {
             progress={progress}
             onGenerate={() => void generate(false)}
           />
-          {error && view === "settings" && <p className="mt-3 text-sm text-rose">{error.message}</p>}
+          {error && view === "settings" && <ForgeError error={error} />}
         </div>
 
         {/* ------------------------------------------------------- results */}
@@ -455,7 +460,7 @@ function SettingsPanel({
               <option value="all">All leagues</option>
               {allowance?.myLeagues.length ? <option value="mine">My leagues ({allowance.myLeagues.length})</option> : null}
               <optgroup label="Clubs">
-                {CLUB_LEAGUES.map((l) => (
+                {CLUB_LEAGUES.filter((l) => paid || !isProLeague(l.code)).map((l) => (
                   <option key={l.code} value={l.code}>
                     {l.flag} {l.shortName}
                   </option>
@@ -468,6 +473,15 @@ function SettingsPanel({
                   </option>
                 ))}
               </optgroup>
+              {!paid && (
+                <optgroup label="Pro leagues (open at kick-off on Free)">
+                  {CLUB_LEAGUES.filter((l) => isProLeague(l.code)).map((l) => (
+                    <option key={l.code} value={l.code}>
+                      {l.flag} {l.shortName} · Pro
+                    </option>
+                  ))}
+                </optgroup>
+              )}
             </Select>
           </Section>
           <Section title="When">
@@ -481,6 +495,8 @@ function SettingsPanel({
           </Section>
         </div>
       </div>
+
+      {!paid && allowance && isProLeague(settings.leagues) && <ProLeagueNotice code={settings.leagues} />}
 
       <div
         style={{ bottom: "calc(var(--bottom-nav-h, 0px) + env(safe-area-inset-bottom))" }}
@@ -521,6 +537,77 @@ function AllowanceLine({ allowance, remaining }: { allowance: Allowance | null; 
         </>
       )}
     </p>
+  );
+}
+
+/* ------------------------------------------------------------ Pro leagues */
+
+const UPGRADE_HREF = "/account/billing?plan=pro";
+
+function GoProButton({ label = "Go Pro" }: { label?: string }) {
+  return (
+    <Link
+      href={UPGRADE_HREF}
+      className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-sm font-bold text-brand-ink hover:bg-brand-strong"
+    >
+      {label} <span aria-hidden>→</span>
+    </Link>
+  );
+}
+
+/** Under the league picker when a free user picks a Pro league, before they spend a combo on it. */
+function ProLeagueNotice({ code }: { code: string }) {
+  const name = leagueByCode(code)?.name ?? "This league";
+  return (
+    <div className="mt-4 rounded-xl border border-violet/30 bg-violet/5 p-4">
+      <p className="flex items-center gap-2 text-sm font-semibold text-ink">
+        <ProTag /> {name} is a Pro league
+      </p>
+      <p className="mt-2 text-sm text-ink-muted">
+        {proLeagueReason(code)} On Free its games open at kick-off, so Forge can&apos;t put them in a combo
+        beforehand.
+      </p>
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-xs text-ink-dim">Pro builds combos from all {PRO_LEAGUE_COUNT} Pro leagues and every other league.</p>
+        <GoProButton />
+      </div>
+    </div>
+  );
+}
+
+/** A failed build. The Pro-league case gets an upgrade card, not an error line. */
+function ForgeError({ error, compact = false }: { error: { message: string; code?: string }; compact?: boolean }) {
+  if (error.code !== "pro_league") {
+    return <p className={compact ? "mt-2 text-xs text-rose" : "mt-3 text-sm text-rose"}>{error.message}</p>;
+  }
+  return (
+    <div className="card mt-3 border-violet/30 p-5">
+      <p className="flex items-center gap-2 text-sm font-semibold text-ink">
+        <ProTag /> Pro leagues only in that window
+      </p>
+      <p className="mt-2 text-sm text-ink-muted">{error.message}</p>
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-xs text-ink-dim">Try All leagues for a free combo, or go Pro to build from every league.</p>
+        <GoProButton />
+      </div>
+    </div>
+  );
+}
+
+/** Under a free combo when Pro-league games in the window were left out of it. */
+function ProHeldNote({ count }: { count: number }) {
+  return (
+    <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-violet/30 bg-violet/5 px-4 py-3">
+      <p className="flex min-w-0 items-center gap-2 text-xs text-ink-muted">
+        <ProTag />
+        <span>
+          {count} {count === 1 ? "game" : "games"} in Pro leagues {count === 1 ? "was" : "were"} left out of this combo.
+        </span>
+      </p>
+      <Link href={UPGRADE_HREF} className="text-xs font-semibold text-brand hover:underline">
+        Include them with Pro →
+      </Link>
+    </div>
   );
 }
 
@@ -608,7 +695,8 @@ function ResultPanel({
             : "Fair prices from the model; market prices will differ."}
           {off && ` Closest the card allows to the ${target.toFixed(2)} you asked for.`}
         </p>
-        {error && <p className="mt-2 text-xs text-rose">{error.message}</p>}
+        {error && <ForgeError error={error} compact />}
+        {!!slip.proHeld && !error && <ProHeldNote count={slip.proHeld} />}
       </div>
 
       {/* legs */}

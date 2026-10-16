@@ -130,6 +130,23 @@ export async function POST(request: Request) {
     // (lib/pro-leagues.ts), except today's free picks.
     const viewer = paid ? null : await freeViewer();
     const result = await buildForgeSlip(planSettings, state, { allowHandicap: paid, leagueCodes, viewer });
+    if (result.legs.length === 0 && result.scanned === 0 && result.proHeld > 0) {
+      // Everything in the window is in a Pro league: say so, rather than
+      // "no games", so the free plan's limit is visible where it bites.
+      await refund();
+      const def = leagueCodes?.length === 1 ? leagueByCode(leagueCodes[0]) : undefined;
+      return json(
+        {
+          error: def
+            ? `${def.name} is a Pro league. Its games open for free accounts at kick-off, so they can't go into a free combo.`
+            : `All ${result.proHeld} games in that window are in Pro leagues. They open for free accounts at kick-off.`,
+          code: "pro_league",
+          proHeld: result.proHeld,
+        },
+        200,
+        setCookie,
+      );
+    }
     if (result.legs.length === 0) {
       await refund();
       return json(

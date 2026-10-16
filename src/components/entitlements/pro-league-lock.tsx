@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { LockedSelection, ProTag } from "@/components/entitlements/locked-pick";
-import { proLeagueLine } from "@/lib/pro-leagues";
+import { PRO_LEAGUE_COUNT, proLeagueLine, proLeagueReason } from "@/lib/pro-leagues";
 import type { Pick } from "@/lib/model/predict";
 
 const UPGRADE_HREF = "/account/billing?plan=pro";
@@ -92,6 +92,40 @@ export function ProStatsLock() {
           Unlock with Pro
         </Link>
       </div>
+    </section>
+  );
+}
+
+/**
+ * Top of a list for a free viewer. With a league, that league is Pro; without
+ * one, some games on the list are. Says what is held back, until when, and
+ * how to get it.
+ */
+export function ProLeaguesBanner({
+  league,
+  held,
+}: {
+  league?: { code: string; name: string };
+  held: number;
+}) {
+  return (
+    <section className="card flex flex-col gap-4 border-violet/30 bg-violet/5 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+      <div className="min-w-0">
+        <p className="flex items-center gap-2 text-sm font-semibold text-ink">
+          <ProTag /> {league ? `${league.name} is a Pro league` : `${held} ${held === 1 ? "game" : "games"} here ${held === 1 ? "is" : "are"} in Pro leagues`}
+        </p>
+        <p className="mt-2 text-sm text-ink-muted">
+          {league
+            ? `${proLeagueReason(league.code)} On Free its picks open at kick-off, apart from today's free pick.`
+            : `Our ${PRO_LEAGUE_COUNT} strongest leagues and cups. On Free their picks open at kick-off; Pro gets them as soon as they're out.`}
+        </p>
+      </div>
+      <Link
+        href={UPGRADE_HREF}
+        className="glow-brand inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg bg-brand px-5 py-2.5 text-sm font-bold text-brand-ink hover:bg-brand-strong"
+      >
+        Unlock every league <span aria-hidden>→</span>
+      </Link>
     </section>
   );
 }

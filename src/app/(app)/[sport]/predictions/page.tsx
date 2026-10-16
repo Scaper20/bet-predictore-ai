@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { PageHeader } from "@/components/ui/page-header";
 import { LeagueFilter } from "@/components/match/league-filter";
+import { ProLeaguesBanner } from "@/components/entitlements/pro-league-lock";
+import { isProLeague } from "@/lib/pro-leagues";
 import { PredictionCard } from "@/components/match/prediction-card";
 import { CoverageNotice } from "@/components/ui/coverage-notice";
 import { Badge, ButtonLink, EmptyState } from "@/components/ui/primitives";
@@ -75,6 +77,7 @@ export default async function PredictionsPage({
   // viewer (lib/access.ts): every match still shows.
   const predictions = rawPredictions.map((p) => viewPrediction(p, viewer));
   const bestBet = rawBest ? viewPrediction(rawBest, viewer) : null;
+  const proHeld = predictions.filter((p) => p.locked.proLeague).length;
 
   /*
    * Followed competitions float to the top of the unfiltered view.
@@ -110,8 +113,14 @@ export default async function PredictionsPage({
 
       <div className={`${containerClass()} space-y-7 py-7 sm:py-10`}>
         <Suspense fallback={<div className="h-10" />}>
-          <LeagueFilter />
+          <LeagueFilter proTags={!viewer.paid} />
         </Suspense>
+
+        {!viewer.paid && def && isProLeague(def.code) ? (
+          <ProLeaguesBanner league={{ code: def.code, name: def.name }} held={proHeld} />
+        ) : !viewer.paid && proHeld > 0 ? (
+          <ProLeaguesBanner held={proHeld} />
+        ) : null}
 
         <TierToggle strongOnly={strongOnly} league={def ? league : undefined} />
 
