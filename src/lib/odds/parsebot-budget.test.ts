@@ -14,16 +14,19 @@ const HOUR = 3_600_000;
 const NOW = 1_800_000_000_000;
 
 describe("liveEnabled", () => {
-  it("is off without the switch, even with a key", () => {
-    expect(liveEnabled({ PARSEBOT_API_KEY: "k" })).toBe(false);
-    expect(liveEnabled({ PARSEBOT_API_KEY: "k", PARSEBOT_LIVE: "true" })).toBe(false);
+  it("is off without the admin switch, even with a key", () => {
+    expect(liveEnabled({ PARSEBOT_API_KEY: "k" }, false)).toBe(false);
+    expect(liveEnabled({ PARSEBOT_API_KEY: "k", PARSEBOT_LIVE: "on" }, false)).toBe(false);
   });
   it("is off with the switch but no key", () => {
-    expect(liveEnabled({ PARSEBOT_LIVE: "on" })).toBe(false);
-    expect(liveEnabled({ PARSEBOT_LIVE: "on", PARSEBOT_API_KEY: "  " })).toBe(false);
+    expect(liveEnabled({}, true)).toBe(false);
+    expect(liveEnabled({ PARSEBOT_API_KEY: "  " }, true)).toBe(false);
   });
-  it("is on with both", () => {
-    expect(liveEnabled({ PARSEBOT_LIVE: "on", PARSEBOT_API_KEY: "k" })).toBe(true);
+  it("is on with the switch and a key", () => {
+    expect(liveEnabled({ PARSEBOT_API_KEY: "k" }, true)).toBe(true);
+  });
+  it("stays off when the environment says off, whatever the switch", () => {
+    expect(liveEnabled({ PARSEBOT_API_KEY: "k", PARSEBOT_LIVE: "off" }, true)).toBe(false);
   });
 });
 

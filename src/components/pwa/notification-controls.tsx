@@ -7,15 +7,9 @@ import type { PushTopics } from "@/lib/push/subscription";
 import { OPEN_INSTALL_EVENT } from "./install";
 import { disablePush, enablePush, loadTopics, pushState, sendTestPush, updateTopics, type PushState } from "./push";
 
-const TOPIC_ROWS: { key: keyof PushTopics; label: string; description: string; vipOnly?: boolean }[] = [
+const TOPIC_ROWS: { key: keyof PushTopics; label: string; description: string }[] = [
   { key: "picks", label: "Today's picks", description: "Each morning around 8am, with the best of the day." },
   { key: "results", label: "Yesterday's results", description: "How the picks did, good day or bad." },
-  {
-    key: "valueAlerts",
-    label: "Value alerts",
-    description: "When the local market prices a pick above fair value.",
-    vipOnly: true,
-  },
 ];
 
 /**
@@ -26,14 +20,7 @@ const TOPIC_ROWS: { key: keyof PushTopics; label: string; description: string; v
  * phone that receives them, and someone may want the morning picks on their
  * phone but not on a work laptop.
  */
-export function NotificationControls({
-  showValueAlerts = false,
-  onEnabled,
-}: {
-  /** Show the VIP value-alerts switch. Only the account page knows the tier. */
-  showValueAlerts?: boolean;
-  onEnabled?: () => void;
-}) {
+export function NotificationControls({ onEnabled }: { onEnabled?: () => void }) {
   const [state, setState] = useState<PushState | null>(null);
   const [topics, setTopics] = useState<PushTopics | null>(null);
   const [busy, setBusy] = useState(false);
@@ -151,9 +138,7 @@ export function NotificationControls({
     return (
       <div className="space-y-3">
         <p className="text-sm leading-relaxed text-ink-muted">
-          {showValueAlerts
-            ? "Today's picks and how yesterday's went each morning, plus your value alerts. Switch them off any time."
-            : "One notification each morning: today's picks and how yesterday's went. Switch them off any time."}
+          One notification each morning: today&apos;s picks and how yesterday&apos;s went. Switch them off any time.
         </p>
         <Button type="button" onClick={() => void turnOn()} disabled={busy} className="px-4 py-2.5">
           {busy ? "Switching on…" : "Turn on notifications"}
@@ -166,7 +151,7 @@ export function NotificationControls({
   return (
     <div className="space-y-3">
       <div className="space-y-2">
-        {TOPIC_ROWS.filter((row) => !row.vipOnly || showValueAlerts).map((row) => (
+        {TOPIC_ROWS.map((row) => (
           <label
             key={row.key}
             className="flex cursor-pointer items-start gap-3 rounded-xl border border-line bg-surface p-3.5 text-sm"

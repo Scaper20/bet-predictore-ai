@@ -1,6 +1,12 @@
 import type { Tier } from "@/lib/entitlements";
 
-export type CampaignType = "warm_checkin" | "survey_subscribed" | "survey_free" | "announce_whatsapp" | "announce_rebrand";
+export type CampaignType =
+  | "warm_checkin"
+  | "survey_subscribed"
+  | "survey_free"
+  | "announce_whatsapp"
+  | "announce_rebrand"
+  | "checkout_reminder";
 export type SurveyType = Extract<CampaignType, "survey_subscribed" | "survey_free">;
 
 /**

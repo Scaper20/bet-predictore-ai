@@ -4,7 +4,7 @@ import webpush from "web-push";
 // http_ece ships no types; it is web-push's own encryption library.
 // @ts-expect-error -- untyped CommonJS module
 import ece from "http_ece";
-import { dailyPayload, valueAlertsPayload } from "@/lib/push/messages";
+import { dailyPayload } from "@/lib/push/messages";
 import { isAllowedPushEndpoint, parseSubscription, parseTopics } from "@/lib/push/subscription";
 import { appDayBounds } from "@/lib/format";
 import type { PersonalizedPick } from "@/lib/for-you";
@@ -77,20 +77,6 @@ describe("dailyPayload", () => {
   });
 });
 
-describe("valueAlertsPayload", () => {
-  const alert = { homeName: "Lyon", awayName: "Nice", label: "Over 2.5", localPrice: 2.1 };
-
-  it("names the first alert and counts the rest", () => {
-    expect(valueAlertsPayload([])).toBeNull();
-    expect(valueAlertsPayload([alert])).toMatchObject({
-      title: "New value price",
-      body: "Lyon v Nice: Over 2.5 at 2.10",
-      url: "/football/value-alerts",
-    });
-    expect(valueAlertsPayload([alert, alert, alert])!.title).toBe("3 new value prices");
-    expect(valueAlertsPayload([alert, alert, alert])!.body).toContain("+2 more");
-  });
-});
 
 describe("isAllowedPushEndpoint", () => {
   it("accepts the browsers' push services", () => {

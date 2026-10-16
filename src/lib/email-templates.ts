@@ -3,7 +3,7 @@ import "server-only";
 import { emailLayout } from "@/lib/email";
 import { naira } from "@/lib/format";
 import { SITE_URL } from "@/lib/site-url";
-import { matchPath, sportPath } from "@/lib/routes";
+import { sportPath } from "@/lib/routes";
 import { TIER_LABEL } from "@/lib/outreach";
 import type { Tier } from "@/lib/entitlements";
 
@@ -30,6 +30,74 @@ export function welcomeEmail(): { subject: string; html: string } {
       <p style="margin:24px 0 0;font-size:13px;color:#6b7670;">Want to see how it has actually done? Every
       published pick is settled and kept on the
       <a href="${SITE_URL}${sportPath("trackRecord")}" style="color:#4f6b00;">track record</a>.</p>
+    `),
+  };
+}
+
+/** Sent once, when someone joins the Code Hub waitlist (src/app/actions/code-hub.ts). */
+export function codeHubWaitlistEmail(): { subject: string; html: string } {
+  return {
+    subject: "You're on the KiqStat Code Hub waitlist",
+    html: emailLayout(`
+      <p style="margin:0 0 12px;font-size:17px;font-weight:700;">You're on the list</p>
+      <p style="margin:0;">Thanks for joining the Code Hub waitlist. Each morning the model will build five
+      ready-made combos, from about 2 to 20 odds. Each one comes with a SportyBet booking code and the model's
+      chance of it landing.</p>
+      <p style="margin:12px 0 0;">We'll send you one more email, on the day it opens. Until then, today's
+      predictions are free to read.</p>
+      ${button(`${SITE_URL}${sportPath("predictions")}`, "See today's predictions")}
+      <p style="margin:24px 0 0;font-size:13px;color:#6b7670;">Every code we publish will stay on the page with its
+      result, landed or missed. KiqStat is for adults 18 and over.</p>
+    `),
+  };
+}
+
+/**
+ * Sent once to someone who opened checkout and didn't finish
+ * (lib/checkout-recovery.ts). No discount: the plan is the plan. It names
+ * what they were buying, says no money was taken, and offers the way back.
+ */
+export function unfinishedCheckoutEmail(opts: { tier: "pro" | "vip"; nigeria: boolean; unsubscribeUrl?: string }): {
+  subject: string;
+  html: string;
+} {
+  const name = opts.tier === "vip" ? "VIP" : "Pro";
+  const perks =
+    opts.tier === "vip"
+      ? [
+          "Picks before kick-off in the 15 Pro leagues, including the Champions League and Serie A",
+          "Live win probability during every match",
+          "Every prediction type, half-time and winning margin included",
+          "Forge with every prediction type and Ask KiqStat 100 times a day",
+          "Priority support",
+        ]
+      : [
+          "Picks before kick-off in the 15 Pro leagues, including the Champions League and Serie A",
+          "Every prediction type, half-time and winning margin included",
+          "The full match breakdown on every game",
+          "Forge with every prediction type, 100 combos a day",
+          "Ask KiqStat 30 times a day",
+        ];
+  return {
+    subject: `Your KiqStat ${name} upgrade is waiting`,
+    html: emailLayout(`
+      <p style="margin:0 0 12px;font-size:17px;font-weight:700;">You were one step from ${name}</p>
+      <p style="margin:0;">You started upgrading to KiqStat ${name} but the payment wasn't finished, so no money was
+      taken. Your place is still there. Here's what ${name} unlocks:</p>
+      <ul style="margin:12px 0 0;padding-left:20px;">${perks.map((p) => `<li style="margin:4px 0;">${p}</li>`).join("")}</ul>
+      <p style="margin:20px 0 8px;font-weight:700;">What the model got right lately</p>
+      <a href="${SITE_URL}${sportPath("trackRecord")}" style="text-decoration:none;">
+        <img src="${SITE_URL}/api/og/recent-wins" width="496" alt="KiqStat's most recent winning picks" style="display:block;width:100%;max-width:496px;height:auto;border:0;border-radius:10px;">
+      </a>
+      <p style="margin:8px 0 0;font-size:12px;color:#6b7670;">Winning picks only. Every pick, won or lost, is on the
+      <a href="${SITE_URL}${sportPath("trackRecord")}" style="color:#4f6b00;">track record</a>.</p>
+      ${button(`${SITE_URL}/account/billing?plan=${opts.tier}`, `Finish upgrading to ${name}`)}
+      <p style="margin:20px 0 0;font-size:13px;color:#6b7670;">${
+        opts.nigeria
+          ? "Card declined? Some banks block online payments until you allow them in your banking app, or you can try another card."
+          : "Mobile money and cards both work on the payment page."
+      } If something went wrong at checkout, message us from the Help page and we'll sort it out.</p>
+      ${opts.unsubscribeUrl ? unsubscribeFooter(opts.unsubscribeUrl) : ""}
     `),
   };
 }
@@ -138,45 +206,6 @@ export function giftSubscriptionEmail(opts: {
       ${button(SITE_URL, "See what's unlocked")}
       <p style="margin:24px 0 0;font-size:13px;color:#6b7670;">Nothing to cancel — this isn't a subscription, it
       just quietly ends on ${until} unless you decide to subscribe for real.</p>
-    `),
-  };
-}
-
-export function valueAlertsEmail(opts: {
-  alerts: { label: string; homeName: string; awayName: string; leagueName: string; kickoff: string; localPrice: number; edge: number; benchmark: "market" | "model"; matchId: string }[];
-  settingsUrl: string;
-}): { subject: string; html: string } {
-  const n = opts.alerts.length;
-  const rows = opts.alerts
-    .slice(0, 10)
-    .map((a) => {
-      const when = new Date(a.kickoff).toLocaleString("en-NG", {
-        timeZone: "Africa/Lagos", weekday: "short", hour: "2-digit", minute: "2-digit",
-      });
-      return `<tr>
-        <td style="padding:10px 0;border-top:1px solid #e1e4da;">
-          <a href="${SITE_URL}${matchPath(a.matchId)}" style="color:#1a1f1c;font-weight:700;text-decoration:none;">${escapeHtml(a.homeName)} vs ${escapeHtml(a.awayName)}</a>
-          <div style="font-size:12px;color:#6b7670;">${escapeHtml(a.leagueName)} · ${when} WAT</div>
-          <div style="font-size:14px;margin-top:4px;">${escapeHtml(a.label)} at <strong>${a.localPrice.toFixed(2)}</strong></div>
-        </td>
-        <td style="padding:10px 0;border-top:1px solid #e1e4da;text-align:right;white-space:nowrap;vertical-align:top;">
-          <strong style="color:#4f6b00;">+${(a.edge * 100).toFixed(1)}%</strong>
-          <div style="font-size:11px;color:#6b7670;">${a.benchmark === "market" ? "vs market" : "vs model"}</div>
-        </td>
-      </tr>`;
-    })
-    .join("");
-  return {
-    subject: `${n} value ${n === 1 ? "price" : "prices"} right now`,
-    html: emailLayout(`
-      <p style="margin:0 0 12px;font-size:17px;font-weight:700;">Value-shift alert</p>
-      <p style="margin:0 0 16px;">${n === 1 ? "One price has" : `${n} prices have`} moved above fair value since our last scan.
-      "vs market" means the local price is longer than the market consensus with the margin taken out; "vs model"
-      appears only where no consensus exists. Prices move quickly.</p>
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;">${rows}</table>
-      ${button(`${SITE_URL}${sportPath("valueAlerts")}`, "See every live alert")}
-      <p style="margin:24px 0 0;font-size:12px;color:#6b7670;">You get this because you're a KiqStat VIP member.
-      <a href="${opts.settingsUrl}" style="color:#6b7670;">Turn these emails off</a> — the alerts page keeps working either way. 18+, use responsibly.</p>
     `),
   };
 }

@@ -4,6 +4,7 @@ import { getPreferences } from "@/lib/preferences";
 import { leagueByCode } from "@/lib/leagues";
 import { claimGuest, guestIdentity, guestUsed, refundGuest } from "@/lib/ask/guest";
 import { buildForgeSlip } from "@/lib/forge-feed";
+import { freeViewer } from "@/lib/service";
 import { FORGE_FREE_DAILY, FORGE_GUEST_TOTAL, FORGE_PAID_DAILY, marketsForPlan, parseForgeRequest } from "@/lib/forge";
 
 export const dynamic = "force-dynamic";
@@ -125,7 +126,10 @@ export async function POST(request: Request) {
   try {
     // Free plan: 1X2 and double chance only, enforced here whatever the request asks for.
     const planSettings = { ...settings, markets: marketsForPlan(settings.markets, paid) };
-    const result = await buildForgeSlip(planSettings, state, { allowHandicap: paid, leagueCodes });
+    // Free plan: games in Pro leagues before kick-off are left out of the pool
+    // (lib/pro-leagues.ts), except today's free picks.
+    const viewer = paid ? null : await freeViewer();
+    const result = await buildForgeSlip(planSettings, state, { allowHandicap: paid, leagueCodes, viewer });
     if (result.legs.length === 0) {
       await refund();
       return json(

@@ -3,7 +3,14 @@ import "server-only";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { supabaseConfigured } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/email";
-import { warmCheckInEmail, subscriberSurveyEmail, freeSurveyEmail, whatsappCommunityAnnouncementEmail, rebrandAnnouncementEmail } from "@/lib/email-templates";
+import {
+  warmCheckInEmail,
+  subscriberSurveyEmail,
+  freeSurveyEmail,
+  whatsappCommunityAnnouncementEmail,
+  rebrandAnnouncementEmail,
+  unfinishedCheckoutEmail,
+} from "@/lib/email-templates";
 import { classifySegment, type CampaignType } from "@/lib/outreach";
 import { SITE_URL } from "@/lib/site-url";
 import { WHATSAPP_COMMUNITY_URL } from "@/lib/whatsapp-community";
@@ -98,7 +105,12 @@ export async function enqueueCampaign(campaign: CampaignType): Promise<{ enqueue
 
   const wantSegment = campaign === "survey_subscribed" ? "subscribed" : campaign === "survey_free" ? "free" : null;
 
+  // Checkout reminder: only people who left checkout and never paid since,
+  // and who weren't reminded in the last 30 days (by this or the daily job).
+  const abandoners = campaign === "checkout_reminder" ? await unfinishedCheckouts(admin) : null;
+
   const candidates = (profiles ?? []).filter((p) => {
+    if (abandoners) return abandoners.has(p.id as string) && classifySegment(subByUser.get(p.id as string) ?? null) === "free";
     if (!wantSegment) return true; // warm_checkin goes to everyone eligible
     return classifySegment(subByUser.get(p.id as string) ?? null) === wantSegment;
   });
@@ -127,6 +139,28 @@ export async function enqueueCampaign(campaign: CampaignType): Promise<{ enqueue
   return { enqueued: (inserted ?? []).length };
 }
 
+/** User id → the plan of their latest unfinished checkout, for people who never paid after it. */
+async function unfinishedCheckouts(admin: ReturnType<typeof supabaseAdmin>): Promise<Map<string, { plan: string; provider: string }>> {
+  const [{ data: attempts }, { data: paid }, { data: reminded }] = await Promise.all([
+    admin
+      .from("payments")
+      .select("user_id, plan, provider, created_at")
+      .in("status", ["pending", "failed"])
+      .lt("created_at", new Date(Date.now() - 2 * 3600_000).toISOString())
+      .not("user_id", "is", null)
+      .order("created_at", { ascending: false }),
+    admin.from("payments").select("user_id, created_at").eq("status", "success"),
+    admin.from("checkout_reminders").select("user_id").gte("sent_at", new Date(Date.now() - 30 * 86_400_000).toISOString()),
+  ]);
+  const latest = new Map<string, { plan: string; provider: string; at: string }>();
+  for (const a of attempts ?? []) {
+    if (!latest.has(a.user_id)) latest.set(a.user_id, { plan: a.plan, provider: a.provider, at: a.created_at });
+  }
+  for (const p of paid ?? []) if (p.created_at >= (latest.get(p.user_id)?.at ?? "~")) latest.delete(p.user_id);
+  for (const r of reminded ?? []) latest.delete(r.user_id);
+  return latest;
+}
+
 interface PendingRecipient {
   id: string;
   user_id: string;
@@ -142,6 +176,27 @@ async function buildCampaignEmail(
 ): Promise<{ subject: string; html: string } | null> {
   if (campaign === "warm_checkin") {
     return warmCheckInEmail({ unsubscribeUrl });
+  }
+
+  if (campaign === "checkout_reminder") {
+    const { data: attempt } = await admin
+      .from("payments")
+      .select("plan, provider")
+      .eq("user_id", recipient.user_id)
+      .in("status", ["pending", "failed"])
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (!attempt) return null;
+    // Logged as reminded, so the daily job doesn't send a second one.
+    await admin
+      .from("checkout_reminders")
+      .upsert({ user_id: recipient.user_id, plan: attempt.plan, sent_at: new Date().toISOString() }, { onConflict: "user_id" });
+    return unfinishedCheckoutEmail({
+      tier: attempt.plan.startsWith("vip") ? "vip" : "pro",
+      nigeria: attempt.provider === "paystack",
+      unsubscribeUrl,
+    });
   }
 
   if (campaign === "announce_rebrand") {
@@ -205,7 +260,7 @@ export async function sendNextBatch(campaign: CampaignType, batchSize: number): 
     const unsubscribeUrl = `${SITE_URL}/unsubscribe/${recipient.id}`;
     try {
       const email = await buildCampaignEmail(admin, campaign, recipient, unsubscribeUrl);
-      if (!email) throw new Error("No content to send (missing survey row).");
+      if (!email) throw new Error("No content to send (missing survey row or checkout).");
 
       await sendEmail({ to: recipient.email, subject: email.subject, html: email.html, from: outreachFrom() });
       await admin

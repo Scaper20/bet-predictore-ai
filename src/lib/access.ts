@@ -1,6 +1,7 @@
 import type { Pick, Prediction } from "@/lib/model/predict";
 import type { MarketProbabilities } from "@/lib/model/poisson";
 import { isStrong } from "@/lib/model/tiers";
+import { isProLeague } from "@/lib/pro-leagues";
 
 /**
  * What each viewer may see.
@@ -15,6 +16,12 @@ import { isStrong } from "@/lib/model/tiers";
  * (`toolView`): on the free plan its answers cover the match result market
  * and today's free picks; Pro opens the rest. Forge keeps its own market rule
  * (forge.ts marketsForPlan).
+ *
+ * Pro leagues (October 2026, lib/pro-leagues.ts): on the 15 competitions
+ * where the model reads best, a free viewer sees the win/draw/loss split
+ * but not the pick or any other market until kick-off, unless the match is
+ * one of today's free picks (`proLeagueLocked`). Every graded result stays
+ * public on the track record.
  *
  * Pure, so the rules are tested once and every surface applies the same one.
  * Redaction happens on the server: a locked value never reaches a free
@@ -92,15 +99,59 @@ function lockMarkets(m: MarketProbabilities): MarketProbabilities {
 }
 
 export interface ViewedPrediction extends Prediction {
-  locked: { pick: boolean; markets: boolean };
+  /** proLeague: locked because the match is in a Pro league before kick-off. */
+  locked: { pick: boolean; markets: boolean; proLeague?: boolean };
+}
+
+/**
+ * Is this match a Pro-league game a free viewer may not read yet? True
+ * before kick-off in a Pro league, unless it is one of today's free picks.
+ */
+export function proLeagueLocked(
+  match: { id: string; kickoff: string; league?: { code?: string | null } },
+  viewer: Viewer,
+  now = Date.now(),
+): boolean {
+  if (viewer.paid || !isProLeague(match.league?.code)) return false;
+  if (Date.parse(match.kickoff) <= now) return false;
+  return match.id !== viewer.freeStrongId && !viewer.freeIds.includes(match.id);
+}
+
+/**
+ * Picks a free audience may be told about now, and how many Pro-league
+ * picks were held back: for the messages that go to everyone at once (the
+ * WhatsApp digest, the morning push to free devices).
+ */
+export function splitForFree<T extends { id: string; kickoff: string; league: { code?: string | null } }>(
+  picks: readonly T[],
+  viewer: Viewer,
+  now = Date.now(),
+): { open: T[]; proHeld: number } {
+  const open = picks.filter((p) => !proLeagueLocked({ id: p.id, kickoff: p.kickoff, league: p.league }, viewer, now));
+  return { open, proHeld: picks.length - open.length };
+}
+
+/** A Pro-league match as a free viewer gets it before kick-off: the 1X2 split and nothing else. */
+function proLeagueView(p: Prediction): ViewedPrediction {
+  const { halves: _halves, ...markets } = p.markets;
+  void _halves;
+  return {
+    ...p,
+    markets: lockMarkets(markets),
+    asianHandicap: [],
+    picks: [],
+    topPick: p.topPick ? lockPick(p.topPick) : null,
+    locked: { pick: true, markets: true, proLeague: true },
+  };
 }
 
 /**
  * The site's view: everything for everyone, except the Pro extras (Asian
  * handicap and the half-by-half markets), stripped for a free viewer.
  */
-export function viewPrediction(p: Prediction, viewer: Viewer): ViewedPrediction {
+export function viewPrediction(p: Prediction, viewer: Viewer, now = Date.now()): ViewedPrediction {
   if (viewer.paid) return { ...p, locked: { pick: false, markets: false } };
+  if (proLeagueLocked(p.match, viewer, now)) return proLeagueView(p);
   const { halves: _halves, ...markets } = p.markets;
   void _halves;
   return { ...p, markets, asianHandicap: [], locked: { pick: false, markets: false } };
@@ -110,8 +161,9 @@ export function viewPrediction(p: Prediction, viewer: Viewer): ViewedPrediction 
  * Ask KiqStat's view for a free account: the 1X2 split and 1X2 picks, and the
  * headline pick only when it is 1X2 or one of today's free picks.
  */
-export function toolView(p: Prediction, viewer: Viewer): ViewedPrediction {
+export function toolView(p: Prediction, viewer: Viewer, now = Date.now()): ViewedPrediction {
   if (viewer.paid) return { ...p, locked: { pick: false, markets: false } };
+  if (proLeagueLocked(p.match, viewer, now)) return proLeagueView(p);
   const pickOpen = pickVisible(p.topPick, p.match.id, viewer);
   const freePick = p.match.id === viewer.freeStrongId || viewer.freeIds.includes(p.match.id);
   return {

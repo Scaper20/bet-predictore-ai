@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
+import { sendCheckoutReminders } from "@/lib/checkout-recovery";
 import { expireStalePendingPayments } from "@/lib/payments-feed";
 
 // Node-only (Supabase service-role client), same as the other cron routes;
 // Proxy (formerly middleware) never touches /api/ at all.
 export const runtime = "nodejs";
-export const maxDuration = 30;
+export const maxDuration = 120;
 
 /**
  * Daily sweep for checkout attempts that never got a Paystack webhook at
@@ -26,5 +27,7 @@ export async function GET(request: Request) {
   }
 
   const { expired } = await expireStalePendingPayments();
-  return NextResponse.json({ expired });
+  // Then one reminder to people who left checkout in the last two days.
+  const reminders = await sendCheckoutReminders().catch(() => ({ candidates: 0, sent: 0 }));
+  return NextResponse.json({ expired, reminders });
 }

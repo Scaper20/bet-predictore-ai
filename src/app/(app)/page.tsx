@@ -8,12 +8,12 @@ import { MatchCard } from "@/components/match/match-card";
 import { SectionHeading, ButtonLink, EmptyState } from "@/components/ui/primitives";
 import { Container, containerClass } from "@/components/ui/container";
 import { liveFeed, upcomingFeed, predictBatch, bestBetOfDay, featuredFeed, freePickPredictions, freeViewer } from "@/lib/service";
-import { viewPrediction } from "@/lib/access";
+import { proLeagueLocked, viewPrediction } from "@/lib/access";
 import { FeaturedBoard } from "@/components/landing/featured-board";
 import { WhatsAppPromo } from "@/components/landing/whatsapp-promo";
 import { toFeaturedRow, type FeaturedReasonCode } from "@/lib/featured";
 import type { FreeSlot } from "@/lib/free-picks";
-import { matchPath, sportPath } from "@/lib/routes";
+import { matchPath, sportPath, scoresPath } from "@/lib/routes";
 
 /*
  * Revalidate every five minutes. Live scores on the landing page update in
@@ -79,7 +79,9 @@ export default async function HomePage() {
       toFeaturedRow({ prediction: viewPrediction(prediction, viewer), score: 1, reason: SLOT_REASON[slot] }, matchPath(prediction.match.id)),
     ),
     ...featured
-      .filter((f) => !onBoard.has(f.prediction.match.id))
+      // This page is shared by everyone, so it tops up from games nobody
+      // sees locked: Pro-league games before kick-off stay off the board.
+      .filter((f) => !onBoard.has(f.prediction.match.id) && !proLeagueLocked(f.prediction.match, viewer))
       .slice(0, BOARD_SLOTS - boardFree.length)
       .map((f) => toFeaturedRow({ ...f, prediction: viewPrediction(f.prediction, viewer) }, matchPath(f.prediction.match.id))),
   ];
@@ -159,7 +161,7 @@ function TodaysPicks({ previews, free }: { previews: Awaited<ReturnType<typeof p
             icon="⚽"
             title="No fixtures with enough history right now"
             description="Check back when the next fixtures are out."
-            action={<ButtonLink href={sportPath("fixtures")} variant="secondary">Browse all fixtures</ButtonLink>}
+            action={<ButtonLink href={scoresPath("fixtures")} variant="secondary">Browse all fixtures</ButtonLink>}
           />
         </div>
       ) : (

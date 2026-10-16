@@ -11,7 +11,7 @@ import { getPreferences } from "@/lib/preferences";
 import { leagueByCode } from "@/lib/leagues";
 import { FixtureRow } from "@/components/match/fixture-row";
 import { containerClass } from "@/components/ui/container";
-import { sportPath } from "@/lib/routes";
+import { sportPath, scoresPath } from "@/lib/routes";
 import { isStrong } from "@/lib/model/tiers";
 import Link from "next/link";
 import { getViewer } from "@/lib/viewer";
@@ -125,7 +125,7 @@ export default async function PredictionsPage({
               icon="🎯"
               title="No fixtures to model right now"
               description="Check back when the next fixtures are out."
-              action={<ButtonLink href={sportPath("fixtures")} variant="secondary">Browse fixtures</ButtonLink>}
+              action={<ButtonLink href={scoresPath("fixtures")} variant="secondary">Browse fixtures</ButtonLink>}
             />
           ) : (
             <>

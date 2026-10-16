@@ -15,17 +15,14 @@ import { DEFAULT_SPORT, isSportId, type SportId } from "@/lib/sports";
  */
 
 export const SPORT_ROUTES = {
-  forYou: "for-you",
   live: "live",
-  fixtures: "fixtures",
   predictions: "predictions",
   trends: "trends",
   trackRecord: "track-record",
   slip: "combo",
   trackedSlips: "combo/tracked",
   forge: "forge",
-  valueAlerts: "value-alerts",
-  results: "results",
+  codeHub: "code-hub",
   tables: "tables",
   h2h: "h2h",
   teamForm: "team-form",
@@ -39,6 +36,27 @@ export function sportPath(route: SportRoute, sport: SportId = DEFAULT_SPORT): st
   return `/${sport}/${SPORT_ROUTES[route]}`;
 }
 
+/**
+ * The scores page's three views. Fixtures, live and results were three pages
+ * until October 2026; they are one page now, at /live, with the view in the
+ * query. The old /fixtures and /results URLs redirect here (next.config.ts).
+ */
+export type ScoresView = "live" | "fixtures" | "results";
+export const SCORES_VIEWS: readonly ScoresView[] = ["live", "fixtures", "results"];
+
+export function scoresPath(
+  view: ScoresView,
+  opts: { league?: string; day?: number; sport?: SportId } = {},
+): string {
+  const p = new URLSearchParams();
+  if (view !== "live") p.set("view", view);
+  if (opts.league) p.set("league", opts.league);
+  if (opts.day) p.set("day", String(opts.day));
+  const qs = p.toString();
+  const base = sportPath("live", opts.sport);
+  return qs ? `${base}?${qs}` : base;
+}
+
 export function matchPath(id: string, sport: SportId = DEFAULT_SPORT): string {
   return `/${sport}/match/${encodeURIComponent(id)}`;
 }
@@ -46,16 +64,16 @@ export function matchPath(id: string, sport: SportId = DEFAULT_SPORT): string {
 /**
  * Where a session starts when the user did not ask for anywhere specific.
  *
- * Sign-up, sign-in and the end of onboarding all land here. For You is the
- * page the questionnaire exists to fill, so finishing onboarding and arriving
- * anywhere else makes the questions look like paperwork.
+ * Sign-up, sign-in and the end of onboarding all land here: today's picks,
+ * the page people come for. (This was For You until that page was paused in
+ * October 2026.)
  *
  * This is only the fallback. A `next` carried through the flow — from a gate
  * on a match page, say — still wins, and must: sending someone to their feed
  * instead of back to the thing they were reading is the same bug in a nicer
  * outfit.
  */
-export const POST_AUTH_DESTINATION = sportPath("forYou");
+export const POST_AUTH_DESTINATION = sportPath("predictions");
 
 /**
  * The active sport for a client component, read off the pathname.

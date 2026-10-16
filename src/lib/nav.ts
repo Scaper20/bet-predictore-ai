@@ -8,7 +8,7 @@
  */
 
 import { DEFAULT_SPORT, type SportId } from "@/lib/sports";
-import { sportPath } from "@/lib/routes";
+import { sportPath, scoresPath } from "@/lib/routes";
 import { CLUB_LEAGUES, INTERNATIONAL_LEAGUES } from "@/lib/leagues";
 
 /* ------------------------------------------------------------- features */
@@ -49,7 +49,7 @@ export const soonHref = (slug: string) => `/soon/${slug}`;
 
 /* ---------------------------------------------------------------- items */
 
-export type NavAction = "ask" | "install" | "slip" | "support";
+export type NavAction = "ask" | "install" | "slip" | "support" | "tour";
 
 export type Badge = { text: string; tone: "brand" | "amber" | "violet" | "rose" | "muted" };
 
@@ -89,7 +89,7 @@ export interface NavMenu {
 
 export type NavTab =
   | { kind: "menu"; menu: NavMenu }
-  | { kind: "link"; id: string; label: string; href: string; live?: boolean };
+  | { kind: "link"; id: string; label: string; href: string; live?: boolean; badge?: Badge; tour?: string };
 
 const TOP_LEAGUES = ["premier-league", "npfl", "champions-league", "la-liga", "serie-a", "afcon-qualifiers"];
 
@@ -102,20 +102,18 @@ export function leagueLinks(sport: SportId): NavLink[] {
 }
 
 /** The desktop menus and the mobile menu's sections, for one sport. */
-export function navFor(sport: SportId): { tabs: NavTab[]; tools: NavLink[] } {
+export function navFor(sport: SportId): { tabs: NavTab[]; tools: NavLink[]; toolsMenu: NavMenu } {
   const p = (route: Parameters<typeof sportPath>[0]) => sportPath(route, sport);
 
   const predictions: NavMenu = {
     id: "predictions",
     label: "Predictions",
-    match: [p("predictions"), p("forYou"), p("valueAlerts")],
+    match: [p("predictions")],
     columns: [
       {
         title: "Picks",
         links: [
-          { label: "For You", desc: "Picks from your leagues and markets", href: p("forYou") },
           { label: "Today", desc: "Every game we rate today", href: p("predictions") },
-          { label: "Value Alerts", desc: "When the market price beats ours", href: p("valueAlerts"), badge: { text: "VIP", tone: "amber" } },
         ],
       },
       {
@@ -136,25 +134,16 @@ export function navFor(sport: SportId): { tabs: NavTab[]; tools: NavLink[] } {
   const matches: NavMenu = {
     id: "matches",
     label: "Matches",
-    match: [p("fixtures"), p("trends"), p("results"), p("tables"), p("h2h"), p("teamForm"), p("goals"), p("ratings")],
+    match: [p("trends"), p("tables"), p("h2h"), p("teamForm"), p("goals"), p("ratings")],
     columns: [
       {
         title: "Matches",
         links: [
-          { label: "Fixtures", desc: "The next two weeks, day by day", href: p("fixtures") },
+          { label: "Fixtures", desc: "The next two weeks, day by day", href: scoresPath("fixtures", { sport }) },
           { label: "Live scores", href: p("live"), badge: { text: "Live", tone: "rose" } },
-          { label: "Results", desc: "Every final score, day by day", href: p("results") },
+          { label: "Results", desc: "Every final score, day by day", href: scoresPath("results", { sport }) },
           { label: "League tables", desc: "Standings that move while games are on", href: p("tables"), badge: { text: "Live", tone: "rose" } },
           { label: "Head-to-head", desc: "Any two teams, every meeting", href: p("h2h") },
-        ],
-      },
-      {
-        title: "Insights",
-        links: [
-          { label: "Trends", desc: "Streaks worth knowing before kick-off", href: p("trends") },
-          { label: "Team form", desc: "Last 10, home and away", href: p("teamForm") },
-          { label: "Goals stats", desc: "Over/under and both-teams-scoring rates by team", href: p("goals") },
-          { label: "Model ratings", desc: "Every team rated 1 to 10", href: p("ratings"), badge: { text: "New", tone: "brand" } },
         ],
       },
     ],
@@ -167,15 +156,42 @@ export function navFor(sport: SportId): { tabs: NavTab[]; tools: NavLink[] } {
     },
   };
 
+  const insights: NavMenu = {
+    id: "insights",
+    label: "Insights",
+    match: [p("trends"), p("teamForm"), p("goals"), p("ratings")],
+    columns: [
+      {
+        title: "Insights",
+        links: [
+          { label: "Trends", desc: "Streaks worth knowing before kick-off", href: p("trends") },
+          { label: "Team form", desc: "Last 10, home and away", href: p("teamForm") },
+          { label: "Goals stats", desc: "Over/under and both-teams-scoring rates by team", href: p("goals") },
+          { label: "Model ratings", desc: "Every team rated 1 to 10", href: p("ratings"), badge: { text: "New", tone: "brand" } },
+        ],
+      },
+    ],
+    feature: {
+      kicker: "Model ratings",
+      title: "Every team rated 1 to 10",
+      body: "Attack, defence and form in one number, from the same model as the picks.",
+      cta: { label: "See the ratings", href: p("ratings") },
+      tone: "brand",
+    },
+  };
+
+  // Not a desktop menu any more: Forge, Code Hub and My combos sit in the
+  // bar itself so they are seen, not found. The phone menu still groups them.
   const tools: NavMenu = {
     id: "tools",
     label: "Tools",
-    match: [p("forge"), p("slip"), p("trackedSlips")],
+    match: [p("forge"), p("codeHub"), p("slip"), p("trackedSlips")],
     columns: [
       {
         title: "Build and check",
         links: [
-          { label: "Forge", desc: "Build a combo from how you like to pick", href: p("forge"), badge: { text: "New", tone: "brand" } },
+          { label: "Code Hub", desc: "Today's ready-made combos, 2 to 20 odds", href: p("codeHub"), badge: { text: "New", tone: "brand" } },
+          { label: "Forge", desc: "Build a combo from how you like to pick", href: p("forge") },
           { label: "My combos", desc: "Track your combos live", href: p("trackedSlips") },
         ],
       },
@@ -208,6 +224,7 @@ export function navFor(sport: SportId): { tabs: NavTab[]; tools: NavLink[] } {
         links: [
           { label: "Your account", href: "/account" },
           { label: "Help centre", desc: "Answers to common questions", href: "/help" },
+          { label: "Take the tour", desc: "A 30-second walkthrough", href: "#tour", action: "tour" },
           { label: "Chat with support", desc: "Message Oma, our support team", href: "/help", action: "support" },
           { label: "Responsible use", desc: "Limits, breaks and support", href: "/responsible-use" },
         ],
@@ -225,12 +242,16 @@ export function navFor(sport: SportId): { tabs: NavTab[]; tools: NavLink[] } {
   return {
     tabs: [
       { kind: "menu", menu: predictions },
-      { kind: "link", id: "live", label: "Live", href: p("live"), live: true },
+      { kind: "link", id: "live", label: "Live", href: p("live"), live: true, tour: "scores" },
       { kind: "menu", menu: matches },
-      { kind: "menu", menu: tools },
+      { kind: "menu", menu: insights },
+      { kind: "link", id: "forge", label: "Forge", href: p("forge"), tour: "forge" },
+      { kind: "link", id: "code-hub", label: "Code Hub", href: p("codeHub"), tour: "code-hub", badge: { text: "New", tone: "brand" } },
+      { kind: "link", id: "combos", label: "My combos", href: p("trackedSlips"), tour: "combos" },
       { kind: "link", id: "pricing", label: "Pricing", href: "/pricing" },
       { kind: "menu", menu: more },
     ],
+    toolsMenu: tools,
     tools: [
       { label: "Forge", desc: "Build a combo from how you pick", href: p("forge") },
       { label: "Ask KiqStat", desc: "Ask anything about a match", href: "#ask", action: "ask" },
@@ -264,16 +285,25 @@ export function allLinks(sport: SportId): NavLink[] {
 }
 
 /**
+ * The phone menu's sections: the desktop menus, with Tools put back in
+ * before More (on desktop its links sit in the bar itself).
+ */
+export function drawerMenus(sport: SportId): NavMenu[] {
+  const { tabs, toolsMenu } = navFor(sport);
+  const menus = tabs.flatMap((t) => (t.kind === "menu" ? [t.menu] : []));
+  const at = menus.findIndex((m) => m.id === "more");
+  menus.splice(at < 0 ? menus.length : at, 0, toolsMenu);
+  return mobileMenus(menus);
+}
+
+/**
  * The mobile menu's sections, from the desktop menus.
  *
- * Phones already reach For You and Picks from the bottom bar, so the
+ * Phones already reach Picks and Live from the bottom bar, so the
  * Predictions section is dropped there; Matches leads, and Insights gets
- * its own section instead of sitting under Matches. Value Alerts, the one
- * Predictions link with no bottom-bar home, moves to Tools.
+ * its own section instead of sitting under Matches.
  */
 export function mobileMenus(menus: NavMenu[]): NavMenu[] {
-  const predictions = menus.find((m) => m.id === "predictions");
-  const extra = predictions?.columns.flatMap((c) => c.links).filter((l) => l.label === "Value Alerts") ?? [];
   return menus.flatMap((m): NavMenu[] => {
     if (m.id === "predictions") return [];
     if (m.id === "matches" && m.columns.length > 1) {
@@ -283,10 +313,6 @@ export function mobileMenus(menus: NavMenu[]): NavMenu[] {
         { ...m, columns: [main], match: main.links.map((l) => l.href) },
         { ...m, id: "insights", label: "Insights", columns: rest, match: insightLinks.map((l) => l.href) },
       ];
-    }
-    if (m.id === "tools" && extra.length) {
-      const [first, ...rest] = m.columns;
-      return [{ ...m, columns: [{ ...first, links: [...first.links, ...extra] }, ...rest], match: [...m.match, ...extra.map((l) => l.href)] }];
     }
     return [m];
   });

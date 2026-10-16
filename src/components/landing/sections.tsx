@@ -5,7 +5,7 @@ import { flutterwaveConfigured } from "@/lib/flutterwave/client";
 import { Container, containerClass } from "@/components/ui/container";
 import { Reveal } from "@/components/ui/reveal";
 import { CLUB_LEAGUES, INTERNATIONAL_LEAGUES } from "@/lib/leagues";
-import { sportPath } from "@/lib/routes";
+import { sportPath, scoresPath } from "@/lib/routes";
 
 /* ---------------------------------------------------------------- Features */
 
@@ -161,7 +161,7 @@ export function Leagues() {
               {group.map((l) => (
                 <Link
                   key={l.code}
-                  href={`${sportPath("fixtures")}?league=${l.code}`}
+                  href={scoresPath("fixtures", { league: l.code })}
                   className="card card-hover flex min-w-0 items-center gap-2.5 px-3 py-2.5 sm:px-4 sm:py-3"
                 >
                   <span className="shrink-0 text-lg" aria-hidden>{l.flag}</span>
@@ -287,8 +287,8 @@ export function FinalCta() {
             <span className="text-gradient-brand">Start reading the numbers.</span>
           </h2>
           <p className="mx-auto mt-5 max-w-xl text-base text-ink-muted">
-            Every pick on every match is free. Go Pro for the full breakdowns, half-time predictions,
-            winning margins and more from Forge and Ask KiqStat.
+            Every match and every pick in 27 competitions is free. Go Pro for picks in the 15 Pro leagues
+            before kick-off, the full breakdowns, half-time predictions and more from Forge and Ask KiqStat.
           </p>
           <div className="mx-auto mt-8 grid max-w-xs gap-3 sm:flex sm:max-w-none sm:justify-center">
             <ButtonLink href={sportPath("predictions")}>Open today&apos;s predictions</ButtonLink>

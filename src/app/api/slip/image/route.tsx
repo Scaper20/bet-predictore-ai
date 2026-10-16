@@ -13,8 +13,9 @@ interface SlipImageLeg {
   result: "win" | "lose" | "void" | null;
 }
 
-const MAX_LEGS = 20;
-const SHOWN_LEGS = 12;
+// Every pick is drawn; the image grows with the combo. The cap only guards
+// against an absurd URL.
+const MAX_LEGS = 60;
 const MAX_STRING_LEN = 80;
 
 const C = {
@@ -87,13 +88,12 @@ export async function GET(request: Request) {
 
   const combined = legs.reduce((p, l) => p * l.probability, 1);
   const fairOdds = 1 / combined;
-  const shown = legs.slice(0, SHOWN_LEGS);
-  const more = legs.length - shown.length;
+  const shown = legs;
   const now = new Date().toISOString();
 
   const width = 1080;
   const rowHeight = 132;
-  const height = 560 + shown.length * rowHeight + (more > 0 ? 60 : 0);
+  const height = 560 + shown.length * rowHeight;
 
   return new ImageResponse(
     (
@@ -142,9 +142,6 @@ export async function GET(request: Request) {
               </div>
             );
           })}
-          {more > 0 && (
-            <div style={{ display: "flex", height: 60, alignItems: "center", fontSize: 24, color: C.muted }}>+{more} more</div>
-          )}
         </div>
 
         {/* Footer */}

@@ -15,7 +15,7 @@ export default function Loading() {
   return (
     <>
       <PageHeader
-        eyebrow="Live"
+        eyebrow="Scores"
         title="Live scores"
         description="Every match in play, updating live."
       />

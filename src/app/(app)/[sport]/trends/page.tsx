@@ -6,7 +6,7 @@ import { AnimatedNumber } from "@/components/motion/animated-number";
 import { streakTrends } from "@/lib/stats/trends";
 import { trends } from "@/lib/service";
 import { containerClass } from "@/components/ui/container";
-import { sportPath } from "@/lib/routes";
+import { scoresPath } from "@/lib/routes";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/football/trends" },
@@ -42,7 +42,7 @@ export default async function TrendsPage() {
             icon="📈"
             title="No streaks to show yet"
             description="Check back closer to the next games."
-            action={<ButtonLink href={sportPath("fixtures")} variant="secondary">Browse fixtures</ButtonLink>}
+            action={<ButtonLink href={scoresPath("fixtures")} variant="secondary">Browse fixtures</ButtonLink>}
           />
         ) : (
           <TrendsBoard trends={streaks} />

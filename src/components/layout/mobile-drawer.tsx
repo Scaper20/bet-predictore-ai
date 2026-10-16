@@ -13,7 +13,7 @@ import { NavSearch } from "@/components/layout/nav-search";
 import { NavBadge } from "@/components/layout/mega-nav";
 import { runNavAction } from "@/components/layout/nav-actions";
 import { useLiveCount } from "@/components/layout/use-live-count";
-import { isActive, mobileMenus, navFor, type NavLink, type NavMenu } from "@/lib/nav";
+import { drawerMenus, isActive, navFor, type NavLink, type NavMenu } from "@/lib/nav";
 import type { SportId } from "@/lib/sports";
 import type { Tier } from "@/lib/entitlements";
 import { LogoLockup } from "@/components/brand/logo";
@@ -47,7 +47,7 @@ export function MobileDrawer({
   const pathname = usePathname();
   const live = useLiveCount();
   const { tabs, tools } = navFor(sport);
-  const menus = mobileMenus(tabs.flatMap((t) => (t.kind === "menu" ? [t.menu] : [])));
+  const menus = drawerMenus(sport);
   const quick = tabs.flatMap((t) => (t.kind === "link" ? [t] : []));
 
   const [section, setSection] = useState(() => sectionFor(menus, pathname));
@@ -82,7 +82,7 @@ export function MobileDrawer({
   if (!open) return null;
 
   const liveLink = quick.find((q) => q.live);
-  const pricing = quick.find((q) => !q.live);
+  const pricing = quick.find((q) => q.id === "pricing");
   const [forge, ask] = tools;
   const current = menus.find((m) => m.id === section) ?? menus[0];
 

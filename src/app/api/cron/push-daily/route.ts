@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { todaysQualifyingPicks } from "@/lib/whatsapp-digest-feed";
+import { freeViewer } from "@/lib/service";
+import { splitForFree } from "@/lib/access";
+import { paidUserIds } from "@/lib/paid-users";
 import { dailyPayload } from "@/lib/push/messages";
 import { pushConfigured, sendPushBatch, summarise } from "@/lib/push/send";
 import { loadSubscriptions, recordOutcome, yesterdayRecord } from "@/lib/push/store";
@@ -36,15 +39,22 @@ export async function GET(request: Request) {
 
   const admin = supabaseAdmin();
   const now = new Date();
-  const [picks, record, devices] = await Promise.all([
+  const [picks, record, devices, viewer, paidUsers] = await Promise.all([
     todaysQualifyingPicks(now).catch(() => []),
     yesterdayRecord(admin, now),
-    loadSubscriptions(admin, { daily: true }),
+    loadSubscriptions(admin),
+    freeViewer(),
+    paidUserIds(admin, now),
   ]);
 
-  // Every pick is free (lib/access.ts): every device hears the full list.
+  // Pro-league picks (lib/pro-leagues.ts) reach paid members' devices in
+  // full; every other device hears the free-league picks and a count.
+  const free = splitForFree(picks, viewer, now.getTime());
   const items = devices.flatMap((d) => {
-    const payload = dailyPayload({ picks, record, topics: d });
+    const paid = d.userId !== null && paidUsers.has(d.userId);
+    const payload = paid
+      ? dailyPayload({ picks, record, topics: d })
+      : dailyPayload({ picks: free.open, record, topics: d, proHeld: free.proHeld });
     return payload ? [{ id: d.id, target: d, payload }] : [];
   });
 
@@ -60,3 +70,4 @@ export async function GET(request: Request) {
     ...summarise(result),
   });
 }
+

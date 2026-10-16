@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { paidUserIds } from "@/lib/paid-users";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { strongKickoffPayload, strongResultPayload, type PushPayload, type StrongPickEvent } from "@/lib/push/messages";
 import { pushConfigured, sendPushBatch, summarise } from "@/lib/push/send";
@@ -21,7 +22,8 @@ const RESULT_WINDOW_MS = 3 * 3_600_000;
  * Vercel's Hobby crons run once a day, too seldom for this. Each event is
  * sent once: push_events_sent holds its key.
  *
- * Every subscribed device hears about every Strong pick: picks are free.
+ * A Pro feature: only devices signed in to a paid account hear these
+ * (lib/pricing.ts). The morning push stays for everyone.
  */
 export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET;
@@ -33,7 +35,7 @@ export async function GET(request: Request) {
 
   const admin = supabaseAdmin();
   const now = Date.now();
-  const cols = "match_id, home_name, away_name, label, probability, kickoff, result, actual_home_goals, actual_away_goals, settled_at";
+  const cols = "match_id, league_code, home_name, away_name, label, probability, kickoff, result, actual_home_goals, actual_away_goals, settled_at";
 
   const [{ data: soon }, { data: graded }] = await Promise.all([
     admin
@@ -51,7 +53,7 @@ export async function GET(request: Request) {
   ]);
 
   type Row = {
-    match_id: string; home_name: string; away_name: string; label: string; probability: number; kickoff: string;
+    match_id: string; league_code: string | null; home_name: string; away_name: string; label: string; probability: number; kickoff: string;
     result: "win" | "lose" | "push" | null; actual_home_goals: number | null; actual_away_goals: number | null;
   };
   const toEvent = (r: Row): StrongPickEvent => ({
@@ -81,12 +83,12 @@ export async function GET(request: Request) {
   const todo = events.filter((e) => fresh.has(e.key));
   if (todo.length === 0) return NextResponse.json({ events: events.length, sent: 0, note: "already sent" });
 
-  // Every pick is free (lib/access.ts), so every subscribed device hears every Strong pick.
-  const devices = await loadSubscriptions(admin, { daily: true });
+  const [devices, paidUsers] = await Promise.all([loadSubscriptions(admin), paidUserIds(admin)]);
 
   const items = todo.flatMap((t) =>
     devices
       .filter((d) => (t.topic === "picks" ? d.picks : d.results))
+      .filter((d) => d.userId !== null && paidUsers.has(d.userId))
       .map((d) => ({ id: d.id, target: d, payload: t.payload })),
   );
 

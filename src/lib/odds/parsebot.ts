@@ -1,5 +1,6 @@
 import "server-only";
 
+import { switchOn } from "@/lib/switches";
 import { ALLOWED_ENDPOINTS, CREDIT_COST, capsFrom, liveEnabled, type ParsebotEndpoint } from "./parsebot-budget";
 
 /**
@@ -8,8 +9,8 @@ import { ALLOWED_ENDPOINTS, CREDIT_COST, capsFrom, liveEnabled, type ParsebotEnd
  * Every call goes through three gates, in order, and any one of them failing
  * means no request is sent and the caller gets null:
  *
- * 1. The kill switch. PARSEBOT_LIVE must be "on" (and the key set). It is off
- *    until the credits are bought and the test plan has run.
+ * 1. The kill switch: the admin toggle at /admin/parsebot, plus the key, and
+ *    PARSEBOT_LIVE not set to "off". It is off until the credits are bought.
  * 2. The allow-list. Only the endpoints the product needs can be called.
  * 3. The ledger. The credits are reserved in public.parsebot_calls against
  *    the daily and 30-day caps before the request goes out. If the ledger
@@ -33,9 +34,9 @@ const SNAPSHOT_VERSION = "15";
 /** Longest a single call may take, body included. */
 const FETCH_TIMEOUT_MS = 8_000;
 
-/** True when live calls are switched on. Cheap; reads the environment only. */
-export function parsebotLive(): boolean {
-  return liveEnabled(process.env);
+/** True when live calls are switched on. Cheap: the switch is cached for a few seconds. */
+export async function parsebotLive(): Promise<boolean> {
+  return liveEnabled(process.env, await switchOn("parsebot_live"));
 }
 
 async function reserve(endpoint: ParsebotEndpoint, note?: string): Promise<number | null> {
@@ -76,7 +77,7 @@ export async function parsebotCall<T>(
   endpoint: ParsebotEndpoint,
   init: { query?: Record<string, string | number | undefined>; body?: unknown; note?: string } = {},
 ): Promise<T | null> {
-  if (!parsebotLive()) return null;
+  if (!(await parsebotLive())) return null;
   if (!ALLOWED_ENDPOINTS.includes(endpoint)) return null;
   const key = process.env.PARSEBOT_API_KEY!.trim();
 

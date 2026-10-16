@@ -30,6 +30,7 @@ export function SlipButton({ sport }: { sport: SportId }) {
   return (
     <Link
       href={sportPath("trackedSlips", sport)}
+      data-tour="combo"
       className="relative grid size-10 place-items-center rounded-lg text-ink-muted transition-colors hover:bg-surface-2 hover:text-ink"
       aria-label={count > 0 ? `My combos (${count} being tracked)` : "My combos"}
       title="My combos"

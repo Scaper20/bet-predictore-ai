@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { mobileMenus, navFor } from "./nav";
+import { drawerMenus } from "./nav";
 
 describe("mobile menu sections", () => {
-  const menus = mobileMenus(navFor("football").tabs.flatMap((t) => (t.kind === "menu" ? [t.menu] : [])));
+  const menus = drawerMenus("football");
 
   it("drops Predictions, leads with Matches and gives Insights its own tab", () => {
     expect(menus.map((m) => m.label)).toEqual(["Matches", "Insights", "Tools", "More"]);
@@ -10,8 +10,8 @@ describe("mobile menu sections", () => {
     expect(menus[1].columns.flatMap((c) => c.links).map((l) => l.label)).toContain("Trends");
   });
 
-  it("keeps Value Alerts reachable, under Tools", () => {
+  it("groups Code Hub, Forge and My combos under Tools", () => {
     const tools = menus.find((m) => m.id === "tools")!;
-    expect(tools.columns.flatMap((c) => c.links).map((l) => l.label)).toContain("Value Alerts");
+    expect(tools.columns.flatMap((c) => c.links).map((l) => l.label)).toEqual(["Code Hub", "Forge", "My combos"]);
   });
 });

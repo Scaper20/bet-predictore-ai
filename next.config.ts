@@ -149,6 +149,15 @@ const nextConfig: NextConfig = {
       { source: `/${DEFAULT_SPORT}/slip`, destination: `/${DEFAULT_SPORT}/combo`, permanent: true },
       { source: `/${DEFAULT_SPORT}/slip/:rest*`, destination: `/${DEFAULT_SPORT}/combo/:rest*`, permanent: true },
       { source: "/responsible-gambling", destination: "/responsible-use", permanent: true },
+      // For You is paused (October 2026), not gone for good, so this is a
+      // temporary redirect: bookmarks and old notifications land on today's picks.
+      { source: `/${DEFAULT_SPORT}/for-you`, destination: `/${DEFAULT_SPORT}/predictions`, permanent: false },
+      // Fixtures and results became views of the one scores page in October
+      // 2026. The query (league, day, days) is carried over by Next.
+      { source: "/:sport/fixtures", destination: "/:sport/live?view=fixtures", permanent: true },
+      { source: "/:sport/results", destination: "/:sport/live?view=results", permanent: true },
+      // Value alerts were retired in October 2026.
+      { source: "/:sport/value-alerts", destination: "/:sport/predictions", permanent: true },
       {
         source: "/match/:id",
         destination: `/${DEFAULT_SPORT}/match/:id`,

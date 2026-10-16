@@ -1,7 +1,4 @@
-import type { Metadata } from "next";
 import { Suspense } from "react";
-import { PageHeader } from "@/components/ui/page-header";
-import { containerClass } from "@/components/ui/container";
 import { LeagueFilter } from "@/components/match/league-filter";
 import { FixtureRow } from "@/components/match/fixture-row";
 import { LeagueGroupCard } from "@/components/match/league-group";
@@ -10,30 +7,14 @@ import { AnimatedNumber } from "@/components/motion/animated-number";
 import { ButtonLink, EmptyState } from "@/components/ui/primitives";
 import { APP_TIMEZONE, appDayBounds } from "@/lib/format";
 import { groupLiveMatches } from "@/lib/live-board";
-import { leagueByCode } from "@/lib/leagues";
+import type { LeagueDef } from "@/lib/leagues";
 import { picksBetween, picksFor, playedBetween, type DayPick, type LoggedPick } from "@/lib/stats/queries";
-import { sportPath } from "@/lib/routes";
-
-export async function generateMetadata({ searchParams }: { searchParams: Promise<{ league?: string }> }): Promise<Metadata> {
-  const { league } = await searchParams;
-  const def = league ? leagueByCode(league) : undefined;
-  const base = sportPath("results");
-  return {
-    title: def ? `${def.name} Results` : "Football Results",
-    description: def
-      ? `${def.name} results day by day, with how each KiqStat pick did.`
-      : "Final scores from every competition KiqStat covers, day by day, with how each of our picks did.",
-    alternates: { canonical: def ? `${base}?league=${def.code}` : base },
-  };
-}
-
-export const revalidate = 120;
+import { scoresPath } from "@/lib/routes";
 
 const DAYS_BACK = 7;
 
-export default async function ResultsPage({ searchParams }: { searchParams: Promise<{ league?: string; day?: string }> }) {
-  const { league, day } = await searchParams;
-  const def = league ? leagueByCode(league) : undefined;
+/** The scores page's Results view: final scores by day, with how each pick did. */
+export async function ResultsView({ def, day }: { def?: LeagueDef; day?: string }) {
   const now = new Date();
   const offset = clampOffset(day);
   const { start, end } = appDayBounds(now, -offset);
@@ -57,22 +38,11 @@ export default async function ResultsPage({ searchParams }: { searchParams: Prom
   const graded = [...[...picks.values()], ...unlisted].filter((p) => p.result === "win" || p.result === "lose");
   const won = graded.filter((p) => p.result === "win").length;
 
-  const qs = (o: number) => {
-    const p = new URLSearchParams();
-    if (def) p.set("league", def.code);
-    if (o > 0) p.set("day", String(o));
-    const s = p.toString();
-    return s ? `${sportPath("results")}?${s}` : sportPath("results");
-  };
+  const qs = (o: number) => scoresPath("results", { league: def?.code, day: o });
 
   return (
     <>
-      <PageHeader
-        eyebrow="Results"
-        title={def ? `${def.name} results` : "Results"}
-        description="Final scores and how our picks did."
-      />
-      <div className={`${containerClass()} space-y-6 py-7 sm:py-10`}>
+      <div className="space-y-6">
         <Suspense fallback={<div className="h-10" />}>
           <LeagueFilter />
         </Suspense>
@@ -107,7 +77,7 @@ export default async function ResultsPage({ searchParams }: { searchParams: Prom
             icon="🏁"
             title="No results on this day"
             description={def ? `No ${def.shortName} games finished on this day.` : "No game in the competitions we cover finished on this day."}
-            action={<ButtonLink href={sportPath("fixtures")} variant="secondary">See upcoming fixtures</ButtonLink>}
+            action={<ButtonLink href={scoresPath("fixtures")} variant="secondary">See upcoming fixtures</ButtonLink>}
           />
         ) : groups.length === 0 ? null : (
           <div className="stagger gap-5 lg:columns-2 [&>*]:mb-5 [&>*]:break-inside-avoid">

@@ -10,7 +10,7 @@ const TICK_MS = 60_000;
 const WATCH_MS = 3 * 60 * 60 * 1000;
 
 /**
- * Live status and score for the For You picks that have kicked off.
+ * Live status and score for listed picks that have kicked off.
  *
  * Asks only about games between kickoff and three hours after, so a page
  * of picks for later today costs nothing until the first one starts. Uses

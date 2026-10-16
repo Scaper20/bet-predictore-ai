@@ -8,7 +8,7 @@ import { parsebotCall } from "./parsebot";
  * selections were booked before and the code is still valid, otherwise one
  * book_bet call (two credits) through the metered client.
  *
- * Not wired to any page yet. While PARSEBOT_LIVE is off the call is never
+ * Used by the Code Hub. While the parse.bot switch is off the call is never
  * made and this answers { ok: false, reason: "unavailable" }.
  */
 

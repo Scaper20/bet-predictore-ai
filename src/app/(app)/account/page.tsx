@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { supabaseServer, supabaseConfigured } from "@/lib/supabase/server";
-import { getEntitlement, meets } from "@/lib/entitlements";
+import { getEntitlement } from "@/lib/entitlements";
 import { getSubscriptionRow, hasLivePaidSubscription } from "@/lib/subscriptions";
 import { getPreferencesFor, hasOnboarded } from "@/lib/preferences";
 import { LEAGUES, leagueByCode } from "@/lib/leagues";
@@ -78,17 +78,6 @@ export default async function AccountPage() {
     getPreferencesFor(supabase, user.id),
   ]);
 
-  // Read on its own rather than through getPreferencesFor, so the shared
-  // preferences query never depends on a column only VIP features use.
-  const isVip = meets(entitlement.tier, "vip");
-  const valueAlertsEmail = isVip
-    ? await supabase
-        .from("user_preferences")
-        .select("value_alerts_email")
-        .eq("user_id", user.id)
-        .maybeSingle()
-        .then(({ data }) => data?.value_alerts_email !== false)
-    : null;
 
   const displayName = profileResult.data?.display_name ?? "";
   const createdAt = profileResult.data?.created_at as string | undefined;
@@ -179,7 +168,7 @@ export default async function AccountPage() {
         />
         <div className="mt-6 grid gap-6 lg:grid-cols-[1.4fr_1fr] lg:items-start">
           <div className="card p-5 sm:p-7">
-            <PreferencesForm leagues={LEAGUES} preferences={preferences} valueAlertsEmail={valueAlertsEmail} />
+            <PreferencesForm leagues={LEAGUES} preferences={preferences} />
           </div>
           <div className="card p-5 sm:p-7">
             <h3 className="mb-4 text-sm font-semibold">Your details</h3>
@@ -195,7 +184,7 @@ export default async function AccountPage() {
           description="Set per device."
         />
         <div className="card mt-6 max-w-2xl p-5 sm:p-7">
-          <NotificationControls showValueAlerts={isVip} />
+          <NotificationControls />
         </div>
       </section>
 
@@ -207,7 +196,7 @@ export default async function AccountPage() {
             <p className="mt-3 text-sm text-ink-muted">
               {paid
                 ? "Invoices, payment method and cancellation all live on the billing page."
-                : "Free covers every pick and every prediction type on every match. Pro adds the full breakdowns, half-time predictions, winning margins and more from Forge and Ask KiqStat."}
+                : "Free covers every match, and every pick in 27 competitions. Pro adds picks in the 15 Pro leagues before kick-off, corners, cards and shots predictions, Strong pick alerts, the full breakdowns, half-time predictions, winning margins and more from Forge and Ask KiqStat."}
             </p>
           </div>
           <div className="flex flex-wrap gap-3">

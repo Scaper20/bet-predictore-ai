@@ -47,6 +47,8 @@ export function dailyPayload(opts: {
   picks: PersonalizedPick[];
   record: DayRecord | null;
   topics: { picks: boolean; results: boolean };
+  /** Pro-league picks held back from a free device (lib/pro-leagues.ts). */
+  proHeld?: number;
 }): PushPayload | null {
   const record = opts.topics.results && opts.record && opts.record.won + opts.record.lost > 0 ? opts.record : null;
   const picks = opts.topics.picks ? opts.picks : [];
@@ -57,6 +59,8 @@ export function dailyPayload(opts: {
     const more = n - named.length;
     const lines = [...named];
     if (more > 0) lines.push(`+${more} more`);
+    const held = opts.topics.picks ? (opts.proHeld ?? 0) : 0;
+    if (held > 0) lines.push(`🔒 +${held} in Pro leagues for Pro members`);
     if (record) lines.push(recordLine(record));
     return {
       title: n === 1 ? "Today's pick is ready" : `Today's ${n} picks are ready`,
@@ -78,30 +82,9 @@ export function dailyPayload(opts: {
   return null;
 }
 
-export interface AlertForPush {
-  homeName: string;
-  awayName: string;
-  label: string;
-  localPrice: number;
-}
-
-/** VIP value-shift alerts, same set the morning email carries. */
-export function valueAlertsPayload(alerts: AlertForPush[]): PushPayload | null {
-  if (alerts.length === 0) return null;
-  const n = alerts.length;
-  const [first] = alerts;
-  const lead = `${first.homeName} v ${first.awayName}: ${first.label} at ${odds(first.localPrice)}`;
-  return {
-    title: n === 1 ? "New value price" : `${n} new value prices`,
-    body: n === 1 ? lead : `${lead}\n+${n - 1} more. Prices move quickly.`,
-    url: sportPath("valueAlerts"),
-    tag: "value-alerts",
-  };
-}
-
 export const TEST_PAYLOAD: PushPayload = {
   title: "Notifications are on",
-  body: "This is how KiqStat will reach you: today's picks each morning, Strong picks before kick-off, and how they did.",
+  body: "This is how KiqStat will reach you: today's picks each morning and how yesterday's did. Pro members also get Strong pick alerts at kick-off and full time.",
   url: sportPath("predictions"),
   tag: "test",
 };

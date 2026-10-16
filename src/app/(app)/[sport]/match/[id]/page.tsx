@@ -7,7 +7,7 @@ import { Crest } from "@/components/ui/crest";
 import { isStrong } from "@/lib/model/tiers";
 import { StrongBadge } from "@/components/ui/strong-badge";
 import { RiskBadge } from "@/components/ui/risk-badge";
-import { matchPath, sportPath } from "@/lib/routes";
+import { matchPath, sportPath, scoresPath } from "@/lib/routes";
 import { BttsPanel, CorrectScorePanel, DoubleChancePanel, GoalsPanel, H2HPanel, OutcomePanel } from "@/components/match/market-panels";
 import { AddToSlip } from "@/components/match/add-to-slip";
 import { MatchTabs, type MatchTab } from "@/components/match/match-tabs";
@@ -31,14 +31,17 @@ import { JsonLd } from "@/components/seo/json-ld";
 import { matchJsonLd } from "@/lib/seo/match-jsonld";
 import { fixtureStatMarkets, type FixtureStatMarkets } from "@/lib/stat-markets-service";
 import { GoalExtrasPanel, StatPanel } from "@/components/match/stat-panels";
-import { freeViewer, matchDetail } from "@/lib/service";
+import { matchDetail } from "@/lib/service";
+import { getViewer } from "@/lib/viewer";
+import { isProLeague } from "@/lib/pro-leagues";
+import { ProLeagueAfterKickoff, ProLeagueMarketsLock, ProLeaguePickLock, ProStatsLock } from "@/components/entitlements/pro-league-lock";
+import { LockedNumber } from "@/components/entitlements/locked-pick";
 import { viewPrediction, type ViewedPrediction } from "@/lib/access";
 import { MatchAccessProvider, ProMarkets } from "@/components/match/match-access";
 import { SITE_URL as SITE } from "@/lib/site-url";
 import { percent, isLive } from "@/lib/format";
 import { LocalTime } from "@/components/ui/local-time";
 import type { Match } from "@/lib/types";
-import type { Prediction } from "@/lib/model/predict";
 import { containerClass } from "@/components/ui/container";
 
 /** What the scoreboard starts from, stamped with when this render read it: the
@@ -93,23 +96,28 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   if (!detail) notFound();
 
   const { match, analysis } = detail;
-  // This page is cached and shared, so it is rendered with the free view
-  // (lib/access.ts) and nothing locked reaches the HTML; MatchAccessProvider
-  // fetches the viewer's own view and unlocks what their plan allows.
-  const prediction = viewPrediction(detail.prediction, await freeViewer());
+  // Rendered per request (force-dynamic) with the viewer's own view
+  // (lib/access.ts): a Pro-league match before kick-off reaches a free
+  // viewer as the 1X2 split only. MatchAccessProvider still fetches the Pro
+  // extras (half-time, Asian handicap) after its own plan check.
+  const viewer = await getViewer();
+  const prediction = viewPrediction(detail.prediction, viewer);
+  const proLocked = Boolean(prediction.locked.proLeague);
+  const proLeagueOpened = !viewer.paid && !proLocked && isProLeague(match.league.code);
   const [ctx, extra] = await Promise.all([
     matchContext(match).catch((): MatchContext => ({ teamIds: { home: null, away: null }, home: null, away: null, table: null })),
     // Corners, cards, shots and more goal markets; the referee where one is
-    // named (the English divisions, about a week ahead).
-    fixtureStatMarkets(match, detail.prediction).catch(() => null),
+    // named (the English divisions, about a week ahead). Pro only: not even
+    // computed for a free viewer, so none of it can reach their page.
+    viewer.paid ? fixtureStatMarkets(match, detail.prediction).catch(() => null) : Promise.resolve(null),
   ]);
   const referee = extra?.referee ?? null;
   const live = isLive(match);
   const label = `${match.home.name} v ${match.away.name}`;
 
   const tabs: MatchTab[] = [
-    { key: "overview", label: "Overview", panel: <Overview match={match} prediction={prediction} analysis={analysis} ctx={ctx} live={live} label={label} /> },
-    { key: "markets", label: "Predictions", short: "Picks", panel: <Markets prediction={prediction} extra={extra} /> },
+    { key: "overview", label: "Overview", panel: <Overview match={match} prediction={prediction} analysis={analysis} ctx={ctx} live={live} label={label} proLeagueOpened={proLeagueOpened} /> },
+    { key: "markets", label: "Predictions", short: "Picks", panel: <Markets prediction={prediction} extra={proLocked ? null : extra} statsLocked={!viewer.paid} /> },
     { key: "stats", label: "Stats", panel: <MatchStats match={match} home={ctx.home} away={ctx.away} /> },
     ...(ctx.table
       ? [{
@@ -161,7 +169,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
           <div className="mx-auto max-w-5xl">
             <div className="flex items-center gap-2.5">
               {match.league.logo && <Crest src={match.league.logo} name={match.league.name} size={18} />}
-              <Link href={`${sportPath("fixtures")}?league=${match.league.code ?? ""}`} className="min-w-0 truncate text-xs font-medium text-ink-muted hover:text-ink sm:text-sm">
+              <Link href={scoresPath("fixtures", { league: match.league.code ?? "" })} className="min-w-0 truncate text-xs font-medium text-ink-muted hover:text-ink sm:text-sm">
                 {match.league.name}
                 {match.round && <span className="text-ink-dim"> · {match.round}</span>}
               </Link>
@@ -240,12 +248,14 @@ function Overview({
   ctx,
   live,
   label,
+  proLeagueOpened,
 }: {
   match: Match;
   prediction: ViewedPrediction;
   analysis: Analysis;
   ctx: MatchContext;
   live: boolean;
+  proLeagueOpened: boolean;
   label: string;
 }) {
   const pick = prediction.topPick;
@@ -270,7 +280,9 @@ function Overview({
           </Gate>
         )}
 
-        {pick && prediction.sufficiency.publishable ? (
+        {prediction.locked.proLeague && prediction.sufficiency.publishable ? (
+          <ProLeaguePickLock group={pick?.group} leagueCode={match.league.code} leagueName={match.league.name} />
+        ) : pick && prediction.sufficiency.publishable ? (
           <section className="orbit-border card rounded-2xl p-5 sm:p-6">
             <p className="flex min-h-5 flex-wrap items-center gap-x-2 gap-y-1 text-[10.5px] font-semibold uppercase leading-none tracking-[0.14em] text-ink-dim">
               <span className="whitespace-nowrap">Our pick</span> {isStrong(pick) && <StrongBadge />} <RiskBadge pick={pick} />
@@ -284,6 +296,7 @@ function Overview({
             {prediction.sufficiency.level === "limited" && (
               <p className="mt-2 text-xs text-amber">Thin data · treat as a guide</p>
             )}
+            {proLeagueOpened && <ProLeagueAfterKickoff />}
           </section>
         ) : (
           <section className="card p-5">
@@ -292,11 +305,19 @@ function Overview({
           </section>
         )}
 
-        <div className="stagger grid grid-cols-3 gap-3">
-          <Fact index={0} label="xG" value={`${prediction.markets.expectedGoals.home.toFixed(1)} – ${prediction.markets.expectedGoals.away.toFixed(1)}`} />
-          <Fact index={1} label="Over 2.5" value={percent(prediction.markets.over["2.5"])} hot={prediction.markets.over["2.5"] >= 0.6} />
-          <Fact index={2} label="Both score" value={percent(prediction.markets.bttsYes)} hot={prediction.markets.bttsYes >= 0.6} />
-        </div>
+        {prediction.locked.markets ? (
+          <div className="stagger grid grid-cols-3 gap-3">
+            {["xG", "Over 2.5", "Both score"].map((l, i) => (
+              <Fact key={l} index={i} label={l} value={<LockedNumber />} />
+            ))}
+          </div>
+        ) : (
+          <div className="stagger grid grid-cols-3 gap-3">
+            <Fact index={0} label="xG" value={`${prediction.markets.expectedGoals.home.toFixed(1)} – ${prediction.markets.expectedGoals.away.toFixed(1)}`} />
+            <Fact index={1} label="Over 2.5" value={percent(prediction.markets.over["2.5"])} hot={prediction.markets.over["2.5"] >= 0.6} />
+            <Fact index={2} label="Both score" value={percent(prediction.markets.bttsYes)} hot={prediction.markets.bttsYes >= 0.6} />
+          </div>
+        )}
 
         {(homeForm.length > 0 || awayForm.length > 0) && (
           <section className="card p-5">
@@ -326,7 +347,7 @@ function Overview({
   );
 }
 
-function Fact({ label, value, hot = false, index }: { label: string; value: string; hot?: boolean; index: number }) {
+function Fact({ label, value, hot = false, index }: { label: string; value: React.ReactNode; hot?: boolean; index: number }) {
   return (
     <div style={{ ["--i" as string]: index }} className={`rounded-xl border px-3 py-3 text-center ${hot ? "border-brand/25 bg-brand/[0.06]" : "border-line bg-surface"}`}>
       <p className="truncate text-[10px] font-medium uppercase tracking-wider text-ink-dim">{label}</p>
@@ -349,7 +370,23 @@ function FormLine({ team, letters }: { team: Match["home"]; letters: Outcome[] }
 
 /* -------------------------------------------------------------- Markets */
 
-function Markets({ prediction, extra }: { prediction: Prediction; extra: FixtureStatMarkets | null }) {
+function Markets({
+  prediction,
+  extra,
+  statsLocked,
+}: {
+  prediction: ViewedPrediction;
+  extra: FixtureStatMarkets | null;
+  statsLocked: boolean;
+}) {
+  if (prediction.locked.proLeague) {
+    return (
+      <div className="space-y-5">
+        <OutcomePanel prediction={prediction} />
+        <ProLeagueMarketsLock leagueCode={prediction.match.league.code} leagueName={prediction.match.league.name} />
+      </div>
+    );
+  }
   return (
     <div className="space-y-5">
       {/* Free and server-rendered: the 1X2 split is what search indexes and
@@ -378,6 +415,7 @@ function Markets({ prediction, extra }: { prediction: Prediction; extra: Fixture
             const m = extra.stats[kind];
             return m ? <StatPanel key={kind} kind={kind} markets={m} match={prediction.match} referee={extra.referee} /> : null;
           })}
+        {statsLocked && <ProStatsLock />}
       </DepthGate>
       {/* Pro: half-time markets and Asian handicap, fetched after the plan check. */}
       <ProMarkets />

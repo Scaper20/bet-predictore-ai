@@ -160,7 +160,7 @@ export interface DailyDigest {
 
 const MAX_PICKS_SHOWN = DIGEST_MAX_SINGLES;
 
-export function formatPicksMessage(picks: PersonalizedPick[]): string {
+export function formatPicksMessage(picks: PersonalizedPick[], proHeld = 0): string {
   const shown = picks.slice(0, MAX_PICKS_SHOWN);
   const lines = shown.map((p) => {
     const q = quotedPrice(p);
@@ -176,8 +176,14 @@ export function formatPicksMessage(picks: PersonalizedPick[]): string {
   const header = `*KiqStat — Today's Picks*\n${shown.length} pick${shown.length === 1 ? "" : "s"} for the next 24 hours, all at a price of ${odds(DIGEST_MIN_ODDS)} or longer.`;
   const footer =
     overflow > 0 ? `+${overflow} more at ${SITE_URL}/football/predictions` : `${SITE_URL}/football/predictions`;
+  // Pro-league picks (lib/pro-leagues.ts) are held back from this public
+  // message until kick-off; say how many, never which.
+  const pro =
+    proHeld > 0
+      ? `🔒 +${proHeld} more pick${proHeld === 1 ? "" : "s"} today in Pro leagues (Champions League, Serie A, Bundesliga and more), for Pro members before kick-off → ${SITE_URL}/pricing`
+      : null;
 
-  return [header, ...lines, footer].join("\n\n");
+  return [header, ...lines, ...(pro ? [pro] : []), footer].join("\n\n");
 }
 
 export function formatAccaMessage(acca: DigestAcca): string {
@@ -201,7 +207,18 @@ export const NO_PICK_MESSAGE = [
 ].join("\n\n");
 
 /** The full day's digest, ready to paste — or a single no-pick message. */
-export function buildDigestFromPicks(picks: PersonalizedPick[]): DailyDigest {
+export function buildDigestFromPicks(picks: PersonalizedPick[], proHeld = 0): DailyDigest {
+  if (picks.length === 0 && proHeld > 0) {
+    return {
+      hasPicks: true,
+      picksMessage: [
+        "*KiqStat — Today's Picks*",
+        `All ${proHeld} of today's picks are in Pro leagues (Champions League, Serie A, Bundesliga and more). Pro members have them now; everyone sees them at kick-off.`,
+        `${SITE_URL}/pricing`,
+      ].join("\n\n"),
+      accaMessages: [],
+    };
+  }
   if (picks.length === 0) {
     return { hasPicks: false, picksMessage: NO_PICK_MESSAGE, accaMessages: [] };
   }
@@ -209,7 +226,7 @@ export function buildDigestFromPicks(picks: PersonalizedPick[]): DailyDigest {
   const tiers = buildAccaTiers(picks);
   return {
     hasPicks: true,
-    picksMessage: formatPicksMessage(picks),
+    picksMessage: formatPicksMessage(picks, proHeld),
     accaMessages: tiers.map(formatAccaMessage),
   };
 }

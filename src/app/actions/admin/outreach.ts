@@ -4,7 +4,14 @@ import { checkAdmin, logAdminAction } from "@/lib/admin";
 import { enqueueCampaign, sendNextBatch, campaignProgress, segmentCounts } from "@/lib/outreach-feed";
 import type { CampaignType } from "@/lib/outreach";
 
-const CAMPAIGNS = new Set<CampaignType>(["warm_checkin", "survey_subscribed", "survey_free", "announce_whatsapp", "announce_rebrand"]);
+const CAMPAIGNS = new Set<CampaignType>([
+  "warm_checkin",
+  "survey_subscribed",
+  "survey_free",
+  "announce_whatsapp",
+  "announce_rebrand",
+  "checkout_reminder",
+]);
 
 // A "use server" actions file can't export `maxDuration` the way a route.ts
 // or page.tsx can (Next.js build fails: the whole module loses its
@@ -74,13 +81,14 @@ export async function getOutreachOverview(): Promise<OutreachOverview | { error:
   const gate = await checkAdmin();
   if (!gate.ok) return { error: gate.error };
 
-  const [segments, warmCheckin, surveySubscribed, surveyFree, announceWhatsapp, announceRebrand] = await Promise.all([
+  const [segments, warmCheckin, surveySubscribed, surveyFree, announceWhatsapp, announceRebrand, checkoutReminder] = await Promise.all([
     segmentCounts(),
     campaignProgress("warm_checkin"),
     campaignProgress("survey_subscribed"),
     campaignProgress("survey_free"),
     campaignProgress("announce_whatsapp"),
     campaignProgress("announce_rebrand"),
+    campaignProgress("checkout_reminder"),
   ]);
 
   return {
@@ -91,6 +99,7 @@ export async function getOutreachOverview(): Promise<OutreachOverview | { error:
       survey_free: surveyFree,
       announce_whatsapp: announceWhatsapp,
       announce_rebrand: announceRebrand,
+      checkout_reminder: checkoutReminder,
     },
   };
 }

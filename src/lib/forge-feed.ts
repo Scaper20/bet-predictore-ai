@@ -5,6 +5,7 @@ import { cached } from "@/lib/providers/cache";
 import { predictBatch, upcomingFeed } from "@/lib/service";
 import { priceSelections } from "@/lib/odds";
 import { windowFor } from "@/lib/time-windows";
+import { proLeagueLocked, type Viewer } from "@/lib/access";
 import { COMBO_PREFIX } from "@/lib/slip-tracker";
 import {
   candidatesFor,
@@ -17,7 +18,7 @@ import {
 } from "@/lib/forge";
 
 /** Every modelled fixture kicking off in a window, predicted once and shared for five minutes. */
-async function predictionsFor(when: ForgeWhen): Promise<Prediction[]> {
+export async function predictionsFor(when: ForgeWhen): Promise<Prediction[]> {
   return cached(`forge:pool:${when}`, 5 * 60_000, async () => {
     const { matches } = await upcomingFeed(7);
     const [from, to] = windowFor(when);
@@ -40,13 +41,14 @@ export interface ForgeResponse extends ForgeResult {
 export async function buildForgeSlip(
   settings: ForgeSettings,
   state: ForgeRequestState,
-  opts: { allowHandicap: boolean; leagueCodes: string[] | null },
+  opts: { allowHandicap: boolean; leagueCodes: string[] | null; viewer?: Viewer | null },
 ): Promise<ForgeResponse> {
   const soon = Date.now() + 10 * 60_000;
   const predictions = (await predictionsFor(settings.when)).filter(
     (p) =>
       p.sufficiency.publishable &&
       Date.parse(p.match.kickoff) > soon &&
+      !(opts.viewer && proLeagueLocked(p.match, opts.viewer)) &&
       (!opts.leagueCodes || opts.leagueCodes.includes(p.match.league.code ?? "")),
   );
 

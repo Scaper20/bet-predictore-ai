@@ -136,7 +136,7 @@ export default function AboutPage() {
                 <li>
                   <strong className="text-ink">Forge and Ask KiqStat.</strong> Forge builds a combo from the
                   model&apos;s own numbers to the risk level and price you choose; Ask KiqStat answers questions about any
-                  match. Both are free to try, and paid plans add more of each plus deeper prediction types and value alerts.{" "}
+                  match. Both are free to try, and paid plans add more of each plus deeper prediction types.{" "}
                   <Link href="/pricing" className="text-brand hover:underline">See plans</Link>.
                 </li>
               </ul>

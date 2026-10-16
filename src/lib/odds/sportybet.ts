@@ -29,7 +29,7 @@ import { boardDecision, MAX_STALE_MS } from "./parsebot-budget";
  * serverless instance. A page only asks parse.bot when that stored board has
  * gone stale for how close its next game is (parsebot-budget.ts), and every
  * call goes through parsebot.ts: the kill switch, the allow-list and the
- * credit ledger. While PARSEBOT_LIVE is off, no call is made at all and
+ * credit ledger. While the switch is off, no call is made at all and
  * prices come only from boards already stored.
  *
  * Everything degrades to "no price". A switched-off client, a spent budget, a
@@ -81,7 +81,7 @@ export async function sportyBetBoard(
   // on one instance costs one database read rather than one each.
   return cached(`sportybet:board:${key}:${fromJob ? "job" : "page"}`, fromJob ? 0 : 5 * 60_000, async () => {
     const stored = await readBoard<SportyBetEvent[]>(key);
-    const canFetch = parsebotLive() && (fromJob || (await dataLayer()) !== "db");
+    const canFetch = (await parsebotLive()) && (fromJob || (await dataLayer()) !== "db");
     const decision = boardDecision(
       stored ? { fetchedAt: stored.fetchedAt, events: stored.payload } : null,
       canFetch,

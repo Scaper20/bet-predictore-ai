@@ -9,6 +9,7 @@ import { naira } from "@/lib/format";
 import { flutterwaveConfigured } from "@/lib/flutterwave/client";
 import { ELSEWHERE, formatMoney } from "@/lib/payments/markets";
 import { sportPath } from "@/lib/routes";
+import { TourButton } from "@/components/tour/tour-button";
 
 export const metadata: Metadata = {
   title: "Help Centre",
@@ -35,7 +36,7 @@ const GROUPS: FaqGroup[] = [
       {
         q: "Is KiqStat free?",
         text: "Live scores fixtures results tables predictions free account prediction types",
-        a: <A>Yes. Live scores, fixtures, results, league tables, team stats and every pick and every prediction type (match result, over/under, both teams to score, two results, correct score) are free, with {FORGE_FREE_DAILY} Forge combos a day (match result and two results) and {ASK_FREE_DAILY} Ask KiqStat questions a day. Pro adds winning margins, half-time predictions, the full written breakdowns and more.</A>,
+        a: <A>Yes. Live scores, fixtures, results, league tables, team stats and every match page are free, and so is every pick in 27 competitions (match result, over/under, both teams to score, two results, correct score), with {FORGE_FREE_DAILY} Forge combos a day (match result and two results) and {ASK_FREE_DAILY} Ask KiqStat questions a day. In the 15 Pro leagues, where the model reads best (Serie A, Bundesliga, Eredivisie, Primeira Liga, the Championship and every cup and European competition among them), free accounts see the win, draw and loss split and get the pick at kick-off; Pro gets it before. Pro also adds corners, cards and shots predictions, Strong pick alerts, winning margins, half-time predictions and the full written breakdowns.</A>,
       },
       {
         q: "Do I need an account?",
@@ -44,13 +45,13 @@ const GROUPS: FaqGroup[] = [
       },
       {
         q: "How do I choose my leagues?",
-        text: "for you leagues preferences follow",
-        a: <A>Open <L href="/account#preferences">your account</L> and pick the competitions you follow. Your For You page then shows only those, first.</A>,
+        text: "leagues preferences follow forge",
+        a: <A>Open <L href="/account#preferences">your account</L> and pick the competitions you follow. Forge can then build combos from just those competitions.</A>,
       },
       {
         q: "Can I install KiqStat on my phone?",
         text: "app install phone home screen android iphone",
-        a: <A>Yes, without an app store. On Android, open the menu in Chrome and choose &ldquo;Install app&rdquo;; on iPhone, tap Share in Safari and &ldquo;Add to Home Screen&rdquo;. You&apos;ll get kick-off and result notifications if you allow them.</A>,
+        a: <A>Yes, without an app store. On Android, open the menu in Chrome and choose &ldquo;Install app&rdquo;; on iPhone, tap Share in Safari and &ldquo;Add to Home Screen&rdquo;. You&apos;ll get the morning picks notification if you allow it; Pro members also get Strong pick alerts at kick-off and full time.</A>,
       },
     ],
   },
@@ -180,6 +181,7 @@ export default function HelpPage() {
           <p className="animate-rise mx-auto mt-4 max-w-lg text-base text-ink-muted" style={{ animationDelay: "160ms" }}>
             Quick answers about your account, plans, predictions and tools.
           </p>
+          <TourButton className="animate-rise mt-5 rounded-xl bg-brand px-5 py-2.5 text-sm font-bold text-brand-ink hover:bg-brand-strong" />
           <div className="animate-rise mt-6 flex flex-wrap justify-center gap-2" style={{ animationDelay: "240ms" }}>
             {GROUPS.map((g) => (
               <a key={g.id} href={`#${g.id}`} className="rounded-full border border-line bg-surface px-3.5 py-2 text-xs font-medium text-ink-muted transition-colors hover:border-brand/40 hover:text-ink">
