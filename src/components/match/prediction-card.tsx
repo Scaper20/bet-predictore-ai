@@ -33,7 +33,7 @@ export function PredictionCard({ prediction, morph = true }: { prediction: Predi
   return (
     // min-w-0: a grid item defaults to its min-content width, which let a
     // long club name push a 320px screen sideways.
-    <article className="card card-hover group flex min-w-0 flex-col overflow-hidden">
+    <article data-tour="card" className="card card-hover group flex min-w-0 flex-col overflow-hidden">
       <Link href={matchPath(match.id)} prefetch={false} className="block flex-1">
         <div className="flex items-center gap-2 px-4 pt-4 sm:px-5">
           {match.league.logo ? <Crest src={match.league.logo} name={match.league.name} size={16} /> : null}

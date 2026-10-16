@@ -149,6 +149,9 @@ const nextConfig: NextConfig = {
       { source: `/${DEFAULT_SPORT}/slip`, destination: `/${DEFAULT_SPORT}/combo`, permanent: true },
       { source: `/${DEFAULT_SPORT}/slip/:rest*`, destination: `/${DEFAULT_SPORT}/combo/:rest*`, permanent: true },
       { source: "/responsible-gambling", destination: "/responsible-use", permanent: true },
+      // For You is paused (October 2026), not gone for good, so this is a
+      // temporary redirect: bookmarks and old notifications land on today's picks.
+      { source: `/${DEFAULT_SPORT}/for-you`, destination: `/${DEFAULT_SPORT}/predictions`, permanent: false },
       {
         source: "/match/:id",
         destination: `/${DEFAULT_SPORT}/match/:id`,

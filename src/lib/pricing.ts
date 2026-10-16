@@ -58,7 +58,6 @@ export const PLANS: PlanDefinition[] = [
       "Strong pick alerts at kick-off and full time",
       "Forge: 5 combos a day, match result and two results",
       "Ask KiqStat: 3 questions a day",
-      "For You feed with likes and comments",
     ],
     price: {},
     cadence: "forever",
@@ -138,7 +137,6 @@ export const PLAN_MATRIX: MatrixGroup[] = [
       { label: "Every match, live scores", values: { free: true, pro: true, vip: true } },
       { label: "Fixtures ahead", values: { free: "14 days", pro: "14 days", vip: "14 days" } },
       { label: "Settled track record", values: { free: true, pro: true, vip: true } },
-      { label: "For You feed, likes and comments", values: { free: true, pro: true, vip: true } },
     ],
   },
   {

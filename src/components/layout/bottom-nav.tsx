@@ -10,7 +10,7 @@ import { useLiveCount } from "@/components/layout/use-live-count";
  * Primary navigation for a thumb.
  *
  * Not a miniature of the desktop nav: desktop navigation is a site map,
- * thumb navigation is a frequency ranking. For You and Live sit under the
+ * thumb navigation is a frequency ranking. Fixtures and Live sit under the
  * left thumb, Forge is the raised centre action, Picks and More on the right.
  * The slip moved up beside Ask KiqStat in the header, where it's visible on
  * every screen without spending a tab. Everything else is behind More.
@@ -24,7 +24,7 @@ const HEIGHT_CLASS = "h-14"; // 56px — mirrors --bottom-nav-h in globals.css.
 type Tab = { route: SportRoute; label: string; icon: IconName };
 
 const LEFT: readonly Tab[] = [
-  { route: "forYou", label: "For You", icon: "star" },
+  { route: "fixtures", label: "Fixtures", icon: "calendar" },
   { route: "live", label: "Live", icon: "live" },
 ];
 const RIGHT: readonly Tab[] = [
@@ -75,6 +75,7 @@ export function BottomNav({ onOpenMenu, menuOpen }: { onOpenMenu: () => void; me
         <li className="contents">
           <Link
             href={forgeHref}
+            data-tour="forge"
             aria-current={forgeActive ? "page" : undefined}
             className="flex h-full flex-col items-center justify-end gap-1 pb-1.5 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand"
           >
@@ -123,7 +124,7 @@ function Label({ active, children }: { active: boolean; children: string }) {
   );
 }
 
-type IconName = "star" | "live" | "chart" | "more";
+type IconName = "calendar" | "live" | "chart" | "more";
 
 function Icon({ name, active }: { name: IconName; active: boolean }) {
   const common = {
@@ -138,10 +139,11 @@ function Icon({ name, active }: { name: IconName; active: boolean }) {
   };
 
   switch (name) {
-    case "star":
+    case "calendar":
       return (
         <svg {...common}>
-          <path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z" />
+          <rect x="3.5" y="5" width="17" height="15" rx="2.5" />
+          <path d="M3.5 10h17M8 3v4M16 3v4" />
         </svg>
       );
     case "live":

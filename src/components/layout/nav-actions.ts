@@ -3,6 +3,7 @@
 import { openAsk } from "@/lib/ask-store";
 import { OPEN_INSTALL_EVENT, OPEN_NOTIFY_EVENT } from "@/lib/pwa";
 import type { NavAction } from "@/lib/nav";
+import { openTour } from "@/lib/tour";
 
 /** Opens the slip overlay (components/slip/slip-sheet.tsx). */
 export const OPEN_SLIP_EVENT = "bx-open-slip";
@@ -23,6 +24,7 @@ export function runNavAction(action: NavAction) {
   else if (action === "install") window.dispatchEvent(new Event(OPEN_INSTALL_EVENT));
   else if (action === "slip") openSlipSheet();
   else if (action === "support") openSupport();
+  else if (action === "tour") openTour();
 }
 
 export function openNotifications() {

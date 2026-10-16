@@ -19,6 +19,7 @@ export function AskButton({ size = "md" }: { size?: "md" | "sm" }) {
     <button
       type="button"
       onClick={toggleAsk}
+      data-tour="ask"
       aria-expanded={open}
       className={`flex shrink-0 items-center whitespace-nowrap border font-semibold transition-colors ${
         sm ? "h-9 gap-1.5 rounded-[10px] px-2.5 text-[13px]" : "h-10 gap-2 rounded-xl px-3.5 text-sm"

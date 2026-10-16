@@ -49,7 +49,7 @@ export const soonHref = (slug: string) => `/soon/${slug}`;
 
 /* ---------------------------------------------------------------- items */
 
-export type NavAction = "ask" | "install" | "slip" | "support";
+export type NavAction = "ask" | "install" | "slip" | "support" | "tour";
 
 export type Badge = { text: string; tone: "brand" | "amber" | "violet" | "rose" | "muted" };
 
@@ -108,12 +108,11 @@ export function navFor(sport: SportId): { tabs: NavTab[]; tools: NavLink[] } {
   const predictions: NavMenu = {
     id: "predictions",
     label: "Predictions",
-    match: [p("predictions"), p("forYou"), p("valueAlerts")],
+    match: [p("predictions"), p("valueAlerts")],
     columns: [
       {
         title: "Picks",
         links: [
-          { label: "For You", desc: "Picks from your leagues and markets", href: p("forYou") },
           { label: "Today", desc: "Every game we rate today", href: p("predictions") },
           { label: "Value Alerts", desc: "When the market price beats ours", href: p("valueAlerts"), badge: { text: "VIP", tone: "amber" } },
         ],
@@ -208,6 +207,7 @@ export function navFor(sport: SportId): { tabs: NavTab[]; tools: NavLink[] } {
         links: [
           { label: "Your account", href: "/account" },
           { label: "Help centre", desc: "Answers to common questions", href: "/help" },
+          { label: "Take the tour", desc: "A 30-second walkthrough", href: "#tour", action: "tour" },
           { label: "Chat with support", desc: "Message Oma, our support team", href: "/help", action: "support" },
           { label: "Responsible use", desc: "Limits, breaks and support", href: "/responsible-use" },
         ],
@@ -266,7 +266,7 @@ export function allLinks(sport: SportId): NavLink[] {
 /**
  * The mobile menu's sections, from the desktop menus.
  *
- * Phones already reach For You and Picks from the bottom bar, so the
+ * Phones already reach Fixtures and Picks from the bottom bar, so the
  * Predictions section is dropped there; Matches leads, and Insights gets
  * its own section instead of sitting under Matches. Value Alerts, the one
  * Predictions link with no bottom-bar home, moves to Tools.

@@ -6,7 +6,7 @@ import type { Match } from "@/lib/types";
 import type { Pick as ModelPick } from "@/lib/model/predict";
 import type { LegScore } from "@/lib/slip-tracker";
 import { useSlip } from "@/lib/slip";
-import { useLivePicks } from "@/components/for-you/use-live-picks";
+import { useLivePicks } from "@/components/match/use-live-picks";
 import { isStaleInPlay } from "@/lib/match-status";
 import { LiveDot } from "@/components/ui/primitives";
 import { useTickingMinute } from "@/components/match/use-live-clock";
@@ -97,6 +97,7 @@ export function PickAction({
   return (
     <button
       type="button"
+      data-tour="pick"
       aria-pressed={onSlip}
       aria-label={onSlip ? `Remove ${pick.label} from combo` : `Add ${pick.label} to combo`}
       onClick={() =>

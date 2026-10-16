@@ -9,6 +9,7 @@ import { naira } from "@/lib/format";
 import { flutterwaveConfigured } from "@/lib/flutterwave/client";
 import { ELSEWHERE, formatMoney } from "@/lib/payments/markets";
 import { sportPath } from "@/lib/routes";
+import { TourButton } from "@/components/tour/tour-button";
 
 export const metadata: Metadata = {
   title: "Help Centre",
@@ -44,8 +45,8 @@ const GROUPS: FaqGroup[] = [
       },
       {
         q: "How do I choose my leagues?",
-        text: "for you leagues preferences follow",
-        a: <A>Open <L href="/account#preferences">your account</L> and pick the competitions you follow. Your For You page then shows only those, first.</A>,
+        text: "leagues preferences follow forge",
+        a: <A>Open <L href="/account#preferences">your account</L> and pick the competitions you follow. Forge can then build combos from just those competitions.</A>,
       },
       {
         q: "Can I install KiqStat on my phone?",
@@ -180,6 +181,7 @@ export default function HelpPage() {
           <p className="animate-rise mx-auto mt-4 max-w-lg text-base text-ink-muted" style={{ animationDelay: "160ms" }}>
             Quick answers about your account, plans, predictions and tools.
           </p>
+          <TourButton className="animate-rise mt-5 rounded-xl bg-brand px-5 py-2.5 text-sm font-bold text-brand-ink hover:bg-brand-strong" />
           <div className="animate-rise mt-6 flex flex-wrap justify-center gap-2" style={{ animationDelay: "240ms" }}>
             {GROUPS.map((g) => (
               <a key={g.id} href={`#${g.id}`} className="rounded-full border border-line bg-surface px-3.5 py-2 text-xs font-medium text-ink-muted transition-colors hover:border-brand/40 hover:text-ink">
