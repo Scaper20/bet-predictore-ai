@@ -527,6 +527,10 @@ function printExamples(examples: { day: number; tier: string; odds: number; chan
     const won = ex.filter((e) => e.landed);
     const byOne = ex.filter((e) => !e.landed && e.misses === 1);
     console.log(`\n  ${tier}-odds: ${won.length} of ${ex.length} landed; ${byOne.length} missed by one leg`);
+    const odds = ex.map((e) => e.odds).sort((a, b) => a - b);
+    const q = (f: number) => odds[Math.min(odds.length - 1, Math.floor(f * odds.length))]?.toFixed(1);
+    const short = (f: number) => ex.filter((e) => e.odds < f * Number(tier)).length;
+    console.log(`  odds: lowest ${q(0)}, quartiles ${q(0.25)} / ${q(0.5)} / ${q(0.75)}, highest ${q(1)}; under 80% of target ${short(0.8)}, under 90% ${short(0.9)}`);
     const show = (e: (typeof ex)[number]) => {
       console.log(`\n    ${e.landed ? "LANDED" : `MISSED (${e.misses} leg${e.misses === 1 ? "" : "s"} lost)`}  built ${new Date(e.day).toISOString().slice(0, 10)}  odds ${e.odds.toFixed(2)}  model chance ${(100 * e.chance).toFixed(1)}%`);
       for (const l of e.legs) console.log(`      ${l}`);
