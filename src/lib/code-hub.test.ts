@@ -4,6 +4,7 @@ import { buildPrediction, type Prediction } from "@/lib/model/predict";
 import { DEFAULT_SETTINGS, candidatesFor, type PoolEntry } from "./forge";
 import {
   FREE_TIER_ID,
+  HUB_EXTRA_GAMES,
   HUB_FORGE_MARKETS,
   HUB_LEG_MIN_PROBABILITY,
   HUB_MAX_CODES_PER_GAME,
@@ -85,17 +86,18 @@ describe("buildHub", () => {
     expect(a).toEqual(b);
   });
 
-  it("publishes each tier at full size, shortest first, near its target", () => {
+  it("publishes each tier at full size or up to two games more, shortest first, near its target", () => {
     const hub = buildHub(pool(), "2026-10-16");
     expect(hub.length).toBeGreaterThan(0);
     const order = HUB_TIERS.map((t) => t.id);
     expect(hub.map((c) => c.tier)).toEqual(order.filter((id) => hub.some((c) => c.tier === id)));
     for (const code of hub) {
       const tier = HUB_TIERS.find((t) => t.id === code.tier)!;
-      expect(code.legs).toHaveLength(tier.games);
-      expect(new Set(code.legs.map((l) => l.matchId)).size).toBe(tier.games);
+      expect(code.legs.length).toBeGreaterThanOrEqual(tier.games);
+      expect(code.legs.length).toBeLessThanOrEqual(tier.games + HUB_EXTRA_GAMES);
+      expect(new Set(code.legs.map((l) => l.matchId)).size).toBe(code.legs.length);
       const total = code.legs.reduce((o, l) => o * l.fairOdds, 1);
-      expect(total).toBeGreaterThan(tier.target / 2.5);
+      expect(total).toBeGreaterThan(tier.target * HUB_MIN_TARGET_SHARE);
       expect(total).toBeLessThan(tier.target * 2.5);
     }
   });

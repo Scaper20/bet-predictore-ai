@@ -343,7 +343,8 @@ export function forge(pool: PoolEntry[], settings: ForgeSettings, state: ForgeRe
   }
   const used = new Set(legs.map((l) => l.matchId));
 
-  const wanted = Math.max(1, Math.min(12, Math.round(settings.games)));
+  // Twelve for a person's combo (parseSettings); the hub's longest code may take thirteen.
+  const wanted = Math.max(1, Math.min(13, Math.round(settings.games)));
   const target = Math.max(1.05, settings.targetOdds);
   const lockedOdds = legs.reduce((o, l) => o * l.fairOdds, 1);
   const open = Math.max(0, wanted - legs.length);

@@ -42,7 +42,7 @@ export function WaitlistWall({ email, joined }: { email: string | null; joined: 
               <div>
                 <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-brand">{t.name}</p>
                 <p className="mt-1 text-xs text-ink-dim">
-                  {t.games} games · <span className="tracking-[0.2em]">••••••</span>
+                  {t.games}+ games · <span className="tracking-[0.2em]">••••••</span>
                 </p>
               </div>
               <p className="font-display text-2xl font-bold text-ink">~{t.target}</p>

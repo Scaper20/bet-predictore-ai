@@ -23,6 +23,7 @@ export interface HubTier {
   id: HubTierId;
   /** The combined price the combo is built toward. */
   target: number;
+  /** Games it starts from; up to HUB_EXTRA_GAMES more when those fall short of the target. */
   games: number;
   risk: ForgeRisk;
   name: string;
@@ -46,9 +47,9 @@ export const HUB_TIERS: HubTier[] = [
   { id: "3", target: 3, games: 3, risk: "safe", name: "Solid 3", blurb: "Short prices, a little more reward", days: 1 },
   { id: "5", target: 5, games: 4, risk: "balanced", name: "Balanced 5", blurb: "The everyday combo", days: 1 },
   { id: "10", target: 10, games: 5, risk: "balanced", name: "Stretch 10", blurb: "Longer, still built on strong reads", days: 1 },
-  { id: "20", target: 20, games: 7, risk: "balanced", name: "Long shot 20", blurb: "Seven strong reads, lands least often of the day", days: 1 },
-  { id: "50", target: 50, games: 9, risk: "balanced", name: "Four-day 50", blurb: "Up to four days of games, nine strong reads", days: 4 },
-  { id: "100", target: 100, games: 11, risk: "balanced", name: "Four-day 100", blurb: "Up to four days of games, eleven strong reads", days: 4 },
+  { id: "20", target: 20, games: 7, risk: "balanced", name: "Long shot 20", blurb: "Seven to nine strong reads, lands least often of the day", days: 1 },
+  { id: "50", target: 50, games: 9, risk: "balanced", name: "Four-day 50", blurb: "Up to four days of games, nine to eleven strong reads", days: 4 },
+  { id: "100", target: 100, games: 11, risk: "balanced", name: "Four-day 100", blurb: "Up to four days of games, eleven to thirteen strong reads", days: 4 },
 ];
 
 /** The one code free accounts see in full before kick-off. */
@@ -102,6 +103,12 @@ export const HUB_MAX_CODES_PER_GAME = 2;
  * twelve months, 88 of 199 "100" codes came in under 90 (the lowest 28.8).
  */
 export const HUB_MIN_TARGET_SHARE = 0.9;
+/**
+ * Games a tier may add when its count falls short of that share: with every
+ * leg at 60% or more, five legs rarely make 10 and seven rarely make 20, and
+ * more, safer legs beat leaving the tier out.
+ */
+export const HUB_EXTRA_GAMES = 2;
 
 /** The Forge markets the hub asks candidatesFor for; hubMarketAllowed narrows them. */
 export const HUB_FORGE_MARKETS: ForgeMarket[] = ["result", "double_chance", "goals", "handicap"];
@@ -183,9 +190,9 @@ export interface BuiltCode {
  * codes under two rules: at most HUB_MAX_CODES_PER_GAME codes, and always the
  * same pick, so one result never sinks every code and no two codes take
  * opposite sides of a game. Each tier is also steered away from games the
- * shorter ones used. A tier that cannot reach its game count, or comes in
- * under HUB_MIN_TARGET_SHARE of its odds, is left out rather than published
- * short.
+ * shorter ones used. A tier short of HUB_MIN_TARGET_SHARE of its odds tries
+ * up to HUB_EXTRA_GAMES more games; one that still falls short, or cannot
+ * fill its games, is left out rather than published short.
  */
 export function buildHub(
   today: PoolEntry[],
@@ -205,13 +212,17 @@ export function buildHub(
         return used ? { ...e, candidates: e.candidates.filter((c) => c.market === used.market) } : e;
       })
       .filter((e) => e.candidates.length > 0);
-    const { legs } = forge(pool, hubSettings(tier), {
-      locked: [],
-      removed: [],
-      avoid: [...uses.keys()],
-      seed: seed + Number(tier.id),
-    });
-    if (legs.length < tier.games || hubTotals(legs).odds < HUB_MIN_TARGET_SHARE * tier.target) continue;
+    let legs: ForgeLeg[] | null = null;
+    for (let games = tier.games; games <= tier.games + HUB_EXTRA_GAMES && !legs; games++) {
+      const built = forge(pool, { ...hubSettings(tier), games }, {
+        locked: [],
+        removed: [],
+        avoid: [...uses.keys()],
+        seed: seed + Number(tier.id),
+      }).legs;
+      if (built.length >= games && hubTotals(built).odds >= HUB_MIN_TARGET_SHARE * tier.target) legs = built;
+    }
+    if (!legs) continue;
     for (const l of legs) {
       const prev = uses.get(l.matchId);
       uses.set(l.matchId, { market: l.market, count: (prev?.count ?? 0) + 1 });
