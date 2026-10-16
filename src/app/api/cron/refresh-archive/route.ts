@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { refreshArchive } from "@/lib/archive/refresh";
+import { refreshArchive, refreshEspnShots } from "@/lib/archive/refresh";
 import { refreshReferees } from "@/lib/archive/referees";
 
 export const runtime = "nodejs";
@@ -10,7 +10,8 @@ export const maxDuration = 120;
  * shots, corners, cards, referees) and stores the referees named for the
  * coming fixtures. Its own job, before settle-predictions: as the last step
  * of that one it ran out of time and the archive stopped growing after
- * 20 September 2026.
+ * 20 September 2026. Then fills shots on target from ESPN for the
+ * competitions football-data.co.uk and TheSportsDB store without them.
  */
 export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET;
@@ -23,9 +24,12 @@ export async function GET(request: Request) {
     .split(",")
     .filter((s) => /^\d{4}$/.test(s))
     .slice(0, 4);
-  const [archive, referees] = await Promise.all([
-    refreshArchive(new Date(), backfill).catch((err) => ({ error: String(err) })),
+  const [[archive, shots], referees] = await Promise.all([
+    (async () => {
+      const a = await refreshArchive(new Date(), backfill).catch((err) => ({ error: String(err) }));
+      return [a, await refreshEspnShots().catch((err) => ({ error: String(err) }))] as const;
+    })(),
     refreshReferees().catch((err) => ({ error: String(err) })),
   ]);
-  return NextResponse.json({ archive, referees });
+  return NextResponse.json({ archive, shots, referees });
 }

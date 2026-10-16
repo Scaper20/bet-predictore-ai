@@ -8,6 +8,7 @@
  */
 
 import type { Pick as ModelPick, Prediction } from "@/lib/model/predict";
+import { isPausedPick } from "@/lib/model/paused";
 import { scoreMatrix } from "@/lib/model/poisson";
 import { COMBO_PREFIX, gradeMarket } from "@/lib/slip-tracker";
 import type { KickoffWindow } from "@/lib/time-windows";
@@ -22,7 +23,8 @@ export type ForgeWhen = Extract<KickoffWindow, "today" | "tonight" | "tomorrow" 
 export const FORGE_MARKETS: { id: ForgeMarket; label: string; paid?: boolean }[] = [
   { id: "result", label: "Match result" },
   { id: "double_chance", label: "Two results" },
-  { id: "goals", label: "Over/Under", paid: true },
+  // Unders are paused as picks (model/predict.ts PAUSED_PICK_MARKETS).
+  { id: "goals", label: "Over goals", paid: true },
   { id: "btts", label: "Both teams to score", paid: true },
   { id: "handicap", label: "Winning margin", paid: true },
 ];
@@ -209,6 +211,7 @@ export function candidatesFor(p: Prediction, opts: CandidateOptions): Candidate[
     if (!fm || !allowed.has(fm)) return false;
     // Whole and quarter handicap lines can push or half-win; keep the slip binary.
     if (fm === "handicap" && Math.abs((Number(pk.market.split(":")[2]) * 2) % 2) !== 1) return false;
+    if (isPausedPick(pk.market)) return false;
     return pk.probability >= 0.12 && pk.fairOdds >= 1.04;
   });
 
@@ -340,7 +343,8 @@ export function forge(pool: PoolEntry[], settings: ForgeSettings, state: ForgeRe
   }
   const used = new Set(legs.map((l) => l.matchId));
 
-  const wanted = Math.max(1, Math.min(12, Math.round(settings.games)));
+  // Twelve for a person's combo (parseSettings); the hub's longest code may take thirteen.
+  const wanted = Math.max(1, Math.min(13, Math.round(settings.games)));
   const target = Math.max(1.05, settings.targetOdds);
   const lockedOdds = legs.reduce((o, l) => o * l.fairOdds, 1);
   const open = Math.max(0, wanted - legs.length);

@@ -4,9 +4,16 @@ import { buildPrediction, type Prediction } from "@/lib/model/predict";
 import { DEFAULT_SETTINGS, candidatesFor, type PoolEntry } from "./forge";
 import {
   FREE_TIER_ID,
+  HUB_EXTRA_GAMES,
+  HUB_FORGE_MARKETS,
+  HUB_LEG_MIN_PROBABILITY,
+  HUB_MAX_CODES_PER_GAME,
+  HUB_MIN_TARGET_SHARE,
   HUB_TIERS,
   bookablePool,
   buildHub,
+  hubMarketAllowed,
+  hubTotals,
   codeState,
   hubAccess,
   hubLegResult,
@@ -79,23 +86,90 @@ describe("buildHub", () => {
     expect(a).toEqual(b);
   });
 
-  it("publishes each tier at full size, shortest first, near its target", () => {
+  it("publishes each tier at full size or up to two games more, shortest first, near its target", () => {
     const hub = buildHub(pool(), "2026-10-16");
     expect(hub.length).toBeGreaterThan(0);
     const order = HUB_TIERS.map((t) => t.id);
     expect(hub.map((c) => c.tier)).toEqual(order.filter((id) => hub.some((c) => c.tier === id)));
     for (const code of hub) {
       const tier = HUB_TIERS.find((t) => t.id === code.tier)!;
-      expect(code.legs).toHaveLength(tier.games);
-      expect(new Set(code.legs.map((l) => l.matchId)).size).toBe(tier.games);
+      expect(code.legs.length).toBeGreaterThanOrEqual(tier.games);
+      expect(code.legs.length).toBeLessThanOrEqual(tier.games + HUB_EXTRA_GAMES);
+      expect(new Set(code.legs.map((l) => l.matchId)).size).toBe(code.legs.length);
       const total = code.legs.reduce((o, l) => o * l.fairOdds, 1);
-      expect(total).toBeGreaterThan(tier.target / 2.5);
+      expect(total).toBeGreaterThan(tier.target * HUB_MIN_TARGET_SHARE);
       expect(total).toBeLessThan(tier.target * 2.5);
     }
   });
 
   it("publishes nothing from an empty pool", () => {
     expect(buildHub([], "2026-10-16")).toEqual([]);
+  });
+});
+
+describe("buildHub rules", () => {
+  const HUB_OPTS = { markets: HUB_FORGE_MARKETS, picksPerGame: 1 as const, allowHandicap: true };
+  const PAIRS = [[0, 11], [1, 10], [2, 9], [3, 8], [4, 7], [5, 6], [11, 0], [10, 1], [6, 2], [7, 3], [8, 4], [9, 5]];
+  const entries = (hours: number): PoolEntry[] =>
+    PAIRS.map(([i, j], k) => {
+      const prediction = fixture(i, j, hours + k);
+      return { prediction, candidates: candidatesFor(prediction, HUB_OPTS) };
+    });
+  const today = entries(2);
+  const later = PAIRS.map(([i, j], k) => {
+    // The same pairings two days on, as different fixtures.
+    const prediction = fixture(i, j, 50 + k);
+    prediction.match.id = `later:${i}-${j}`;
+    return { prediction, candidates: candidatesFor(prediction, HUB_OPTS) };
+  });
+  const hub = buildHub(today, "2026-10-16", [...today, ...later]);
+
+  it("uses only match result, double chance and over 1.5, every leg at 60% or more", () => {
+    for (const code of hub) {
+      for (const l of code.legs) {
+        expect(hubMarketAllowed(l.market)).toBe(true);
+        expect(l.market.startsWith("ou:under")).toBe(false);
+        expect(l.probability).toBeGreaterThanOrEqual(HUB_LEG_MIN_PROBABILITY);
+      }
+    }
+  });
+
+  it("puts a game in at most two codes, always with the same pick", () => {
+    const seen = new Map<string, { market: string; count: number }>();
+    for (const code of hub) {
+      for (const l of code.legs) {
+        const prev = seen.get(l.matchId);
+        if (prev) expect(l.market).toBe(prev.market);
+        seen.set(l.matchId, { market: l.market, count: (prev?.count ?? 0) + 1 });
+      }
+    }
+    for (const v of seen.values()) expect(v.count).toBeLessThanOrEqual(HUB_MAX_CODES_PER_GAME);
+  });
+
+  it("keeps daily codes on today's games and lets the four-day codes reach ahead", () => {
+    for (const code of hub) {
+      const tier = HUB_TIERS.find((t) => t.id === code.tier)!;
+      if (tier.days === 1) for (const l of code.legs) expect(l.matchId.startsWith("later:")).toBe(false);
+    }
+    const long = hub.filter((c) => HUB_TIERS.find((t) => t.id === c.tier)!.days === 4);
+    expect(long.length).toBeGreaterThan(0);
+    expect(long.some((c) => c.legs.some((l) => l.matchId.startsWith("later:")))).toBe(true);
+  });
+
+  it("publishes a code only within reach of its target odds", () => {
+    for (const code of hub) {
+      const tier = HUB_TIERS.find((t) => t.id === code.tier)!;
+      expect(hubTotals(code.legs).odds).toBeGreaterThanOrEqual(HUB_MIN_TARGET_SHARE * tier.target);
+    }
+    // Only short prices on offer: nine or eleven of them cannot make 50 or 100.
+    const short = [...today, ...later]
+      .map((e) => ({ ...e, candidates: e.candidates.filter((c) => c.fairOdds < 1.3) }))
+      .filter((e) => e.candidates.length > 0);
+    expect(buildHub(short, "2026-10-16", short).some((c) => c.tier === "50" || c.tier === "100")).toBe(false);
+  });
+
+  it("never offers a 1.5-odds code", () => {
+    expect(HUB_TIERS.every((t) => t.target >= 2)).toBe(true);
   });
 });
 
@@ -145,7 +219,12 @@ describe("codeState", () => {
   it("shows a stored code until the first kick-off", () => {
     const stored = { bookingCode: "ABC123", deadline: "2026-10-16T15:00:00Z" };
     expect(codeState(stored, first, first - 60_000)).toEqual({ state: "ready", bookingCode: "ABC123", deadline: first });
-    expect(codeState(stored, first, first)).toEqual({ state: "closed" });
+  });
+  it("keeps the code on the card once the games start", () => {
+    const stored = { bookingCode: "ABC123", deadline: "2026-10-16T15:00:00Z" };
+    expect(codeState(stored, first, first)).toEqual({ state: "started", bookingCode: "ABC123" });
+    expect(codeState(stored, first, first + 3 * 86_400_000)).toEqual({ state: "started", bookingCode: "ABC123" });
+    expect(codeState({ bookingCode: null, deadline: null }, first, first)).toEqual({ state: "closed" });
   });
   it("waits when no code has been booked", () => {
     expect(codeState({ bookingCode: null, deadline: null }, first, first - 60_000)).toEqual({ state: "waiting" });

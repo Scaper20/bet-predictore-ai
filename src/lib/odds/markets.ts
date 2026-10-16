@@ -8,8 +8,9 @@
  * to say what a price is worth.
  *
  * SportyBet uses Betradar's market catalogue, so the ids below are the
- * standard ones (1 = 1X2, 10 = double chance, 18 = totals, 29 = both teams to
- * score, 45 = correct score) with Betradar outcome ids underneath.
+ * standard ones (1 = 1X2, 10 = double chance, 16 = Asian handicap, 18 =
+ * totals, 29 = both teams to score, 45 = correct score) with Betradar outcome
+ * ids underneath.
  *
  * Everything keys on the NUMERIC id, never the display name, and that is
  * load-bearing rather than stylistic. A single fixture carries 821 markets,
@@ -40,6 +41,15 @@ const DOUBLE_CHANCE: Record<string, string> = {
 const BTTS: Record<string, string> = { yes: "74", no: "76" };
 
 const TOTALS: Record<string, string> = { over: "12", under: "13" };
+
+/**
+ * Asian handicap: Betradar market 16, outcome 1714 for the home side and 1715
+ * for the away side, the line always written from the home side
+ * ("hcp=-0.5" is home -0.5, away +0.5). Taken from Betradar's catalogue, which
+ * SportyBet uses; not yet seen on a stored SportyBet board, so the first live
+ * booking with a handicap leg should be checked on SportyBet.
+ */
+const HANDICAP: Record<string, string> = { home: "1714", away: "1715" };
 
 /**
  * The SportyBet address for a KiqStat market id, or null when the market has no
@@ -77,6 +87,15 @@ export function toSportyBet(market: string): SportyBetSelection | null {
     // "total=2.5" and "total=2" as separate markets at very different prices.
     if (!/^\d+(\.\d+)?$/.test(line)) return null;
     return { marketId: "18", outcomeId, specifier: `total=${line}` };
+  }
+
+  if (family === "ah") {
+    const outcomeId = HANDICAP[rest[0]];
+    const line = Number(rest[1]);
+    if (!outcomeId || rest[1] === undefined || !/^[+-]?\d+(\.\d+)?$/.test(rest[1]) || !Number.isFinite(line)) return null;
+    // Our id carries each side's own line; SportyBet's specifier is the home line.
+    const homeLine = rest[0] === "home" ? line : -line;
+    return { marketId: "16", outcomeId, specifier: `hcp=${homeLine === 0 ? 0 : homeLine}` };
   }
 
   return null;

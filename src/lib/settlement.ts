@@ -1,10 +1,9 @@
 /**
  * Grades a logged pick against a fixture's final score.
  *
- * Only markets the site's headline "top pick" can ever select need grading
- * here — see rankPicks/pickScore in model/predict.ts, which excludes Asian
- * Handicap from topPick ranking entirely (score -1), so handicap lines never
- * reach predictions_log and are deliberately not handled below.
+ * Covers every market a published pick can carry, Asian handicap included:
+ * the digest and Code Hub may use half-goal handicap lines, and quarter lines
+ * settle as a push when they half-win or half-lose (the slip tracker's rule).
  */
 export type PickResult = "win" | "lose" | "push";
 
@@ -50,6 +49,9 @@ export function evaluatePick(
     return "push";
   }
 
+  const ah = market.match(/^ah:(home|away):([+-]?\d+(?:\.\d+)?)$/);
+  if (ah) return gradeHandicap(ah[1] as "home" | "away", Number(ah[2]), homeGoals, awayGoals);
+
   const correctScore = market.match(/^cs:(\d+)-(\d+)$/);
   if (correctScore) {
     const h = Number(correctScore[1]);
@@ -58,4 +60,17 @@ export function evaluatePick(
   }
 
   return null;
+}
+
+/** An Asian handicap line against a score; a quarter line that splits settles as a push. */
+export function gradeHandicap(side: "home" | "away", line: number, home: number, away: number): PickResult {
+  const quarter = Math.abs((line * 4) % 2) === 1;
+  if (quarter) {
+    const a = gradeHandicap(side, line - 0.25, home, away);
+    const b = gradeHandicap(side, line + 0.25, home, away);
+    if (a === b) return a;
+    return a === "push" ? b : b === "push" ? a : "push";
+  }
+  const margin = (side === "home" ? home - away : away - home) + line;
+  return margin > 0 ? "win" : margin < 0 ? "lose" : "push";
 }

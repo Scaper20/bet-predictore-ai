@@ -2,8 +2,9 @@ import "server-only";
 
 import { after } from "next/server";
 import { cached } from "@/lib/providers/cache";
-import { predictionsFor } from "@/lib/forge-feed";
+import { predictBatch, upcomingFeed } from "@/lib/service";
 import { candidatesFor, type ForgeLeg } from "@/lib/forge";
+import { appDayBounds } from "@/lib/format";
 import { leagueByCode } from "@/lib/leagues";
 import { priceQuotes } from "@/lib/odds";
 import { bookingCodeFor } from "@/lib/odds/booking-code";
@@ -11,7 +12,10 @@ import { findOnBoard } from "@/lib/odds/sportybet";
 import { parsebotLive } from "@/lib/odds/parsebot";
 import type { BookingLeg } from "@/lib/odds/booking";
 import {
+  CODE_RUN_MS,
+  HUB_FORGE_MARKETS,
   buildHub,
+  codeRunning,
   hubDay,
   hubTotals,
   toHubLeg,
@@ -107,29 +111,38 @@ async function priceLegs(legs: ForgeLeg[]): Promise<ForgeLeg[]> {
   return legs.map((l, i) => ({ ...l, price: priced?.[i]?.local ?? null }));
 }
 
-/** Today's combos, freshly built from the model. Nothing is stored here. */
+/** Calendar days the four-day codes may span, counting today. */
+const AHEAD_DAYS = 4;
+
+/**
+ * Today's combos, freshly built from the model. Nothing is stored here.
+ *
+ * Daily codes use today's games (Lagos day); the four-day codes today's and
+ * the next three days'. Run by the 07:00 cron, so the whole day's slate is
+ * in the pool rather than whatever is left when someone first opens the page.
+ */
 async function buildToday(day: string): Promise<HubCodeRow[]> {
-  const soon = Date.now() + LEAD_MS;
-  const predictions = (await predictionsFor("today")).filter((p) => {
-    const code = p.match.league.code;
+  const now = new Date();
+  const soon = now.getTime() + LEAD_MS;
+  const todayEnd = appDayBounds(now).end.getTime();
+  const aheadEnd = appDayBounds(now, AHEAD_DAYS - 1).end.getTime();
+  const { matches } = await upcomingFeed(AHEAD_DAYS + 1);
+  const inWindow = matches.filter((m) => {
+    const t = Date.parse(m.kickoff);
+    const code = m.league.code;
     // Only competitions SportyBet's board can be asked for by id: a leg on
     // any other game could never be turned into a code.
-    return (
-      p.sufficiency.publishable &&
-      Date.parse(p.match.kickoff) > soon &&
-      Boolean(code && leagueByCode(code)?.ids.sportyBet)
-    );
+    return m.status === "scheduled" && t > soon && t < aheadEnd && Boolean(code && leagueByCode(code)?.ids.sportyBet);
   });
-  const pool = predictions.map((prediction) => ({
+  const predictions = (await predictBatch(inWindow, 400)).filter((p) => p.sufficiency.publishable);
+  const entry = (prediction: (typeof predictions)[number]) => ({
     prediction,
-    candidates: candidatesFor(prediction, {
-      markets: ["result", "double_chance", "goals", "btts"],
-      picksPerGame: 1,
-      allowHandicap: false,
-    }),
-  }));
+    candidates: candidatesFor(prediction, { markets: HUB_FORGE_MARKETS, picksPerGame: 1, allowHandicap: true }),
+  });
+  const ahead = predictions.map(entry);
+  const today = ahead.filter((e) => Date.parse(e.prediction.match.kickoff) < todayEnd);
 
-  const built = buildHub(pool, day);
+  const built = buildHub(today, day, ahead);
   return Promise.all(
     built.map(async ({ tier, legs }) => {
       const hubLegs = (await priceLegs(legs)).map(toHubLeg);
@@ -268,9 +281,36 @@ async function readTodayHub(): Promise<Omit<TodayHub, "now">> {
   return { day, codes, stored: again.ok };
 }
 
-const TIER_ORDER: HubTierId[] = ["2", "3", "5", "10", "20"];
+const TIER_ORDER: HubTierId[] = ["2", "3", "5", "10", "20", "50", "100"];
 function sortTiers(rows: HubCodeRow[]): HubCodeRow[] {
   return [...rows].sort((a, b) => TIER_ORDER.indexOf(a.tier) - TIER_ORDER.indexOf(b.tier));
+}
+
+/**
+ * Codes from the last few days whose games are still being played: the
+ * four-day codes, which outlive the day they were published on. They stay
+ * on the page beside today's until their last game ends.
+ */
+export async function runningHub(now = Date.now()): Promise<HubCodeRow[]> {
+  return cached(`code-hub:running:${hubDay()}:${Math.floor(now / 60_000)}`, 60_000, async () => {
+    try {
+      const db = await admin();
+      const since = hubDay(new Date(now - 4 * 86_400_000));
+      const { data, error } = await db
+        .from("code_hub_codes")
+        .select(COLUMNS)
+        .gte("day", since)
+        .lt("day", hubDay(new Date(now)))
+        .gt("last_kickoff", new Date(now - CODE_RUN_MS).toISOString())
+        .order("day", { ascending: false });
+      if (error || !data) return [];
+      const rows = (data as DbRow[]).map(fromDb);
+      bookMissing(rows);
+      return rows;
+    } catch {
+      return [];
+    }
+  });
 }
 
 export interface PastHubDay {
@@ -296,7 +336,8 @@ export async function pastHub(days = 7): Promise<{ days: PastHubDay[]; scores: R
         .gte("day", since)
         .order("day", { ascending: false });
       if (error || !data) return empty;
-      const rows = (data as DbRow[]).map(fromDb);
+      // Codes still in play are shown with today's (runningHub), not here.
+      const rows = (data as DbRow[]).map(fromDb).filter((r) => !codeRunning(r.lastKickoff));
 
       const ids = [...new Set(rows.flatMap((r) => r.legs.map((l) => l.matchId)))];
       const scores: Record<string, FinalScore> = {};

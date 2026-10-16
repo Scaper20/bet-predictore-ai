@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Badge, type Tone } from "@/components/ui/primitives";
 import { LocalTime } from "@/components/ui/local-time";
 import { CodeBox } from "@/components/code-hub/code-box";
-import { odds, percent } from "@/lib/format";
+import { APP_TIMEZONE, odds, percent } from "@/lib/format";
 import { oneIn } from "@/lib/forge";
 import {
   hubLegOdds,
@@ -27,6 +27,8 @@ export interface HubCardProps {
   code: CodeState;
   /** Before launch: the combo is real, the code is not out yet. */
   preview: boolean;
+  /** Set on an earlier day's code still in play: the day it was published. */
+  publishedOn?: string;
 }
 
 const STATUS: Record<HubStatus, { text: string; tone: Tone } | null> = {
@@ -43,6 +45,12 @@ const RESULT_DOT: Record<HubLegResult, string> = {
   pending: "bg-line-strong",
 };
 
+/** "3 days": calendar days (Lagos) a code's games fall on. */
+function daySpan(legs: HubLeg[]): string {
+  const days = new Set(legs.map((l) => new Date(l.kickoff).toLocaleDateString("en-CA", { timeZone: APP_TIMEZONE })));
+  return days.size === 1 ? "1 day" : `${days.size} days`;
+}
+
 export function HubCard(props: HubCardProps) {
   const tier = hubTier(props.tier)!;
   const status = STATUS[props.status];
@@ -53,7 +61,7 @@ export function HubCard(props: HubCardProps) {
       <header className="flex items-start justify-between gap-3 border-b border-line px-5 pb-4 pt-5">
         <div>
           <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-brand">{tier.name}</p>
-          <p className="mt-1 text-sm text-ink-muted">{tier.blurb}</p>
+          <p className="mt-1 text-sm text-ink-muted">{props.publishedOn ? `Published ${props.publishedOn}, still running` : tier.blurb}</p>
         </div>
         <div className="text-right">
           <p className="font-display text-3xl font-bold leading-none text-ink">{odds(props.odds)}</p>
@@ -63,7 +71,8 @@ export function HubCard(props: HubCardProps) {
 
       <div className="flex flex-wrap items-center gap-2 px-5 pt-4 text-xs text-ink-muted">
         <span>
-          {props.legs.length} games · model chance <strong className="text-ink">{percent(props.probability)}</strong>{" "}
+          {props.legs.length} games{tier.days > 1 && <> over {daySpan(props.legs)}</>} · model chance{" "}
+          <strong className="text-ink">{percent(props.probability)}</strong>{" "}
           <span className="text-ink-dim">({oneIn(props.probability)})</span>
         </span>
         {status && <Badge tone={status.tone}>{status.text}</Badge>}
@@ -78,7 +87,7 @@ export function HubCard(props: HubCardProps) {
                 <p className="truncate text-sm font-semibold text-ink">{locked ? "Hidden pick" : leg.label}</p>
                 <p className="truncate text-xs text-ink-dim">
                   {locked ? "Home v Away" : `${leg.homeName} v ${leg.awayName}`} ·{" "}
-                  <LocalTime iso={leg.kickoff} kind="time" />
+                  <LocalTime iso={leg.kickoff} kind={tier.days > 1 ? "dayTime" : "time"} />
                 </p>
               </div>
               <span className="shrink-0 font-mono text-sm text-ink-muted">{locked ? "1.00" : odds(hubLegOdds(leg))}</span>
@@ -105,9 +114,17 @@ export function HubCard(props: HubCardProps) {
         <footer className="px-5 pb-5">
           {props.code.state === "ready" ? (
             <CodeBox code={props.code.bookingCode} />
+          ) : props.code.state === "started" ? (
+            <div className="space-y-2">
+              <CodeBox code={props.code.bookingCode} />
+              <p className="text-xs text-ink-muted">
+                Games under way. The code stays here until the last game ends; SportyBet stops loading it at the first
+                kick-off.
+              </p>
+            </div>
           ) : props.code.state === "closed" ? (
             <p className="rounded-xl border border-line bg-surface-2 px-4 py-3 text-xs text-ink-muted">
-              The first game has started, so this code no longer loads.
+              The games have started; this combo went out without a code.
             </p>
           ) : (
             <div className="flex items-center justify-between gap-3 rounded-xl border border-dashed border-line-strong px-4 py-3">
