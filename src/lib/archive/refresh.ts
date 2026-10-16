@@ -3,6 +3,8 @@ import "server-only";
 import { LEAGUES } from "@/lib/leagues";
 import { parseCountryCsv, parseDivisionCsv, type ArchiveRow } from "@/lib/archive/football-data-uk";
 import { storeResults } from "@/lib/archive/history-store";
+import { ESPN_SHOT_LEAGUES, espnDay, matchShots, type ArchiveRow as ShotRow } from "@/lib/archive/espn-shots";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 /**
  * Nightly top-up of the training archive from football-data.co.uk.
@@ -40,6 +42,52 @@ export async function refreshArchive(
   const rows = (await Promise.all(jobs)).flat();
   const added = await storeResults(rows, "football-data.co.uk");
   return { fetched: rows.length, added };
+}
+
+/**
+ * Nightly: shots on target from ESPN for the competitions whose archive rows
+ * arrive without them (see espn-shots.ts). Runs after refreshArchive so the
+ * day's new rows exist; a week back covers results a source stores late.
+ */
+export async function refreshEspnShots(now = new Date(), days = 7): Promise<{ checked: number; filled: number }> {
+  const admin = supabaseAdmin();
+  const since = new Date(now.getTime() - (days + 1) * 86_400_000).toISOString();
+  let checked = 0;
+  let filled = 0;
+  for (const [league, slug] of Object.entries(ESPN_SHOT_LEAGUES)) {
+    const { data, error } = await admin
+      .from("historical_results")
+      .select("id, kickoff, home_name, away_name, home_goals, away_goals")
+      .eq("league_code", league)
+      .is("home_shots_on_target", null)
+      .gte("kickoff", since);
+    if (error || !data?.length) continue;
+    const rows: ShotRow[] = data.map((r) => ({
+      id: r.id as string,
+      kickoff: Date.parse(r.kickoff as string),
+      home: r.home_name as string,
+      away: r.away_name as string,
+      hg: r.home_goals as number,
+      ag: r.away_goals as number,
+    }));
+    checked += rows.length;
+    const games = (
+      await Promise.all(Array.from({ length: days + 1 }, (_, i) => espnDay(slug, new Date(now.getTime() - i * 86_400_000)).catch(() => [])))
+    ).flat();
+    for (const u of matchShots(games, rows)) {
+      const { error: writeError } = await admin
+        .from("historical_results")
+        .update({
+          home_shots_on_target: u.hsot,
+          away_shots_on_target: u.asot,
+          ...(u.hs !== null && u.as !== null ? { home_shots: u.hs, away_shots: u.as } : {}),
+        })
+        .eq("id", u.id)
+        .is("home_shots_on_target", null);
+      if (!writeError) filled++;
+    }
+  }
+  return { checked, filled };
 }
 
 /** football-data.co.uk's season label, e.g. "2627"; their season flips in August. */
