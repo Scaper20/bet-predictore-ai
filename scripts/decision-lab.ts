@@ -30,10 +30,11 @@
 
 import { buildPrediction, headlineEligible, type Pick, type Prediction } from "../src/lib/model/predict";
 import { fitLeague } from "../src/lib/model/fit";
+import { resultCalibrationFor } from "../src/lib/model/result-calibration";
 import { evaluatePick } from "../src/lib/settlement";
 import { deVig } from "../src/lib/model/backtest";
 import { candidatesFor, forge, type ForgeRisk, type PoolEntry } from "../src/lib/forge";
-import { buildHub, daySeed, hubMarketAllowed, hubTier, HUB_FORGE_MARKETS, HUB_TIERS, withHandicap } from "../src/lib/code-hub";
+import { buildHub, daySeed, hubMarketAllowed, hubTier, HUB_FORGE_MARKETS, HUB_TIERS, withoutHandicap, type HubBuildOptions } from "../src/lib/code-hub";
 import { isQuotable } from "../src/lib/odds/markets";
 import { digestPick } from "../src/lib/whatsapp-digest";
 import { csv, parse, toMatch, toResultRow, type Row } from "./lib/football-data-uk";
@@ -98,7 +99,8 @@ function walk(d: (typeof DIVS)[number], rows: Row[], days: number): Graded[] {
       fit = fitLeague(prior);
       fits.set(day, fit);
     }
-    const p = buildPrediction(toMatch(row, league), prior, [], { prefit: fit });
+    // --cal=1: the straight-win correction production applies to these divisions.
+    const p = buildPrediction(toMatch(row, league), prior, [], { prefit: fit, ...(arg("cal") === "1" ? { resultCalibration: resultCalibrationFor(d.code) } : {}) });
     if (!p.sufficiency.publishable) continue;
     out.push({ day, div: d.div, row, p });
   }
@@ -385,13 +387,26 @@ function digest2(all: Graded[]) {
 interface HubVariant {
   name: string;
   allow: (market: string) => boolean;
+  options?: HubBuildOptions;
 }
 
 const HUB_VARIANTS: HubVariant[] = [
-  { name: "v2 as built: result, double chance, over 1.5", allow: hubMarketAllowed },
-  { name: "v2 plus half-goal handicap", allow: withHandicap },
-  { name: "v2 result and double chance only", allow: (m) => m.startsWith("1x2") || m.startsWith("dc") },
+  { name: "v2 fixed counts: result, double chance, over 1.5", allow: withoutHandicap, options: { strategy: "count" } },
+  { name: "v2 fixed counts plus half-goal handicap", allow: hubMarketAllowed, options: { strategy: "count" } },
+  { name: "v2 result and double chance only", allow: (m) => m.startsWith("1x2") || m.startsWith("dc"), options: { strategy: "count" } },
+  { name: "best legs first, no game count (legs 1.15+)", allow: withoutHandicap, options: { strategy: "best", minLegOdds: 1.15 } },
+  { name: "best legs first, no game count (legs 1.25+)", allow: withoutHandicap, options: { strategy: "best", minLegOdds: 1.25 } },
+  { name: "flex game count, no handicap", allow: withoutHandicap, options: { strategy: "flex" } },
+  { name: "result, double chance, half-goal handicap", allow: resultDcHandicap, options: { strategy: "count" } },
+  { name: "flex: result, double chance, half-goal handicap", allow: resultDcHandicap, options: { strategy: "flex" } },
+  { name: "as shipped: flex to 5 odds, counts above; result, double chance, over 1.5, half-goal handicap", allow: hubMarketAllowed },
 ];
+
+function resultDcHandicap(market: string): boolean {
+  const [family, , line] = market.split(":");
+  if (family === "1x2" || family === "dc") return true;
+  return family === "ah" && Math.abs((Number(line) * 2) % 2) === 1;
+}
 
 /** The first hub (16 Oct), for comparison: four markets, no floor, five tiers. */
 const V1_TIERS: { target: number; games: number; risk: ForgeRisk }[] = [
@@ -448,7 +463,9 @@ function hub(all: Graded[]): { day: number; tier: string; odds: number; chance: 
 
   type Example = { day: number; tier: string; odds: number; chance: number; landed: boolean; legs: string[]; misses: number };
   const examples: Example[] = [];
-  for (const v of HUB_VARIANTS) {
+  // --hub=0,6,7 replays only those variants (by position in HUB_VARIANTS).
+  const pick = arg("hub")?.split(",").map(Number);
+  for (const v of HUB_VARIANTS.filter((_, i) => !pick || pick.includes(i))) {
     const stats = new Map(HUB_TIERS.map((t) => [t.id, { built: 0, landed: 0, expected: 0, legs: 0, legN: 0, legWins: 0, legProb: 0, span: 0 }]));
     const mix = new Map<string, number>();
     let anyDays = 0, builtDays = 0, dailyAny = 0;
@@ -459,7 +476,7 @@ function hub(all: Graded[]): { day: number; tier: string; odds: number; chance: 
       }));
       const today = toPool(byDay.get(day)!);
       const ahead = toPool(days.filter((d) => d >= day && d < day + 4 * DAY).flatMap((d) => byDay.get(d)!));
-      const codes = buildHub(today, String(day), ahead, v.allow);
+      const codes = buildHub(today, String(day), ahead, v.allow, v.options);
       // Days counted are days with at least one daily code, as for v1.
       if (!codes.some((c) => hubTier(c.tier)!.days === 1)) continue;
       builtDays++;

@@ -8,6 +8,7 @@
  * the over/under numbers can never contradict the correct-score numbers.
  */
 
+import { calibrateResult, type ResultCalibration } from "./result-calibration";
 import { isPausedPick, PAUSED_PICK_MARKETS } from "./paused";
 import type { Match, ResultRow } from "@/lib/types";
 import { leagueByCode, type LeagueDef } from "@/lib/leagues";
@@ -211,6 +212,8 @@ export interface ModelOptions {
   excludeHeadline?: string[];
   /** Multiplies every drawn scoreline before renormalising (1 = off). Lab knob. */
   drawInflation?: number;
+  /** The straight-win correction learned from the model's own record (result-calibration.ts); null or absent = off. */
+  resultCalibration?: ResultCalibration | null;
   /** Scales both expected goal rates after the totals shrink (1 = off). Lab knob. */
   goalScale?: number;
 }
@@ -241,7 +244,8 @@ export function buildPrediction(
   const lambda = shrunk.lambda * goalScale;
   const mu = shrunk.mu * goalScale;
 
-  const grid = inflateDraws(scoreMatrix(lambda, mu, fit.rho), options.drawInflation ?? 1);
+  const raw = inflateDraws(scoreMatrix(lambda, mu, fit.rho), options.drawInflation ?? 1);
+  const grid = options.resultCalibration ? calibrateResult(raw, options.resultCalibration) : raw;
   const markets = {
     ...deriveMarkets(grid, lambda, mu),
     halves: halfMarkets(lambda, mu, { home: SITE_FIRST_HALF_SHARE, away: SITE_FIRST_HALF_SHARE }, SITE_HALF_TILT, SITE_SECOND_HALF_TILT),
