@@ -30,6 +30,8 @@ export interface HubTier {
   blurb: string;
   /** Calendar days its games may span, counting today: the long codes reach ahead. */
   days: 1 | 4;
+  /** No longer built; kept so codes already published still render with their name. */
+  retired?: boolean;
 }
 
 /**
@@ -47,6 +49,9 @@ export interface HubTier {
  * As shipped, replayed the same way: 2-odds 53.6% against 50.0% expected,
  * 3-odds 39.7% against 33.3%, 5-odds 21.2% against 20.0%, 10-odds 9.9%,
  * 20-odds 2.6% against 5.1% (76 codes), the four-day 50 3.0% and 100 3.2%.
+ *
+ * The four-day 50 and 100 were retired on 17 Oct 2026: they lose 97 and 99
+ * times in 100 by design, which reads as a hub that always loses.
  */
 export const HUB_TIERS: HubTier[] = [
   { id: "2", target: 2, games: 2, risk: "safe", name: "Steady 2", blurb: "The model's surest reads, two to four games", days: 1 },
@@ -54,9 +59,12 @@ export const HUB_TIERS: HubTier[] = [
   { id: "5", target: 5, games: 4, risk: "balanced", name: "Balanced 5", blurb: "The everyday combo", days: 1 },
   { id: "10", target: 10, games: 5, risk: "balanced", name: "Stretch 10", blurb: "Longer, still built on strong reads", days: 1 },
   { id: "20", target: 20, games: 7, risk: "balanced", name: "Long shot 20", blurb: "Seven to nine strong reads, lands least often of the day", days: 1 },
-  { id: "50", target: 50, games: 9, risk: "balanced", name: "Four-day 50", blurb: "Up to four days of games, nine to eleven strong reads", days: 4 },
-  { id: "100", target: 100, games: 11, risk: "balanced", name: "Four-day 100", blurb: "Up to four days of games, eleven to thirteen strong reads", days: 4 },
+  { id: "50", target: 50, games: 9, risk: "balanced", name: "Four-day 50", blurb: "Up to four days of games, nine to eleven strong reads", days: 4, retired: true },
+  { id: "100", target: 100, games: 11, risk: "balanced", name: "Four-day 100", blurb: "Up to four days of games, eleven to thirteen strong reads", days: 4, retired: true },
 ];
+
+/** The tiers the hub still builds, shortest first. */
+export const HUB_LIVE_TIERS: HubTier[] = HUB_TIERS.filter((t) => !t.retired);
 
 /** The one code free accounts see in full before kick-off. */
 export const FREE_TIER_ID: HubTierId = "2";
@@ -229,7 +237,7 @@ export function buildHub(
   const uses = new Map<string, { market: string; count: number }>();
   const out: BuiltCode[] = [];
   const seed = daySeed(day);
-  for (const tier of HUB_TIERS) {
+  for (const tier of HUB_LIVE_TIERS) {
     const pool = pools[tier.days]
       .filter((e) => (uses.get(e.prediction.match.id)?.count ?? 0) < HUB_MAX_CODES_PER_GAME)
       .map((e) => {

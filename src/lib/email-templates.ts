@@ -41,8 +41,8 @@ export function codeHubWaitlistEmail(): { subject: string; html: string } {
     html: emailLayout(`
       <p style="margin:0 0 12px;font-size:17px;font-weight:700;">You're on the list</p>
       <p style="margin:0;">Thanks for joining the Code Hub waitlist. Each morning the model will build
-      ready-made codes from 2 to 100 odds: five from the day's games and two that run up to four days. Each one
-      comes with a SportyBet booking code and the model's chance of it landing.</p>
+      five ready-made codes from 2 to 20 odds from the day's games. Each one comes with a SportyBet booking
+      code and the model's chance of it landing.</p>
       <p style="margin:12px 0 0;">We'll send you one more email, on the day it opens. Until then, today's
       predictions are free to read.</p>
       ${button(`${SITE_URL}${sportPath("predictions")}`, "See today's predictions")}

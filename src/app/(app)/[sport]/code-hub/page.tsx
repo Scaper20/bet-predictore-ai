@@ -65,7 +65,7 @@ export default async function CodeHubPage() {
       <PageHeader
         eyebrow="Code Hub"
         title="Today's codes"
-        description="Ready-made codes from 2 to 100 odds, each with a SportyBet code."
+        description="Ready-made codes from 2 to 20 odds, each with a SportyBet code."
         actions={
           !open ? (
             <Badge tone="amber">Admin view: visitors see the waitlist</Badge>

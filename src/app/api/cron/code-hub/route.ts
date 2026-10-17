@@ -3,7 +3,7 @@ import { todayHub } from "@/lib/code-hub-feed";
 
 // Node-only (service-role client), like the other crons.
 export const runtime = "nodejs";
-// Predicting up to four days of fixtures and pricing them can take a while.
+// Predicting the day's fixtures and pricing them can take a while.
 export const maxDuration = 300;
 
 /**
