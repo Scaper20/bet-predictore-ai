@@ -1,5 +1,5 @@
 import { WaitlistForm } from "@/components/code-hub/waitlist-form";
-import { HUB_TIERS } from "@/lib/code-hub";
+import { hubGameRange, HUB_TIERS } from "@/lib/code-hub";
 import { GENERATOR_ALLOWANCE } from "@/lib/code-hub-plans";
 
 /** What everyone but admins sees while the Code Hub is on its waitlist. */
@@ -42,7 +42,7 @@ export function WaitlistWall({ email, joined }: { email: string | null; joined: 
               <div>
                 <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-brand">{t.name}</p>
                 <p className="mt-1 text-xs text-ink-dim">
-                  {t.games}+ games · <span className="tracking-[0.2em]">••••••</span>
+                  {hubGameRange(t).join("–")} games · <span className="tracking-[0.2em]">••••••</span>
                 </p>
               </div>
               <p className="font-display text-2xl font-bold text-ink">~{t.target}</p>
