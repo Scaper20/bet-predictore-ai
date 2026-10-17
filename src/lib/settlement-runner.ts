@@ -2,7 +2,8 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getMatch } from "@/lib/providers";
-import { evaluatePick, evaluateStatPick, statKindOf, type PickResult } from "@/lib/settlement";
+import { evaluatePick, evaluateStatPick, robustStatGrade, statKindOf, type PickResult } from "@/lib/settlement";
+import { espnDay, espnStatsComplete, findEspnGame, type EspnResult } from "@/lib/archive/espn-shots";
 import { leagueByCode } from "@/lib/leagues";
 import { looseKey, nameBook, nameScope } from "@/lib/teams/canonical";
 import type { Match } from "@/lib/types";
@@ -81,8 +82,12 @@ export async function runSettlementPass(
 
   let settledCount = 0;
   const statCache = new Map<string, StatGame[]>();
+  const espnCache: EspnCache = { games: new Map(), until: Date.now() + ESPN_BUDGET_MS };
   for (const row of pending) {
     const matchId = row.match_id as string;
+    // Corners and shots stats are never in within hours of the whistle; the
+    // daily sweep grades those, not the pass behind every live poll.
+    if (opts.maxAgeHours && statKindOf(row.market as string)) continue;
 
     const { data: cached } = await admin
       .from("match_results")
@@ -111,7 +116,12 @@ export async function runSettlementPass(
 
     const market = row.market as string;
     const result = statKindOf(market)
-      ? await gradeFromStats(admin, row as StatRow, statCache)
+      ? await gradeFromStats(
+          admin,
+          { market, league_code: row.league_code, home_name: row.home_name, away_name: row.away_name, kickoff: row.kickoff, hg: homeGoals, ag: awayGoals },
+          statCache,
+          espnCache,
+        )
       : evaluatePick(market, homeGoals, awayGoals);
     if (!result) continue;
 
@@ -137,6 +147,8 @@ interface StatRow {
   home_name: string;
   away_name: string;
   kickoff: string;
+  hg: number;
+  ag: number;
 }
 
 interface StatGame {
@@ -153,10 +165,17 @@ const STAT_WAIT_MS = 10 * 86_400_000;
 
 /**
  * A corners, shots or shots-on-target pick, graded from the counts in the
- * results archive (historical_results). Those arrive with football-data.co.uk
- * a few days after the game, so until then the pick stays open (null).
+ * results archive (historical_results), which arrive with football-data.co.uk
+ * two to five days after the game. Until then ESPN's scoreboard, which has
+ * them within hours, grades it when its counts look complete and the result
+ * is clear of the line (robustStatGrade); otherwise the pick stays open (null).
  */
-async function gradeFromStats(admin: SupabaseClient, row: StatRow, cache: Map<string, StatGame[]>): Promise<PickResult | null> {
+async function gradeFromStats(
+  admin: SupabaseClient,
+  row: StatRow,
+  cache: Map<string, StatGame[]>,
+  espnCache: EspnCache,
+): Promise<PickResult | null> {
   const kind = statKindOf(row.market);
   const code = row.league_code;
   if (!kind || !code) return null;
@@ -190,5 +209,36 @@ async function gradeFromStats(admin: SupabaseClient, row: StatRow, cache: Map<st
   const game = cache.get(key)!.find((g) => canon(g.home) === canon(row.home_name) && canon(g.away) === canon(row.away_name));
   const counts = game?.[kind];
   if (counts) return evaluateStatPick(row.market, counts[0], counts[1]);
+  const espn = await espnCounts(row, kind, espnCache);
+  if (espn) {
+    const grade = robustStatGrade(row.market, espn[0], espn[1]);
+    if (grade) return grade;
+  }
   return Date.now() - at > STAT_WAIT_MS ? "push" : null;
+}
+
+/** ESPN days fetched in this pass, and the time after which the pass stops asking (the cron has 120s in all). */
+interface EspnCache {
+  games: Map<string, Promise<EspnResult[]>>;
+  until: number;
+}
+const ESPN_BUDGET_MS = 40_000;
+
+/** The game's counts from ESPN's scoreboard (the kick-off day and the day before, as ESPN dates by US time), if complete. */
+async function espnCounts(row: StatRow, kind: "corners" | "shots" | "shotsOnTarget", cache: EspnCache): Promise<[number, number] | null> {
+  const slug = row.league_code ? leagueByCode(row.league_code)?.ids.espn : undefined;
+  if (!slug || Date.now() > cache.until) return null;
+  const at = Date.parse(row.kickoff);
+  const days = [new Date(at), new Date(at - 86_400_000)];
+  const games: EspnResult[] = [];
+  for (const d of days) {
+    const key = `${slug}|${d.toISOString().slice(0, 10)}`;
+    if (!cache.games.has(key)) cache.games.set(key, espnDay(slug, d).catch(() => []));
+    games.push(...(await cache.games.get(key)!));
+  }
+  const g = findEspnGame(games, { home: row.home_name, away: row.away_name, kickoff: at, hg: row.hg, ag: row.ag });
+  if (!g || !espnStatsComplete(g)) return null;
+  if (kind === "corners") return [g.hc!, g.ac!];
+  if (kind === "shots") return [g.hs!, g.as!];
+  return [g.hsot!, g.asot!];
 }
