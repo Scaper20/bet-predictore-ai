@@ -32,6 +32,7 @@ import { buildPrediction, headlineEligible, type Pick, type Prediction } from ".
 import { fitLeague } from "../src/lib/model/fit";
 import { resultCalibrationFor } from "../src/lib/model/result-calibration";
 import { evaluatePick } from "../src/lib/settlement";
+import { isStrong } from "../src/lib/model/tiers";
 import { deVig } from "../src/lib/model/backtest";
 import { candidatesFor, forge, type ForgeRisk, type PoolEntry } from "../src/lib/forge";
 import { buildHub, daySeed, hubMarketAllowed, hubTier, HUB_FORGE_MARKETS, HUB_TIERS, withoutHandicap, type HubBuildOptions } from "../src/lib/code-hub";
@@ -284,8 +285,46 @@ function headline(all: Graded[]) {
   // the pause this replay gave 75.9% landed (74.0% stated, average 1.36) with
   // unders, against the 75.4% (73.0%, 1.38) of the paused rule below.
   console.log("\n5. PUBLISHED PICK WITH UNDERS PAUSED");
+  // The pick as buildPrediction publishes it: sweet spots first (model/sweet-spots.ts).
+  {
+    const t = new Tally();
+    const fam = new Map<string, Tally>();
+    let price = 0;
+    for (const g of all) {
+      const pk = g.p.topPick;
+      if (!pk) continue;
+      const w = grade(pk, g.row);
+      if (w === null) continue;
+      t.add(w, pk.probability);
+      price += pk.fairOdds;
+      const k = family(pk.market);
+      (fam.get(k) ?? fam.set(k, new Tally()).get(k)!).add(w, pk.probability);
+    }
+    console.log("  " + t.line("KiqStat pick, sweet spots first") + `  avg price ${(price / Math.max(1, t.n)).toFixed(2)}`);
+    for (const strong of [true, false]) {
+      const s = new Tally();
+      for (const g of all) {
+        const pk = g.p.topPick;
+        if (!pk || isStrong(pk) !== strong) continue;
+        const w = grade(pk, g.row);
+        if (w !== null) s.add(w, pk.probability);
+      }
+      console.log("      " + s.line(strong ? "Strong" : "not Strong", 30) + `  share ${((100 * s.n) / Math.max(1, t.n)).toFixed(0)}%`);
+    }
+    for (const c of [60, 62, 63, 64, 65, 66, 67, 68, 70]) {
+      const s = new Tally();
+      for (const g of all) {
+        const pk = g.p.topPick;
+        if (!pk || pk.confidence < c) continue;
+        const w = grade(pk, g.row);
+        if (w !== null) s.add(w, pk.probability);
+      }
+      console.log("      " + s.line(`confidence ${c}+`, 30) + `  share ${((100 * s.n) / Math.max(1, t.n)).toFixed(0)}%`);
+    }
+    for (const [k, v] of [...fam].sort()) if (v.n >= 30) console.log("      " + v.line(k, 30));
+  }
   const rules: [string, PickRule][] = [
-    ["unders paused (live rule)", { noUnder: true }],
+    ["unders paused (old rule)", { noUnder: true }],
     ["unders paused, handicap fallback", { noUnder: true, ah: true }],
   ];
   for (const [name, rule] of rules) {

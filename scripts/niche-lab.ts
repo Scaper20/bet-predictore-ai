@@ -21,6 +21,7 @@
  *
  *   npx tsx scripts/niche-lab.ts --stage=predict
  *   npx tsx scripts/niche-lab.ts --stage=analyse
+ *   npx tsx scripts/niche-lab.ts --stage=analyse --ship   (only what the site can run; refits model/sweet-spots.ts)
  */
 
 import fs from "node:fs";

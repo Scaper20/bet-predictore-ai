@@ -425,6 +425,11 @@ export function analyse(preds: Pred[], argv: string[]) {
   }
   const statSelf = statModels.filter((m) => m.name.endsWith(":nb")).map((m) => recalibrated(m, preds));
 
+  if (argv.includes("--ship")) {
+    shippable(preds, goalModel("dc", (i) => dcGrid[i]), statModels.filter((m) => m.name.endsWith(":nb")), wins, holdWeeks);
+    return { winners: [], preds, goalModels, statModels };
+  }
+
   /* 1. Sharpness: Brier score per group on the holdout (lower is better). */
   console.log("\n1. WHICH MATHS IS SHARPER: holdout Brier score per market group, lower is better");
   const groupsOf = (m: Model) => [...new Set(m.keys.map(group))];
@@ -656,4 +661,127 @@ export function analyse(preds: Pred[], argv: string[]) {
 
   void argv;
   return { winners, preds, goalModels, statModels };
+}
+
+/* ------------------------------------------------- 10. shippable picks */
+
+/** Goal selections a KiqStat pick may carry today: no draw, no both-score, no paused unders, no team goals. */
+const SHIP_GOAL_KEYS = GOAL_KEYS.filter((k) => /^(1x2:(home|away)|dc:|ou:over:|ah:)/.test(k));
+
+interface ShipRule {
+  key: string;
+  model: Model;
+  k: number;
+  threshold: number;
+  tuneHit: number;
+  tuneN: number;
+}
+
+/** The lowest threshold whose record on `pool` reaches the target with minN picks. */
+function ruleOn(m: Model, preds: Pred[], k: number, target: number, minN: number, all: boolean): ShipRule | null {
+  const sel = all ? [...selections(m, preds, k, false), ...selections(m, preds, k, true)] : selections(m, preds, k, false);
+  for (let t = 0.5; t <= PMAX - 0.02; t += 0.01) {
+    const pool = sel.filter((x) => x.p >= t && x.p <= PMAX);
+    if (pool.length < minN) return null;
+    const hit = pool.reduce((a, x) => a + x.w, 0) / pool.length;
+    if (hit >= target) return { key: m.keys[k], model: m, k, threshold: Math.round(t * 100) / 100, tuneHit: hit, tuneN: pool.length };
+  }
+  return null;
+}
+
+/**
+ * What the site could publish with only the maths it runs today: the live
+ * goals model for result, double chance, overs and Asian handicaps, the live
+ * count model for corners, shots and shots on target. Rules chosen on 2024-25,
+ * scored on 2025-26; a game no rule covers keeps today's headline pick.
+ */
+function shippable(preds: Pred[], dc: Model, nbs: Model[], wins: Uint8Array[], holdWeeks: number) {
+  const r_w = (r: ShipRule, i: number) => r.model.wins[i]![r.k];
+  console.log("\n10. SHIPPABLE KIQSTAT PICK: live goals model + live count model only, every league, rules from 2024-25, scored on 2025-26");
+  const pubSel = (i: number): { p: number; w: number; key: string } | null => {
+    const pub = preds[i].pub;
+    if (!pub) return null;
+    const k = GOAL_KEYS.indexOf(pub[0]);
+    return k < 0 ? null : { p: pub[1], w: wins[i][k], key: pub[0] };
+  };
+  const goalRules = (target: number, all: boolean) => SHIP_GOAL_KEYS.map((key) => ruleOn(dc, preds, dc.keys.indexOf(key), target, 100, all)).filter((r): r is ShipRule => r !== null);
+  const statRules = (target: number, all: boolean) => nbs.flatMap((m) => m.keys.map((_, k) => ruleOn(m, preds, k, target, 100, all))).filter((r): r is ShipRule => r !== null);
+  const groupOf = (key: string) => (key.startsWith("corners") ? "corners" : key.startsWith("shots") ? "shots" : key.startsWith("sot") ? "shots on target" : group(key));
+
+  const slate = (label: string, rules: ShipRule[]) => {
+    const picks: { i: number; p: number; w: number; key: string; fallback: boolean }[] = [];
+    preds.forEach((pred, i) => {
+      if (!isHold(pred)) return;
+      let best: { r: ShipRule; p: number } | null = null;
+      for (const r of rules) {
+        const pr = r.model.probs[i];
+        if (!pr || !r.model.wins[i]) continue;
+        const p = pr[r.k];
+        if (p < r.threshold || p > PMAX) continue;
+        if (!best || r.tuneHit > best.r.tuneHit || (r.tuneHit === best.r.tuneHit && p > best.p)) best = { r, p };
+      }
+      if (best) picks.push({ i, p: best.p, w: best.r.model.wins[i]![best.r.k], key: best.r.key, fallback: false });
+      else {
+        const f = pubSel(i);
+        if (f) picks.push({ i, ...f, fallback: true });
+      }
+    });
+    const n = picks.length, w = picks.reduce((a, x) => a + x.w, 0), st = picks.reduce((a, x) => a + x.p, 0);
+    const c = consistency(picks.map((x) => ({ i: x.i, p: x.p, w: x.w })), preds);
+    console.log(`  ${label.padEnd(46)} ${String(n).padStart(5)} picks  landed ${pct(w / n)}  stated ${pct(st / n)}  ${(n / holdWeeks).toFixed(0)}/wk  median week ${pct(c.median)}  worst 10% ${pct(c.p10)}  weeks>=75% ${pct(c.atLeast75)}  worst run ${c.worstRun}  price ~${(n / st).toFixed(2)}`);
+    const by = new Map<string, { n: number; w: number; st: number }>();
+    for (const x of picks) {
+      const g = x.fallback ? "today's pick (no rule)" : groupOf(x.key);
+      const b = by.get(g) ?? { n: 0, w: 0, st: 0 };
+      b.n++; b.w += x.w; b.st += x.p;
+      by.set(g, b);
+    }
+    console.log(`      ${[...by].sort((a, b) => b[1].n - a[1].n).map(([g, b]) => `${g} ${b.n} @ ${pct(b.w / b.n)} (stated ${pct(b.st / b.n)})`).join("; ")}`);
+    return picks;
+  };
+
+  slate("today's headline pick", []);
+  for (const target of [0.8, 0.81, 0.82, 0.83, 0.84, 0.85]) {
+    const g = goalRules(target, false);
+    console.log(`\n  target ${Math.round(target * 100)}%: ${g.length} goal rules: ${g.map((r) => `${r.key} ${r.threshold.toFixed(2)}`).join(", ")}`);
+    const picks = slate("goals + Asian handicap", g);
+    if (target === 0.82 || target === 0.83) {
+      const byDiv = new Map<string, { n: number; w: number }>();
+      for (const x of picks) {
+        const b = byDiv.get(preds[x.i].d) ?? { n: 0, w: 0 };
+        b.n++; b.w += x.w;
+        byDiv.set(preds[x.i].d, b);
+      }
+      console.log(`      by league: ${[...byDiv].map(([d, b]) => `${d} ${pct(b.w / b.n)}`).join(", ")}`);
+      // The same rules on the season they were chosen on, for comparison.
+      const tunePicks = preds.map((pred, i) => ({ pred, i })).filter(({ pred }) => !isHold(pred));
+      let n = 0, w = 0;
+      for (const { i } of tunePicks) {
+        let best: { r: ShipRule; p: number } | null = null;
+        for (const r of g) {
+          const p = r.model.probs[i]![r.k];
+          if (p < r.threshold || p > PMAX) continue;
+          if (!best || r.tuneHit > best.r.tuneHit) best = { r, p };
+        }
+        if (best) { n++; w += r_w(best.r, i); }
+        else { const f = pubSel(i); if (f) { n++; w += f.w; } }
+      }
+      console.log(`      2024-25 (the season the rules came from): ${n} picks, landed ${pct(w / n)}`);
+    }
+  }
+  const r_w_unused = 0; void r_w_unused;
+  for (const target of [0.85]) {
+    const g = goalRules(target, false), st = statRules(target, false);
+    slate("85%: goals + handicap + corners", [...g, ...st.filter((r) => r.key.startsWith("corners"))]);
+  }
+
+  // The rules production would use: chosen on both seasons.
+  for (const target of [0.82, 0.83]) {
+    const rules = goalRules(target, true).sort((a, b) => b.tuneHit - a.tuneHit);
+    console.log(`\n  PRODUCTION RULES at ${Math.round(target * 100)}% (chosen on both seasons): ${rules.length}`);
+    for (const r of rules) {
+      const tune = ruleOn(r.model, preds, r.k, target, 100, false);
+      console.log(`    ["${r.key}", ${r.threshold.toFixed(2)}, ${r.tuneHit.toFixed(3)}],  // ${r.tuneN} picks${tune ? `; 2024-25 rule ${tune.threshold.toFixed(2)}` : "; no 2024-25 rule"}`);
+    }
+  }
 }
