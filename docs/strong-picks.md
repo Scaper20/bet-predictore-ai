@@ -42,6 +42,9 @@ Replayed through the live code over the last 365 days (scripts/decision-lab.ts,
 | 64+ | 11% | 85.7% |
 | below 63 | 80% | 80.7% |
 
+With the whole-line handicap sweet spots added the same day, 63+ was 26% of
+picks and landed 86.5%; 64+ was 15% at 87.2%.
+
 ## Where it shows
 - Track record: Strong and All headline cards; All / Strong filter on the log.
 - ★ Strong badge on prediction cards, the best bet, the match page and For You.

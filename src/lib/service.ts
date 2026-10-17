@@ -7,6 +7,8 @@
 
 import "server-only";
 import type { Match, ResultRow } from "@/lib/types";
+import { statChances } from "@/lib/stat-markets-service";
+import { sweetSpotLeague } from "@/lib/model/sweet-spots";
 import {
   getLive, getMatch, getTrainingResults, getH2H, getUpcoming,
   providerHealth, hasFullCoverage,
@@ -162,7 +164,16 @@ async function assembleTraining(match: Match, code: string): Promise<Training> {
  * its own way ("Norwich City FC" for "Norwich") has to be looked up the same
  * way, or the model finds no history for a club with years of it.
  */
-function modelOptions(match: Match, training: { rows: ResultRow[]; book?: NameBook; topFive?: ReadonlySet<string> }): ModelOptions {
+/** Corners and shots chances for a fixture a sweet spot can read them for (model/sweet-spots.ts). */
+async function sweetSpotStats(match: Match): Promise<Record<string, number> | undefined> {
+  return sweetSpotLeague(match.league.code) ? statChances(match) : undefined;
+}
+
+function modelOptions(
+  match: Match,
+  training: { rows: ResultRow[]; book?: NameBook; topFive?: ReadonlySet<string> },
+  stats?: Record<string, number>,
+): ModelOptions {
   const prefit = sharedFit(match, training.rows);
   const book = training.book;
   const ratingNames = book && book.canonical.size > 0
@@ -179,6 +190,7 @@ function modelOptions(match: Match, training: { rows: ResultRow[]; book?: NameBo
     prefit,
     ...(ratingNames ? { ratingNames } : {}),
     ...(barred.length ? { excludeHeadline: [...HEADLINE_EXCLUDED, ...barred] } : {}),
+    ...(stats ? { statChances: stats } : {}),
   };
 }
 
@@ -266,8 +278,8 @@ export async function matchDetail(id: string): Promise<MatchDetail | null> {
     const match = await getMatch(id);
     if (!match) return null;
 
-    const [training, h2h] = await Promise.all([trainingRows(match), getH2H(match)]);
-    const prediction = buildPrediction(match, training.rows, h2h, modelOptions(match, training));
+    const [training, h2h, stats] = await Promise.all([trainingRows(match), getH2H(match), sweetSpotStats(match)]);
+    const prediction = buildPrediction(match, training.rows, h2h, modelOptions(match, training, stats));
     const analysis = await writeAnalysis(prediction);
 
     return {
@@ -295,8 +307,8 @@ export async function matchPrediction(id: string): Promise<Prediction | null> {
   return cached(`prediction:${id}`, 10 * 60_000, async () => {
     const match = await getMatch(id);
     if (!match) return null;
-    const [training, h2h] = await Promise.all([trainingRows(match), getH2H(match)]);
-    return buildPrediction(match, training.rows, h2h, modelOptions(match, training));
+    const [training, h2h, stats] = await Promise.all([trainingRows(match), getH2H(match), sweetSpotStats(match)]);
+    return buildPrediction(match, training.rows, h2h, modelOptions(match, training, stats));
   });
 }
 
@@ -392,10 +404,8 @@ async function predictSlice(slice: Match[]): Promise<Prediction[]> {
   await Promise.all(
     [...byLeague.values()].map(async (group) => {
       // One training fetch and one fit per competition, reused across its fixtures.
-      const training = await trainingRows(group[0]);
-      for (const m of group) {
-        out.push(buildPrediction(m, training.rows, [], modelOptions(m, training)));
-      }
+      const [training, stats] = await Promise.all([trainingRows(group[0]), Promise.all(group.map(sweetSpotStats))]);
+      group.forEach((m, i) => out.push(buildPrediction(m, training.rows, [], modelOptions(m, training, stats[i]))));
     }),
   );
 

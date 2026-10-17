@@ -111,7 +111,7 @@ const GROUPS: FaqGroup[] = [
       {
         q: "What is a Strong pick?",
         text: "strong pick star confident safest",
-        a: <A>Our most confident picks, about one game in five, marked ★ Strong before kick-off. Replayed over the last year they landed about 86% of the time, against about 82% for all picks. They come at shorter prices, and they are still wrong sometimes. The <L href={sportPath("trackRecord")}>track record</L> shows the Strong record on its own, next to every pick.</A>,
+        a: <A>Our most confident picks, about one game in four, marked ★ Strong before kick-off. Replayed over the last year they landed about 86% of the time, against about 82% for all picks. They come at shorter prices, and they are still wrong sometimes. The <L href={sportPath("trackRecord")}>track record</L> shows the Strong record on its own, next to every pick.</A>,
       },
       {
         q: "How accurate are you?",

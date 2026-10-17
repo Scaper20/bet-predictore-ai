@@ -156,7 +156,7 @@ function Tile({ label, value, suffix = "", hint }: { label: string; value: numbe
 function PickLine({ pick }: { pick: LoggedPick }) {
   const tone =
     pick.result === "win" ? "text-brand" : pick.result === "lose" ? "text-rose" : "text-ink-dim";
-  const mark = pick.result === "win" ? "✓" : pick.result === "lose" ? "✗" : "…";
+  const mark = pick.result === "win" ? "✓" : pick.result === "lose" ? "✗" : pick.result === "push" ? "void" : "…";
   return (
     <p className={`flex items-center gap-1.5 pt-0.5 text-[11px] ${tone}`}>
       <span className="font-bold">{mark}</span>

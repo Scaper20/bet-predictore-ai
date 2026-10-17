@@ -66,7 +66,9 @@ export interface Pick {
     | "Both Teams To Score"
     | "Double Chance"
     | "Correct Score"
-    | "Asian Handicap";
+    | "Asian Handicap"
+    | "Corners"
+    | "Shots";
   probability: number;
   /** Model's own fair price. */
   fairOdds: number;
@@ -84,6 +86,8 @@ export interface Prediction {
   picks: Pick[];
   /** The single strongest selection, or null when the data cannot support one. */
   topPick: Pick | null;
+  /** True when topPick came from a sweet spot (sweet-spots.ts) rather than the usual ranking. */
+  sweetSpot?: boolean;
   /** What in the data the model is reacting to; see insights.ts. */
   insights: Insight[];
   /** Whether there is enough real history to stand behind this prediction. */
@@ -215,6 +219,8 @@ export interface ModelOptions {
   drawInflation?: number;
   /** False ranks every game the usual way, ignoring sweet-spots.ts (lab comparison). */
   sweetSpots?: boolean;
+  /** Corners, shots and shots-on-target chances keyed like a pick's market (stat-markets-service statChances), for the sweet spots that read them. */
+  statChances?: Record<string, number>;
   /** The straight-win correction learned from the model's own record (result-calibration.ts); null or absent = off. */
   resultCalibration?: ResultCalibration | null;
   /** Scales both expected goal rates after the totals shrink (1 = off). Lab knob. */
@@ -269,8 +275,15 @@ export function buildPrediction(
   const baselines = empiricalBaselines(results);
   const ranked = rankPicks(markets, asianHandicap, dataQuality, uncertainty, baselines, options);
   // Where a sweet spot applies it heads the list, so the pick and the ranking agree.
-  const sweet = options.sweetSpots === false ? null : sweetSpotPick(ranked, match.league.code, options.excludeHeadline);
-  const picks = sweet ? [sweet, ...ranked.filter((p) => p !== sweet)] : ranked;
+  const spot = options.sweetSpots === false ? null : sweetSpotPick(ranked, match.league.code, options.excludeHeadline, asianHandicap, options.statChances);
+  const sweet = spot
+    ? ranked.find((p) => p.market === spot.market && p.probability === spot.probability) ?? {
+        ...spot,
+        fairOdds: fairOdds(spot.probability),
+        confidence: confidenceFor(spot.probability, dataQuality, uncertainty),
+      }
+    : null;
+  const picks = sweet ? [sweet, ...ranked.filter((p) => p.market !== sweet.market)] : ranked;
   const sufficiency = assessSufficiency(
     fit.matchesUsed,
     homeRating?.played ?? 0,
@@ -289,6 +302,7 @@ export function buildPrediction(
     asianHandicap,
     picks,
     topPick,
+    sweetSpot: Boolean(topPick && sweet && topPick === sweet),
     insights,
     sufficiency,
     form,

@@ -10,6 +10,8 @@ const GROUP_LABELS: Record<string, string> = {
   "Double Chance": "Two results",
   "Correct Score": "Correct score",
   "Asian Handicap": "Winning margin",
+  Corners: "Corners",
+  Shots: "Shots",
 };
 
 export function groupLabel(group: string): string {

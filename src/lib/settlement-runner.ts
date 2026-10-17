@@ -2,7 +2,9 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getMatch } from "@/lib/providers";
-import { evaluatePick } from "@/lib/settlement";
+import { evaluatePick, evaluateStatPick, statKindOf, type PickResult } from "@/lib/settlement";
+import { leagueByCode } from "@/lib/leagues";
+import { looseKey, nameBook, nameScope } from "@/lib/teams/canonical";
 import type { Match } from "@/lib/types";
 
 /**
@@ -63,19 +65,22 @@ export async function runSettlementPass(
 ): Promise<number> {
   let query = admin
     .from("predictions_log")
-    .select("id, match_id, market")
+    .select("id, match_id, market, league_code, home_name, away_name, kickoff")
     .is("settled_at", null)
-    .lt("kickoff", new Date().toISOString());
+    .lt("kickoff", new Date().toISOString())
+    .order("kickoff", { ascending: false });
 
   if (opts.maxAgeHours) {
     query = query.gt("kickoff", new Date(Date.now() - opts.maxAgeHours * 60 * 60 * 1000).toISOString());
   }
 
-  const { data: pending, error } = await query.limit(200);
+  // Corners and shots picks wait days for their stats, so the sweep reads past them.
+  const { data: pending, error } = await query.limit(600);
   if (error) throw error;
   if (!pending || pending.length === 0) return 0;
 
   let settledCount = 0;
+  const statCache = new Map<string, StatGame[]>();
   for (const row of pending) {
     const matchId = row.match_id as string;
 
@@ -104,7 +109,10 @@ export async function runSettlementPass(
 
     if (status !== "finished" || homeGoals === null || awayGoals === null) continue;
 
-    const result = evaluatePick(row.market as string, homeGoals, awayGoals);
+    const market = row.market as string;
+    const result = statKindOf(market)
+      ? await gradeFromStats(admin, row as StatRow, statCache)
+      : evaluatePick(market, homeGoals, awayGoals);
     if (!result) continue;
 
     const { error: updateError } = await admin
@@ -119,4 +127,68 @@ export async function runSettlementPass(
     if (!updateError) settledCount++;
   }
   return settledCount;
+}
+
+/* ------------------------------------------------- corners and shots picks */
+
+interface StatRow {
+  market: string;
+  league_code: string | null;
+  home_name: string;
+  away_name: string;
+  kickoff: string;
+}
+
+interface StatGame {
+  at: number;
+  home: string;
+  away: string;
+  corners: [number, number] | null;
+  shots: [number, number] | null;
+  shotsOnTarget: [number, number] | null;
+}
+
+/** After this long without stats a pick is voided rather than left open for ever. */
+const STAT_WAIT_MS = 10 * 86_400_000;
+
+/**
+ * A corners, shots or shots-on-target pick, graded from the counts in the
+ * results archive (historical_results). Those arrive with football-data.co.uk
+ * a few days after the game, so until then the pick stays open (null).
+ */
+async function gradeFromStats(admin: SupabaseClient, row: StatRow, cache: Map<string, StatGame[]>): Promise<PickResult | null> {
+  const kind = statKindOf(row.market);
+  const code = row.league_code;
+  if (!kind || !code) return null;
+  const at = Date.parse(row.kickoff);
+  const day = new Date(at).toISOString().slice(0, 10);
+  const key = `${code}|${day}`;
+  if (!cache.has(key)) {
+    const { data } = await admin
+      .from("historical_results")
+      .select("kickoff, home_name, away_name, home_corners, away_corners, home_shots, away_shots, home_shots_on_target, away_shots_on_target")
+      .eq("league_code", code)
+      .gte("kickoff", new Date(at - 36 * 3_600_000).toISOString())
+      .lte("kickoff", new Date(at + 36 * 3_600_000).toISOString());
+    const pair = (a: unknown, b: unknown): [number, number] | null => (typeof a === "number" && typeof b === "number" ? [a, b] : null);
+    cache.set(
+      key,
+      (data ?? []).map((r) => ({
+        at: Date.parse(r.kickoff as string),
+        home: r.home_name as string,
+        away: r.away_name as string,
+        corners: pair(r.home_corners, r.away_corners),
+        shots: pair(r.home_shots, r.away_shots),
+        shotsOnTarget: pair(r.home_shots_on_target, r.away_shots_on_target),
+      })),
+    );
+  }
+  const def = leagueByCode(code);
+  const scope = def ? nameScope(def) : null;
+  const book = scope ? await nameBook(scope) : null;
+  const canon = (n: string) => looseKey(book?.canonical.get(looseKey(n)) ?? n);
+  const game = cache.get(key)!.find((g) => canon(g.home) === canon(row.home_name) && canon(g.away) === canon(row.away_name));
+  const counts = game?.[kind];
+  if (counts) return evaluateStatPick(row.market, counts[0], counts[1]);
+  return Date.now() - at > STAT_WAIT_MS ? "push" : null;
 }

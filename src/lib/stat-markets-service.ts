@@ -7,7 +7,7 @@ import { refereeFor } from "@/lib/archive/referees";
 import { leagueByCode } from "@/lib/leagues";
 import { looseKey, nameBook, nameScope } from "@/lib/teams/canonical";
 import {
-  expectStat, fitStat, statGrid, statMarkets, STAT_LINES, STAT_OPTIONS,
+  expectStat, fitStat, statGrid, statMarkets, statSelections, STAT_LINES, STAT_OPTIONS,
   type StatFit, type StatKind, type StatMarkets, type StatSample,
 } from "@/lib/model/match-stats";
 import { goalMarkets, type GoalMarkets } from "@/lib/model/goal-markets";
@@ -81,4 +81,29 @@ export async function fixtureStatMarkets(match: Match, prediction: Prediction): 
     stats[kind] = { ...statMarkets(statGrid(expected, fit, STAT_LINES[kind].max), STAT_LINES[kind]), matches: fit.matches };
   }
   return { referee, stats, goals };
+}
+
+const PICK_KINDS: StatKind[] = ["corners", "shots", "shotsOnTarget"];
+
+/**
+ * The chances a sweet spot (model/sweet-spots.ts) reads for corners, shots
+ * and shots on target, keyed like a pick's market. Undefined for a
+ * competition with no stat history, or when the archive cannot be read.
+ */
+export async function statChances(match: Match): Promise<Record<string, number> | undefined> {
+  const code = match.league.code;
+  if (!code) return undefined;
+  try {
+    const { fits, canon } = await leagueFits(code);
+    const out: Record<string, number> = {};
+    for (const kind of PICK_KINDS) {
+      const fit = fits[kind];
+      if (!fit) continue;
+      const expected = expectStat(fit, canon(match.home.name), canon(match.away.name));
+      Object.assign(out, statSelections(kind, statMarkets(statGrid(expected, fit, STAT_LINES[kind].max), STAT_LINES[kind])));
+    }
+    return Object.keys(out).length ? out : undefined;
+  } catch {
+    return undefined;
+  }
 }

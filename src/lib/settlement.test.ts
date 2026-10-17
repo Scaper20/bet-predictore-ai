@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { evaluatePick } from "./settlement";
+import { evaluatePick, evaluateStatPick, statKindOf } from "./settlement";
 
 describe("evaluatePick", () => {
   it("grades 1x2", () => {
@@ -60,5 +60,27 @@ describe("evaluatePick", () => {
 
   it("returns null for markets it does not grade", () => {
     expect(evaluatePick("something:unknown", 2, 1)).toBeNull();
+  });
+});
+
+describe("evaluateStatPick", () => {
+  it("grades totals, team totals, who had more and handicaps from the counts", () => {
+    expect(evaluateStatPick("corners:under:12.5", 6, 5)).toBe("win");
+    expect(evaluateStatPick("corners:under:12.5", 8, 5)).toBe("lose");
+    expect(evaluateStatPick("sot:home:over:3.5", 4, 1)).toBe("win");
+    expect(evaluateStatPick("sot:away:under:4.5", 9, 5)).toBe("lose");
+    expect(evaluateStatPick("sot:most:home-or-level", 3, 3)).toBe("win");
+    expect(evaluateStatPick("sot:most:home", 3, 3)).toBe("lose");
+    expect(evaluateStatPick("sot:hcp:away:+3.5", 7, 4)).toBe("win");
+    expect(evaluateStatPick("sot:hcp:home:-1.5", 5, 4)).toBe("lose");
+    expect(evaluateStatPick("shots:hcp:home:-4.5", 15, 10)).toBe("win");
+  });
+
+  it("leaves goals picks to evaluatePick, and goals picks never read a stat", () => {
+    expect(evaluateStatPick("1x2:home", 2, 1)).toBeNull();
+    expect(statKindOf("sot:home:over:3.5")).toBe("shotsOnTarget");
+    expect(statKindOf("corners:under:12.5")).toBe("corners");
+    expect(statKindOf("ah:away:1.5")).toBeNull();
+    expect(evaluatePick("corners:under:12.5", 1, 0)).toBeNull();
   });
 });
