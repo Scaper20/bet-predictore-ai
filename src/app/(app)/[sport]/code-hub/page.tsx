@@ -27,7 +27,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/football/code-hub" },
   title: "Code Hub: Today's Ready-Made Combos",
   description:
-    "Ready-made codes every day from the KiqStat model, from 2 to 100 odds, each with a SportyBet booking code and the model's chance of it landing.",
+    "Ready-made codes every day from the KiqStat model, from 2 to 20 odds, each with a SportyBet booking code and the model's chance of it landing.",
 };
 
 // Per viewer: which codes are open depends on the plan.
