@@ -426,7 +426,7 @@ export function analyse(preds: Pred[], argv: string[]) {
   const statSelf = statModels.filter((m) => m.name.endsWith(":nb")).map((m) => recalibrated(m, preds));
 
   if (argv.includes("--ship")) {
-    shippable(preds, goalModel("dc", (i) => dcGrid[i]), statModels.filter((m) => m.name.endsWith(":nb")), wins, holdWeeks);
+    shippable(preds, goalModel("dc", (i) => dcGrid[i]), dcGrid, statModels.filter((m) => m.name.endsWith(":nb")), wins, holdWeeks);
     return { winners: [], preds, goalModels, statModels };
   }
 
@@ -665,8 +665,89 @@ export function analyse(preds: Pred[], argv: string[]) {
 
 /* ------------------------------------------------- 10. shippable picks */
 
-/** Goal selections a KiqStat pick may carry today: no draw, no both-score, no paused unders, no team goals. */
-const SHIP_GOAL_KEYS = GOAL_KEYS.filter((k) => /^(1x2:(home|away)|dc:|ou:over:|ah:)/.test(k));
+/**
+ * Big clubs as the model sees them before each game: the top three of the
+ * division by average expected goal difference over their last 10 games
+ * (5 at least), from fixtures already played. No look-ahead.
+ */
+function bigFlags(preds: Pred[]): { home: boolean[]; away: boolean[] } {
+  const home = new Array<boolean>(preds.length).fill(false), away = new Array<boolean>(preds.length).fill(false);
+  const order = preds.map((_, i) => i).sort((a, b) => preds[a].t - preds[b].t);
+  const recent = new Map<string, number[]>();
+  const top = (d: string) => {
+    const rows: { team: string; s: number }[] = [];
+    for (const [k, v] of recent) if (k.startsWith(`${d}|`) && v.length >= 5) rows.push({ team: k.slice(d.length + 1), s: v.reduce((a, x) => a + x, 0) / v.length });
+    return new Set(rows.sort((a, b) => b.s - a.s).slice(0, 3).map((r) => r.team));
+  };
+  const push = (k: string, v: number) => {
+    const a = recent.get(k) ?? [];
+    a.push(v);
+    if (a.length > 10) a.shift();
+    recent.set(k, a);
+  };
+  let j = 0;
+  while (j < order.length) {
+    const day = Math.floor(preds[order[j]].t / DAY);
+    let k = j;
+    while (k < order.length && Math.floor(preds[order[k]].t / DAY) === day) k++;
+    const tops = new Map<string, Set<string>>();
+    for (let x = j; x < k; x++) {
+      const p = preds[order[x]];
+      if (!tops.has(p.d)) tops.set(p.d, top(p.d));
+      home[order[x]] = tops.get(p.d)!.has(p.h);
+      away[order[x]] = tops.get(p.d)!.has(p.a);
+    }
+    for (let x = j; x < k; x++) {
+      const p = preds[order[x]];
+      push(`${p.d}|${p.h}`, p.dc[0] - p.dc[1]);
+      push(`${p.d}|${p.a}`, p.dc[1] - p.dc[0]);
+    }
+    j = k;
+  }
+  return { home, away };
+}
+
+/** Which side a selection backs, if any. */
+function backs(key: string): "home" | "away" | null {
+  if (/^(1x2:home|dc:home-draw|ah:home)/.test(key) || /^(corners|shots|sot):(most:home|hcp:home)/.test(key)) return "home";
+  if (/^(1x2:away|dc:away-draw|ah:away)/.test(key) || /^(corners|shots|sot):(most:away|hcp:away)/.test(key)) return "away";
+  return null;
+}
+
+/** Goal selections a KiqStat pick may carry today: no draw, no both-score, no paused unders, no team goals, handicaps from the full model below. */
+const SHIP_GOAL_KEYS = GOAL_KEYS.filter((k) => /^(1x2:(home|away)|dc:|ou:over:)/.test(k));
+
+/** Every Asian line the site shows, named as predictions_log stores them; whole lines can push. */
+const AH_LINES_ALL = [-2.5, -2, -1.5, -1, 0, 1, 1.5, 2, 2.5];
+const PUSH = 2;
+
+/** Handicap selections from a grid: probability = chance of a win against a loss (a push is neither), wins 1/0, or PUSH. */
+function handicapModel(preds: Pred[], grids: Grid[]): Model {
+  const keys = AH_LINES_ALL.flatMap((l) => [`ah:home:${l}`, `ah:away:${l === 0 ? 0 : -l}`]);
+  const probs = grids.map((g) => {
+    const out: number[] = [];
+    for (const l of AH_LINES_ALL) {
+      let hw = 0, aw = 0;
+      g.forEach((row, x) => row.forEach((p, y) => {
+        const m = x - y + l;
+        if (m > 0) hw += p; else if (m < 0) aw += p;
+      }));
+      // A whole line can push: its fair price, and so its chance, is win against loss.
+      if (Number.isInteger(l)) out.push(hw / (hw + aw), aw / (hw + aw));
+      else out.push(hw, aw);
+    }
+    return Float64Array.from(out);
+  });
+  const wins = preds.map((p) => {
+    const out: number[] = [];
+    for (const l of AH_LINES_ALL) {
+      const m = p.hg - p.ag + l;
+      out.push(m > 0 ? 1 : m < 0 ? 0 : PUSH, m < 0 ? 1 : m > 0 ? 0 : PUSH);
+    }
+    return Uint8Array.from(out);
+  });
+  return { name: "dc", keys, probs, wins };
+}
 
 interface ShipRule {
   key: string;
@@ -677,9 +758,11 @@ interface ShipRule {
   tuneN: number;
 }
 
-/** The lowest threshold whose record on `pool` reaches the target with minN picks. */
+const decided = (x: Sel) => x.w !== PUSH;
+
+/** The lowest threshold whose record reaches the target with minN decided picks (pushes left out). */
 function ruleOn(m: Model, preds: Pred[], k: number, target: number, minN: number, all: boolean): ShipRule | null {
-  const sel = all ? [...selections(m, preds, k, false), ...selections(m, preds, k, true)] : selections(m, preds, k, false);
+  const sel = (all ? [...selections(m, preds, k, false), ...selections(m, preds, k, true)] : selections(m, preds, k, false)).filter(decided);
   for (let t = 0.5; t <= PMAX - 0.02; t += 0.01) {
     const pool = sel.filter((x) => x.p >= t && x.p <= PMAX);
     if (pool.length < minN) return null;
@@ -689,46 +772,82 @@ function ruleOn(m: Model, preds: Pred[], k: number, target: number, minN: number
   return null;
 }
 
+/** A rule's holdout record. */
+function held(r: ShipRule, preds: Pred[]) {
+  const sel = selections(r.model, preds, r.k, true).filter((x) => x.p >= r.threshold && x.p <= PMAX);
+  const dec = sel.filter(decided);
+  return { n: dec.length, pushes: sel.length - dec.length, hit: dec.reduce((a, x) => a + x.w, 0) / Math.max(1, dec.length), stated: dec.reduce((a, x) => a + x.p, 0) / Math.max(1, dec.length) };
+}
+
+const LABEL: Record<string, string> = { corners: "corners", shots: "shots", sot: "shots on target" };
+function plain(key: string): string {
+  const [f, a, b, c] = key.split(":");
+  if (f === "ah") return `${a} ${Number(b) > 0 ? "+" : ""}${b} handicap`;
+  if (!(f in LABEL)) return key;
+  const what = LABEL[f];
+  if (a === "over" || a === "under") return `${a} ${b} ${what}`;
+  if (a === "most") return `most ${what}: ${b}`;
+  if (a === "hcp") return `${b} ${c} ${what} handicap`;
+  return `${a} team ${b} ${c} ${what}`;
+}
+
 /**
  * What the site could publish with only the maths it runs today: the live
- * goals model for result, double chance, overs and Asian handicaps, the live
+ * goals model for result, double chance, overs and every Asian line, the live
  * count model for corners, shots and shots on target. Rules chosen on 2024-25,
- * scored on 2025-26; a game no rule covers keeps today's headline pick.
+ * scored on 2025-26. Rules sit in tiers: a game takes the strongest rule of the
+ * first tier that has one, and a game no rule covers keeps today's pick.
  */
-function shippable(preds: Pred[], dc: Model, nbs: Model[], wins: Uint8Array[], holdWeeks: number) {
-  const r_w = (r: ShipRule, i: number) => r.model.wins[i]![r.k];
+function shippable(preds: Pred[], dc: Model, grids: Grid[], nbs: Model[], wins: Uint8Array[], holdWeeks: number) {
   console.log("\n10. SHIPPABLE KIQSTAT PICK: live goals model + live count model only, every league, rules from 2024-25, scored on 2025-26");
+  const ah = handicapModel(preds, grids);
   const pubSel = (i: number): { p: number; w: number; key: string } | null => {
     const pub = preds[i].pub;
     if (!pub) return null;
     const k = GOAL_KEYS.indexOf(pub[0]);
     return k < 0 ? null : { p: pub[1], w: wins[i][k], key: pub[0] };
   };
-  const goalRules = (target: number, all: boolean) => SHIP_GOAL_KEYS.map((key) => ruleOn(dc, preds, dc.keys.indexOf(key), target, 100, all)).filter((r): r is ShipRule => r !== null);
-  const statRules = (target: number, all: boolean) => nbs.flatMap((m) => m.keys.map((_, k) => ruleOn(m, preds, k, target, 100, all))).filter((r): r is ShipRule => r !== null);
+  const rulesFor = (m: Model, keys: string[], target: number, all: boolean) => keys.map((key) => ruleOn(m, preds, m.keys.indexOf(key), target, 100, all)).filter((r): r is ShipRule => r !== null);
+  const goalRules = (target: number, all = false) => [...rulesFor(dc, SHIP_GOAL_KEYS, target, all), ...rulesFor(ah, ah.keys, target, all)];
+  const statRules = (prefix: string, target: number, all = false) => nbs.filter((m) => m.keys[0].startsWith(prefix)).flatMap((m) => rulesFor(m, m.keys, target, all));
   const groupOf = (key: string) => (key.startsWith("corners") ? "corners" : key.startsWith("shots") ? "shots" : key.startsWith("sot") ? "shots on target" : group(key));
 
-  const slate = (label: string, rules: ShipRule[]) => {
-    const picks: { i: number; p: number; w: number; key: string; fallback: boolean }[] = [];
-    preds.forEach((pred, i) => {
-      if (!isHold(pred)) return;
+  type Picked = { i: number; p: number; w: number; key: string; fallback: boolean };
+  const big = bigFlags(preds);
+  /** Backs the side a big club is playing against: the model under-rates big clubs. */
+  const againstBig = (i: number, key: string) => {
+    const side = backs(key);
+    return side === "home" ? big.away[i] && !big.home[i] : side === "away" ? big.home[i] && !big.away[i] : false;
+  };
+  let guard = false;
+  const pickFor = (i: number, tiers: ShipRule[][]): Picked | null => {
+    for (const tier of tiers) {
       let best: { r: ShipRule; p: number } | null = null;
-      for (const r of rules) {
+      for (const r of tier) {
+        if (guard && againstBig(i, r.key)) continue;
         const pr = r.model.probs[i];
         if (!pr || !r.model.wins[i]) continue;
         const p = pr[r.k];
         if (p < r.threshold || p > PMAX) continue;
         if (!best || r.tuneHit > best.r.tuneHit || (r.tuneHit === best.r.tuneHit && p > best.p)) best = { r, p };
       }
-      if (best) picks.push({ i, p: best.p, w: best.r.model.wins[i]![best.r.k], key: best.r.key, fallback: false });
-      else {
-        const f = pubSel(i);
-        if (f) picks.push({ i, ...f, fallback: true });
-      }
+      if (best) return { i, p: best.p, w: best.r.model.wins[i]![best.r.k], key: best.r.key, fallback: false };
+    }
+    const f = pubSel(i);
+    return f ? { i, ...f, fallback: true } : null;
+  };
+  const slate = (label: string, tiers: ShipRule[][], hold = true, quiet = false) => {
+    const all: Picked[] = [];
+    preds.forEach((pred, i) => {
+      if (isHold(pred) !== hold) return;
+      const x = pickFor(i, tiers);
+      if (x) all.push(x);
     });
+    const picks = all.filter((x) => x.w !== PUSH);
     const n = picks.length, w = picks.reduce((a, x) => a + x.w, 0), st = picks.reduce((a, x) => a + x.p, 0);
     const c = consistency(picks.map((x) => ({ i: x.i, p: x.p, w: x.w })), preds);
-    console.log(`  ${label.padEnd(46)} ${String(n).padStart(5)} picks  landed ${pct(w / n)}  stated ${pct(st / n)}  ${(n / holdWeeks).toFixed(0)}/wk  median week ${pct(c.median)}  worst 10% ${pct(c.p10)}  weeks>=75% ${pct(c.atLeast75)}  worst run ${c.worstRun}  price ~${(n / st).toFixed(2)}`);
+    if (quiet) return picks;
+    console.log(`  ${label.padEnd(52)} ${String(n).padStart(5)} picks  landed ${pct(w / n)}  stated ${pct(st / n)}  pushes ${all.length - n}  median week ${pct(c.median)}  worst 10% ${pct(c.p10)}  weeks>=75% ${pct(c.atLeast75)}  worst run ${c.worstRun}  price ~${(n / st).toFixed(2)}`);
     const by = new Map<string, { n: number; w: number; st: number }>();
     for (const x of picks) {
       const g = x.fallback ? "today's pick (no rule)" : groupOf(x.key);
@@ -740,48 +859,175 @@ function shippable(preds: Pred[], dc: Model, nbs: Model[], wins: Uint8Array[], h
     return picks;
   };
 
-  slate("today's headline pick", []);
-  for (const target of [0.8, 0.81, 0.82, 0.83, 0.84, 0.85]) {
-    const g = goalRules(target, false);
-    console.log(`\n  target ${Math.round(target * 100)}%: ${g.length} goal rules: ${g.map((r) => `${r.key} ${r.threshold.toFixed(2)}`).join(", ")}`);
-    const picks = slate("goals + Asian handicap", g);
-    if (target === 0.82 || target === 0.83) {
-      const byDiv = new Map<string, { n: number; w: number }>();
-      for (const x of picks) {
-        const b = byDiv.get(preds[x.i].d) ?? { n: 0, w: 0 };
-        b.n++; b.w += x.w;
-        byDiv.set(preds[x.i].d, b);
-      }
-      console.log(`      by league: ${[...byDiv].map(([d, b]) => `${d} ${pct(b.w / b.n)}`).join(", ")}`);
-      // The same rules on the season they were chosen on, for comparison.
-      const tunePicks = preds.map((pred, i) => ({ pred, i })).filter(({ pred }) => !isHold(pred));
-      let n = 0, w = 0;
-      for (const { i } of tunePicks) {
-        let best: { r: ShipRule; p: number } | null = null;
-        for (const r of g) {
-          const p = r.model.probs[i]![r.k];
-          if (p < r.threshold || p > PMAX) continue;
-          if (!best || r.tuneHit > best.r.tuneHit) best = { r, p };
-        }
-        if (best) { n++; w += r_w(best.r, i); }
-        else { const f = pubSel(i); if (f) { n++; w += f.w; } }
-      }
-      console.log(`      2024-25 (the season the rules came from): ${n} picks, landed ${pct(w / n)}`);
+  /* Every Asian line on its own. */
+  console.log("\n  ASIAN HANDICAP, EVERY LINE: the lowest chance that reached 80/82/85% in 2024-25, and that rule on 2025-26 (pushes left out)");
+  for (const key of ah.keys) {
+    const parts: string[] = [];
+    for (const target of [0.8, 0.82, 0.85]) {
+      const r = ruleOn(ah, preds, ah.keys.indexOf(key), target, 100, false);
+      if (!r) { parts.push(`${Math.round(target * 100)}%: none`); continue; }
+      const h = held(r, preds);
+      parts.push(`${Math.round(target * 100)}%: from ${r.threshold.toFixed(2)} -> ${pct(h.hit)} of ${h.n} (${(h.n / holdWeeks).toFixed(1)}/wk, stated ${pct(h.stated)}, ${h.pushes} pushes)`);
     }
-  }
-  const r_w_unused = 0; void r_w_unused;
-  for (const target of [0.85]) {
-    const g = goalRules(target, false), st = statRules(target, false);
-    slate("85%: goals + handicap + corners", [...g, ...st.filter((r) => r.key.startsWith("corners"))]);
+    console.log(`  ${plain(key).padEnd(22)} ${parts.join("   ")}`);
   }
 
-  // The rules production would use: chosen on both seasons.
-  for (const target of [0.82, 0.83]) {
-    const rules = goalRules(target, true).sort((a, b) => b.tuneHit - a.tuneHit);
-    console.log(`\n  PRODUCTION RULES at ${Math.round(target * 100)}% (chosen on both seasons): ${rules.length}`);
-    for (const r of rules) {
-      const tune = ruleOn(r.model, preds, r.k, target, 100, false);
-      console.log(`    ["${r.key}", ${r.threshold.toFixed(2)}, ${r.tuneHit.toFixed(3)}],  // ${r.tuneN} picks${tune ? `; 2024-25 rule ${tune.threshold.toFixed(2)}` : "; no 2024-25 rule"}`);
+  /* Every corners, shots and on-target variant on its own. */
+  for (const prefix of ["corners", "shots:", "sot"]) {
+    console.log(`\n  ${prefix.replace(":", "").toUpperCase()}: every rule that held 82%+ in 2024-25, on 2025-26`);
+    const rules = statRules(prefix, 0.82).map((r) => ({ r, h: held(r, preds) })).filter((x) => x.h.n >= 30).sort((a, b) => b.h.n - a.h.n);
+    for (const { r, h } of rules) console.log(`    ${plain(r.key).padEnd(38)} from ${r.threshold.toFixed(2)}  ${pct(h.hit)} of ${String(h.n).padStart(5)}  ${(h.n / holdWeeks).toFixed(1).padStart(5)}/wk  stated ${pct(h.stated)}`);
+  }
+
+  /* KiqStat pick candidates. */
+  console.log("\n  KIQSTAT PICK SLATES (2025-26, one pick per game; guard = never back the side a big club is playing)");
+  slate("today's pick", []);
+  const g82 = goalRules(0.82);
+  const halfOnly = g82.filter((r) => !/^ah:(home|away):-?\d+$/.test(r.key));
+  console.log(`  goal rules at 82%: ${g82.map((r) => `${r.key} ${r.threshold.toFixed(2)}`).join(", ")}`);
+  const c85 = statRules("corners", 0.85), s85 = statRules("shots:", 0.85), t85 = statRules("sot", 0.85);
+  const validated = (rs: ShipRule[]) => rs.filter((r) => { const h = held(r, preds); return h.n >= 100 && h.hit >= 0.82; });
+  const c85v = validated(c85), s85v = validated(s85), t85v = validated(t85);
+  console.log(`  stat rules at 85%: corners ${c85.length} (${c85v.length} held 82%+ on 2025-26), shots ${s85.length} (${s85v.length}), on target ${t85.length} (${t85v.length})`);
+  for (const r of [...c85, ...t85, ...s85]) {
+    const h = held(r, preds);
+    const ok = h.n >= 100 && h.hit >= 0.82;
+    console.log(`    ${ok ? "HELD" : "    "} { market: "${r.key}", min: ${r.threshold.toFixed(2)}, record: ${r.tuneHit.toFixed(3)} },  // 2024-25 ${r.tuneN} picks; 2025-26 ${pct(h.hit)} of ${h.n}`);
+  }
+  for (const g of [false, true]) {
+    guard = g;
+    console.log(`  ${g ? "WITH" : "WITHOUT"} THE BIG-CLUB GUARD`);
+    slate("result, dc, over 1.5, half-goal handicaps (live today)", [halfOnly]);
+    slate("+ whole-line handicaps (+1, +2, draw no bet)", [g82]);
+    slate("+ corners competing", [[...g82, ...c85]]);
+    slate("+ corners and on target competing", [[...g82, ...c85, ...t85]]);
+    slate("+ corners, on target, shots competing", [[...g82, ...c85, ...t85, ...s85]]);
+    slate("+ corners competing, then on target and shots", [[...g82, ...c85], [...t85, ...s85]]);
+    slate("+ held-up stat rules only, competing", [[...g82, ...c85v, ...t85v, ...s85v]]);
+    slate("+ held-up corners competing, then held-up on target and shots", [[...g82, ...c85v], [...t85v, ...s85v]]);
+  }
+  guard = true;
+  slate("2024-25 check: + corners and on target competing, guard", [[...g82, ...c85, ...t85]], false);
+  guard = false;
+
+  /* Production rules, refitted on both seasons. */
+  const prodGoal = goalRules(0.82, true).sort((a, b) => b.tuneHit - a.tuneHit);
+  console.log(`\n  PRODUCTION GOAL RULES at 82% (both seasons): ${prodGoal.length}`);
+  for (const r of prodGoal) {
+    const tune = ruleOn(r.model, preds, r.k, 0.82, 100, false);
+    console.log(`    { market: "${r.key}", min: ${r.threshold.toFixed(2)}, record: ${r.tuneHit.toFixed(3)} },  // ${r.tuneN} picks${tune ? `; 2024-25 rule ${tune.threshold.toFixed(2)}` : "; no 2024-25 rule"}`);
+  }
+  for (const prefix of ["corners", "shots:", "sot"]) {
+    const prod = statRules(prefix, 0.85, true).sort((a, b) => b.tuneHit - a.tuneHit);
+    console.log(`  PRODUCTION ${prefix.replace(":", "").toUpperCase()} RULES at 85% (both seasons): ${prod.length}`);
+    for (const r of prod) {
+      const tune = ruleOn(r.model, preds, r.k, 0.85, 100, false);
+      console.log(`    { market: "${r.key}", min: ${r.threshold.toFixed(2)}, record: ${r.tuneHit.toFixed(3)} },  // ${r.tuneN} picks${tune ? `; 2024-25 rule ${tune.threshold.toFixed(2)}` : "; no 2024-25 rule"}`);
     }
   }
+
+  guard = true;
+  bias(preds, grids, slate("", [[...g82, ...c85, ...t85]], true, true), big);
+}
+
+/* ------------------------------------------------------- 11. big teams */
+
+/**
+ * Does the model lean toward big clubs, or miss upsets? Big = the top three
+ * of each division and season by the model's own average expected goal
+ * difference. Every 2025-26 game, stated against what happened.
+ */
+function bias(preds: Pred[], grids: Grid[], picks: { i: number; p: number; w: number; key: string }[], pre: { home: boolean[]; away: boolean[] }) {
+  console.log("\n11. BIG TEAMS AND UPSETS (2025-26)");
+  const season = (t: number) => new Date(t - 182 * DAY).getUTCFullYear();
+  const strength = new Map<string, { s: number; n: number }>();
+  preds.forEach((p) => {
+    const gd = p.dc[0] - p.dc[1];
+    for (const [team, v] of [[p.h, gd], [p.a, -gd]] as [string, number][]) {
+      const k = `${p.d}|${season(p.t)}|${team}`;
+      const b = strength.get(k) ?? { s: 0, n: 0 };
+      b.s += v; b.n++;
+      strength.set(k, b);
+    }
+  });
+  const big = new Set<string>();
+  const groups = new Map<string, { team: string; s: number }[]>();
+  for (const [k, b] of strength) {
+    const [d, y, team] = k.split("|");
+    const g = groups.get(`${d}|${y}`) ?? [];
+    g.push({ team, s: b.s / b.n });
+    groups.set(`${d}|${y}`, g);
+  }
+  for (const [dy, g] of groups) g.sort((a, b) => b.s - a.s).slice(0, 3).forEach((x) => big.add(`${dy}|${x.team}`));
+  const isBig = (p: Pred, team: string) => big.has(`${p.d}|${season(p.t)}|${team}`);
+
+  const tally = () => ({ n: 0, st: 0, w: 0 });
+  type T = ReturnType<typeof tally>;
+  const add = (t: T, st: number, w: boolean) => { t.n++; t.st += st; t.w += Number(w); };
+  const line = (label: string, t: T) => console.log(`  ${label.padEnd(58)} ${String(t.n).padStart(5)} games  stated ${pct(t.st / Math.max(1, t.n))}  happened ${pct(t.w / Math.max(1, t.n))}  gap ${((100 * (t.w - t.st)) / Math.max(1, t.n)).toFixed(1)}`);
+  const bigWin = tally(), bigWinHome = tally(), bigWinAway = tally(), bigFav = tally(), bigUpset = tally(), otherFav = tally(), otherUpset = tally();
+  const favBands = [0.45, 0.55, 0.65, 0.75, 1.01].map(() => ({ fav: tally(), dog: tally(), draw: tally() }));
+  preds.forEach((p, i) => {
+    if (!isHold(p)) return;
+    const g = grids[i];
+    let h = 0, d = 0, a = 0;
+    g.forEach((row, x) => row.forEach((q, y) => { if (x > y) h += q; else if (x === y) d += q; else a += q; }));
+    const homeWon = p.hg > p.ag, awayWon = p.ag > p.hg, drew = p.hg === p.ag;
+    const favHome = h >= a;
+    const fav = favHome ? h : a, dog = favHome ? a : h;
+    const favWon = favHome ? homeWon : awayWon, dogWon = favHome ? awayWon : homeWon;
+    const band = favBands[[0.45, 0.55, 0.65, 0.75, 1.01].findIndex((b) => fav < b)];
+    add(band.fav, fav, favWon); add(band.dog, dog, dogWon); add(band.draw, d, drew);
+    const hb = isBig(p, p.h), ab = isBig(p, p.a);
+    if (hb !== ab) {
+      const bigHome = hb;
+      const pw = bigHome ? h : a, won = bigHome ? homeWon : awayWon;
+      add(bigWin, pw, won);
+      add(bigHome ? bigWinHome : bigWinAway, pw, won);
+      if (pw >= 0.6) { add(bigFav, pw, won); add(bigUpset, bigHome ? a : h, bigHome ? awayWon : homeWon); }
+    } else if (!hb && !ab && fav >= 0.6) {
+      add(otherFav, fav, favWon); add(otherUpset, dog, dogWon);
+    }
+  });
+  console.log("  By how big the favourite was:");
+  ["under 45%", "45-55%", "55-65%", "65-75%", "75%+"].forEach((label, j) => {
+    const b = favBands[j];
+    console.log(`    favourite rated ${label.padEnd(9)} favourite won ${pct(b.fav.w / Math.max(1, b.fav.n))} (said ${pct(b.fav.st / Math.max(1, b.fav.n))})   underdog won ${pct(b.dog.w / Math.max(1, b.dog.n))} (said ${pct(b.dog.st / Math.max(1, b.dog.n))})   draw ${pct(b.draw.w / Math.max(1, b.draw.n))} (said ${pct(b.draw.st / Math.max(1, b.draw.n))})   ${b.fav.n} games`);
+  });
+  line("big club against a smaller one: big club wins", bigWin);
+  line("  at home", bigWinHome);
+  line("  away", bigWinAway);
+  line("big club rated 60%+: big club wins", bigFav);
+  line("big club rated 60%+: the smaller side wins (upset)", bigUpset);
+  line("two smaller clubs, favourite 60%+: favourite wins", otherFav);
+  line("two smaller clubs, favourite 60%+: underdog wins (upset)", otherUpset);
+
+  // The same with big clubs as known before kick-off (rolling form, no look-ahead).
+  const preWin = tally(), preUpset = tally();
+  preds.forEach((p, i) => {
+    if (!isHold(p) || pre.home[i] === pre.away[i]) return;
+    let h = 0, a = 0;
+    grids[i].forEach((row, x) => row.forEach((q, y) => { if (x > y) h += q; else if (x < y) a += q; }));
+    const bigHome = pre.home[i];
+    add(preWin, bigHome ? h : a, bigHome ? p.hg > p.ag : p.ag > p.hg);
+    add(preUpset, bigHome ? a : h, bigHome ? p.ag > p.hg : p.hg > p.ag);
+  });
+  line("big club by pre-match form vs a smaller one: big club wins", preWin);
+  line("big club by pre-match form vs a smaller one: smaller side wins", preUpset);
+
+  // The KiqStat pick: does it lean on big clubs, and do those picks land?
+  const pBig = tally(), pSmallVsBig = tally(), pOther = tally(), pNeutral = tally();
+  for (const x of picks) {
+    const side = backs(x.key);
+    if (!side) { add(pNeutral, x.p, x.w === 1); continue; }
+    const mine = side === "home" ? pre.home[x.i] : pre.away[x.i], theirs = side === "home" ? pre.away[x.i] : pre.home[x.i];
+    if (mine && !theirs) add(pBig, x.p, x.w === 1);
+    else if (!mine && theirs) add(pSmallVsBig, x.p, x.w === 1);
+    else add(pOther, x.p, x.w === 1);
+  }
+  console.log("  The KiqStat pick (goals, handicaps, corners and on target, with the guard):");
+  line("backs a big club against a smaller one", pBig);
+  line("backs the smaller side against a big club", pSmallVsBig);
+  line("backs a side, no big club or both big", pOther);
+  line("backs no side (goals, corners, shots)", pNeutral);
 }

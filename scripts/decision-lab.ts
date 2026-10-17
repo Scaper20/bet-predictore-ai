@@ -427,6 +427,8 @@ interface HubVariant {
   name: string;
   allow: (market: string) => boolean;
   options?: HubBuildOptions;
+  /** Legs only from each game's sweet-spot pick (model/sweet-spots.ts). */
+  sweetOnly?: boolean;
 }
 
 const HUB_VARIANTS: HubVariant[] = [
@@ -439,6 +441,9 @@ const HUB_VARIANTS: HubVariant[] = [
   { name: "result, double chance, half-goal handicap", allow: resultDcHandicap, options: { strategy: "count" } },
   { name: "flex: result, double chance, half-goal handicap", allow: resultDcHandicap, options: { strategy: "flex" } },
   { name: "as shipped: flex to 5 odds, counts above; result, double chance, over 1.5, half-goal handicap", allow: hubMarketAllowed },
+  { name: "sweet-spot legs only, flex to 5 odds, counts above", allow: hubMarketAllowed, sweetOnly: true },
+  { name: "sweet-spot legs only, flex at every tier", allow: hubMarketAllowed, sweetOnly: true, options: { strategy: "flex" } },
+  { name: "sweet-spot legs only, best legs first", allow: hubMarketAllowed, sweetOnly: true, options: { strategy: "best", minLegOdds: 1.15 } },
 ];
 
 function resultDcHandicap(market: string): boolean {
@@ -511,7 +516,8 @@ function hub(all: Graded[]): { day: number; tier: string; odds: number; chance: 
     for (const day of days) {
       const toPool = (gs: Graded[]): PoolEntry[] => gs.map((g) => ({
         prediction: g.p,
-        candidates: candidatesFor(g.p, { markets: HUB_FORGE_MARKETS, picksPerGame: 1, allowHandicap: true }),
+        candidates: candidatesFor(g.p, { markets: HUB_FORGE_MARKETS, picksPerGame: 1, allowHandicap: true })
+          .filter((c) => !v.sweetOnly || (g.p.sweetSpot && c.market === g.p.topPick?.market)),
       }));
       const today = toPool(byDay.get(day)!);
       const ahead = toPool(days.filter((d) => d >= day && d < day + 4 * DAY).flatMap((d) => byDay.get(d)!));
