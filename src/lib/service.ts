@@ -461,7 +461,7 @@ export async function trends(days = 3): Promise<TrendSnapshot> {
  */
 /**
  * The day's headline pick: always one of today's games (Lagos time), never
- * tomorrow's. The strongest pick of the day wins; Strong is confidence 60+
+ * tomorrow's. The strongest pick of the day wins; Strong is confidence 63+
  * (model/tiers.ts), so ranking on confidence puts any Strong pick first and
  * falls back to the best ordinary pick when the day has none. Games already
  * under way still count, so the pick holds through the day instead of

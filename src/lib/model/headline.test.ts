@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildPrediction, HEADLINE_MAX_PROBABILITY, TOTALS_SHRINK } from "./predict";
+import { SWEET_SPOT_MAX, SWEET_SPOTS, sweetSpotPick } from "./sweet-spots";
 import { expectedRates, fitLeague } from "./fit";
 import type { Match, ResultRow } from "@/lib/types";
 
@@ -46,10 +47,47 @@ describe("headline pick", () => {
     }
   });
 
+  it("takes a sweet spot as the pick in a tested division, the usual ranking elsewhere", () => {
+    const tested = (h: string, a: string) => {
+      const m = fixture(h, a);
+      return buildPrediction({ ...m, league: { id: "t", name: "Premier League", code: "premier-league" } }, rows);
+    };
+    const strong = tested("Alpha", "Charlie");
+    const rule = SWEET_SPOTS.find((r) => r.market === strong.topPick!.market);
+    expect(rule).toBeDefined();
+    expect(strong.topPick!.probability).toBeGreaterThanOrEqual(rule!.min);
+    expect(strong.topPick!.probability).toBeLessThanOrEqual(SWEET_SPOT_MAX);
+    expect(strong.picks[0]).toBe(strong.topPick);
+    // The same game in an untested competition keeps the usual headline.
+    const usual = buildPrediction(fixture("Alpha", "Charlie"), rows).topPick!;
+    expect(usual.probability).toBeLessThanOrEqual(HEADLINE_MAX_PROBABILITY);
+    expect(buildPrediction({ ...fixture("Alpha", "Charlie"), league: { id: "t", name: "Premier League", code: "premier-league" } }, rows, [], { sweetSpots: false }).topPick!.market).toBe(usual.market);
+    // A game no rule covers keeps the usual pick even in a tested division.
+    expect(tested("Alpha", "Hotel").topPick!.market).toBe(buildPrediction(fixture("Alpha", "Hotel"), rows).topPick!.market);
+  });
+
   it("still lists every market below the headline", () => {
     const p = buildPrediction(fixture("Alpha", "Hotel"), rows);
     expect(p.picks.some((x) => x.market === "btts:yes")).toBe(true);
     expect(p.picks.some((x) => x.market === "ou:over:0.5")).toBe(true);
+  });
+});
+
+describe("sweet spots", () => {
+  const pick = (market: string, probability: number) => ({ market, label: market, group: "Double Chance" as const, probability, fairOdds: 1 / probability, confidence: 70 });
+
+  it("picks the applying rule with the strongest record, inside the price band", () => {
+    const picks = [pick("dc:home-draw", 0.8), pick("ah:away:1.5", 0.78), pick("dc:home-away", 0.9), pick("ou:over:1.5", 0.83)];
+    // Home or away is the strongest rule but at 90% it is too short; home or draw is next.
+    expect(sweetSpotPick(picks, "serie-a")!.market).toBe("dc:home-draw");
+  });
+
+  it("applies only in the divisions it was tested on, and respects a barred market", () => {
+    const picks = [pick("dc:home-draw", 0.8)];
+    expect(sweetSpotPick(picks, "mls")).toBeNull();
+    expect(sweetSpotPick(picks, undefined)).toBeNull();
+    expect(sweetSpotPick(picks, "serie-a", ["dc:home-draw"])).toBeNull();
+    expect(sweetSpotPick([pick("dc:home-draw", 0.7)], "serie-a")).toBeNull();
   });
 });
 

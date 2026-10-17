@@ -188,7 +188,7 @@ export default async function PredictionsPage({
   );
 }
 
-/** All picks, or only the Strong ones (confidence 60+, src/lib/model/tiers.ts). */
+/** All picks, or only the Strong ones (confidence 63+, src/lib/model/tiers.ts). */
 function TierToggle({ strongOnly, league }: { strongOnly: boolean; league?: string }) {
   const href = (strong: boolean) => {
     const q = new URLSearchParams();

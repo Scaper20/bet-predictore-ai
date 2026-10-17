@@ -9,6 +9,7 @@
  */
 
 import { calibrateResult, type ResultCalibration } from "./result-calibration";
+import { sweetSpotPick } from "./sweet-spots";
 import { isPausedPick, PAUSED_PICK_MARKETS } from "./paused";
 import type { Match, ResultRow } from "@/lib/types";
 import { leagueByCode, type LeagueDef } from "@/lib/leagues";
@@ -212,6 +213,8 @@ export interface ModelOptions {
   excludeHeadline?: string[];
   /** Multiplies every drawn scoreline before renormalising (1 = off). Lab knob. */
   drawInflation?: number;
+  /** False ranks every game the usual way, ignoring sweet-spots.ts (lab comparison). */
+  sweetSpots?: boolean;
   /** The straight-win correction learned from the model's own record (result-calibration.ts); null or absent = off. */
   resultCalibration?: ResultCalibration | null;
   /** Scales both expected goal rates after the totals shrink (1 = off). Lab knob. */
@@ -264,7 +267,10 @@ export function buildPrediction(
   // Ranked against what this competition actually does, not a pooled
   // European constant — see empiricalBaselines.
   const baselines = empiricalBaselines(results);
-  const picks = rankPicks(markets, asianHandicap, dataQuality, uncertainty, baselines, options);
+  const ranked = rankPicks(markets, asianHandicap, dataQuality, uncertainty, baselines, options);
+  // Where a sweet spot applies it heads the list, so the pick and the ranking agree.
+  const sweet = options.sweetSpots === false ? null : sweetSpotPick(ranked, match.league.code, options.excludeHeadline);
+  const picks = sweet ? [sweet, ...ranked.filter((p) => p !== sweet)] : ranked;
   const sufficiency = assessSufficiency(
     fit.matchesUsed,
     homeRating?.played ?? 0,
@@ -412,8 +418,8 @@ function rankPicks(
   }
 
   for (const line of ah) {
-    picks.push(mk(`ah:home:${line.line}`, `Home ${formatLine(line.line)}`, "Asian Handicap", line.home));
-    picks.push(mk(`ah:away:${-line.line}`, `Away ${formatLine(-line.line)}`, "Asian Handicap", line.away));
+    picks.push(mk(`ah:home:${line.line}`, `Home ${formatLine(line.line)} handicap`, "Asian Handicap", line.home));
+    picks.push(mk(`ah:away:${-line.line}`, `Away ${formatLine(-line.line)} handicap`, "Asian Handicap", line.away));
   }
 
   /*
@@ -549,6 +555,8 @@ export const FAMILY_RELIABILITY: Record<string, number> = {
  * odds of 1.25, so a bookmaker price of roughly 1.20. Win rate can always be
  * bought with shorter prices — "over 0.5 goals" lands nine times in ten and is
  * worthless as a tip — so the cap is what keeps a higher win rate honest.
+ * A sweet spot (sweet-spots.ts) may reach 0.85: those rules were tested on a
+ * season they were not chosen on.
  */
 export const HEADLINE_MAX_PROBABILITY = 0.8;
 

@@ -124,7 +124,14 @@ export default function HowItWorksPage() {
                 the time is a strong read; a 75% over 1.5 goals in a league where that lands 76% of the time says
                 nothing new.
               </p>
-              <p>The top of that list is the pick you see on the card and the match page.</p>
+              <p>
+                In the 17 European leagues we have tested most, some selections have a long record of landing at least
+                8 times in 10 once the model rates them highly enough: home win, double chance, over 1.5 goals, and a
+                side +1.5 on the handicap (they lose by no more than one goal, or better). When one of those applies,
+                it becomes the pick. Replayed on a season the rules had never seen, these picks landed 82% of the time.
+                They pay less, fair odds of about 1.27, because more likely outcomes always do.
+              </p>
+              <p>Otherwise the top of that list is the pick you see on the card and the match page.</p>
             </>
           ),
         },
@@ -136,8 +143,8 @@ export default function HowItWorksPage() {
               <p>
                 When the model is most sure of a pick (a high chance, plenty of history and a clear favourite), it is
                 marked <strong className="text-ink">★ Strong</strong>. That is decided before kick-off and never changed
-                after. Tested on two past seasons the model never saw, Strong picks were about one in six and landed
-                about 80% of the time, against about 76% for the rest.
+                after. Replayed over the last year, Strong picks were about one in five and landed about 86% of the time,
+                against about 81% for the rest.
               </p>
               <p>Strong picks have their own record on the track record page, beside the record for every pick.</p>
             </>

@@ -3,10 +3,10 @@ import { isStrong, pickTier, STRONG_CONFIDENCE } from "./tiers";
 import { summarise, type SettledRow } from "../performance";
 
 describe("pick tiers", () => {
-  it("marks 60+ confidence as strong", () => {
-    expect(STRONG_CONFIDENCE).toBe(60);
-    expect(pickTier(60)).toBe("strong");
-    expect(pickTier(59.9)).toBe("standard");
+  it("marks 63+ confidence as strong", () => {
+    expect(STRONG_CONFIDENCE).toBe(63);
+    expect(pickTier(63)).toBe("strong");
+    expect(pickTier(62.9)).toBe("standard");
     expect(isStrong({ confidence: 72 })).toBe(true);
     expect(isStrong(null)).toBe(false);
   });
