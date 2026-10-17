@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { matchShots, nameWords } from "./espn-shots";
+import { matchShots, nameWords, findEspnGame, espnStatsComplete } from "./espn-shots";
 
 const t = Date.parse("2026-10-12T01:00:00Z");
 
@@ -55,5 +55,27 @@ describe("matchShots", () => {
 
   it("ignores games more than 30 hours apart", () => {
     expect(matchShots(espn, [{ ...rows[0], kickoff: t + 2 * 86_400_000 }])).toEqual([]);
+  });
+});
+
+describe("findEspnGame", () => {
+  const t = Date.UTC(2026, 9, 11, 14);
+  const games = [
+    { date: t, home: "Crystal Palace", away: "Nottingham Forest", hg: 3, ag: 1, hs: 13, as: 24, hsot: 7, asot: 6, hc: 5, ac: 8 },
+    { date: t, home: "Hull City", away: "Everton", hg: 2, ag: 2, hs: 9, as: 15, hsot: 5, asot: 7, hc: 7, ac: 6 },
+    { date: t, home: "Rayo Vallecano", away: "Athletic Club", hg: 1, ag: 1, hs: 1, as: 1, hsot: 1, asot: 0, hc: 1, ac: 2 },
+  ];
+
+  it("finds the game on time, score and a name word one club owns", () => {
+    expect(findEspnGame(games, { home: "Crystal Palace", away: "Nott'm Forest", kickoff: t, hg: 3, ag: 1 })?.hc).toBe(5);
+    expect(findEspnGame(games, { home: "Hull", away: "Everton", kickoff: t + 3_600_000, hg: 2, ag: 2 })?.ac).toBe(6);
+    // Wrong score: not this game.
+    expect(findEspnGame(games, { home: "Crystal Palace", away: "Nott'm Forest", kickoff: t, hg: 2, ag: 1 })).toBeNull();
+  });
+
+  it("refuses counts that never came through", () => {
+    expect(espnStatsComplete(games[0])).toBe(true);
+    expect(espnStatsComplete(games[2])).toBe(false);
+    expect(espnStatsComplete({ ...games[0], hc: undefined })).toBe(false);
   });
 });

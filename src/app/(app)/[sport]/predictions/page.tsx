@@ -97,7 +97,7 @@ export default async function PredictionsPage({
   const preferences = await getPreferences();
   const followed = new Set(def ? [] : preferences.leagues);
 
-  const publishable = predictions.filter((p) => p.sufficiency.publishable && (!strongOnly || isStrong(p.topPick)));
+  const publishable = predictions.filter((p) => p.sufficiency.publishable && (!strongOnly || isStrong(p.topPick, p.match.league.code)));
   const withheld = predictions.filter((p) => !p.sufficiency.publishable);
 
   // Live first, then the rest of today, then tomorrow and on (lib/pick-sections.ts).
@@ -127,7 +127,7 @@ export default async function PredictionsPage({
         {feed && <CoverageNotice coverage={feed.coverage} />}
 
         <LiveScoresProvider matches={[...(bestBet ? [bestBet] : []), ...publishable].map((p) => ({ id: p.match.id, kickoff: p.match.kickoff, status: p.match.status }))}>
-          {bestBet?.topPick && (!strongOnly || isStrong(bestBet.topPick)) && <BestBetOfDay prediction={bestBet} />}
+          {bestBet?.topPick && (!strongOnly || isStrong(bestBet.topPick, bestBet.match.league.code)) && <BestBetOfDay prediction={bestBet} />}
 
           {predictions.length === 0 ? (
             <EmptyState
@@ -188,7 +188,7 @@ export default async function PredictionsPage({
   );
 }
 
-/** All picks, or only the Strong ones (confidence 60+, src/lib/model/tiers.ts). */
+/** All picks, or only the Strong ones (confidence 63+ in a tested division, src/lib/model/tiers.ts). */
 function TierToggle({ strongOnly, league }: { strongOnly: boolean; league?: string }) {
   const href = (strong: boolean) => {
     const q = new URLSearchParams();

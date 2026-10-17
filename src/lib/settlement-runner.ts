@@ -2,7 +2,10 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getMatch } from "@/lib/providers";
-import { evaluatePick } from "@/lib/settlement";
+import { evaluatePick, evaluateStatPick, robustStatGrade, statKindOf, type PickResult } from "@/lib/settlement";
+import { espnDay, espnStatsComplete, findEspnGame, type EspnResult } from "@/lib/archive/espn-shots";
+import { leagueByCode } from "@/lib/leagues";
+import { looseKey, nameBook, nameScope } from "@/lib/teams/canonical";
 import type { Match } from "@/lib/types";
 
 /**
@@ -63,21 +66,28 @@ export async function runSettlementPass(
 ): Promise<number> {
   let query = admin
     .from("predictions_log")
-    .select("id, match_id, market")
+    .select("id, match_id, market, league_code, home_name, away_name, kickoff")
     .is("settled_at", null)
-    .lt("kickoff", new Date().toISOString());
+    .lt("kickoff", new Date().toISOString())
+    .order("kickoff", { ascending: false });
 
   if (opts.maxAgeHours) {
     query = query.gt("kickoff", new Date(Date.now() - opts.maxAgeHours * 60 * 60 * 1000).toISOString());
   }
 
-  const { data: pending, error } = await query.limit(200);
+  // Corners and shots picks wait days for their stats, so the sweep reads past them.
+  const { data: pending, error } = await query.limit(600);
   if (error) throw error;
   if (!pending || pending.length === 0) return 0;
 
   let settledCount = 0;
+  const statCache = new Map<string, StatGame[]>();
+  const espnCache: EspnCache = { games: new Map(), until: Date.now() + ESPN_BUDGET_MS };
   for (const row of pending) {
     const matchId = row.match_id as string;
+    // Corners and shots stats are never in within hours of the whistle; the
+    // daily sweep grades those, not the pass behind every live poll.
+    if (opts.maxAgeHours && statKindOf(row.market as string)) continue;
 
     const { data: cached } = await admin
       .from("match_results")
@@ -104,7 +114,15 @@ export async function runSettlementPass(
 
     if (status !== "finished" || homeGoals === null || awayGoals === null) continue;
 
-    const result = evaluatePick(row.market as string, homeGoals, awayGoals);
+    const market = row.market as string;
+    const result = statKindOf(market)
+      ? await gradeFromStats(
+          admin,
+          { market, league_code: row.league_code, home_name: row.home_name, away_name: row.away_name, kickoff: row.kickoff, hg: homeGoals, ag: awayGoals },
+          statCache,
+          espnCache,
+        )
+      : evaluatePick(market, homeGoals, awayGoals);
     if (!result) continue;
 
     const { error: updateError } = await admin
@@ -119,4 +137,108 @@ export async function runSettlementPass(
     if (!updateError) settledCount++;
   }
   return settledCount;
+}
+
+/* ------------------------------------------------- corners and shots picks */
+
+interface StatRow {
+  market: string;
+  league_code: string | null;
+  home_name: string;
+  away_name: string;
+  kickoff: string;
+  hg: number;
+  ag: number;
+}
+
+interface StatGame {
+  at: number;
+  home: string;
+  away: string;
+  corners: [number, number] | null;
+  shots: [number, number] | null;
+  shotsOnTarget: [number, number] | null;
+}
+
+/** After this long without stats a pick is voided rather than left open for ever. */
+const STAT_WAIT_MS = 10 * 86_400_000;
+
+/**
+ * A corners, shots or shots-on-target pick, graded from the counts in the
+ * results archive (historical_results), which arrive with football-data.co.uk
+ * two to five days after the game. Until then ESPN's scoreboard, which has
+ * them within hours, grades it when its counts look complete and the result
+ * is clear of the line (robustStatGrade); otherwise the pick stays open (null).
+ */
+async function gradeFromStats(
+  admin: SupabaseClient,
+  row: StatRow,
+  cache: Map<string, StatGame[]>,
+  espnCache: EspnCache,
+): Promise<PickResult | null> {
+  const kind = statKindOf(row.market);
+  const code = row.league_code;
+  if (!kind || !code) return null;
+  const at = Date.parse(row.kickoff);
+  const day = new Date(at).toISOString().slice(0, 10);
+  const key = `${code}|${day}`;
+  if (!cache.has(key)) {
+    const { data } = await admin
+      .from("historical_results")
+      .select("kickoff, home_name, away_name, home_corners, away_corners, home_shots, away_shots, home_shots_on_target, away_shots_on_target")
+      .eq("league_code", code)
+      .gte("kickoff", new Date(at - 36 * 3_600_000).toISOString())
+      .lte("kickoff", new Date(at + 36 * 3_600_000).toISOString());
+    const pair = (a: unknown, b: unknown): [number, number] | null => (typeof a === "number" && typeof b === "number" ? [a, b] : null);
+    cache.set(
+      key,
+      (data ?? []).map((r) => ({
+        at: Date.parse(r.kickoff as string),
+        home: r.home_name as string,
+        away: r.away_name as string,
+        corners: pair(r.home_corners, r.away_corners),
+        shots: pair(r.home_shots, r.away_shots),
+        shotsOnTarget: pair(r.home_shots_on_target, r.away_shots_on_target),
+      })),
+    );
+  }
+  const def = leagueByCode(code);
+  const scope = def ? nameScope(def) : null;
+  const book = scope ? await nameBook(scope) : null;
+  const canon = (n: string) => looseKey(book?.canonical.get(looseKey(n)) ?? n);
+  const game = cache.get(key)!.find((g) => canon(g.home) === canon(row.home_name) && canon(g.away) === canon(row.away_name));
+  const counts = game?.[kind];
+  if (counts) return evaluateStatPick(row.market, counts[0], counts[1]);
+  const espn = await espnCounts(row, kind, espnCache);
+  if (espn) {
+    const grade = robustStatGrade(row.market, espn[0], espn[1]);
+    if (grade) return grade;
+  }
+  return Date.now() - at > STAT_WAIT_MS ? "push" : null;
+}
+
+/** ESPN days fetched in this pass, and the time after which the pass stops asking (the cron has 120s in all). */
+interface EspnCache {
+  games: Map<string, Promise<EspnResult[]>>;
+  until: number;
+}
+const ESPN_BUDGET_MS = 40_000;
+
+/** The game's counts from ESPN's scoreboard (the kick-off day and the day before, as ESPN dates by US time), if complete. */
+async function espnCounts(row: StatRow, kind: "corners" | "shots" | "shotsOnTarget", cache: EspnCache): Promise<[number, number] | null> {
+  const slug = row.league_code ? leagueByCode(row.league_code)?.ids.espn : undefined;
+  if (!slug || Date.now() > cache.until) return null;
+  const at = Date.parse(row.kickoff);
+  const days = [new Date(at), new Date(at - 86_400_000)];
+  const games: EspnResult[] = [];
+  for (const d of days) {
+    const key = `${slug}|${d.toISOString().slice(0, 10)}`;
+    if (!cache.games.has(key)) cache.games.set(key, espnDay(slug, d).catch(() => []));
+    games.push(...(await cache.games.get(key)!));
+  }
+  const g = findEspnGame(games, { home: row.home_name, away: row.away_name, kickoff: at, hg: row.hg, ag: row.ag });
+  if (!g || !espnStatsComplete(g)) return null;
+  if (kind === "corners") return [g.hc!, g.ac!];
+  if (kind === "shots") return [g.hs!, g.as!];
+  return [g.hsot!, g.asot!];
 }

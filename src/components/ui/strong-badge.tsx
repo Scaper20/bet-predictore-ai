@@ -1,4 +1,4 @@
-/** Marks a Strong pick (src/lib/model/tiers.ts): confidence 60+, decided before kickoff. */
+/** Marks a Strong pick (src/lib/model/tiers.ts): confidence 63+ in a tested division, decided before kickoff. */
 export function StrongBadge({ className = "" }: { className?: string }) {
   return (
     <span

@@ -37,6 +37,9 @@ const MARKET_LABELS: Record<string, string> = {
   btts: "Both teams to score",
   cs: "Correct score",
   ah: "Winning margin",
+  corners: "Corners",
+  shots: "Shots",
+  sot: "Shots on target",
 };
 
 export function ScalableModelPerformance({ rows }: { rows: ModelPerformanceRow[] }) {

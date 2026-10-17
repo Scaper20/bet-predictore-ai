@@ -124,7 +124,21 @@ export default function HowItWorksPage() {
                 the time is a strong read; a 75% over 1.5 goals in a league where that lands 76% of the time says
                 nothing new.
               </p>
-              <p>The top of that list is the pick you see on the card and the match page.</p>
+              <p>
+                In the 17 European leagues we have tested most, some selections have a long record of landing at least
+                8 times in 10 once the model rates them highly enough: home win, double chance, over 1.5 goals, a side
+                getting a goal start on the handicap (+1, +1.5 or +2), draw no bet, and under 12.5 corners. When one of
+                those applies, it becomes the pick. A game none of them covers can take a shots or shots-on-target
+                selection with the same kind of record. Replayed on a season the rules had never seen, these picks
+                landed about 83% of the time. They pay less, fair odds of about 1.24, because more likely outcomes
+                always do.
+              </p>
+              <p>
+                On a whole handicap line (+1, +2, draw no bet) a result exactly on the line refunds the stake, and the
+                pick is graded void. Corners and shots picks are graded from the match statistics, which arrive a few
+                days after the game, so they stay open on the track record until then.
+              </p>
+              <p>Otherwise the top of that list is the pick you see on the card and the match page.</p>
             </>
           ),
         },
@@ -136,8 +150,13 @@ export default function HowItWorksPage() {
               <p>
                 When the model is most sure of a pick (a high chance, plenty of history and a clear favourite), it is
                 marked <strong className="text-ink">★ Strong</strong>. That is decided before kick-off and never changed
-                after. Tested on two past seasons the model never saw, Strong picks were about one in six and landed
-                about 80% of the time, against about 76% for the rest.
+                after. Replayed over the last year, Strong picks were about one in four and landed about 86% of the time,
+                against about 81% for the rest.
+              </p>
+              <p>
+                Strong picks only come from the 17 leagues the model has been tested on most, the top five and twelve
+                more in Europe. Elsewhere its most confident picks have landed about 71%, no better than the rest, so
+                they are not marked.
               </p>
               <p>Strong picks have their own record on the track record page, beside the record for every pick.</p>
             </>

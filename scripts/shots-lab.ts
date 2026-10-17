@@ -175,11 +175,47 @@ async function rest(days: number) {
   }
 }
 
+/**
+ * 3. Straight-win calibration outside the 17 football-data.co.uk divisions:
+ * home and away win, stated against landed by band, raw and with the result
+ * correction fitted on those divisions (scripts/lib/niche-analyse.ts).
+ */
+async function calibration(days: number) {
+  const corr = { home: { a: 0.084, b: 1.259 }, away: { a: 0.156, b: 1.277 } };
+  const plattQ = (c: { a: number; b: number }, p: number) => {
+    const q = Math.min(0.999, Math.max(0.001, p));
+    return 1 / (1 + Math.exp(-(c.a + c.b * Math.log(q / (1 - q)))));
+  };
+  console.log("\n3. STRAIGHT WINS STATED 55%+: landed vs stated, raw and corrected");
+  const groups: { name: string; slugs: string[]; code: string; window?: number }[] = [
+    { name: "MLS", slugs: ["usa.1"], code: "mls" },
+    { name: "Brasileirão", slugs: ["bra.1"], code: "brasileirao" },
+    { name: "Argentina", slugs: ["arg.1"], code: "argentina-liga-profesional" },
+    { name: "Liga MX", slugs: ["mex.1"], code: "liga-mx" },
+    { name: "UEFA cups (pooled)", slugs: ["uefa.champions", "uefa.europa", "uefa.europa.conf"], code: "champions-league", window: 730 },
+  ];
+  for (const grp of groups) {
+    const games = (await Promise.all(grp.slugs.map((s) => espnGames(s)))).flat().sort((a, b) => a.date - b.date);
+    const raw: { p: number; w: number }[] = [], fixed: { p: number; w: number }[] = [];
+    walk(games, games, grp.code, days, [0.5], grp.window, (g, [p]) => {
+      for (const [side, prob, won] of [["home", p.markets.home, g.hg > g.ag], ["away", p.markets.away, g.hg < g.ag]] as const) {
+        const q = plattQ(corr[side], prob);
+        if (prob >= 0.55) raw.push({ p: prob, w: Number(won) });
+        if (q >= 0.55) fixed.push({ p: q, w: Number(won) });
+      }
+    });
+    const line = (xs: { p: number; w: number }[]) =>
+      xs.length ? `${((100 * xs.reduce((a, x) => a + x.w, 0)) / xs.length).toFixed(1)}% vs ${((100 * xs.reduce((a, x) => a + x.p, 0)) / xs.length).toFixed(1)}% (${xs.length})` : "—";
+    console.log(`  ${grp.name.padEnd(20)} raw ${line(raw).padEnd(28)} corrected ${line(fixed)}`);
+  }
+}
+
 async function main() {
   const days = Number(arg("days") ?? 365);
   const only = arg("only");
   if (!only || only === "shots") await shots(days);
   if (!only || only === "rest") await rest(days);
+  if (!only || only === "cal") await calibration(days);
 }
 
 main().catch((e) => {

@@ -10,6 +10,7 @@ import { useLivePicks } from "@/components/match/use-live-picks";
 import { isStaleInPlay } from "@/lib/match-status";
 import { LiveDot } from "@/components/ui/primitives";
 import { useTickingMinute } from "@/components/match/use-live-clock";
+import { isStatMarket } from "@/lib/model/sweet-spots";
 
 /**
  * The one thing a pick card lets you do without opening the match: put the
@@ -80,7 +81,8 @@ export function PickAction({
     );
   }
 
-  if (!pick) return null;
+  // Corners and shots picks are graded from match stats, which a combo cannot follow.
+  if (!pick || isStatMarket(pick.market)) return null;
 
   if (locked) {
     return (

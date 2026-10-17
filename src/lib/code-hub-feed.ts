@@ -111,38 +111,34 @@ async function priceLegs(legs: ForgeLeg[]): Promise<ForgeLeg[]> {
   return legs.map((l, i) => ({ ...l, price: priced?.[i]?.local ?? null }));
 }
 
-/** Calendar days the four-day codes may span, counting today. */
-const AHEAD_DAYS = 4;
-
 /**
  * Today's combos, freshly built from the model. Nothing is stored here.
  *
- * Daily codes use today's games (Lagos day); the four-day codes today's and
- * the next three days'. Run by the 07:00 cron, so the whole day's slate is
- * in the pool rather than whatever is left when someone first opens the page.
+ * Every code uses today's games (Lagos day); the four-day codes that once
+ * reached ahead are retired (code-hub.ts). Run by the 07:00 cron, so the
+ * whole day's slate is in the pool rather than whatever is left when someone
+ * first opens the page.
  */
 async function buildToday(day: string): Promise<HubCodeRow[]> {
   const now = new Date();
   const soon = now.getTime() + LEAD_MS;
   const todayEnd = appDayBounds(now).end.getTime();
-  const aheadEnd = appDayBounds(now, AHEAD_DAYS - 1).end.getTime();
-  const { matches } = await upcomingFeed(AHEAD_DAYS + 1);
+  const { matches } = await upcomingFeed(2);
   const inWindow = matches.filter((m) => {
     const t = Date.parse(m.kickoff);
     const code = m.league.code;
     // Only competitions SportyBet's board can be asked for by id: a leg on
     // any other game could never be turned into a code.
-    return m.status === "scheduled" && t > soon && t < aheadEnd && Boolean(code && leagueByCode(code)?.ids.sportyBet);
+    return m.status === "scheduled" && t > soon && t < todayEnd && Boolean(code && leagueByCode(code)?.ids.sportyBet);
   });
   const predictions = (await predictBatch(inWindow, 400)).filter((p) => p.sufficiency.publishable);
   const entry = (prediction: (typeof predictions)[number]) => ({
     prediction,
     candidates: candidatesFor(prediction, { markets: HUB_FORGE_MARKETS, picksPerGame: 1, allowHandicap: true }),
   });
-  const ahead = predictions.map(entry);
-  const today = ahead.filter((e) => Date.parse(e.prediction.match.kickoff) < todayEnd);
+  const today = predictions.map(entry);
 
-  const built = buildHub(today, day, ahead);
+  const built = buildHub(today, day);
   return Promise.all(
     built.map(async ({ tier, legs }) => {
       const hubLegs = (await priceLegs(legs)).map(toHubLeg);

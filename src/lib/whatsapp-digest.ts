@@ -185,7 +185,7 @@ export function formatPicksMessage(picks: PersonalizedPick[], proHeld = 0): stri
   const lines = shown.map((p) => {
     const q = quotedPrice(p);
     return (
-      `${isStrong(p) ? "⭐ STRONG PICK · " : "⚽ "}${p.league.shortName}\n` +
+      `${isStrong(p, p.league.code) ? "⭐ STRONG PICK · " : "⚽ "}${p.league.shortName}\n` +
       `${p.homeTeam} vs ${p.awayTeam} — ${kickoffTime(p.kickoff)}\n` +
       `*${p.label}* at ${odds(q.price)}${q.source === "market" ? " (market)" : " (est.)"}\n` +
       `${percent(p.probability)} chance · based on ${p.matchesUsed} matches`

@@ -362,3 +362,40 @@ export function statMarkets(grid: number[][], lines: StatLines): StatMarkets {
   const odd = tot.reduce((s, p, k) => (k % 2 === 1 ? s + p : s), 0);
   return { expected: { home: eh, away: ea, total: eh + ea }, over, homeOver, awayOver, result: { home, draw, away }, handicap, odd };
 }
+
+/* --------------------------------------------------------------- selections */
+
+/** The market prefix a statistic's selections carry in predictions_log ("corners:under:12.5"). */
+export const STAT_MARKET_PREFIX: Record<StatKind, string> = { corners: "corners", cards: "cards", shots: "shots", shotsOnTarget: "sot" };
+
+const signed = (x: number) => (x > 0 ? `+${x}` : String(x));
+
+/**
+ * Every half-line selection of a statistic as a chance, keyed the way a pick
+ * stores it: totals ("sot:under:10.5"), team totals ("sot:home:over:3.5"),
+ * who has more ("sot:most:home-or-level") and handicaps ("sot:hcp:away:+3.5").
+ * Whole handicap lines are left out: they can push.
+ */
+export function statSelections(kind: StatKind, m: StatMarkets, lines: StatLines = STAT_LINES[kind]): Record<string, number> {
+  const p = STAT_MARKET_PREFIX[kind];
+  const out: Record<string, number> = {};
+  for (const l of lines.total) {
+    out[`${p}:over:${l}`] = m.over[key(l)];
+    out[`${p}:under:${l}`] = 1 - m.over[key(l)];
+  }
+  for (const l of lines.team) {
+    out[`${p}:home:over:${l}`] = m.homeOver[key(l)];
+    out[`${p}:home:under:${l}`] = 1 - m.homeOver[key(l)];
+    out[`${p}:away:over:${l}`] = m.awayOver[key(l)];
+    out[`${p}:away:under:${l}`] = 1 - m.awayOver[key(l)];
+  }
+  out[`${p}:most:home`] = m.result.home;
+  out[`${p}:most:away`] = m.result.away;
+  out[`${p}:most:home-or-level`] = m.result.home + m.result.draw;
+  out[`${p}:most:away-or-level`] = m.result.away + m.result.draw;
+  for (const l of lines.handicap.filter((x) => !Number.isInteger(x))) {
+    out[`${p}:hcp:home:${signed(l)}`] = m.handicap[key(l)].home;
+    out[`${p}:hcp:away:${signed(-l)}`] = m.handicap[key(l)].away;
+  }
+  return out;
+}

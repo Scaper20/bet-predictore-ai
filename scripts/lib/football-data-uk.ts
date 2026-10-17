@@ -47,6 +47,8 @@ export interface Row {
   ast?: number;
   /** Closing over/under 2.5 prices, market average. */
   closeOu?: { over: number; under: number };
+  /** Closing Asian handicap: the home line and the market-average prices either side. */
+  closeAh?: { line: number; home: number; away: number };
   /** Half-time score, where the file records it. */
   htHome?: number;
   htAway?: number;
@@ -122,6 +124,7 @@ export function parse(body: string, div: string): Row[] {
   const iHf = statCol("HF"), iAf = statCol("AF"), iHy = statCol("HY"), iAy = statCol("AY");
   const iHr = statCol("HR"), iAr = statCol("AR");
   const iHta = at("HTAG");
+  const iAhl = at("AHCh"), iAhh = at("AvgCAHH"), iAha = at("AvgCAHA");
 
   const rows: Row[] = [];
   for (const line of lines.slice(1)) {
@@ -146,6 +149,7 @@ export function parse(body: string, div: string): Row[] {
     const co = num(iCo);
     const cu = num(iCu);
 
+    const ahl = num(iAhl), ahh = num(iAhh), aha = num(iAha);
     const hst = num(iHst);
     const ast = num(iAst);
     const hth = num(iHth);
@@ -181,6 +185,8 @@ export function parse(body: string, div: string): Row[] {
           : undefined,
       closeOu:
         Number.isFinite(co) && Number.isFinite(cu) ? { over: co, under: cu } : undefined,
+      closeAh:
+        Number.isFinite(ahl) && f[iAhl]?.trim() !== "" && ahh > 1 && aha > 1 ? { line: ahl, home: ahh, away: aha } : undefined,
     });
   }
   return rows.sort((a, b) => a.date - b.date);

@@ -190,7 +190,7 @@ export function navFor(sport: SportId): { tabs: NavTab[]; tools: NavLink[]; tool
       {
         title: "Build and check",
         links: [
-          { label: "Code Hub", desc: "Ready-made codes, 2 to 100 odds", href: p("codeHub"), badge: { text: "New", tone: "brand" } },
+          { label: "Code Hub", desc: "Ready-made codes, 2 to 20 odds", href: p("codeHub"), badge: { text: "New", tone: "brand" } },
           { label: "Forge", desc: "Build a combo from how you like to pick", href: p("forge") },
           { label: "My combos", desc: "Track your combos live", href: p("trackedSlips") },
         ],

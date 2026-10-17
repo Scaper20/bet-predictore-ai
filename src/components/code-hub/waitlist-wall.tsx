@@ -1,5 +1,5 @@
 import { WaitlistForm } from "@/components/code-hub/waitlist-form";
-import { HUB_TIERS } from "@/lib/code-hub";
+import { hubGameRange, HUB_LIVE_TIERS } from "@/lib/code-hub";
 import { GENERATOR_ALLOWANCE } from "@/lib/code-hub-plans";
 
 /** What everyone but admins sees while the Code Hub is on its waitlist. */
@@ -12,8 +12,8 @@ export function WaitlistWall({ email, joined }: { email: string | null; joined: 
           Ready-made combos, with the code to load them
         </h2>
         <p className="mt-4 text-sm leading-relaxed text-ink-muted sm:text-base">
-          Every morning the model builds codes from 2 to 100 odds: five from the day&apos;s games and two that run up
-          to four days. Each one comes with a SportyBet booking code and the model&apos;s honest chance of it landing.
+          Every morning the model builds five codes from 2 to 20 odds from the day&apos;s games. Each one comes with
+          a SportyBet booking code and the model&apos;s honest chance of it landing.
           Every code stays on the page afterwards with its result.
         </p>
         <ul className="mt-5 space-y-2 text-sm text-ink-muted">
@@ -33,7 +33,7 @@ export function WaitlistWall({ email, joined }: { email: string | null; joined: 
       <div className="relative" aria-hidden>
         {/* Right padding holds the staircase: each card steps 4px right. */}
         <div className="space-y-3 pr-6">
-          {HUB_TIERS.map((t, i) => (
+          {HUB_LIVE_TIERS.map((t, i) => (
             <div
               key={t.id}
               className="card flex items-center justify-between px-5 py-4"
@@ -42,7 +42,7 @@ export function WaitlistWall({ email, joined }: { email: string | null; joined: 
               <div>
                 <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-brand">{t.name}</p>
                 <p className="mt-1 text-xs text-ink-dim">
-                  {t.games}+ games · <span className="tracking-[0.2em]">••••••</span>
+                  {hubGameRange(t).join("–")} games · <span className="tracking-[0.2em]">••••••</span>
                 </p>
               </div>
               <p className="font-display text-2xl font-bold text-ink">~{t.target}</p>

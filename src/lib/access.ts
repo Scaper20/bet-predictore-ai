@@ -59,10 +59,10 @@ export function isLockedPick(pick: { market: string } | null | undefined): boole
 }
 
 /** Can this viewer see this match's headline pick? */
-export function pickVisible(pick: Pick | null | undefined, matchId: string, viewer: Viewer): boolean {
+export function pickVisible(pick: Pick | null | undefined, matchId: string, viewer: Viewer, leagueCode: string | null | undefined): boolean {
   if (!pick || viewer.paid) return true;
   if (matchId === viewer.freeStrongId || viewer.freeIds.includes(matchId)) return true;
-  if (isStrong(pick)) return false;
+  if (isStrong(pick, leagueCode)) return false;
   return isFreeMarket(pick.market);
 }
 
@@ -71,14 +71,14 @@ export function pickVisible(pick: Pick | null | undefined, matchId: string, view
  * card can say "Pro pick · Goals"), the selection and its numbers do not.
  * Confidence is kept only as whether it is Strong, which the badge shows.
  */
-export function lockPick(pick: Pick): Pick {
+export function lockPick(pick: Pick, leagueCode: string | null | undefined): Pick {
   return {
     market: "locked",
     label: "",
     group: pick.group,
     probability: 0,
     fairOdds: 0,
-    confidence: isStrong(pick) ? 100 : 0,
+    confidence: isStrong(pick, leagueCode) ? 100 : 0,
   };
 }
 
@@ -140,7 +140,7 @@ function proLeagueView(p: Prediction): ViewedPrediction {
     markets: lockMarkets(markets),
     asianHandicap: [],
     picks: [],
-    topPick: p.topPick ? lockPick(p.topPick) : null,
+    topPick: p.topPick ? lockPick(p.topPick, p.match.league.code) : null,
     locked: { pick: true, markets: true, proLeague: true },
   };
 }
@@ -164,14 +164,14 @@ export function viewPrediction(p: Prediction, viewer: Viewer, now = Date.now()):
 export function toolView(p: Prediction, viewer: Viewer, now = Date.now()): ViewedPrediction {
   if (viewer.paid) return { ...p, locked: { pick: false, markets: false } };
   if (proLeagueLocked(p.match, viewer, now)) return proLeagueView(p);
-  const pickOpen = pickVisible(p.topPick, p.match.id, viewer);
+  const pickOpen = pickVisible(p.topPick, p.match.id, viewer, p.match.league.code);
   const freePick = p.match.id === viewer.freeStrongId || viewer.freeIds.includes(p.match.id);
   return {
     ...p,
     markets: lockMarkets(p.markets),
     asianHandicap: [],
     picks: p.picks.filter((x) => isFreeMarket(x.market) || (freePick && x.market === p.topPick?.market)),
-    topPick: p.topPick ? (pickOpen ? p.topPick : lockPick(p.topPick)) : null,
+    topPick: p.topPick ? (pickOpen ? p.topPick : lockPick(p.topPick, p.match.league.code)) : null,
     locked: { pick: !pickOpen, markets: true },
   };
 }

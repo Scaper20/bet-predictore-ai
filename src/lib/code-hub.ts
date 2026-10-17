@@ -11,7 +11,7 @@
  * model, the database or parse.bot. The server side is lib/code-hub-feed.ts.
  */
 
-import { forge, type ForgeLeg, type ForgeMarket, type ForgeRisk, type ForgeSettings, type PoolEntry } from "@/lib/forge";
+import { forge, toLeg, type ForgeLeg, type ForgeMarket, type ForgeRisk, type ForgeSettings, type PoolEntry } from "@/lib/forge";
 import { isQuotable } from "@/lib/odds/markets";
 import { COMBO_PREFIX, gradeMarket } from "@/lib/slip-tracker";
 
@@ -23,40 +23,72 @@ export interface HubTier {
   id: HubTierId;
   /** The combined price the combo is built toward. */
   target: number;
-  /** Games it starts from; up to HUB_EXTRA_GAMES more when those fall short of the target. */
+  /** Its usual length; hubGameRange gives the lengths the builder may use. */
   games: number;
   risk: ForgeRisk;
   name: string;
   blurb: string;
   /** Calendar days its games may span, counting today: the long codes reach ahead. */
   days: 1 | 4;
+  /** No longer built; kept so codes already published still render with their name. */
+  retired?: boolean;
 }
 
 /**
  * Shortest price first: the order the page shows them in.
  *
- * Game counts keep every leg near 1.4-1.6 (a 60-70% read): a 20-odds code
- * from six legs would need 1.65s at the floor. Replayed walk-forward over
- * 220 match days (scripts/decision-lab.ts) with these markets and the 60%
- * floor, every tier landed at or above its expected rate: 2-odds 53.6%,
- * 3-odds 35.5%, 5-odds 29.5%, 10-odds 15.4%, 20-odds 14.4%, the four-day
- * 50 4.0% and 100 2.7%.
+ * The 2, 3 and 5 odds codes have no fixed game count: each is built at every
+ * length in hubGameRange and the build with the strongest weakest leg is kept
+ * (compileFlex), so a 2-odds code is usually three or four of the day's
+ * surest reads. The longer codes keep their counts, growing only to reach
+ * their odds: built the same flexible way they ran to nine-plus legs of 80%
+ * reads, and replayed walk-forward over 220 match days (scripts/
+ * decision-lab.ts) the 20-odds code then landed 1.3% against 5% expected and
+ * the 100 never; one upset sinks a long code, and the model's 60-70% reads
+ * beat their stated chance by more (3-4 points a leg) than its 80% ones.
+ * As shipped, replayed the same way: 2-odds 53.6% against 50.0% expected,
+ * 3-odds 39.7% against 33.3%, 5-odds 21.2% against 20.0%, 10-odds 9.9%,
+ * 20-odds 2.6% against 5.1% (76 codes), the four-day 50 3.0% and 100 3.2%.
+ *
+ * The four-day 50 and 100 were retired on 17 Oct 2026: they lose 97 and 99
+ * times in 100 by design, which reads as a hub that always loses.
  */
 export const HUB_TIERS: HubTier[] = [
-  { id: "2", target: 2, games: 2, risk: "safe", name: "Steady 2", blurb: "Two games the model is surest of", days: 1 },
+  { id: "2", target: 2, games: 2, risk: "safe", name: "Steady 2", blurb: "The model's surest reads, two to four games", days: 1 },
   { id: "3", target: 3, games: 3, risk: "safe", name: "Solid 3", blurb: "Short prices, a little more reward", days: 1 },
   { id: "5", target: 5, games: 4, risk: "balanced", name: "Balanced 5", blurb: "The everyday combo", days: 1 },
   { id: "10", target: 10, games: 5, risk: "balanced", name: "Stretch 10", blurb: "Longer, still built on strong reads", days: 1 },
   { id: "20", target: 20, games: 7, risk: "balanced", name: "Long shot 20", blurb: "Seven to nine strong reads, lands least often of the day", days: 1 },
-  { id: "50", target: 50, games: 9, risk: "balanced", name: "Four-day 50", blurb: "Up to four days of games, nine to eleven strong reads", days: 4 },
-  { id: "100", target: 100, games: 11, risk: "balanced", name: "Four-day 100", blurb: "Up to four days of games, eleven to thirteen strong reads", days: 4 },
+  { id: "50", target: 50, games: 9, risk: "balanced", name: "Four-day 50", blurb: "Up to four days of games, nine to eleven strong reads", days: 4, retired: true },
+  { id: "100", target: 100, games: 11, risk: "balanced", name: "Four-day 100", blurb: "Up to four days of games, eleven to thirteen strong reads", days: 4, retired: true },
 ];
+
+/** The tiers the hub still builds, shortest first. */
+export const HUB_LIVE_TIERS: HubTier[] = HUB_TIERS.filter((t) => !t.retired);
 
 /** The one code free accounts see in full before kick-off. */
 export const FREE_TIER_ID: HubTierId = "2";
 
 export function hubTier(id: string): HubTier | undefined {
   return HUB_TIERS.find((t) => t.id === id);
+}
+
+/** Codes at or under these odds take any length in their range; longer ones keep their count. */
+export const HUB_FLEX_MAX_TARGET = 5;
+
+/** How a tier's code is put together: see HUB_TIERS. */
+export function hubStrategy(tier: Pick<HubTier, "target">): "flex" | "count" {
+  return tier.target <= HUB_FLEX_MAX_TARGET ? "flex" : "count";
+}
+
+/**
+ * The lengths a tier's code may take: a flexible code from one game under its
+ * usual count (never a single) up to HUB_EXTRA_GAMES over, a counted one from
+ * its count up to HUB_EXTRA_GAMES over.
+ */
+export function hubGameRange(tier: Pick<HubTier, "games" | "target">): [number, number] {
+  const fewest = hubStrategy(tier) === "flex" ? Math.max(2, tier.games - 1) : tier.games;
+  return [fewest, tier.games + HUB_EXTRA_GAMES];
 }
 
 /* -------------------------------------------------------------- building */
@@ -104,9 +136,9 @@ export const HUB_MAX_CODES_PER_GAME = 2;
  */
 export const HUB_MIN_TARGET_SHARE = 0.9;
 /**
- * Games a tier may add when its count falls short of that share: with every
- * leg at 60% or more, five legs rarely make 10 and seven rarely make 20, and
- * more, safer legs beat leaving the tier out.
+ * Games a tier may add over its usual count: with every leg at 60% or more,
+ * five legs rarely make 10 and seven rarely make 20, and more, safer legs
+ * beat leaving the tier out.
  */
 export const HUB_EXTRA_GAMES = 2;
 
@@ -114,27 +146,27 @@ export const HUB_EXTRA_GAMES = 2;
 export const HUB_FORGE_MARKETS: ForgeMarket[] = ["result", "double_chance", "goals", "handicap"];
 
 /**
- * Markets a hub leg may use: match result, double chance and over 1.5 goals.
+ * Markets a hub leg may use: match result, double chance, over 1.5 goals and
+ * half-goal Asian handicap lines (away +1.5, home -1.5 and the like).
  *
  * Replayed over 220 match days (scripts/decision-lab.ts), codes from these
- * three landed at or above their expected rate at every tier (5-odds 29.5%
- * against 21.2%, 20-odds 14.4% against 6.8%). Adding half-goal Asian
- * handicap lines lowered every tier from 5 odds up (5-odds 24.7%, 10-odds
- * 10.7%): the +1.5 lines it reached for landed below their stated chance.
- * Handicap stays bookable (odds/markets.ts) and can be passed in by a caller.
- * Unders are paused everywhere for now (model/paused.ts).
+ * landed at or above their expected rate at every tier with the flexible
+ * game count, and the walk-forward niche lab (scripts/niche-lab.ts) found the
+ * +1.5 lines held their stated chance in both seasons (away +1.5 rated 69%+
+ * landed 80.2% on the 2025-26 holdout). With fixed game counts the handicap
+ * made no difference either way; every builder pooled within noise of the
+ * others. Unders are paused everywhere for now (model/paused.ts).
  */
 export function hubMarketAllowed(market: string): boolean {
   const [family, side, line] = market.split(":");
   if (family === "1x2" || family === "dc") return true;
+  if (family === "ah") return Math.abs((Number(line) * 2) % 2) === 1;
   return family === "ou" && side === "over" && line === "1.5";
 }
 
-/** Half-goal Asian handicap lines, for a caller that wants them in the hub. */
-export function withHandicap(market: string): boolean {
-  if (hubMarketAllowed(market)) return true;
-  const [family, , line] = market.split(":");
-  return family === "ah" && Math.abs((Number(line) * 2) % 2) === 1;
+/** The October hub's markets, without the handicap lines, for comparison in the lab. */
+export function withoutHandicap(market: string): boolean {
+  return hubMarketAllowed(market) && !market.startsWith("ah:");
 }
 
 /**
@@ -190,21 +222,22 @@ export interface BuiltCode {
  * codes under two rules: at most HUB_MAX_CODES_PER_GAME codes, and always the
  * same pick, so one result never sinks every code and no two codes take
  * opposite sides of a game. Each tier is also steered away from games the
- * shorter ones used. A tier short of HUB_MIN_TARGET_SHARE of its odds tries
- * up to HUB_EXTRA_GAMES more games; one that still falls short, or cannot
- * fill its games, is left out rather than published short.
+ * shorter ones used. Each tier is built its own way (hubStrategy); one
+ * with no build within reach of HUB_MIN_TARGET_SHARE of its odds is left
+ * out rather than published short.
  */
 export function buildHub(
   today: PoolEntry[],
   day: string,
   ahead: PoolEntry[] = today,
   allow: (market: string) => boolean = hubMarketAllowed,
+  options: HubBuildOptions = {},
 ): BuiltCode[] {
   const pools = { 1: bookablePool(today, allow), 4: bookablePool(ahead, allow) };
   const uses = new Map<string, { market: string; count: number }>();
   const out: BuiltCode[] = [];
   const seed = daySeed(day);
-  for (const tier of HUB_TIERS) {
+  for (const tier of HUB_LIVE_TIERS) {
     const pool = pools[tier.days]
       .filter((e) => (uses.get(e.prediction.match.id)?.count ?? 0) < HUB_MAX_CODES_PER_GAME)
       .map((e) => {
@@ -213,7 +246,10 @@ export function buildHub(
       })
       .filter((e) => e.candidates.length > 0);
     let legs: ForgeLeg[] | null = null;
-    for (let games = tier.games; games <= tier.games + HUB_EXTRA_GAMES && !legs; games++) {
+    const strategy = options.strategy ?? hubStrategy(tier);
+    if (strategy === "best") legs = compileBest(pool, tier.target, [...uses.keys()], options);
+    if (strategy === "flex") legs = compileFlex(pool, tier, [...uses.keys()], seed + Number(tier.id), options);
+    for (let games = tier.games; strategy === "count" && games <= tier.games + HUB_EXTRA_GAMES && !legs; games++) {
       const built = forge(pool, { ...hubSettings(tier), games }, {
         locked: [],
         removed: [],
@@ -230,6 +266,80 @@ export function buildHub(
     out.push({ tier: tier.id, legs });
   }
   return out;
+}
+
+export interface HubBuildOptions {
+  /**
+   * Every tier one way, for the lab; absent, each tier uses hubStrategy.
+   * "flex": every length in hubGameRange, the strongest kept (compileFlex).
+   * "count": the tier's usual count, growing only when short of its odds.
+   * "best": every game's strongest leg, ranked, added until the code reaches
+   * its odds (compileBest). Replayed, "best" landed at its expected rate but
+   * on fewer days (64% against 74%): 80% legs at 1.2 need many games to reach
+   * the odds, and one miss sinks the code.
+   */
+  strategy?: "count" | "best" | "flex";
+  /** How sure a leg really is: the stated chance, or one corrected by its own record. */
+  quality?: (market: string, probability: number) => number;
+  /** Legs shorter than this add risk without adding odds. */
+  minLegOdds?: number;
+  maxLegs?: number;
+}
+
+/**
+ * Best legs first: each game offers its single strongest pick (by `quality`),
+ * the games are ranked by it, and legs are added in that order until the code
+ * reaches HUB_MIN_TARGET_SHARE of its odds. A leg that would carry the code
+ * far past its odds is passed over for the next. However many legs that takes
+ * is the code's length: a 2-odds code can be three or four strong legs.
+ */
+export function compileBest(pool: PoolEntry[], target: number, avoid: string[], options: HubBuildOptions): ForgeLeg[] | null {
+  const quality = options.quality ?? ((_: string, p: number) => p);
+  const minOdds = options.minLegOdds ?? 1.15;
+  const maxLegs = options.maxLegs ?? 20;
+  const avoided = new Set(avoid);
+  const ranked = pool
+    .flatMap((e) => {
+      const options_ = e.candidates.filter((c) => c.fairOdds >= minOdds);
+      if (options_.length === 0) return [];
+      const best = options_.reduce((a, b) => (quality(b.market, b.probability) > quality(a.market, a.probability) ? b : a));
+      // A game a shorter code already uses ranks a little lower, so codes spread.
+      const q = quality(best.market, best.probability) - (avoided.has(e.prediction.match.id) ? 0.03 : 0);
+      return [{ entry: e, c: best, q }];
+    })
+    .sort((a, b) => b.q - a.q);
+  const legs: ForgeLeg[] = [];
+  let odds = 1;
+  for (const r of ranked) {
+    if (odds >= HUB_MIN_TARGET_SHARE * target || legs.length >= maxLegs) break;
+    if (odds * r.c.fairOdds > target * 1.3) continue;
+    legs.push(toLeg(r.entry, r.c));
+    odds *= r.c.fairOdds;
+  }
+  return odds >= HUB_MIN_TARGET_SHARE * target ? legs.sort((a, b) => Date.parse(a.kickoff) - Date.parse(b.kickoff)) : null;
+}
+
+/**
+ * No fixed game count: the code is built at every length in hubGameRange and
+ * the build whose weakest leg is strongest wins, the shorter on a tie. A
+ * 2-odds code becomes three games when three reads reach 2 odds without one
+ * as shaky as the best pair's weaker leg. Every build lands about as often as
+ * its odds say (a calibrated chance times fair odds is 1 at any length), so
+ * the choice is about the reads, not the arithmetic.
+ */
+export function compileFlex(pool: PoolEntry[], tier: HubTier, avoid: string[], seed: number, options: HubBuildOptions): ForgeLeg[] | null {
+  const quality = options.quality ?? ((_: string, p: number) => p);
+  const [fewest, most] = hubGameRange(tier);
+  let best: { legs: ForgeLeg[]; weakest: number } | null = null;
+  for (let games = fewest; games <= most; games++) {
+    const legs = forge(pool, { ...hubSettings(tier), games }, { locked: [], removed: [], avoid, seed }).legs;
+    if (legs.length < games) continue;
+    const odds = hubTotals(legs).odds;
+    if (odds < HUB_MIN_TARGET_SHARE * tier.target || odds > tier.target * 1.3) continue;
+    const weakest = Math.min(...legs.map((l) => quality(l.market, l.probability)));
+    if (!best || weakest > best.weakest + 1e-9) best = { legs, weakest };
+  }
+  return best?.legs ?? null;
 }
 
 /* ---------------------------------------------------------------- totals */

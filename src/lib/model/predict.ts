@@ -8,6 +8,8 @@
  * the over/under numbers can never contradict the correct-score numbers.
  */
 
+import { calibrateResult, type ResultCalibration } from "./result-calibration";
+import { sweetSpotPick } from "./sweet-spots";
 import { isPausedPick, PAUSED_PICK_MARKETS } from "./paused";
 import type { Match, ResultRow } from "@/lib/types";
 import { leagueByCode, type LeagueDef } from "@/lib/leagues";
@@ -64,7 +66,9 @@ export interface Pick {
     | "Both Teams To Score"
     | "Double Chance"
     | "Correct Score"
-    | "Asian Handicap";
+    | "Asian Handicap"
+    | "Corners"
+    | "Shots";
   probability: number;
   /** Model's own fair price. */
   fairOdds: number;
@@ -82,6 +86,8 @@ export interface Prediction {
   picks: Pick[];
   /** The single strongest selection, or null when the data cannot support one. */
   topPick: Pick | null;
+  /** True when topPick came from a sweet spot (sweet-spots.ts) rather than the usual ranking. */
+  sweetSpot?: boolean;
   /** What in the data the model is reacting to; see insights.ts. */
   insights: Insight[];
   /** Whether there is enough real history to stand behind this prediction. */
@@ -211,6 +217,12 @@ export interface ModelOptions {
   excludeHeadline?: string[];
   /** Multiplies every drawn scoreline before renormalising (1 = off). Lab knob. */
   drawInflation?: number;
+  /** False ranks every game the usual way, ignoring sweet-spots.ts (lab comparison). */
+  sweetSpots?: boolean;
+  /** Corners, shots and shots-on-target chances keyed like a pick's market (stat-markets-service statChances), for the sweet spots that read them. */
+  statChances?: Record<string, number>;
+  /** The straight-win correction learned from the model's own record (result-calibration.ts); null or absent = off. */
+  resultCalibration?: ResultCalibration | null;
   /** Scales both expected goal rates after the totals shrink (1 = off). Lab knob. */
   goalScale?: number;
 }
@@ -241,7 +253,8 @@ export function buildPrediction(
   const lambda = shrunk.lambda * goalScale;
   const mu = shrunk.mu * goalScale;
 
-  const grid = inflateDraws(scoreMatrix(lambda, mu, fit.rho), options.drawInflation ?? 1);
+  const raw = inflateDraws(scoreMatrix(lambda, mu, fit.rho), options.drawInflation ?? 1);
+  const grid = options.resultCalibration ? calibrateResult(raw, options.resultCalibration) : raw;
   const markets = {
     ...deriveMarkets(grid, lambda, mu),
     halves: halfMarkets(lambda, mu, { home: SITE_FIRST_HALF_SHARE, away: SITE_FIRST_HALF_SHARE }, SITE_HALF_TILT, SITE_SECOND_HALF_TILT),
@@ -260,7 +273,17 @@ export function buildPrediction(
   // Ranked against what this competition actually does, not a pooled
   // European constant — see empiricalBaselines.
   const baselines = empiricalBaselines(results);
-  const picks = rankPicks(markets, asianHandicap, dataQuality, uncertainty, baselines, options);
+  const ranked = rankPicks(markets, asianHandicap, dataQuality, uncertainty, baselines, options);
+  // Where a sweet spot applies it heads the list, so the pick and the ranking agree.
+  const spot = options.sweetSpots === false ? null : sweetSpotPick(ranked, match.league.code, options.excludeHeadline, asianHandicap, options.statChances);
+  const sweet = spot
+    ? ranked.find((p) => p.market === spot.market && p.probability === spot.probability) ?? {
+        ...spot,
+        fairOdds: fairOdds(spot.probability),
+        confidence: confidenceFor(spot.probability, dataQuality, uncertainty),
+      }
+    : null;
+  const picks = sweet ? [sweet, ...ranked.filter((p) => p.market !== sweet.market)] : ranked;
   const sufficiency = assessSufficiency(
     fit.matchesUsed,
     homeRating?.played ?? 0,
@@ -279,6 +302,7 @@ export function buildPrediction(
     asianHandicap,
     picks,
     topPick,
+    sweetSpot: Boolean(topPick && sweet && topPick === sweet),
     insights,
     sufficiency,
     form,
@@ -408,8 +432,8 @@ function rankPicks(
   }
 
   for (const line of ah) {
-    picks.push(mk(`ah:home:${line.line}`, `Home ${formatLine(line.line)}`, "Asian Handicap", line.home));
-    picks.push(mk(`ah:away:${-line.line}`, `Away ${formatLine(-line.line)}`, "Asian Handicap", line.away));
+    picks.push(mk(`ah:home:${line.line}`, `Home ${formatLine(line.line)} handicap`, "Asian Handicap", line.home));
+    picks.push(mk(`ah:away:${-line.line}`, `Away ${formatLine(-line.line)} handicap`, "Asian Handicap", line.away));
   }
 
   /*
@@ -545,6 +569,8 @@ export const FAMILY_RELIABILITY: Record<string, number> = {
  * odds of 1.25, so a bookmaker price of roughly 1.20. Win rate can always be
  * bought with shorter prices — "over 0.5 goals" lands nine times in ten and is
  * worthless as a tip — so the cap is what keeps a higher win rate honest.
+ * A sweet spot (sweet-spots.ts) may reach 0.85: those rules were tested on a
+ * season they were not chosen on.
  */
 export const HEADLINE_MAX_PROBABILITY = 0.8;
 

@@ -30,10 +30,12 @@
 
 import { buildPrediction, headlineEligible, type Pick, type Prediction } from "../src/lib/model/predict";
 import { fitLeague } from "../src/lib/model/fit";
+import { resultCalibrationFor } from "../src/lib/model/result-calibration";
 import { evaluatePick } from "../src/lib/settlement";
+import { isStrong } from "../src/lib/model/tiers";
 import { deVig } from "../src/lib/model/backtest";
 import { candidatesFor, forge, type ForgeRisk, type PoolEntry } from "../src/lib/forge";
-import { buildHub, daySeed, hubMarketAllowed, hubTier, HUB_FORGE_MARKETS, HUB_TIERS, withHandicap } from "../src/lib/code-hub";
+import { buildHub, daySeed, hubMarketAllowed, hubTier, HUB_FORGE_MARKETS, HUB_TIERS, withoutHandicap, type HubBuildOptions } from "../src/lib/code-hub";
 import { isQuotable } from "../src/lib/odds/markets";
 import { digestPick } from "../src/lib/whatsapp-digest";
 import { csv, parse, toMatch, toResultRow, type Row } from "./lib/football-data-uk";
@@ -98,7 +100,8 @@ function walk(d: (typeof DIVS)[number], rows: Row[], days: number): Graded[] {
       fit = fitLeague(prior);
       fits.set(day, fit);
     }
-    const p = buildPrediction(toMatch(row, league), prior, [], { prefit: fit });
+    // --cal=1: the straight-win correction production applies to these divisions.
+    const p = buildPrediction(toMatch(row, league), prior, [], { prefit: fit, ...(arg("cal") === "1" ? { resultCalibration: resultCalibrationFor(d.code) } : {}) });
     if (!p.sufficiency.publishable) continue;
     out.push({ day, div: d.div, row, p });
   }
@@ -282,8 +285,46 @@ function headline(all: Graded[]) {
   // the pause this replay gave 75.9% landed (74.0% stated, average 1.36) with
   // unders, against the 75.4% (73.0%, 1.38) of the paused rule below.
   console.log("\n5. PUBLISHED PICK WITH UNDERS PAUSED");
+  // The pick as buildPrediction publishes it: sweet spots first (model/sweet-spots.ts).
+  {
+    const t = new Tally();
+    const fam = new Map<string, Tally>();
+    let price = 0;
+    for (const g of all) {
+      const pk = g.p.topPick;
+      if (!pk) continue;
+      const w = grade(pk, g.row);
+      if (w === null) continue;
+      t.add(w, pk.probability);
+      price += pk.fairOdds;
+      const k = family(pk.market);
+      (fam.get(k) ?? fam.set(k, new Tally()).get(k)!).add(w, pk.probability);
+    }
+    console.log("  " + t.line("KiqStat pick, sweet spots first") + `  avg price ${(price / Math.max(1, t.n)).toFixed(2)}`);
+    for (const strong of [true, false]) {
+      const s = new Tally();
+      for (const g of all) {
+        const pk = g.p.topPick;
+        if (!pk || isStrong(pk, g.p.match.league.code) !== strong) continue;
+        const w = grade(pk, g.row);
+        if (w !== null) s.add(w, pk.probability);
+      }
+      console.log("      " + s.line(strong ? "Strong" : "not Strong", 30) + `  share ${((100 * s.n) / Math.max(1, t.n)).toFixed(0)}%`);
+    }
+    for (const c of [60, 62, 63, 64, 65, 66, 67, 68, 70]) {
+      const s = new Tally();
+      for (const g of all) {
+        const pk = g.p.topPick;
+        if (!pk || pk.confidence < c) continue;
+        const w = grade(pk, g.row);
+        if (w !== null) s.add(w, pk.probability);
+      }
+      console.log("      " + s.line(`confidence ${c}+`, 30) + `  share ${((100 * s.n) / Math.max(1, t.n)).toFixed(0)}%`);
+    }
+    for (const [k, v] of [...fam].sort()) if (v.n >= 30) console.log("      " + v.line(k, 30));
+  }
   const rules: [string, PickRule][] = [
-    ["unders paused (live rule)", { noUnder: true }],
+    ["unders paused (old rule)", { noUnder: true }],
     ["unders paused, handicap fallback", { noUnder: true, ah: true }],
   ];
   for (const [name, rule] of rules) {
@@ -385,13 +426,31 @@ function digest2(all: Graded[]) {
 interface HubVariant {
   name: string;
   allow: (market: string) => boolean;
+  options?: HubBuildOptions;
+  /** Legs only from each game's sweet-spot pick (model/sweet-spots.ts). */
+  sweetOnly?: boolean;
 }
 
 const HUB_VARIANTS: HubVariant[] = [
-  { name: "v2 as built: result, double chance, over 1.5", allow: hubMarketAllowed },
-  { name: "v2 plus half-goal handicap", allow: withHandicap },
-  { name: "v2 result and double chance only", allow: (m) => m.startsWith("1x2") || m.startsWith("dc") },
+  { name: "v2 fixed counts: result, double chance, over 1.5", allow: withoutHandicap, options: { strategy: "count" } },
+  { name: "v2 fixed counts plus half-goal handicap", allow: hubMarketAllowed, options: { strategy: "count" } },
+  { name: "v2 result and double chance only", allow: (m) => m.startsWith("1x2") || m.startsWith("dc"), options: { strategy: "count" } },
+  { name: "best legs first, no game count (legs 1.15+)", allow: withoutHandicap, options: { strategy: "best", minLegOdds: 1.15 } },
+  { name: "best legs first, no game count (legs 1.25+)", allow: withoutHandicap, options: { strategy: "best", minLegOdds: 1.25 } },
+  { name: "flex game count, no handicap", allow: withoutHandicap, options: { strategy: "flex" } },
+  { name: "result, double chance, half-goal handicap", allow: resultDcHandicap, options: { strategy: "count" } },
+  { name: "flex: result, double chance, half-goal handicap", allow: resultDcHandicap, options: { strategy: "flex" } },
+  { name: "as shipped: flex to 5 odds, counts above; result, double chance, over 1.5, half-goal handicap", allow: hubMarketAllowed },
+  { name: "sweet-spot legs only, flex to 5 odds, counts above", allow: hubMarketAllowed, sweetOnly: true },
+  { name: "sweet-spot legs only, flex at every tier", allow: hubMarketAllowed, sweetOnly: true, options: { strategy: "flex" } },
+  { name: "sweet-spot legs only, best legs first", allow: hubMarketAllowed, sweetOnly: true, options: { strategy: "best", minLegOdds: 1.15 } },
 ];
+
+function resultDcHandicap(market: string): boolean {
+  const [family, , line] = market.split(":");
+  if (family === "1x2" || family === "dc") return true;
+  return family === "ah" && Math.abs((Number(line) * 2) % 2) === 1;
+}
 
 /** The first hub (16 Oct), for comparison: four markets, no floor, five tiers. */
 const V1_TIERS: { target: number; games: number; risk: ForgeRisk }[] = [
@@ -448,18 +507,21 @@ function hub(all: Graded[]): { day: number; tier: string; odds: number; chance: 
 
   type Example = { day: number; tier: string; odds: number; chance: number; landed: boolean; legs: string[]; misses: number };
   const examples: Example[] = [];
-  for (const v of HUB_VARIANTS) {
+  // --hub=0,6,7 replays only those variants (by position in HUB_VARIANTS).
+  const pick = arg("hub")?.split(",").map(Number);
+  for (const v of HUB_VARIANTS.filter((_, i) => !pick || pick.includes(i))) {
     const stats = new Map(HUB_TIERS.map((t) => [t.id, { built: 0, landed: 0, expected: 0, legs: 0, legN: 0, legWins: 0, legProb: 0, span: 0 }]));
     const mix = new Map<string, number>();
     let anyDays = 0, builtDays = 0, dailyAny = 0;
     for (const day of days) {
       const toPool = (gs: Graded[]): PoolEntry[] => gs.map((g) => ({
         prediction: g.p,
-        candidates: candidatesFor(g.p, { markets: HUB_FORGE_MARKETS, picksPerGame: 1, allowHandicap: true }),
+        candidates: candidatesFor(g.p, { markets: HUB_FORGE_MARKETS, picksPerGame: 1, allowHandicap: true })
+          .filter((c) => !v.sweetOnly || (g.p.sweetSpot && c.market === g.p.topPick?.market)),
       }));
       const today = toPool(byDay.get(day)!);
       const ahead = toPool(days.filter((d) => d >= day && d < day + 4 * DAY).flatMap((d) => byDay.get(d)!));
-      const codes = buildHub(today, String(day), ahead, v.allow);
+      const codes = buildHub(today, String(day), ahead, v.allow, v.options);
       // Days counted are days with at least one daily code, as for v1.
       if (!codes.some((c) => hubTier(c.tier)!.days === 1)) continue;
       builtDays++;

@@ -12,6 +12,8 @@ const PLACEHOLDER: Record<Pick["group"], string> = {
   "Double Chance": "Home or Draw",
   "Correct Score": "2 - 1",
   "Asian Handicap": "Home -0.5",
+  Corners: "Under 12.5 corners",
+  Shots: "Home over 3.5 shots on target",
 };
 
 export function LockIcon({ className = "size-3.5" }: { className?: string }) {

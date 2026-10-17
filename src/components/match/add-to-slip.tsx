@@ -6,6 +6,7 @@ import { useSlip } from "@/lib/slip";
 import { Button } from "@/components/ui/primitives";
 import { percent } from "@/lib/format";
 import { useMatchAccess } from "@/components/match/match-access";
+import { isStatMarket } from "@/lib/model/sweet-spots";
 
 /** Pick a selection from this fixture and drop it on the slip. */
 export function AddToSlip({ prediction: shared }: { prediction: Prediction }) {
@@ -17,7 +18,8 @@ export function AddToSlip({ prediction: shared }: { prediction: Prediction }) {
   const { picks, match, sufficiency } = prediction;
 
   const existing = legs.find((l) => l.matchId === match.id);
-  const options = picks.slice(0, 8);
+  // Corners and shots picks are graded from match stats, which a combo cannot follow.
+  const options = picks.filter((p) => !isStatMarket(p.market)).slice(0, 8);
   const [selected, setSelected] = useState(existing?.market ?? options[0]?.market ?? "");
 
   if ("locked" in prediction && (prediction as { locked?: { proLeague?: boolean } }).locked?.proLeague && picks.length === 0) {

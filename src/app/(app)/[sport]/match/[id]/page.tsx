@@ -285,7 +285,7 @@ function Overview({
         ) : pick && prediction.sufficiency.publishable ? (
           <section className="orbit-border card rounded-2xl p-5 sm:p-6">
             <p className="flex min-h-5 flex-wrap items-center gap-x-2 gap-y-1 text-[10.5px] font-semibold uppercase leading-none tracking-[0.14em] text-ink-dim">
-              <span className="whitespace-nowrap">Our pick</span> {isStrong(pick) && <StrongBadge />} <RiskBadge pick={pick} />
+              <span className="whitespace-nowrap">Our pick</span> {isStrong(pick, match.league.code) && <StrongBadge />} <RiskBadge pick={pick} />
             </p>
             <div className="mt-2 flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
               <p className="font-display text-2xl font-bold text-ink sm:text-3xl">{pick.label}</p>

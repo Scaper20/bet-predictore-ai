@@ -74,3 +74,50 @@ export function gradeHandicap(side: "home" | "away", line: number, home: number,
   const margin = (side === "home" ? home - away : away - home) + line;
   return margin > 0 ? "win" : margin < 0 ? "lose" : "push";
 }
+
+/** The statistic a corners, shots or shots-on-target pick is graded on; null for a goals pick. */
+export function statKindOf(market: string): "corners" | "shots" | "shotsOnTarget" | null {
+  const family = market.split(":")[0];
+  return family === "corners" ? "corners" : family === "shots" ? "shots" : family === "sot" ? "shotsOnTarget" : null;
+}
+
+/**
+ * Grades a corners, shots or shots-on-target pick against the match's counts
+ * (home, away). Markets as stat sweet spots name them: totals
+ * ("corners:under:12.5"), team totals ("sot:home:over:3.5"), who had more
+ * ("sot:most:home-or-level") and handicaps ("sot:hcp:away:+3.5").
+ */
+export function evaluateStatPick(market: string, home: number, away: number): PickResult | null {
+  if (!statKindOf(market)) return null;
+  const [, a, b, c] = market.split(":");
+  const vs = (x: number, line: number, over: boolean): PickResult => (x === line ? "push" : (x > line) === over ? "win" : "lose");
+  if (a === "over" || a === "under") return vs(home + away, Number(b), a === "over");
+  if ((a === "home" || a === "away") && (b === "over" || b === "under")) return vs(a === "home" ? home : away, Number(c), b === "over");
+  if (a === "most") {
+    if (b === "home") return home > away ? "win" : "lose";
+    if (b === "away") return away > home ? "win" : "lose";
+    if (b === "home-or-level") return home >= away ? "win" : "lose";
+    if (b === "away-or-level") return away >= home ? "win" : "lose";
+    return null;
+  }
+  if (a === "hcp" && (b === "home" || b === "away")) return gradeHandicap(b, Number(c), home, away);
+  return null;
+}
+
+/**
+ * The stat pick's grade only when a count off by one either way could not
+ * change it. Two sources can disagree by a corner or a shot (ESPN and
+ * football-data.co.uk do, about one game in eight), so a grade from the
+ * quicker source waits for the slower one when it sits that close to the line.
+ */
+export function robustStatGrade(market: string, home: number, away: number): PickResult | null {
+  const grade = evaluateStatPick(market, home, away);
+  if (!grade) return null;
+  for (const dh of [-1, 0, 1]) {
+    for (const da of [-1, 0, 1]) {
+      if (home + dh < 0 || away + da < 0) continue;
+      if (evaluateStatPick(market, home + dh, away + da) !== grade) return null;
+    }
+  }
+  return grade;
+}

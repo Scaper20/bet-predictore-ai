@@ -4,11 +4,12 @@ import { buildPrediction, type Prediction } from "@/lib/model/predict";
 import { DEFAULT_SETTINGS, candidatesFor, type PoolEntry } from "./forge";
 import {
   FREE_TIER_ID,
-  HUB_EXTRA_GAMES,
+  hubGameRange,
   HUB_FORGE_MARKETS,
   HUB_LEG_MIN_PROBABILITY,
   HUB_MAX_CODES_PER_GAME,
   HUB_MIN_TARGET_SHARE,
+  HUB_LIVE_TIERS,
   HUB_TIERS,
   bookablePool,
   buildHub,
@@ -86,20 +87,26 @@ describe("buildHub", () => {
     expect(a).toEqual(b);
   });
 
-  it("publishes each tier at full size or up to two games more, shortest first, near its target", () => {
+  it("publishes each tier at any length in its range, shortest first, near its target", () => {
     const hub = buildHub(pool(), "2026-10-16");
     expect(hub.length).toBeGreaterThan(0);
     const order = HUB_TIERS.map((t) => t.id);
     expect(hub.map((c) => c.tier)).toEqual(order.filter((id) => hub.some((c) => c.tier === id)));
     for (const code of hub) {
       const tier = HUB_TIERS.find((t) => t.id === code.tier)!;
-      expect(code.legs.length).toBeGreaterThanOrEqual(tier.games);
-      expect(code.legs.length).toBeLessThanOrEqual(tier.games + HUB_EXTRA_GAMES);
+      const [fewest, most] = hubGameRange(tier);
+      expect(code.legs.length).toBeGreaterThanOrEqual(fewest);
+      expect(code.legs.length).toBeLessThanOrEqual(most);
       expect(new Set(code.legs.map((l) => l.matchId)).size).toBe(code.legs.length);
       const total = code.legs.reduce((o, l) => o * l.fairOdds, 1);
       expect(total).toBeGreaterThan(tier.target * HUB_MIN_TARGET_SHARE);
       expect(total).toBeLessThan(tier.target * 2.5);
     }
+  });
+
+  it("lets a 2-odds code run from two to four games, and keeps a 20 near its count", () => {
+    expect(hubGameRange(HUB_TIERS.find((t) => t.id === "2")!)).toEqual([2, 4]);
+    expect(hubGameRange(HUB_TIERS.find((t) => t.id === "20")!)).toEqual([7, 9]);
   });
 
   it("publishes nothing from an empty pool", () => {
@@ -124,7 +131,7 @@ describe("buildHub rules", () => {
   });
   const hub = buildHub(today, "2026-10-16", [...today, ...later]);
 
-  it("uses only match result, double chance and over 1.5, every leg at 60% or more", () => {
+  it("uses only match result, double chance, over 1.5 and half-goal handicaps, every leg at 60% or more", () => {
     for (const code of hub) {
       for (const l of code.legs) {
         expect(hubMarketAllowed(l.market)).toBe(true);
@@ -146,14 +153,14 @@ describe("buildHub rules", () => {
     for (const v of seen.values()) expect(v.count).toBeLessThanOrEqual(HUB_MAX_CODES_PER_GAME);
   });
 
-  it("keeps daily codes on today's games and lets the four-day codes reach ahead", () => {
+  it("builds only from today's games, and never the retired 50 and 100", () => {
+    expect(hub.length).toBeGreaterThan(0);
     for (const code of hub) {
-      const tier = HUB_TIERS.find((t) => t.id === code.tier)!;
-      if (tier.days === 1) for (const l of code.legs) expect(l.matchId.startsWith("later:")).toBe(false);
+      expect(HUB_LIVE_TIERS.some((t) => t.id === code.tier)).toBe(true);
+      for (const l of code.legs) expect(l.matchId.startsWith("later:")).toBe(false);
     }
-    const long = hub.filter((c) => HUB_TIERS.find((t) => t.id === c.tier)!.days === 4);
-    expect(long.length).toBeGreaterThan(0);
-    expect(long.some((c) => c.legs.some((l) => l.matchId.startsWith("later:")))).toBe(true);
+    expect(HUB_LIVE_TIERS.map((t) => t.id)).toEqual(["2", "3", "5", "10", "20"]);
+    expect(HUB_TIERS.find((t) => t.id === "100")?.retired).toBe(true);
   });
 
   it("publishes a code only within reach of its target odds", () => {
@@ -161,11 +168,11 @@ describe("buildHub rules", () => {
       const tier = HUB_TIERS.find((t) => t.id === code.tier)!;
       expect(hubTotals(code.legs).odds).toBeGreaterThanOrEqual(HUB_MIN_TARGET_SHARE * tier.target);
     }
-    // Only short prices on offer: nine or eleven of them cannot make 50 or 100.
-    const short = [...today, ...later]
+    // Only short prices on offer: nine of them at most cannot make 20.
+    const short = today
       .map((e) => ({ ...e, candidates: e.candidates.filter((c) => c.fairOdds < 1.3) }))
       .filter((e) => e.candidates.length > 0);
-    expect(buildHub(short, "2026-10-16", short).some((c) => c.tier === "50" || c.tier === "100")).toBe(false);
+    expect(buildHub(short, "2026-10-16", short).some((c) => c.tier === "20")).toBe(false);
   });
 
   it("never offers a 1.5-odds code", () => {

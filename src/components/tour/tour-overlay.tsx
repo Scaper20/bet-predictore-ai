@@ -57,7 +57,7 @@ const STEPS: Step[] = [
   {
     targets: ['[data-tour="code-hub"]'],
     title: "Code Hub",
-    body: "Ready-made codes every day, from 2 to 100 odds, each with a SportyBet code. Coming soon: join the waitlist to hear first.",
+    body: "Ready-made codes every day, from 2 to 20 odds, each with a SportyBet code. Coming soon: join the waitlist to hear first.",
   },
   {
     targets: ['[data-tour="ask"]'],

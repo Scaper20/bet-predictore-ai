@@ -43,6 +43,9 @@ export interface EspnResult {
   asot?: number;
   hs?: number;
   as?: number;
+  /** Corners won. */
+  hc?: number;
+  ac?: number;
 }
 
 export interface ArchiveRow {
@@ -168,7 +171,45 @@ export async function espnDay(slug: string, day: Date): Promise<EspnResult[]> {
       asot: stat(a, "shotsOnTarget"),
       hs: stat(h, "totalShots"),
       as: stat(a, "totalShots"),
+      hc: stat(h, "wonCorners"),
+      ac: stat(a, "wonCorners"),
     });
   }
   return out;
+}
+
+/**
+ * ESPN's game for a fixture, matched on kick-off within 30 hours, the exact
+ * score and at least one name word that belongs to one club only (as in
+ * matchShots); null when no game, or more than one, fits.
+ */
+export function findEspnGame(espn: EspnResult[], fixture: { home: string; away: string; kickoff: number; hg: number; ag: number }): EspnResult | null {
+  const clubs = new Map<string, number>();
+  for (const name of new Set(espn.flatMap((g) => [g.home, g.away]))) {
+    for (const w of nameWords(name)) clubs.set(w, (clubs.get(w) ?? 0) + 1);
+  }
+  const shares = (ours: string, theirs: string) => {
+    const mine = nameWords(ours);
+    for (const w of nameWords(theirs)) if (clubs.get(w) === 1 && mine.has(w)) return true;
+    return false;
+  };
+  const fits = espn.filter(
+    (g) =>
+      Math.abs(g.date - fixture.kickoff) <= WINDOW_MS &&
+      g.hg === fixture.hg &&
+      g.ag === fixture.ag &&
+      (shares(fixture.home, g.home) || shares(fixture.away, g.away)),
+  );
+  return fits.length === 1 ? fits[0] : null;
+}
+
+/**
+ * Whether ESPN's counts look complete. It sometimes lists a game with a shot
+ * or two a side (Rayo v Athletic, October 2026: one shot each) where the
+ * statistics never came through; a real game has ten shots or more.
+ */
+export function espnStatsComplete(g: EspnResult): boolean {
+  const all = [g.hs, g.as, g.hsot, g.asot, g.hc, g.ac];
+  if (all.some((x) => x === undefined)) return false;
+  return g.hs! + g.as! >= 10 && g.hsot! <= g.hs! && g.asot! <= g.as!;
 }
