@@ -83,9 +83,9 @@ export function selectFreePicks(
   const usable = predictions.filter((p) => p.sufficiency.publishable && p.topPick);
   const confidence = (p: Prediction) => p.topPick?.confidence ?? 0;
 
-  const strongPick = usable.filter((p) => isStrong(p.topPick)).sort((x, y) => confidence(y) - confidence(x))[0];
+  const strongPick = usable.filter((p) => isStrong(p.topPick, p.match.league.code)).sort((x, y) => confidence(y) - confidence(x))[0];
 
-  const standard = usable.filter((p) => !isStrong(p.topPick));
+  const standard = usable.filter((p) => !isStrong(p.topPick, p.match.league.code));
   const opensSomething = standard.filter((p) => !isFreeMarket(p.topPick!.market));
   const pool = opensSomething.length >= HOT_SLOTS + NORMAL_SLOTS ? opensSomething : standard;
 

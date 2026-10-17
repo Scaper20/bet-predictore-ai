@@ -305,7 +305,7 @@ function headline(all: Graded[]) {
       const s = new Tally();
       for (const g of all) {
         const pk = g.p.topPick;
-        if (!pk || isStrong(pk) !== strong) continue;
+        if (!pk || isStrong(pk, g.p.match.league.code) !== strong) continue;
         const w = grade(pk, g.row);
         if (w !== null) s.add(w, pk.probability);
       }

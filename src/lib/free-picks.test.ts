@@ -25,8 +25,8 @@ describe("free picks", () => {
 
   it("picks one Strong pick, two hot games and three more, all different", () => {
     const set = selectFreePicks("2026-10-07", [
-      pred("strong1", { confidence: 72 }),
-      pred("strong2", { confidence: 65 }),
+      pred("strong1", { league: "la-liga", confidence: 72 }),
+      pred("strong2", { league: "serie-a", confidence: 65 }),
       pred("epl", { league: "premier-league", strength: 0.6 }),
       pred("ucl", { league: "champions-league", strength: 0.5 }),
       pred("n1", { league: "eredivisie", confidence: 58 }),

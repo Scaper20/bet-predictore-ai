@@ -153,6 +153,11 @@ export default function HowItWorksPage() {
                 after. Replayed over the last year, Strong picks were about one in four and landed about 86% of the time,
                 against about 81% for the rest.
               </p>
+              <p>
+                Strong picks only come from the 17 leagues the model has been tested on most, the top five and twelve
+                more in Europe. Elsewhere its most confident picks have landed about 71%, no better than the rest, so
+                they are not marked.
+              </p>
               <p>Strong picks have their own record on the track record page, beside the record for every pick.</p>
             </>
           ),

@@ -16,21 +16,23 @@ describe("free-tier access", () => {
   });
 
   it("shows free viewers 1X2 picks and only the chosen Strong pick", () => {
-    expect(pickVisible(pick("1x2:home", 50), "m1", free)).toBe(true);
-    expect(pickVisible(pick("ou:under:3.5", 50), "m1", free)).toBe(false);
-    expect(pickVisible(pick("1x2:home", 70), "m1", free)).toBe(false);
-    expect(pickVisible(pick("ou:under:3.5", 70), "m-strong", free)).toBe(true);
-    expect(pickVisible(pick("ou:under:3.5", 70), "m1", paid)).toBe(true);
+    expect(pickVisible(pick("1x2:home", 50), "m1", free, "la-liga")).toBe(true);
+    expect(pickVisible(pick("ou:under:3.5", 50), "m1", free, "la-liga")).toBe(false);
+    expect(pickVisible(pick("1x2:home", 70), "m1", free, "la-liga")).toBe(false);
+    expect(pickVisible(pick("ou:under:3.5", 70), "m-strong", free, "la-liga")).toBe(true);
+    expect(pickVisible(pick("ou:under:3.5", 70), "m1", paid, "la-liga")).toBe(true);
+    // Outside the tested divisions no pick is Strong, so a 1X2 pick stays free.
+    expect(pickVisible(pick("1x2:home", 70), "m1", free, "mls")).toBe(true);
   });
 
   it("opens any market on today's free picks", () => {
-    expect(pickVisible(pick("ou:over:2.5", 55), "m-hot", free)).toBe(true);
-    expect(pickVisible(pick("btts:yes", 55), "m-other", free)).toBe(false);
+    expect(pickVisible(pick("ou:over:2.5", 55), "m-hot", free, "la-liga")).toBe(true);
+    expect(pickVisible(pick("btts:yes", 55), "m-other", free, "la-liga")).toBe(false);
   });
 
   it("opens every pick and market on the site, holding back only the Pro extras", () => {
     const p = {
-      match: { id: "m1" },
+      match: { id: "m1", league: { code: "la-liga" } },
       markets: { home: 0.5, draw: 0.3, away: 0.2, over: { "2.5": 0.55 }, halves: { ht: {} } },
       asianHandicap: [{}],
       picks: [pick("1x2:home", 50), pick("ou:over:2.5", 55)],
@@ -47,7 +49,7 @@ describe("free-tier access", () => {
 
   it("Ask KiqStat's tool view strips locked numbers before they leave the server", () => {
     const p = {
-      match: { id: "m1" },
+      match: { id: "m1", league: { code: "la-liga" } },
       markets: { home: 0.5, draw: 0.3, away: 0.2, bttsYes: 0.6, bttsNo: 0.4, over: { "2.5": 0.55 }, under: { "2.5": 0.45 },
         doubleChance: { homeOrDraw: 0.8, awayOrDraw: 0.5, homeOrAway: 0.7 }, cleanSheet: { home: 0.3, away: 0.2 },
         correctScore: [{ home: 1, away: 0, probability: 0.1 }], expectedGoals: { home: 1.5, away: 1, total: 2.5 } },

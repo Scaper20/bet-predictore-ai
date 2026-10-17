@@ -80,7 +80,7 @@ async function logUpcomingPicks(admin: ReturnType<typeof supabaseAdmin>): Promis
       // Fixed before kickoff, like everything else on the row; the Strong
       // record is only honest because nothing decides a tier after a result.
       confidence: Math.round(p.topPick!.confidence),
-      pick_tier: pickTier(p.topPick!.confidence),
+      pick_tier: pickTier(p.topPick!.confidence, p.match.league.code),
     }));
 
   if (rows.length === 0) return 0;
