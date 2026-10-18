@@ -85,12 +85,13 @@ export async function runSettlementPass(
 
   let settledCount = 0;
   const statCache = new Map<string, StatGame[]>();
-  const espnCache: EspnCache = { games: new Map(), until: Date.now() + ESPN_BUDGET_MS };
+  // The pass behind a live poll gets a short ESPN budget; the daily sweep a long one.
+  const espnCache: EspnCache = { games: new Map(), until: Date.now() + (opts.maxAgeHours ? ESPN_QUICK_BUDGET_MS : ESPN_BUDGET_MS) };
   for (const row of pending) {
     const matchId = row.match_id as string;
-    // Corners and shots stats are never in within hours of the whistle; the
-    // daily sweep grades those, not the pass behind every live poll.
-    if (opts.maxAgeHours && statKindOf(row.market as string)) continue;
+    // A corners or shots pick waits until the game is surely over (ESPN has
+    // the counts minutes after); before that there is nothing to grade on.
+    if (statKindOf(row.market as string) && Date.now() - Date.parse(row.kickoff as string) < STAT_READY_MS) continue;
 
     const { data: cached } = await admin
       .from("match_results")
@@ -265,6 +266,9 @@ interface EspnCache {
   until: number;
 }
 const ESPN_BUDGET_MS = 40_000;
+const ESPN_QUICK_BUDGET_MS = 8_000;
+/** Kick-off plus a full game and stoppage: from here a stat pick can be graded. */
+const STAT_READY_MS = 115 * 60_000;
 
 /** The game's counts from ESPN's scoreboard (the kick-off day and the day before, as ESPN dates by US time), if complete. */
 async function espnCounts(row: StatRow, kind: "corners" | "shots" | "shotsOnTarget", cache: EspnCache): Promise<[number, number] | null> {
