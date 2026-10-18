@@ -5,6 +5,7 @@ import { isStrong } from "@/lib/model/tiers";
 import type { ViewedPrediction } from "@/lib/access";
 import type { StatMarkets } from "@/lib/model/match-stats";
 import { buildTopPicks, type TopPick } from "@/lib/top-picks";
+import { SharePicksButton } from "@/components/match/share-picks-button";
 
 /**
  * The match's three best picks at once: the headline pick and the strongest
@@ -19,10 +20,13 @@ export function TopPicks({ prediction, corners }: { prediction: ViewedPrediction
 
   return (
     <section aria-label="Top picks" className="space-y-3">
-      <h2 className="flex items-center gap-2 px-1 font-sans text-sm font-semibold uppercase tracking-wider text-ink-muted">
-        Top picks
-        <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-brand/15 px-1.5 text-[11px] font-bold text-brand">{picks.length}</span>
-      </h2>
+      <div className="flex items-center justify-between gap-3 px-1">
+        <h2 className="flex items-center gap-2 font-sans text-sm font-semibold uppercase tracking-wider text-ink-muted">
+          Top picks
+          <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-brand/15 px-1.5 text-[11px] font-bold text-brand">{picks.length}</span>
+        </h2>
+        <SharePicksButton matchId={prediction.match.id} label={`${prediction.match.home.name} v ${prediction.match.away.name}`} />
+      </div>
       {picks.map((p) => (
         <PickCard key={p.market} pick={p} strong={p.headline && strong} />
       ))}
