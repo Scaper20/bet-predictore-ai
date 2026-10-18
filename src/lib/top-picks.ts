@@ -30,6 +30,38 @@ export interface TopPick {
   why: string;
   /** Once the game is over. */
   outcome?: "win" | "lose" | "push";
+  /**
+   * While the game is on: settled already ("won" once Over 1.5 has its two
+   * goals; "lost" once Under 2.5 has its third), or how it stands on the score
+   * now. Absent before kick-off and for corners, which the score cannot tell.
+   */
+  live?: LiveState;
+}
+
+export type LiveState = "won" | "lost" | "winning" | "losing" | "level";
+
+/**
+ * A goal pick against the score so far. Goals only ever go up, so a total
+ * already past an over line has won and past an under line has lost, and both
+ * teams having scored settles that market; every other pick is only "winning"
+ * or "losing" until full time.
+ */
+export function liveState(market: string, home: number, away: number): LiveState | null {
+  const [family, side, l] = market.split(":");
+  const total = home + away;
+  if (family === "ou") {
+    const n = Number(l);
+    if (total > n) return side === "over" ? "won" : "lost";
+    return side === "over" ? "losing" : "winning";
+  }
+  if (family === "btts") {
+    const both = home > 0 && away > 0;
+    if (both) return side === "yes" ? "won" : "lost";
+    return side === "yes" ? "losing" : "winning";
+  }
+  const now = evaluatePick(market, home, away);
+  if (!now) return null;
+  return now === "win" ? "winning" : now === "lose" ? "losing" : "level";
 }
 
 export interface TopPicksInput {
@@ -236,6 +268,11 @@ export function buildTopPicks({ prediction: pr, corners }: TopPicksInput): TopPi
   if (stat && chosen.length < MAX_PICKS && !taken.has("corners")) chosen.push(stat);
 
   const finished = pr.match.status === "finished" && pr.match.score.home !== null && pr.match.score.away !== null;
+  const inPlay = (pr.match.status === "live" || pr.match.status === "halftime") && pr.match.score.home !== null && pr.match.score.away !== null;
+  const withLive = (market: string, h: number, a: number) => {
+    const live = liveState(market, h, a);
+    return live ? { live } : {};
+  };
   return chosen.map((p) => {
     const outcome = finished && familyOf(p.market) !== "corners" ? evaluatePick(p.market, pr.match.score.home ?? 0, pr.match.score.away ?? 0) : null;
     return {
@@ -248,6 +285,7 @@ export function buildTopPicks({ prediction: pr, corners }: TopPicksInput): TopPi
       variations: variationsFor(p, pr, corners),
       why: whyFor(p, pr, corners),
       ...(outcome ? { outcome } : {}),
+      ...(inPlay && familyOf(p.market) !== "corners" ? withLive(p.market, pr.match.score.home ?? 0, pr.match.score.away ?? 0) : {}),
     };
   });
 }

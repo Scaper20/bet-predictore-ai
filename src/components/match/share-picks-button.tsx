@@ -5,12 +5,13 @@ import { ShareImageSheet } from "@/components/slip/share-slip-sheet";
 
 /** Opens the match's picks as a shareable image (api/match/[id]/share-image). */
 export function SharePicksButton({ matchId, label }: { matchId: string; label: string }) {
-  const [open, setOpen] = useState(false);
+  // The image is drawn in the theme the viewer is using (root data-theme, theme-toggle.tsx).
+  const [theme, setTheme] = useState<"light" | "dark" | null>(null);
   return (
     <>
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => setTheme(document.documentElement.dataset.theme === "light" ? "light" : "dark")}
         className="inline-flex items-center gap-1.5 rounded-lg border border-line px-2.5 py-1 text-xs font-semibold normal-case tracking-normal text-ink-muted hover:bg-surface-2 hover:text-ink"
       >
         <svg viewBox="0 0 20 20" className="size-3.5" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
@@ -18,13 +19,13 @@ export function SharePicksButton({ matchId, label }: { matchId: string; label: s
         </svg>
         Share
       </button>
-      {open && (
+      {theme && (
         <ShareImageSheet
-          src={`/api/match/${encodeURIComponent(matchId)}/share-image`}
+          src={`/api/match/${encodeURIComponent(matchId)}/share-image?theme=${theme}`}
           title="picks"
           filename="kiqstat-picks.png"
           shareText={`${label} · picks on KiqStat · kiqstat.app`}
-          onClose={() => setOpen(false)}
+          onClose={() => setTheme(null)}
         />
       )}
     </>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildTopPicks } from "./top-picks";
+import { buildTopPicks, liveState } from "./top-picks";
 import type { FormEntry, Pick, Prediction } from "@/lib/model/predict";
 import type { StatMarkets } from "@/lib/model/match-stats";
 
@@ -82,5 +82,15 @@ describe("top picks", () => {
   it("returns nothing for a locked or unpublishable pick", () => {
     expect(buildTopPicks({ prediction: pred({ picks, topPick: pk("locked", 0, "Goals") }) })).toEqual([]);
     expect(buildTopPicks({ prediction: pred({ picks, sufficiency: { publishable: false } as never }) })).toEqual([]);
+  });
+
+  it("settles goal lines as soon as the score decides them, and tracks the rest", () => {
+    expect(liveState("ou:over:1.5", 1, 1)).toBe("won");
+    expect(liveState("ou:under:2.5", 2, 1)).toBe("lost");
+    expect(liveState("ou:over:2.5", 1, 0)).toBe("losing");
+    expect(liveState("btts:yes", 1, 1)).toBe("won");
+    expect(liveState("dc:home-draw", 0, 2)).toBe("losing");
+    expect(liveState("dc:away-draw", 1, 1)).toBe("winning");
+    expect(liveState("ah:home:0", 1, 1)).toBe("level");
   });
 });

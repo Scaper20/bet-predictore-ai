@@ -7,7 +7,7 @@ import { getEntitlement } from "@/lib/entitlements";
 import { viewerForTier } from "@/lib/viewer";
 import { viewPrediction } from "@/lib/access";
 import { fixtureStatMarkets } from "@/lib/stat-markets-service";
-import { buildTopPicks, type TopPick } from "@/lib/top-picks";
+import { buildTopPicks, type LiveState, type TopPick } from "@/lib/top-picks";
 import { RISK, riskFor } from "@/lib/model/risk";
 import { isStrong } from "@/lib/model/tiers";
 import { flagUrl } from "@/lib/flags";
@@ -15,22 +15,58 @@ import { flagUrl } from "@/lib/flags";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** The site's palette (Ink, Pitch, Steel, Chalk, Volt, Signal). */
-const C = {
-  ink: "#0b0e0d",
-  pitch: "#121815",
-  panel: "#161d1a",
+/**
+ * The site's two themes (globals.css). An image cannot follow the viewer's
+ * theme by itself, so the share sheet asks for the one the viewer is using.
+ */
+const DARK = {
+  bg: "#0b0e0d",
+  glow: "rgba(212,255,58,0.16)",
+  glowEnd: "rgba(11,14,13,0)",
+  card: "#161d1a",
+  cardAlt: "#121815",
   line: "#27322c",
-  chalk: "#f2f4ec",
-  steel: "#97a39c",
+  frame: "rgba(242,244,236,0.06)",
+  track: "rgba(242,244,236,0.18)",
+  text: "#f2f4ec",
+  muted: "#97a39c",
   dim: "#66726b",
-  volt: "#d4ff3a",
+  accent: "#d4ff3a",
+  accentSoft: "rgba(212,255,58,0.08)",
+  accentEdge: "rgba(212,255,58,0.55)",
+  onAccent: "#0b0e0d",
   signal: "#ff5d73",
+  signalSoft: "rgba(255,93,115,0.08)",
   amber: "#f5b942",
+  band: "#d4ff3a",
+  onBand: "#0b0e0d",
+};
+type Pal = typeof DARK;
+const LIGHT: Pal = {
+  bg: "#f6f7f2",
+  glow: "rgba(79,107,0,0.12)",
+  glowEnd: "rgba(246,247,242,0)",
+  card: "#ffffff",
+  cardAlt: "#ffffff",
+  line: "#e1e4da",
+  frame: "#eef0e8",
+  track: "#e3e6dc",
+  text: "#07090b",
+  muted: "#4c5650",
+  dim: "#78827c",
+  accent: "#4f6b00",
+  accentSoft: "rgba(79,107,0,0.07)",
+  accentEdge: "rgba(79,107,0,0.55)",
+  onAccent: "#ffffff",
+  signal: "#d6203f",
+  signalSoft: "rgba(214,32,63,0.06)",
+  amber: "#b56f00",
+  band: "#d4ff3a",
+  onBand: "#07090b",
 };
 
-const RISK_TONE = { low: C.volt, medium: C.amber, high: C.signal } as const;
-const LOCKUP_SRC = `data:image/svg+xml;base64,${Buffer.from(lockupSvg(C.chalk, C.volt)).toString("base64")}`;
+const lockupSrc = (c: Pal) => `data:image/svg+xml;base64,${Buffer.from(lockupSvg(c.text, c === DARK ? c.accent : "#4f6b00")).toString("base64")}`;
+const riskTone = (c: Pal) => ({ low: c.accent, medium: c.amber, high: c.signal }) as const;
 
 /* ------------------------------------------------------------ assets */
 
@@ -83,26 +119,32 @@ async function crestData(src: string | undefined, name: string): Promise<string 
 
 const lagos = (iso: string, opts: Intl.DateTimeFormatOptions) => new Date(iso).toLocaleString("en-GB", { timeZone: "Africa/Lagos", ...opts });
 const pctText = (p: number) => `${Math.round(p * 100)}%`;
+const MONO = { fontFamily: "Plex Mono", textTransform: "uppercase" } as const;
 
 function initials(name: string): string {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]!.toUpperCase()).join("");
 }
 
-function Crest({ data, name }: { data: string | null; name: string }) {
+/** "Home or Draw" reads better on a shared image as "Udinese or Draw". */
+function withTeams(label: string, home: string, away: string): string {
+  return label.replace(/\bHome\b/, home).replace(/\bAway\b/, away);
+}
+
+function Crest({ c, data, name }: { c: Pal; data: string | null; name: string }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 176, height: 176, borderRadius: 88, background: "rgba(242,244,236,0.06)", border: `2px solid ${C.line}` }}>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 176, height: 176, borderRadius: 88, background: c.frame, border: `2px solid ${c.line}` }}>
       {data ? (
         // eslint-disable-next-line @next/next/no-img-element -- satori renders plain <img>
         <img src={data} width={116} height={116} style={{ objectFit: "contain" }} alt="" />
       ) : (
-        <div style={{ display: "flex", fontFamily: "Unbounded", fontSize: 52, color: C.chalk }}>{initials(name)}</div>
+        <div style={{ display: "flex", fontFamily: "Unbounded", fontSize: 52, color: c.text }}>{initials(name)}</div>
       )}
     </div>
   );
 }
 
 /** The model's chance as a ring: the arc is the probability. */
-function Ring({ p, tone }: { p: number; tone: string }) {
+function Ring({ c, p, tone }: { c: Pal; p: number; tone: string }) {
   const size = 148;
   const stroke = 12;
   const r = (size - stroke) / 2;
@@ -110,20 +152,10 @@ function Ring({ p, tone }: { p: number; tone: string }) {
   return (
     <div style={{ display: "flex", position: "relative", width: size, height: size, alignItems: "center", justifyContent: "center" }}>
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ position: "absolute", top: 0, left: 0 }}>
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={C.line} strokeWidth={stroke} />
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          fill="none"
-          stroke={tone}
-          strokeWidth={stroke}
-          strokeLinecap="round"
-          strokeDasharray={`${circ * p} ${circ}`}
-          transform={`rotate(-90 ${size / 2} ${size / 2})`}
-        />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={c.track} strokeWidth={stroke} />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={tone} strokeWidth={stroke} strokeLinecap="round" strokeDasharray={`${circ * p} ${circ}`} transform={`rotate(-90 ${size / 2} ${size / 2})`} />
       </svg>
-      <div style={{ display: "flex", fontFamily: "Unbounded", fontSize: 36, color: C.chalk }}>{pctText(p)}</div>
+      <div style={{ display: "flex", fontFamily: "Unbounded", fontSize: 36, color: c.text }}>{pctText(p)}</div>
     </div>
   );
 }
@@ -144,78 +176,90 @@ function Cross({ color }: { color: string }) {
   );
 }
 
-function Chip({ children, color, fill }: { children: React.ReactNode; color: string; fill?: boolean }) {
+function Dot({ color }: { color: string }) {
+  return <div style={{ display: "flex", width: 12, height: 12, borderRadius: 6, background: color }} />;
+}
+
+function Chip({ children, color, ink, fill }: { children: React.ReactNode; color: string; ink: string; fill?: boolean }) {
   return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 8,
-        height: 40,
-        padding: "0 16px",
-        borderRadius: 20,
-        fontFamily: "Plex Mono",
-        fontSize: 20,
-        letterSpacing: 1.5,
-        textTransform: "uppercase",
-        color: fill ? C.ink : color,
-        background: fill ? color : "transparent",
-        border: fill ? "none" : `2px solid ${color}`,
-      }}
-    >
+    <div style={{ ...MONO, display: "flex", alignItems: "center", gap: 8, height: 40, padding: "0 16px", borderRadius: 20, fontSize: 20, letterSpacing: 1.5, color: fill ? ink : color, background: fill ? color : "transparent", border: fill ? "none" : `2px solid ${color}` }}>
       {children}
     </div>
   );
 }
 
-/** "Home or Draw" reads better on a shared image as "Udinese or Draw". */
-function withTeams(label: string, home: string, away: string): string {
-  return label.replace(/\bHome\b/, home).replace(/\bAway\b/, away);
+/** Where a pick stands: settled (full time, or a goal line the score has already decided) or how it is going. */
+type Standing = "won" | "lost" | "push" | "winning" | "losing" | "level" | "in-play" | "grading" | null;
+
+/** A corners pick has no live state: the score cannot tell it, so it says when it will settle. */
+function standingOf(p: TopPick, phase: "before" | "live" | "over"): Standing {
+  if (p.outcome) return p.outcome === "win" ? "won" : p.outcome === "lose" ? "lost" : "push";
+  if (p.live) return p.live as LiveState;
+  return phase === "live" ? "in-play" : phase === "over" ? "grading" : null;
 }
 
-function PickCard({ pick, strong, home, away }: { pick: TopPick; strong: boolean; home: string; away: string }) {
+function StandingChip({ c, s }: { c: Pal; s: Standing }) {
+  switch (s) {
+    case "won":
+      return <Chip color={c.accent} ink={c.onAccent} fill><Tick color={c.onAccent} /> Won</Chip>;
+    case "lost":
+      return <Chip color={c.signal} ink="#ffffff" fill><Cross color="#ffffff" /> Lost</Chip>;
+    case "push":
+      return <Chip color={c.muted} ink={c.bg} fill>Refunded</Chip>;
+    case "winning":
+      return <Chip color={c.accent} ink={c.onAccent}><Dot color={c.accent} /> Winning now</Chip>;
+    case "losing":
+      return <Chip color={c.signal} ink="#ffffff"><Dot color={c.signal} /> Losing now</Chip>;
+    case "level":
+      return <Chip color={c.muted} ink={c.bg}><Dot color={c.muted} /> Level now</Chip>;
+    case "in-play":
+      return <Chip color={c.muted} ink={c.bg}><Dot color={c.muted} /> In play</Chip>;
+    case "grading":
+      return <Chip color={c.muted} ink={c.bg}>Grading from match stats</Chip>;
+    default:
+      return null;
+  }
+}
+
+function PickCard({ c, pick, strong, home, away, phase }: { c: Pal; pick: TopPick; strong: boolean; home: string; away: string; phase: "before" | "live" | "over" }) {
   const level = riskFor(pick.probability);
-  const won = pick.outcome === "win";
-  const lost = pick.outcome === "lose";
-  const edge = won ? C.volt : lost ? C.signal : pick.headline ? "rgba(212,255,58,0.55)" : C.line;
+  const s = standingOf(pick, phase);
+  const good = s === "won" || s === "winning";
+  const bad = s === "lost" || s === "losing";
+  const edge = s === "won" ? c.accent : s === "lost" ? c.signal : good ? c.accentEdge : bad ? c.signal : pick.headline ? c.accentEdge : c.line;
+  const fill = s === "won" ? c.accentSoft : s === "lost" ? c.signalSoft : c.card;
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 28, padding: "30px 32px", borderRadius: 32, background: won ? "rgba(212,255,58,0.07)" : C.panel, border: `2px solid ${edge}` }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 28, padding: "30px 32px", borderRadius: 32, background: fill, border: `${s === "won" || s === "lost" ? 3 : 2}px solid ${edge}` }}>
       <div style={{ display: "flex", flexDirection: "column", flex: 1, gap: 12 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 14, fontFamily: "Plex Mono", fontSize: 20, letterSpacing: 2.5, textTransform: "uppercase", color: C.steel }}>
-          {pick.headline ? <div style={{ display: "flex", color: C.volt }}>KiqStat pick</div> : null}
-          {pick.headline ? <div style={{ display: "flex", color: C.dim }}>/</div> : null}
+        <div style={{ ...MONO, display: "flex", alignItems: "center", gap: 14, fontSize: 20, letterSpacing: 2.5, color: c.muted }}>
+          {pick.headline ? <div style={{ display: "flex", color: c.accent }}>KiqStat pick</div> : null}
+          {pick.headline ? <div style={{ display: "flex", color: c.dim }}>/</div> : null}
           <div style={{ display: "flex" }}>{pick.group}</div>
         </div>
-        <div style={{ display: "flex", fontFamily: "Space Grotesk", fontWeight: 700, fontSize: 46, lineHeight: 1.1, color: lost ? C.steel : C.chalk }}>{withTeams(pick.label, home, away)}</div>
-        {pick.reasons[0] ? <div style={{ display: "flex", fontFamily: "Space Grotesk", fontWeight: 500, fontSize: 25, color: C.steel }}>{pick.reasons[0]}</div> : null}
+        <div style={{ display: "flex", fontFamily: "Space Grotesk", fontWeight: 700, fontSize: 46, lineHeight: 1.1, color: s === "lost" ? c.muted : c.text, textDecoration: s === "lost" ? "line-through" : "none" }}>
+          {withTeams(pick.label, home, away)}
+        </div>
+        {pick.reasons[0] ? <div style={{ display: "flex", fontWeight: 500, fontSize: 25, color: c.muted }}>{pick.reasons[0]}</div> : null}
         <div style={{ display: "flex", gap: 10, marginTop: 6 }}>
-          {won ? (
-            <Chip color={C.volt} fill>
-              <Tick color={C.ink} /> Landed
-            </Chip>
-          ) : lost ? (
-            <Chip color={C.signal} fill>
-              <Cross color={C.ink} /> Missed
-            </Chip>
-          ) : null}
-          {strong ? (
-            <Chip color={C.amber} fill>
-              Strong
-            </Chip>
-          ) : null}
-          <Chip color={RISK_TONE[level]}>{RISK[level].label}</Chip>
+          <StandingChip c={c} s={s} />
+          {strong ? <Chip color={c.amber} ink={c.bg} fill>Strong</Chip> : null}
+          <Chip color={riskTone(c)[level]} ink={c.bg}>{RISK[level].label}</Chip>
         </div>
       </div>
-      <Ring p={pick.probability} tone={lost ? C.signal : C.volt} />
+      <Ring c={c} p={pick.probability} tone={bad ? c.signal : c.accent} />
     </div>
   );
 }
 
 /* ------------------------------------------------------------ route */
 
-/** One match's picks as a branded image to save or share. Built from the match id alone, so nothing in the URL is trusted. */
-export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+/**
+ * One match's picks as a branded image to save or share. Built from the match
+ * id alone, so nothing in the URL is trusted beyond the theme switch.
+ */
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const c = new URL(request.url).searchParams.get("theme") === "light" ? LIGHT : DARK;
   const detail = await matchDetail(decodeURIComponent(id)).catch(() => null);
   if (!detail) return new Response("Match not found", { status: 404 });
 
@@ -237,96 +281,74 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
 
   const strong = isStrong(prediction.topPick, match.league.code);
   const started = match.status !== "scheduled" && match.score.home !== null && match.score.away !== null;
-  const stage = match.status === "finished" ? "Full time" : match.status === "halftime" ? "Half time" : match.status === "live" ? "Live" : "Kick-off";
   const live = match.status === "live" || match.status === "halftime";
+  const stage = match.status === "finished" ? "Full time" : match.status === "halftime" ? "Half time" : live ? "Live" : "Kick-off · WAT";
   const sub = [match.league.name, match.round].filter(Boolean).join("  ·  ");
   const split = [
     { label: match.home.name, p: prediction.markets.home },
     { label: "Draw", p: prediction.markets.draw },
     { label: match.away.name, p: prediction.markets.away },
   ];
-  const top = Math.max(...split.map((s) => s.p));
+  const top = Math.max(...split.map((x) => x.p));
+  const settled = picks.filter((p) => p.outcome === "win" || p.outcome === "lose");
+  const tally = match.status === "finished" && settled.length > 0 ? `${settled.filter((p) => p.outcome === "win").length} of ${settled.length} landed` : null;
 
   const width = 1080;
-  // Measured: about 1,000px of frame plus a card per pick; the footer's auto margin takes the slack.
-  const height = 1060 + picks.length * 296;
+  // Measured: about 1,060px of frame plus a card per pick; the footer's auto margin takes the slack.
+  // A pick name past about 26 characters wraps to a second line at this size, and so does a
+  // team name past about 15; each adds a line's height.
+  const wrapped = picks.filter((p) => withTeams(p.label, match.home.name, match.away.name).length > 26).length;
+  const longName = Math.max(match.home.name.length, match.away.name.length) > 15 ? 40 : 0;
+  const height = 1080 + picks.length * 296 + wrapped * 52 + longName;
 
   return new ImageResponse(
     (
-      <div
-        style={{
-          width: "100%",
-          height: "100%",
-          display: "flex",
-          flexDirection: "column",
-          padding: "56px 56px 48px",
-          background: C.ink,
-          backgroundImage: "radial-gradient(900px 620px at 50% -120px, rgba(212,255,58,0.16), rgba(11,14,13,0) 70%)",
-          fontFamily: "Space Grotesk",
-          color: C.chalk,
-        }}
-      >
+      <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", padding: "56px 56px 48px", background: c.bg, backgroundImage: `radial-gradient(900px 620px at 50% -120px, ${c.glow}, ${c.glowEnd} 70%)`, fontFamily: "Space Grotesk", color: c.text }}>
         {/* Brand row */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           {/* eslint-disable-next-line @next/next/no-img-element -- satori renders plain <img> */}
-          <img src={LOCKUP_SRC} width={Math.round(48 * LOCKUP_ASPECT)} height={48} alt="KiqStat" />
-          <div style={{ display: "flex", fontFamily: "Plex Mono", fontSize: 21, letterSpacing: 3, textTransform: "uppercase", color: C.steel }}>
-            {lagos(match.kickoff, { weekday: "short", day: "numeric", month: "short" })}
-          </div>
+          <img src={lockupSrc(c)} width={Math.round(48 * LOCKUP_ASPECT)} height={48} alt="KiqStat" />
+          <div style={{ ...MONO, display: "flex", fontSize: 21, letterSpacing: 3, color: c.muted }}>{lagos(match.kickoff, { weekday: "short", day: "numeric", month: "short" })}</div>
         </div>
 
         {/* Fixture */}
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: 52 }}>
-          <div style={{ display: "flex", fontFamily: "Plex Mono", fontSize: 22, letterSpacing: 3.5, textTransform: "uppercase", color: C.steel }}>{sub}</div>
+          <div style={{ ...MONO, display: "flex", fontSize: 22, letterSpacing: 3.5, color: c.muted }}>{sub}</div>
           <div style={{ display: "flex", width: "100%", alignItems: "flex-start", justifyContent: "space-between", marginTop: 40 }}>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: 300, gap: 22 }}>
-              <Crest data={homeCrest} name={match.home.name} />
-              <div style={{ display: "flex", textAlign: "center", justifyContent: "center", fontWeight: 700, fontSize: 34, lineHeight: 1.15 }}>{match.home.name}</div>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 34, gap: 18 }}>
-              <div style={{ display: "flex", fontFamily: "Unbounded", fontSize: started ? 104 : 80, color: started ? C.volt : C.chalk, letterSpacing: -2 }}>
-                {started ? `${match.score.home}–${match.score.away}` : lagos(match.kickoff, { hour: "2-digit", minute: "2-digit", hour12: false })}
-              </div>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  height: 40,
-                  padding: "0 18px",
-                  borderRadius: 20,
-                  fontFamily: "Plex Mono",
-                  fontSize: 20,
-                  letterSpacing: 2.5,
-                  textTransform: "uppercase",
-                  color: live ? C.ink : C.steel,
-                  background: live ? C.signal : "rgba(242,244,236,0.06)",
-                }}
-              >
-                {stage}
-                {!started ? <div style={{ display: "flex", color: C.dim }}>WAT</div> : null}
-              </div>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: 300, gap: 22 }}>
-              <Crest data={awayCrest} name={match.away.name} />
-              <div style={{ display: "flex", textAlign: "center", justifyContent: "center", fontWeight: 700, fontSize: 34, lineHeight: 1.15 }}>{match.away.name}</div>
-            </div>
+            {[{ team: match.home, crest: homeCrest }, null, { team: match.away, crest: awayCrest }].map((side, i) =>
+              side ? (
+                <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", width: 300, gap: 22 }}>
+                  <Crest c={c} data={side.crest} name={side.team.name} />
+                  <div style={{ display: "flex", textAlign: "center", justifyContent: "center", fontWeight: 700, fontSize: 34, lineHeight: 1.15 }}>{side.team.name}</div>
+                </div>
+              ) : (
+                <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 34, gap: 18 }}>
+                  <div style={{ display: "flex", fontFamily: "Unbounded", fontSize: started ? 104 : 80, color: started ? c.accent : c.text, letterSpacing: -2 }}>
+                    {started ? `${match.score.home}–${match.score.away}` : lagos(match.kickoff, { hour: "2-digit", minute: "2-digit", hour12: false })}
+                  </div>
+                  <div style={{ ...MONO, display: "flex", alignItems: "center", gap: 10, height: 40, padding: "0 18px", borderRadius: 20, fontSize: 20, letterSpacing: 2.5, color: live ? "#ffffff" : c.muted, background: live ? c.signal : c.frame }}>
+                    {live ? <Dot color="#ffffff" /> : null}
+                    {stage}
+                  </div>
+                </div>
+              ),
+            )}
           </div>
         </div>
 
         {/* The model's read on the result */}
-        <div style={{ display: "flex", flexDirection: "column", marginTop: 52, padding: "28px 32px", borderRadius: 28, background: C.pitch, border: `2px solid ${C.line}` }}>
-          <div style={{ display: "flex", fontFamily: "Plex Mono", fontSize: 19, letterSpacing: 3, textTransform: "uppercase", color: C.dim }}>Model&apos;s read</div>
+        <div style={{ display: "flex", flexDirection: "column", marginTop: 52, padding: "28px 32px", borderRadius: 28, background: c.cardAlt, border: `2px solid ${c.line}` }}>
+          <div style={{ ...MONO, display: "flex", fontSize: 19, letterSpacing: 3, color: c.dim }}>Model&apos;s read</div>
           <div style={{ display: "flex", gap: 6, marginTop: 18, height: 16 }}>
-            {split.map((s) => (
-              <div key={s.label} style={{ display: "flex", width: `${s.p * 100}%`, height: 16, borderRadius: 8, background: s.p === top ? C.volt : "rgba(242,244,236,0.18)" }} />
+            {split.map((x) => (
+              <div key={x.label} style={{ display: "flex", width: `${x.p * 100}%`, height: 16, borderRadius: 8, background: x.p === top ? c.accent : c.track }} />
             ))}
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", marginTop: 16 }}>
-            {split.map((s, i) => (
-              <div key={s.label} style={{ display: "flex", flexDirection: "column", alignItems: i === 0 ? "flex-start" : i === 1 ? "center" : "flex-end", width: 300 }}>
-                <div style={{ display: "flex", fontFamily: "Unbounded", fontSize: 30, color: s.p === top ? C.volt : C.chalk }}>{pctText(s.p)}</div>
-                <div style={{ display: "flex", fontSize: 22, color: C.steel, marginTop: 4 }}>{s.label}</div>
+            {split.map((x, i) => (
+              <div key={x.label} style={{ display: "flex", flexDirection: "column", alignItems: i === 0 ? "flex-start" : i === 1 ? "center" : "flex-end", width: 300 }}>
+                <div style={{ display: "flex", fontFamily: "Unbounded", fontSize: 30, color: x.p === top ? c.accent : c.text }}>{pctText(x.p)}</div>
+                <div style={{ display: "flex", fontSize: 22, color: c.muted, marginTop: 4 }}>{x.label}</div>
               </div>
             ))}
           </div>
@@ -335,26 +357,25 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
         {/* Picks */}
         <div style={{ display: "flex", alignItems: "center", gap: 18, marginTop: 52 }}>
           <div style={{ display: "flex", fontFamily: "Unbounded", fontSize: 30 }}>Top picks</div>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 44, height: 44, borderRadius: 22, background: C.volt, color: C.ink, fontFamily: "Unbounded", fontSize: 22 }}>{picks.length}</div>
-          <div style={{ display: "flex", flex: 1, height: 2, background: C.line }} />
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 44, height: 44, borderRadius: 22, background: c.accent, color: c.onAccent, fontFamily: "Unbounded", fontSize: 22 }}>{picks.length}</div>
+          <div style={{ display: "flex", flex: 1, height: 2, background: c.line }} />
+          {tally ? <div style={{ ...MONO, display: "flex", fontSize: 21, letterSpacing: 2, color: c.accent }}>{tally}</div> : null}
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 22, marginTop: 28 }}>
           {picks.map((p) => (
-            <PickCard key={p.market} pick={p} strong={p.headline && strong} home={match.home.name} away={match.away.name} />
+            <PickCard key={p.market} c={c} pick={p} strong={p.headline && strong} home={match.home.name} away={match.away.name} phase={live ? "live" : match.status === "finished" ? "over" : "before"} />
           ))}
         </div>
 
         {/* Footer */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "auto", padding: "30px 36px", borderRadius: 28, background: C.volt, color: C.ink }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "auto", padding: "30px 36px", borderRadius: 28, background: c.band, color: c.onBand }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             <div style={{ display: "flex", fontFamily: "Unbounded", fontSize: 30 }}>Every market, every game</div>
             <div style={{ display: "flex", fontWeight: 500, fontSize: 24 }}>Form, the reasons behind each pick and the full record</div>
           </div>
           <div style={{ display: "flex", fontFamily: "Plex Mono", fontSize: 26, letterSpacing: 1 }}>kiqstat.app</div>
         </div>
-        <div style={{ display: "flex", justifyContent: "center", marginTop: 22, fontFamily: "Plex Mono", fontSize: 18, letterSpacing: 2, textTransform: "uppercase", color: C.dim }}>
-          Model chances, not guarantees  ·  18+
-        </div>
+        <div style={{ ...MONO, display: "flex", justifyContent: "center", marginTop: 22, fontSize: 18, letterSpacing: 2, color: c.dim }}>Model chances, not guarantees  ·  18+</div>
       </div>
     ),
     { width, height, fonts: fontList, headers: { "Cache-Control": "private, no-store" } },
