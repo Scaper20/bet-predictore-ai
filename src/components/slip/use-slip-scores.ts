@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { legsToPoll, type LegScore } from "@/lib/slip-tracker";
+import { statKindOf } from "@/lib/settlement";
 import { recordScores, type TrackedSlip } from "@/lib/tracked-slips";
 import { stampAll } from "@/lib/live-clock";
 
@@ -27,16 +28,24 @@ export function useSlipScores(slips: TrackedSlip[], pollMs = POLL_MS): Record<st
     return () => window.clearInterval(t);
   }, []);
 
-  const ids = useMemo(() => {
+  const [ids, statIds] = useMemo(() => {
     const set = new Set<string>();
-    for (const s of slips) for (const l of legsToPoll(s.legs, s.results, now)) set.add(l.matchId);
-    return [...set].sort();
+    const stats = new Set<string>();
+    for (const s of slips) {
+      for (const l of legsToPoll(s.legs, s.results, now)) {
+        set.add(l.matchId);
+        if (statKindOf(l.market)) stats.add(l.matchId);
+      }
+    }
+    return [[...set].sort(), [...stats].sort()];
   }, [slips, now]);
   const key = ids.join(",");
+  const statKey = statIds.join(",");
 
   useEffect(() => {
     if (key === "") return;
     const wanted = key.split(",");
+    const withStats = statKey ? statKey.split(",") : [];
     let cancelled = false;
     let controller: AbortController | null = null;
 
@@ -48,7 +57,7 @@ export function useSlipScores(slips: TrackedSlip[], pollMs = POLL_MS): Record<st
         const res = await fetch("/api/slip/status", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ids: wanted }),
+          body: JSON.stringify({ ids: wanted, stats: withStats }),
           signal: controller.signal,
         });
         if (!res.ok || cancelled) return;
@@ -76,7 +85,7 @@ export function useSlipScores(slips: TrackedSlip[], pollMs = POLL_MS): Record<st
       window.clearInterval(timer);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [key, pollMs]);
+  }, [key, statKey, pollMs]);
 
   return scores;
 }

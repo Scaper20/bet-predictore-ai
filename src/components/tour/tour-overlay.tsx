@@ -52,7 +52,7 @@ const STEPS: Step[] = [
   {
     targets: ['[data-tour="forge"]'],
     title: "Let Forge build one",
-    body: "Choose safe, balanced or risky and how many games. Forge picks the matches from the model's own numbers.",
+    body: "Pick the price you want. Forge takes the strongest picks on the card first, then the next strongest, until it gets there.",
   },
   {
     targets: ['[data-tour="code-hub"]'],

@@ -7,7 +7,9 @@ import {
   bestSwap,
   candidatesFor,
   forge,
+  forgeBest,
   friendlyLabel,
+  nextBest,
   gridFor,
   jointProbability,
   oneIn,
@@ -183,5 +185,50 @@ describe("Forge markets by plan", () => {
     expect(marketsForPlan(["double_chance", "goals"], false)).toEqual(["double_chance"]);
     expect(marketsForPlan(["goals"], false)).toEqual(["result"]);
     expect(marketsForPlan(["goals", "btts"], true)).toEqual(["goals", "btts"]);
+  });
+});
+
+describe("forgeBest", () => {
+  const settings: ForgeSettings = { ...DEFAULT_SETTINGS, targetOdds: 5, games: 10 };
+  const fresh = { locked: [], removed: [], avoid: [], seed: 1 };
+
+  it("takes the strongest reads first and stops once the price is reached", () => {
+    const p = pool();
+    const { legs, bench } = forgeBest(p, settings, fresh);
+    const total = slipTotals(legs, 1).odds;
+    expect(total).toBeGreaterThanOrEqual(0.95 * 5);
+    expect(total).toBeLessThanOrEqual(5 * 1.35);
+    // Nothing left on the bench is a stronger read than the weakest leg taken.
+    const weakest = Math.min(...legs.map((l) => l.probability));
+    expect(bench.every((b) => b.probability <= weakest + 0.08)).toBe(true);
+    // Removing the weakest leg would leave the slip short of the price: no spare games.
+    const sorted = [...legs].sort((a, b) => a.probability - b.probability);
+    expect(slipTotals(sorted.slice(1), 1).odds).toBeLessThan(0.95 * 5);
+  });
+
+  it("uses fewer games for a smaller price", () => {
+    const small = forgeBest(pool(), { ...settings, targetOdds: 2 }, fresh).legs.length;
+    const big = forgeBest(pool(), { ...settings, targetOdds: 10 }, fresh).legs.length;
+    expect(small).toBeLessThan(big);
+  });
+
+  it("keeps locked legs, never offers removed games, and swaps in the next best", () => {
+    const first = forgeBest(pool(), settings, fresh);
+    const keep = first.legs[0];
+    const gone = first.legs[1].matchId;
+    const again = forgeBest(pool(), settings, { locked: [{ matchId: keep.matchId, market: keep.market }], removed: [gone], avoid: [], seed: 1 });
+    expect(again.legs.find((l) => l.matchId === keep.matchId)?.market).toBe(keep.market);
+    expect([...again.legs, ...again.bench].some((l) => l.matchId === gone)).toBe(false);
+    expect(nextBest(again.bench, new Set(again.legs.map((l) => l.matchId)))).toEqual(again.bench[0]);
+  });
+
+  it("offers corners and shots only on a tested line at its chance", () => {
+    const prediction = fixture(0, 11);
+    const corners = candidatesFor(prediction, { ...OPTS, markets: ["corners"] }, { "corners:under:12.5": 0.84, "corners:under:11.5": 0.9 });
+    expect(corners.map((c) => c.market)).toEqual(["corners:under:12.5"]);
+    expect(corners[0].label).toBe("Under 12.5 corners");
+    // Below the line's tested chance, or with corners not chosen, nothing.
+    expect(candidatesFor(prediction, { ...OPTS, markets: ["corners"] }, { "corners:under:12.5": 0.7 })).toHaveLength(0);
+    expect(candidatesFor(prediction, OPTS, { "corners:under:12.5": 0.84 }).some((c) => c.market.startsWith("corners"))).toBe(false);
   });
 });

@@ -138,3 +138,16 @@ describe("helpers", () => {
     );
   });
 });
+
+describe("settleLeg on corners and shots", () => {
+  const corners = leg({ market: "corners:under:12.5", kickoff: "2026-10-18T14:00:00Z" });
+  const day = Date.parse("2026-10-18T18:00:00Z");
+  it("grades from the match's counts once they are in", () => {
+    expect(settleLeg(corners, { status: "finished", home: 1, away: 0, stats: { corners: [5, 4] } }, day)?.grade).toBe("win");
+    expect(settleLeg(corners, { status: "finished", home: 1, away: 0, stats: { corners: [9, 6] } }, day)?.grade).toBe("lose");
+  });
+  it("waits for counts, then voids the leg if none come", () => {
+    expect(settleLeg(corners, { status: "finished", home: 1, away: 0 }, day)).toBeNull();
+    expect(settleLeg(corners, { status: "finished", home: 1, away: 0 }, day + 4 * 86_400_000)?.grade).toBe("void");
+  });
+});
