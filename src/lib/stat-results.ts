@@ -3,7 +3,7 @@ import "server-only";
 import { cached } from "@/lib/providers/cache";
 import { espnDay, espnStatsComplete, findEspnGame, type EspnResult } from "@/lib/archive/espn-shots";
 import { leagueByCode } from "@/lib/leagues";
-import { robustStatGrade, statKindOf, type PickResult } from "@/lib/settlement";
+import { evaluateStatPick, statKindOf, type PickResult } from "@/lib/settlement";
 import type { Match } from "@/lib/types";
 
 /**
@@ -12,9 +12,9 @@ import type { Match } from "@/lib/types";
  * archive (football-data.co.uk) that the daily sweep waits for takes two to
  * five days.
  *
- * A grade is only given when a count off by one either way could not change
- * it (robustStatGrade), the same rule settlement uses for ESPN, so the page
- * and the record cannot disagree. Close calls wait for the archive.
+ * ESPN's counts are taken as final, close calls included, the same rule
+ * settlement uses (settlement-runner.ts gradeFromStats), so the page and the
+ * record cannot disagree.
  */
 
 export type StatCounts = Record<"corners" | "shots" | "shotsOnTarget", [number, number]>;
@@ -39,12 +39,12 @@ export async function espnCountsFor(
   return { corners: [g.hc!, g.ac!], shots: [g.hs!, g.as!], shotsOnTarget: [g.hsot!, g.asot!] };
 }
 
-/** A stat pick's grade from counts, or null when it is too close to call on ESPN alone. */
+/** A stat pick's grade from ESPN's counts. */
 export function statOutcome(market: string, counts: StatCounts | null): PickResult | null {
   const kind = statKindOf(market);
   if (!kind || !counts) return null;
   const [h, a] = counts[kind];
-  return robustStatGrade(market, h, a);
+  return evaluateStatPick(market, h, a);
 }
 
 /** Fills in the outcome of any stat pick on a finished match that has none yet. */

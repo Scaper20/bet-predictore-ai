@@ -103,21 +103,3 @@ export function evaluateStatPick(market: string, home: number, away: number): Pi
   if (a === "hcp" && (b === "home" || b === "away")) return gradeHandicap(b, Number(c), home, away);
   return null;
 }
-
-/**
- * The stat pick's grade only when a count off by one either way could not
- * change it. Two sources can disagree by a corner or a shot (ESPN and
- * football-data.co.uk do, about one game in eight), so a grade from the
- * quicker source waits for the slower one when it sits that close to the line.
- */
-export function robustStatGrade(market: string, home: number, away: number): PickResult | null {
-  const grade = evaluateStatPick(market, home, away);
-  if (!grade) return null;
-  for (const dh of [-1, 0, 1]) {
-    for (const da of [-1, 0, 1]) {
-      if (home + dh < 0 || away + da < 0) continue;
-      if (evaluateStatPick(market, home + dh, away + da) !== grade) return null;
-    }
-  }
-  return grade;
-}

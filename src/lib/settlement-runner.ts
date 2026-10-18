@@ -2,7 +2,7 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getMatch } from "@/lib/providers";
-import { evaluatePick, evaluateStatPick, robustStatGrade, statKindOf, type PickResult } from "@/lib/settlement";
+import { evaluatePick, evaluateStatPick, statKindOf, type PickResult } from "@/lib/settlement";
 import { espnDay, espnStatsComplete, findEspnGame, type EspnResult } from "@/lib/archive/espn-shots";
 import { leagueByCode } from "@/lib/leagues";
 import { looseKey, nameBook, nameScope } from "@/lib/teams/canonical";
@@ -208,10 +208,10 @@ const STAT_WAIT_MS = 10 * 86_400_000;
 
 /**
  * A corners, shots or shots-on-target pick, graded from the counts in the
- * results archive (historical_results), which arrive with football-data.co.uk
- * two to five days after the game. Until then ESPN's scoreboard, which has
- * them within hours, grades it when its counts look complete and the result
- * is clear of the line (robustStatGrade); otherwise the pick stays open (null).
+ * results archive (historical_results) when it already has them, otherwise
+ * from ESPN's scoreboard, which has them minutes after full time. ESPN's
+ * counts are taken as final (decided 18 Oct 2026): a pick graded from them
+ * is not re-graded when the archive arrives.
  */
 async function gradeFromStats(
   admin: SupabaseClient,
@@ -254,7 +254,7 @@ async function gradeFromStats(
   if (counts) return evaluateStatPick(row.market, counts[0], counts[1]);
   const espn = await espnCounts(row, kind, espnCache);
   if (espn) {
-    const grade = robustStatGrade(row.market, espn[0], espn[1]);
+    const grade = evaluateStatPick(row.market, espn[0], espn[1]);
     if (grade) return grade;
   }
   return Date.now() - at > STAT_WAIT_MS ? "push" : null;
