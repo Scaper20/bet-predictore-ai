@@ -444,6 +444,9 @@ const HUB_VARIANTS: HubVariant[] = [
   { name: "sweet-spot legs only, flex to 5 odds, counts above", allow: hubMarketAllowed, sweetOnly: true },
   { name: "sweet-spot legs only, flex at every tier", allow: hubMarketAllowed, sweetOnly: true, options: { strategy: "flex" } },
   { name: "sweet-spot legs only, best legs first", allow: hubMarketAllowed, sweetOnly: true, options: { strategy: "best", minLegOdds: 1.15 } },
+  { name: "best legs first, leg floor scaled to the code (Forge's rule)", allow: hubMarketAllowed, options: { strategy: "best", scaled: true } },
+  { name: "best legs first, scaled to 8 legs", allow: hubMarketAllowed, options: { strategy: "best", scaled: true, maxLegs: 8 } },
+  { name: "best legs first, scaled to 10 legs", allow: hubMarketAllowed, options: { strategy: "best", scaled: true, maxLegs: 10 } },
 ];
 
 function resultDcHandicap(market: string): boolean {

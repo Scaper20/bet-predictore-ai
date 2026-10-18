@@ -249,7 +249,7 @@ export function buildHub(
       .filter((e) => e.candidates.length > 0);
     let legs: ForgeLeg[] | null = null;
     const strategy = options.strategy ?? hubStrategy(tier);
-    if (strategy === "best") legs = compileBest(pool, tier.target, [...uses.keys()], options);
+    if (strategy === "best") legs = compileBest(pool, tier.target, [...uses.keys()], { ...options, maxLegs: options.maxLegs ?? tier.games + HUB_EXTRA_GAMES });
     if (strategy === "flex") legs = compileFlex(pool, tier, [...uses.keys()], seed + Number(tier.id), options);
     for (let games = tier.games; strategy === "count" && games <= tier.games + HUB_EXTRA_GAMES && !legs; games++) {
       const built = forge(pool, { ...hubSettings(tier), games }, {
@@ -286,6 +286,12 @@ export interface HubBuildOptions {
   /** Legs shorter than this add risk without adding odds. */
   minLegOdds?: number;
   maxLegs?: number;
+  /**
+   * "best" only: raise the shortest leg allowed to what the code's odds need
+   * inside its game limit, Forge's rule (forge.ts forgeBest), so a long code
+   * is reached with strong legs rather than a dozen 1.2s.
+   */
+  scaled?: boolean;
 }
 
 /**
@@ -297,8 +303,8 @@ export interface HubBuildOptions {
  */
 export function compileBest(pool: PoolEntry[], target: number, avoid: string[], options: HubBuildOptions): ForgeLeg[] | null {
   const quality = options.quality ?? ((_: string, p: number) => p);
-  const minOdds = options.minLegOdds ?? 1.15;
   const maxLegs = options.maxLegs ?? 20;
+  const minOdds = Math.max(options.minLegOdds ?? 1.15, options.scaled ? Math.pow(target, 1 / maxLegs) * 1.02 : 0);
   const avoided = new Set(avoid);
   const ranked = pool
     .flatMap((e) => {
