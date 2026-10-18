@@ -21,7 +21,7 @@ import { archivedResults, storeResults } from "@/lib/archive/history-store";
 import { leagueClubTies } from "@/lib/archive/cup-ties";
 import { fitLeague, normaliseKey, type LeagueFit } from "@/lib/model/fit";
 import { scoreMatrix, deriveLiveWinProbability } from "@/lib/model/poisson";
-import { writeAnalysis, aiEnabled, type Analysis } from "@/lib/ai/analyst";
+import { aiEnabled } from "@/lib/ai/analyst";
 import { isLive } from "@/lib/format";
 import { internationalPool, leagueByCode } from "@/lib/leagues";
 import { sportOrDefault } from "@/lib/sports";
@@ -59,7 +59,6 @@ export async function upcomingFeed(days = 7, league?: string): Promise<FixtureFe
 export interface MatchDetail {
   match: Match;
   prediction: Prediction;
-  analysis: Analysis;
   trainedOn: { leagueName: string; curated: boolean; rows: number };
 }
 
@@ -280,12 +279,10 @@ export async function matchDetail(id: string): Promise<MatchDetail | null> {
 
     const [training, h2h, stats] = await Promise.all([trainingRows(match), getH2H(match), sweetSpotStats(match)]);
     const prediction = buildPrediction(match, training.rows, h2h, modelOptions(match, training, stats));
-    const analysis = await writeAnalysis(prediction);
 
     return {
       match,
       prediction,
-      analysis,
       trainedOn: {
         leagueName: training.leagueName,
         curated: training.curated,
@@ -296,12 +293,11 @@ export async function matchDetail(id: string): Promise<MatchDetail | null> {
 }
 
 /**
- * The fitted prediction for one fixture, without the written analysis.
+ * The fitted prediction for one fixture, without the match context.
  *
  * For Ask KiqStat (lib/ask/tools.ts), which reads the numbers and writes its
- * own answer: going through matchDetail() would pay for a second model call
- * (writeAnalysis) on every question about a fixture. Cached briefly, since a
- * conversation tends to ask about the same match several times in a row.
+ * own answer. Cached briefly, since a conversation tends to ask about the
+ * same match several times in a row.
  */
 export async function matchPrediction(id: string): Promise<Prediction | null> {
   return cached(`prediction:${id}`, 10 * 60_000, async () => {

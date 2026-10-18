@@ -44,11 +44,6 @@ export async function GET(
         // leaves the same data leaking out through this second list.
         picks: hasPass ? viewed.picks : viewed.picks.filter((p) => p.group !== "Asian Handicap"),
       },
-      analysis: {
-        ...detail.analysis,
-        body: hasPass ? detail.analysis.body : detail.analysis.body.slice(0, 1),
-        factors: hasPass ? detail.analysis.factors : [],
-      },
       entitlement: { tier: entitlement.tier },
     };
 

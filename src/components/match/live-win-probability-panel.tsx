@@ -93,14 +93,14 @@ export function LiveWinProbabilityPanel({ matchId }: { matchId: string }) {
   if (ended && !data) return null;
   if (!data) {
     return (
-      <div className="card p-5">
-        <p className="mb-4 text-sm font-semibold uppercase tracking-wider text-ink-muted">
+      <div className="card px-4 py-3">
+        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
           Loading live win probability…
         </p>
-        <div className="animate-pulse space-y-3">
-          <div className="h-4 rounded bg-surface-2" />
-          <div className="h-4 rounded bg-surface-2" />
-          <div className="h-4 rounded bg-surface-2" />
+        <div className="animate-pulse space-y-2">
+          <div className="h-3 rounded bg-surface-2" />
+          <div className="h-3 rounded bg-surface-2" />
+          <div className="h-3 rounded bg-surface-2" />
         </div>
       </div>
     );
@@ -114,46 +114,41 @@ export function LiveWinProbabilityPanel({ matchId }: { matchId: string }) {
   ];
 
   return (
-    <div className="card p-5">
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <span className="text-sm font-semibold uppercase tracking-wider text-ink-muted">
-          Live win probability
+    <div className="card px-4 py-3">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">Live win probability</span>
+        <span className="flex items-center gap-2.5">
+          <span className="tnum text-sm font-bold">
+            {data.currentScore.home}–{data.currentScore.away}
+          </span>
+          {ended ? (
+            <Badge tone="neutral">Full time</Badge>
+          ) : (
+            <Badge tone="live">
+              <LiveDot />
+              {minute ?? data.elapsedMinutes}&apos;
+            </Badge>
+          )}
         </span>
-        {ended ? (
-          <Badge tone="neutral">Full time</Badge>
-        ) : (
-          <Badge tone="live">
-            <LiveDot />
-            {minute ?? data.elapsedMinutes}&apos;
-          </Badge>
-        )}
       </div>
 
-      <p className="tnum mb-4 text-center text-2xl font-bold">
-        {data.currentScore.home}–{data.currentScore.away}
-      </p>
-
-      <div className="space-y-3">
+      <div className="mt-2 space-y-1.5">
         {rows.map((r) => (
-          <div key={r.label}>
-            <div className="mb-1.5 flex items-baseline justify-between gap-3">
-              <span className={`text-sm ${r.value === best ? "font-semibold text-ink" : "text-ink-muted"}`}>
-                {r.label}
-              </span>
-              <span className="tnum text-sm font-bold">{percent(r.value, 1)}</span>
-            </div>
+          <div key={r.label} className="grid grid-cols-[3rem_minmax(0,1fr)_3.25rem] items-center gap-2.5">
+            <span className={`text-xs ${r.value === best ? "font-semibold text-ink" : "text-ink-muted"}`}>{r.label}</span>
             <ProbabilityBar value={r.value} tone={r.value === best ? "brand" : "neutral"} />
+            <span className="tnum text-right text-xs font-bold">{percent(r.value, 1)}</span>
           </div>
         ))}
       </div>
 
       {!data.publishable && (
-        <p className="mt-4 text-[11px] leading-relaxed text-amber">
+        <p className="mt-2 text-[11px] leading-relaxed text-amber">
           Thin sample for this competition — treat as indicative.
         </p>
       )}
       {failing && (
-        <p className="mt-4 text-[11px] leading-relaxed text-ink-dim">
+        <p className="mt-2 text-[11px] leading-relaxed text-ink-dim">
           Reconnecting to the feed — showing the last good read.
         </p>
       )}
