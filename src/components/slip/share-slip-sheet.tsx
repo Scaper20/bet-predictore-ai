@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import type { SlipView } from "@/components/slip/tracked-slip";
 import { useOverlay } from "@/components/ui/use-overlay";
 import { Spinner } from "@/components/ui/primitives";
@@ -84,7 +85,9 @@ export function ShareImageSheet({
     }
   };
 
-  return (
+  // Portalled to the body: opened from inside an animated tab panel, a transformed
+  // ancestor would otherwise trap this fixed sheet inside the panel, off screen.
+  return createPortal(
     <div className="fixed inset-0 z-[70]" role="presentation">
       <button type="button" aria-label="Close" tabIndex={-1} onClick={onClose} className="slip-fade absolute inset-0 bg-black/60" />
       <div
@@ -144,7 +147,8 @@ export function ShareImageSheet({
           {note && <p className="text-center text-xs text-ink-dim">{note}</p>}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
