@@ -7,9 +7,10 @@ import { priceSelections } from "@/lib/odds";
 import { windowFor } from "@/lib/time-windows";
 import { proLeagueLocked, type Viewer } from "@/lib/access";
 import { COMBO_PREFIX } from "@/lib/slip-tracker";
+import { statChances } from "@/lib/stat-markets-service";
 import {
   candidatesFor,
-  forge,
+  forgeBest,
   type ForgeLeg,
   type ForgeRequestState,
   type ForgeResult,
@@ -55,16 +56,21 @@ export async function buildForgeSlip(
   const predictions = opts.viewer ? eligible.filter((p) => !proLeagueLocked(p.match, opts.viewer!)) : eligible;
   const proHeld = eligible.length - predictions.length;
 
-  const pool = predictions.map((prediction) => ({
+  // Corners and shots chances only when asked for: one count-model fit per competition, shared.
+  const wantsStats = settings.markets.includes("corners") || settings.markets.includes("shots");
+  const stats = wantsStats ? await Promise.all(predictions.map((p) => statChances(p.match).catch(() => undefined))) : [];
+
+  const pool = predictions.map((prediction, i) => ({
     prediction,
-    candidates: candidatesFor(prediction, {
-      markets: settings.markets,
-      picksPerGame: settings.picksPerGame,
-      allowHandicap: opts.allowHandicap,
-    }),
+    candidates: candidatesFor(
+      prediction,
+      { markets: settings.markets, picksPerGame: settings.picksPerGame, allowHandicap: opts.allowHandicap },
+      stats[i],
+    ),
   }));
 
-  const result = forge(pool, settings, state);
+  // Best first: the strongest reads on the card until the price is reached (lib/forge.ts).
+  const result = forgeBest(pool, settings, state);
   const byId = new Map(predictions.map((p) => [p.match.id, p]));
 
   // SportyBet prices for single picks. Combos stay at the model's fair odds:

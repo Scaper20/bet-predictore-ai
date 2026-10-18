@@ -6,8 +6,8 @@ export const metadata: Metadata = {
   alternates: { canonical: "/football/forge" },
   title: "KiqStat Forge — Build My Combo",
   description:
-    "Tell KiqStat how you like to pick — safe, balanced or risky, the combined price you want, how many games — " +
-    "and Forge builds the combo from the model's own numbers, with market prices where they're listed.",
+    "Pick the price you want and Forge builds the combo from the model's strongest picks first, then the next " +
+    "strongest, with corners and shots on Pro and market prices where they're listed.",
 };
 
 export default function ForgePage() {

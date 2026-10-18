@@ -6,6 +6,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { captureMatchResults } from "@/lib/settlement-runner";
 import type { Match } from "@/lib/types";
 import type { LegScore } from "@/lib/slip-tracker";
+import { espnCountsFor } from "@/lib/stat-results";
 
 export const dynamic = "force-dynamic";
 
@@ -27,11 +28,14 @@ const ID_PATTERN = /^[a-z]+:[\w.-]{1,64}$/i;
  */
 export async function POST(request: Request) {
   let ids: string[];
+  let statIds: Set<string>;
   try {
-    const body = (await request.json()) as { ids?: unknown };
-    ids = Array.isArray(body.ids)
-      ? [...new Set(body.ids.filter((id): id is string => typeof id === "string" && ID_PATTERN.test(id)))].slice(0, MAX_IDS)
-      : [];
+    const body = (await request.json()) as { ids?: unknown; stats?: unknown };
+    const valid = (v: unknown) =>
+      Array.isArray(v) ? [...new Set(v.filter((id): id is string => typeof id === "string" && ID_PATTERN.test(id)))].slice(0, MAX_IDS) : [];
+    ids = valid(body.ids);
+    // Matches with a corners or shots leg: their counts come back once finished.
+    statIds = new Set(valid(body.stats).filter((id) => ids.includes(id)));
   } catch {
     return NextResponse.json({ error: "Invalid body" }, { status: 400 });
   }
@@ -74,6 +78,18 @@ export async function POST(request: Request) {
     if (!m) continue;
     out[remaining[i]] = toScore(m);
     if (m.status === "finished") finished.push(m);
+  }
+
+  // Corners and shots counts for finished matches that need them (ESPN, shared per competition-day).
+  const wantStats = [...statIds].filter((id) => out[id]?.status === "finished");
+  if (wantStats.length > 0) {
+    await Promise.all(
+      wantStats.map(async (id) => {
+        const m = await cached(`slip-status:match:${id}`, 60_000, () => getMatch(id)).catch(() => null);
+        const counts = m ? await espnCountsFor(m).catch(() => null) : null;
+        if (counts) out[id] = { ...out[id], stats: counts };
+      }),
+    );
   }
 
   // Remember finished games so the next device asking is answered from step 1.

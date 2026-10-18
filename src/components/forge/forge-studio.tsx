@@ -9,9 +9,8 @@ import {
   FORGE_GUEST_TOTAL,
   FORGE_MARKETS,
   FORGE_WHEN,
-  RISK_PRESETS,
-  bestSwap,
   legOdds,
+  nextBest,
   oneIn,
   slipTotals,
   type ForgeLeg,
@@ -75,6 +74,16 @@ function save(key: string, value: unknown) {
 
 const pct = (p: number) => `${Math.round(p * 100)}%`;
 
+/** The prices offered as one tap; any other can be typed. */
+const PRICE_CHIPS = [1.5, 2, 3, 5, 10, 20];
+
+/** The style a price implies: it sets how unlikely a leg Forge may take (lib/forge.ts legFloorFor). */
+function riskFor(target: number): ForgeRisk {
+  return target <= 2.5 ? "safe" : target <= 8 ? "balanced" : "risky";
+}
+
+const SETTINGS_VERSION = 2;
+
 /* ----------------------------------------------------------------- studio */
 
 export function ForgeStudio() {
@@ -90,15 +99,20 @@ export function ForgeStudio() {
   const [view, setView] = useState<"settings" | "result">("settings");
   const [toast, setToast] = useState<ReactNode>(null);
   const progress = useBuildProgress(busy);
+  // Nothing is saved until the remembered settings and slip have been read back:
+  // saving the defaults on mount would overwrite them before they load.
+  const [restored, setRestored] = useState(false);
 
   // Remembered settings and the last slip, restored after hydration.
   useEffect(() => {
     const t = window.setTimeout(() => {
-      const s = load<ForgeSettings>(SETTINGS_KEY);
-      if (s) setSettings({ ...DEFAULT_SETTINGS, ...s });
+      const s = load<ForgeSettings & { v?: number }>(SETTINGS_KEY);
+      // Settings saved before best-first builds carried a fixed game count; keep the rest.
+      if (s) setSettings({ ...DEFAULT_SETTINGS, ...s, ...(s.v === SETTINGS_VERSION ? {} : { games: DEFAULT_SETTINGS.games }) });
       const last = load<Slip>(SLIP_KEY);
       // A slip whose first game has kicked off is stale; start fresh.
       if (last?.legs.length && last.legs.every((l) => Date.parse(l.kickoff) > Date.now())) setSlip(last);
+      setRestored(true);
     }, 0);
     fetch("/api/forge", { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
@@ -107,15 +121,23 @@ export function ForgeStudio() {
     return () => window.clearTimeout(t);
   }, []);
 
-  useEffect(() => save(SETTINGS_KEY, settings), [settings]);
-  useEffect(() => save(SLIP_KEY, slip), [slip]);
+  useEffect(() => {
+    if (restored) save(SETTINGS_KEY, { ...settings, v: SETTINGS_VERSION });
+  }, [restored, settings]);
+  useEffect(() => {
+    if (restored) save(SLIP_KEY, slip);
+  }, [restored, slip]);
   useEffect(() => {
     if (!toast) return;
     const t = window.setTimeout(() => setToast(null), 6000);
     return () => window.clearTimeout(t);
   }, [toast]);
 
-  const patch = (p: Partial<ForgeSettings>) => setSettings((s) => ({ ...s, ...p }));
+  const patch = (p: Partial<ForgeSettings>) =>
+    setSettings((s) => {
+      const next = { ...s, ...p };
+      return { ...next, risk: riskFor(next.targetOdds) };
+    });
   const remaining =
     allowance && allowance.limit !== null && allowance.used !== null ? Math.max(0, allowance.limit - allowance.used) : null;
 
@@ -183,7 +205,7 @@ export function ForgeStudio() {
   const swapLeg = (leg: ForgeLeg) =>
     setSlip((s) => {
       if (!s) return s;
-      const next = bestSwap(leg, s.bench, new Set(s.legs.map((l) => l.matchId)));
+      const next = nextBest(s.bench, new Set(s.legs.map((l) => l.matchId)));
       if (!next) return s;
       return {
         ...s,
@@ -347,83 +369,58 @@ function SettingsPanel({
     3: "Up to 3 adds a third line to the same game (result, goals and both teams to score). Bigger price per game, fewer games needed.",
   };
 
+  const custom = !PRICE_CHIPS.includes(settings.targetOdds);
+
   return (
     <div className="card p-5 sm:p-6">
       <div className="space-y-6">
-        <Section title="How do you like to pick?">
-          <div className="grid grid-cols-3 gap-2.5">
-            {(Object.keys(RISK_PRESETS) as ForgeRisk[]).map((r) => {
-              const active = settings.risk === r;
+        <Section title="What price are you after?">
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-6 lg:grid-cols-3">
+            {PRICE_CHIPS.map((n) => {
+              const on = settings.targetOdds === n;
               return (
                 <button
-                  key={r}
+                  key={n}
                   type="button"
-                  onClick={() => patch({ risk: r, targetOdds: RISK_PRESETS[r].targetOdds, games: RISK_PRESETS[r].games })}
-                  aria-pressed={active}
-                  className={`rounded-xl border p-3 text-left transition-colors ${
-                    active ? "border-brand/60 bg-brand/10" : "border-line bg-surface-2/40 hover:border-line-strong"
+                  aria-pressed={on}
+                  onClick={() => patch({ targetOdds: n })}
+                  className={`rounded-xl border py-3 text-center transition-colors ${
+                    on ? "border-brand/60 bg-brand/10" : "border-line bg-surface-2/40 hover:border-line-strong"
                   }`}
                 >
-                  <span className={`block text-sm font-bold ${active ? "text-brand" : "text-ink"}`}>{RISK_PRESETS[r].label}</span>
-                  <span className="mt-1 block text-[11px] leading-snug text-ink-muted">{RISK_PRESETS[r].blurb}</span>
+                  <span className={`tnum block font-mono text-base font-bold ${on ? "text-brand" : "text-ink"}`}>{n.toFixed(n < 10 ? 1 : 0)}</span>
+                  <span className="mt-0.5 block text-[10.5px] text-ink-dim">{oneIn(1 / n)}</span>
                 </button>
               );
             })}
           </div>
-        </Section>
-
-        <div className="grid grid-cols-2 items-start gap-3">
-          <Section title="Combined price">
-            <label className="flex h-14 items-center gap-2 rounded-xl border border-line bg-surface-2 px-3.5 focus-within:border-brand/50">
-              <input
-                inputMode="decimal"
-                value={oddsText}
-                onChange={(e) => setOddsText(e.target.value)}
-                onBlur={() => {
-                  const n = Number.parseFloat(oddsText.replace(",", "."));
-                  if (Number.isFinite(n) && n >= 1.2) patch({ targetOdds: Math.min(1000, Math.round(n * 100) / 100) });
-                  else setOddsText(settings.targetOdds.toFixed(2));
-                }}
-                className="tnum w-full min-w-0 bg-transparent font-mono text-lg font-bold text-ink outline-none"
-                aria-label="Combined price you want"
-              />
-              <span className="shrink-0 text-[11px] font-medium text-ink-dim">{oneIn(1 / settings.targetOdds)}</span>
-            </label>
-          </Section>
-          <Section title="Number of games">
-            <div className="flex h-14 items-center justify-between rounded-xl border border-line bg-surface-2 px-2">
-              <StepButton label="Fewer games" onClick={() => patch({ games: Math.max(1, settings.games - 1) })}>
-                −
-              </StepButton>
-              <span className="tnum font-mono text-lg font-bold">{settings.games}</span>
-              <StepButton label="More games" onClick={() => patch({ games: Math.min(10, settings.games + 1) })}>
-                +
-              </StepButton>
-            </div>
-          </Section>
-        </div>
-
-        <Section title="Picks per game">
-          <div className="grid grid-cols-3 rounded-xl border border-line bg-surface-2/40 p-1">
-            {([1, 2, 3] as const).map((n) => (
-              <button
-                key={n}
-                type="button"
-                aria-pressed={settings.picksPerGame === n}
-                onClick={() => patch({ picksPerGame: n })}
-                className={`rounded-lg py-2.5 text-sm font-semibold transition-colors ${
-                  settings.picksPerGame === n ? "bg-brand text-brand-ink" : "text-ink-muted hover:text-ink"
-                }`}
-              >
-                {n === 1 ? "1 per game" : `Up to ${n}`}
-              </button>
-            ))}
-          </div>
-          <p className="mt-2 text-xs leading-relaxed text-ink-dim">{picksHelp[settings.picksPerGame]}</p>
+          <label
+            className={`mt-2.5 flex items-center gap-3 rounded-xl border px-3.5 py-2.5 focus-within:border-brand/50 ${
+              custom ? "border-brand/60 bg-brand/10" : "border-line bg-surface-2"
+            }`}
+          >
+            <span className="shrink-0 text-xs font-medium text-ink-muted">Or type a price</span>
+            <input
+              inputMode="decimal"
+              value={oddsText}
+              onChange={(e) => setOddsText(e.target.value)}
+              onBlur={() => {
+                const n = Number.parseFloat(oddsText.replace(",", "."));
+                if (Number.isFinite(n) && n >= 1.2) patch({ targetOdds: Math.min(1000, Math.round(n * 100) / 100) });
+                else setOddsText(settings.targetOdds.toFixed(2));
+              }}
+              className="tnum w-full min-w-0 bg-transparent text-right font-mono text-base font-bold text-ink outline-none"
+              aria-label="Combined price you want"
+            />
+          </label>
+          <p className="mt-2 text-xs leading-relaxed text-ink-dim">
+            Forge takes the strongest picks on the card first, then the next strongest, until it reaches your price. A
+            smaller price needs fewer games.
+          </p>
         </Section>
 
         <Section title="Prediction types">
-          <div className="flex flex-wrap gap-2">
+          <div className="grid grid-cols-2 gap-2">
             {FORGE_MARKETS.map((m) => {
               const lockedOut = m.paid && !paid;
               const on = settings.markets.includes(m.id) && !lockedOut;
@@ -431,11 +428,11 @@ function SettingsPanel({
                 <Link
                   key={m.id}
                   href="/pricing"
-                  className="flex items-center gap-1.5 rounded-full border border-line px-3.5 py-2 text-sm text-ink-dim hover:text-ink-muted"
+                  className="flex min-w-0 items-center justify-between gap-1.5 rounded-xl border border-line px-3 py-2.5 text-[13px] text-ink-dim hover:text-ink-muted"
                   title={`${m.label} is part of Pro`}
                 >
-                  {m.label}
-                  <span className="rounded bg-violet/15 px-1.5 py-px text-[10px] font-semibold text-violet">Pro</span>
+                  <span className="truncate">{m.label}</span>
+                  <span className="shrink-0 rounded bg-violet/15 px-1.5 py-px text-[10px] font-semibold text-violet">Pro</span>
                 </Link>
               ) : (
                 <button
@@ -443,18 +440,36 @@ function SettingsPanel({
                   type="button"
                   aria-pressed={on}
                   onClick={() => toggleMarket(m.id)}
-                  className={`rounded-full border px-3.5 py-2 text-sm font-medium transition-colors ${
+                  className={`flex min-w-0 items-center justify-between gap-2 rounded-xl border px-3 py-2.5 text-left text-[13px] font-medium transition-colors ${
                     on ? "border-brand/40 bg-brand/12 text-brand" : "border-line text-ink-muted hover:border-line-strong hover:text-ink"
                   }`}
                 >
-                  {m.label}
+                  <span className="truncate">{m.label}</span>
+                  <span aria-hidden className={`grid size-4 shrink-0 place-items-center rounded-full border text-[9px] ${on ? "border-brand bg-brand text-brand-ink" : "border-line-strong"}`}>
+                    {on ? "✓" : ""}
+                  </span>
                 </button>
               );
             })}
           </div>
+          {(settings.markets.includes("corners") || settings.markets.includes("shots")) && paid && (
+            <p className="mt-2 text-xs leading-relaxed text-ink-dim">
+              Corners and shots use only the lines that held 82% or more on a season they were not chosen on, and only in
+              the leagues with match stats.
+            </p>
+          )}
         </Section>
 
         <div className="grid grid-cols-2 gap-3">
+          <Section title="When">
+            <Select value={settings.when} onChange={(v) => patch({ when: v as ForgeSettings["when"] })} label="When">
+              {FORGE_WHEN.map((w) => (
+                <option key={w.id} value={w.id}>
+                  {w.label}
+                </option>
+              ))}
+            </Select>
+          </Section>
           <Section title="Leagues">
             <Select value={settings.leagues} onChange={(v) => patch({ leagues: v })} label="Leagues">
               <option value="all">All leagues</option>
@@ -484,16 +499,53 @@ function SettingsPanel({
               )}
             </Select>
           </Section>
-          <Section title="When">
-            <Select value={settings.when} onChange={(v) => patch({ when: v as ForgeSettings["when"] })} label="When">
-              {FORGE_WHEN.map((w) => (
-                <option key={w.id} value={w.id}>
-                  {w.label}
-                </option>
-              ))}
-            </Select>
-          </Section>
         </div>
+
+        <details className="group rounded-xl border border-line">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-ink [&::-webkit-details-marker]:hidden">
+            More options
+            <span className="flex items-center gap-2 text-xs font-normal text-ink-dim">
+              Up to {settings.games} games · {settings.picksPerGame === 1 ? "1 pick" : `${settings.picksPerGame} picks`} a game
+              <span aria-hidden className="transition-transform group-open:rotate-180">▾</span>
+            </span>
+          </summary>
+          <div className="space-y-5 border-t border-line px-4 py-4">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-ink">Most games</p>
+                <p className="text-xs text-ink-dim">Forge stops sooner if it reaches your price first.</p>
+              </div>
+              <div className="flex shrink-0 items-center gap-1 rounded-xl border border-line bg-surface-2 px-1.5 py-1">
+                <StepButton label="Fewer games" onClick={() => patch({ games: Math.max(1, settings.games - 1) })}>
+                  −
+                </StepButton>
+                <span className="tnum w-7 text-center font-mono text-base font-bold">{settings.games}</span>
+                <StepButton label="More games" onClick={() => patch({ games: Math.min(12, settings.games + 1) })}>
+                  +
+                </StepButton>
+              </div>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-ink">Picks in one game</p>
+              <div className="mt-2 grid grid-cols-3 rounded-xl border border-line bg-surface-2/40 p-1">
+                {([1, 2, 3] as const).map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    aria-pressed={settings.picksPerGame === n}
+                    onClick={() => patch({ picksPerGame: n })}
+                    className={`rounded-lg py-2 text-sm font-semibold transition-colors ${
+                      settings.picksPerGame === n ? "bg-brand text-brand-ink" : "text-ink-muted hover:text-ink"
+                    }`}
+                  >
+                    {n === 1 ? "1" : `Up to ${n}`}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-2 text-xs leading-relaxed text-ink-dim">{picksHelp[settings.picksPerGame]}</p>
+            </div>
+          </div>
+        </details>
       </div>
 
       {!paid && allowance && isProLeague(settings.leagues) && <ProLeagueNotice code={settings.leagues} />}
@@ -648,8 +700,10 @@ function ResultPanel({
 }) {
   const t = useMemo(() => slipTotals(slip.legs, 1), [slip.legs]);
   const onSlip = new Set(slip.legs.map((l) => l.matchId));
-  const style = RISK_PRESETS[slip.settings.risk].label;
   const target = slip.settings.targetOdds;
+  const style = `Price ${target.toFixed(target < 10 ? 2 : 0)}`;
+  // Strongest first, the order Forge chose them in.
+  const ranked = [...slip.legs].sort((a, b) => b.probability - a.probability);
   const off = Math.abs(Math.log(t.odds) - Math.log(target)) > 0.35;
   const pricedTime = new Date(slip.pricedAt).toLocaleTimeString("en-NG", { hour: "2-digit", minute: "2-digit", hour12: false });
 
@@ -701,9 +755,10 @@ function ResultPanel({
 
       {/* legs */}
       <div className="grid gap-3 md:grid-cols-2">
-        {slip.legs.map((leg) => (
+        {ranked.map((leg, i) => (
           <LegCard
             key={leg.matchId}
+            rank={i + 1}
             leg={leg}
             locked={locked.has(leg.matchId)}
             canSwap={slip.bench.some((b) => !onSlip.has(b.matchId))}
@@ -748,6 +803,7 @@ function ResultPanel({
 }
 
 function LegCard({
+  rank,
   leg,
   locked,
   canSwap,
@@ -755,6 +811,7 @@ function LegCard({
   onSwap,
   onRemove,
 }: {
+  rank: number;
   leg: ForgeLeg;
   locked: boolean;
   canSwap: boolean;
@@ -766,8 +823,16 @@ function LegCard({
   return (
     <article className={`card flex flex-col p-4 sm:p-5 ${combo ? "border-violet/35" : ""} ${locked ? "ring-1 ring-brand/40" : ""}`}>
       <div className="flex items-start justify-between gap-3">
-        <p className="min-w-0 truncate text-xs text-ink-dim">
-          {leg.league} · <LocalTime iso={leg.kickoff} kind="day" /> <LocalTime iso={leg.kickoff} />
+        <p className="flex min-w-0 items-center gap-2 text-xs text-ink-dim">
+          <span
+            title={rank === 1 ? "The strongest pick on this combo" : `Pick ${rank} by strength`}
+            className={`grid size-6 shrink-0 place-items-center rounded-full font-mono text-[11px] font-bold ${rank === 1 ? "bg-brand text-brand-ink" : "bg-surface-3 text-ink-muted"}`}
+          >
+            {rank}
+          </span>
+          <span className="min-w-0 truncate">
+            {leg.league} · <LocalTime iso={leg.kickoff} kind="day" /> <LocalTime iso={leg.kickoff} />
+          </span>
         </p>
         {combo && (
           <span className="shrink-0 rounded-md bg-violet/15 px-2 py-0.5 text-[11px] font-semibold text-violet">
@@ -817,8 +882,8 @@ function LegCard({
 
 function EmptyResult() {
   const steps = [
-    ["Tell Forge how you like to pick", "Safe, balanced or risky; the combined price you're after; how many games."],
-    ["Generate", "Forge reads every modelled fixture in your window and builds the combo that best fits."],
+    ["Pick a price", "Tap a price, or type your own, and choose what kinds of prediction to use."],
+    ["Generate", "Forge reads every modelled game in your window and takes the strongest picks first, then the next strongest, until it reaches your price."],
     ["Make it yours", "Keep the games you like, swap the rest, then add it to your combo or track it live."],
   ];
   return (

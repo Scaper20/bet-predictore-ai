@@ -6,7 +6,7 @@
  * share one definition of what "on track", "won" and "lost" mean.
  */
 
-import { evaluatePick, type PickResult } from "@/lib/settlement";
+import { evaluatePick, evaluateStatPick, statKindOf, type PickResult } from "@/lib/settlement";
 import type { MatchStatus } from "@/lib/types";
 
 /** One leg as it was when the slip was saved. Nothing here changes later. */
@@ -32,7 +32,12 @@ export interface LegScore {
   /** Set by the polling browser, never the API: when this minute was first
    * seen (epoch ms), for the live clock to count on from (lib/live-clock.ts). */
   observedAt?: number;
+  /** Corners, shots and shots on target (home, away) once a finished match's counts are in. */
+  stats?: Partial<Record<"corners" | "shots" | "shotsOnTarget", [number, number]>>;
 }
+
+/** A corners or shots leg with no counts this long after kick-off is voided, as settlement does. */
+export const STAT_VOID_AFTER_MS = 3 * 86_400_000;
 
 /** A finished leg, remembered on the device so it never has to be looked up again. */
 export interface LegResult {
@@ -78,11 +83,19 @@ export function gradeMarket(market: string, home: number, away: number): PickRes
 }
 
 /** Turns a finished (or abandoned) match into the result stored on the leg. */
-export function settleLeg(leg: TrackedLeg, score: LegScore): LegResult | null {
+export function settleLeg(leg: TrackedLeg, score: LegScore, now = Date.now()): LegResult | null {
   if (score.status === "postponed" || score.status === "cancelled") {
     return { home: score.home ?? 0, away: score.away ?? 0, grade: "void", abandoned: score.status };
   }
   if (score.status !== "finished" || score.home === null || score.away === null) return null;
+  // Corners and shots: graded from the match's counts, which can trail the score.
+  const kind = statKindOf(leg.market);
+  if (kind) {
+    const counts = score.stats?.[kind];
+    if (!counts) return now - Date.parse(leg.kickoff) > STAT_VOID_AFTER_MS ? { home: score.home, away: score.away, grade: "void" } : null;
+    const g = evaluateStatPick(leg.market, counts[0], counts[1]);
+    return g ? { home: score.home, away: score.away, grade: g === "push" ? "void" : g } : null;
+  }
   const grade = gradeMarket(leg.market, score.home, score.away);
   if (!grade) return null;
   return { home: score.home, away: score.away, grade: grade === "push" ? "void" : grade };

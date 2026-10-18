@@ -9,6 +9,7 @@
 
 import type { Pick as ModelPick, Prediction } from "@/lib/model/predict";
 import { isPausedPick } from "@/lib/model/paused";
+import { isStatMarket, SWEET_SPOT_FILLERS, SWEET_SPOT_MAX, SWEET_SPOTS, sweetSpotLabel } from "@/lib/model/sweet-spots";
 import { scoreMatrix } from "@/lib/model/poisson";
 import { COMBO_PREFIX, gradeMarket } from "@/lib/slip-tracker";
 import type { KickoffWindow } from "@/lib/time-windows";
@@ -16,7 +17,7 @@ import type { KickoffWindow } from "@/lib/time-windows";
 /* ------------------------------------------------------------------ types */
 
 export type ForgeRisk = "safe" | "balanced" | "risky";
-export type ForgeMarket = "result" | "double_chance" | "goals" | "btts" | "handicap";
+export type ForgeMarket = "result" | "double_chance" | "goals" | "btts" | "handicap" | "corners" | "shots";
 export type ForgeWhen = Extract<KickoffWindow, "today" | "tonight" | "tomorrow" | "weekend" | "next_3_days">;
 
 /** Free plan: 1X2 and double chance; every other market is Pro. */
@@ -25,8 +26,11 @@ export const FORGE_MARKETS: { id: ForgeMarket; label: string; paid?: boolean }[]
   { id: "double_chance", label: "Two results" },
   // Unders are paused as picks (model/predict.ts PAUSED_PICK_MARKETS).
   { id: "goals", label: "Over goals", paid: true },
-  { id: "btts", label: "Both teams to score", paid: true },
-  { id: "handicap", label: "Winning margin", paid: true },
+  { id: "btts", label: "Both score", paid: true },
+  { id: "handicap", label: "Handicap", paid: true },
+  // Only the lines that held 82%+ on a season they were not chosen on (model/sweet-spots.ts).
+  { id: "corners", label: "Corners", paid: true },
+  { id: "shots", label: "Shots", paid: true },
 ];
 
 /** The markets a settings object may use on this plan; never empty. */
@@ -73,7 +77,8 @@ export interface ForgeSettings {
 export const DEFAULT_SETTINGS: ForgeSettings = {
   risk: "balanced",
   targetOdds: 5,
-  games: 4,
+  // Best-first builds use as few games as reach the price; this is the most they may take.
+  games: 10,
   picksPerGame: 2,
   markets: ["result", "double_chance", "goals", "btts"],
   when: "today",
@@ -153,7 +158,7 @@ function shortPart(market: string, home: string, away: string, fallback: string)
 
 /* ------------------------------------------------------------ candidates */
 
-type Family = "result" | "goals" | "btts";
+type Family = "result" | "goals" | "btts" | "corners" | "shots";
 
 const GROUP_MARKET: Partial<Record<ModelPick["group"], ForgeMarket>> = {
   "Match Result": "result",
@@ -161,6 +166,8 @@ const GROUP_MARKET: Partial<Record<ModelPick["group"], ForgeMarket>> = {
   Goals: "goals",
   "Both Teams To Score": "btts",
   "Asian Handicap": "handicap",
+  Corners: "corners",
+  Shots: "shots",
 };
 
 const FAMILY: Record<ForgeMarket, Family> = {
@@ -169,6 +176,8 @@ const FAMILY: Record<ForgeMarket, Family> = {
   handicap: "result",
   goals: "goals",
   btts: "btts",
+  corners: "corners",
+  shots: "shots",
 };
 
 export interface CandidateOptions {
@@ -200,13 +209,35 @@ export function gridFor(p: Prediction): number[][] {
   return scoreMatrix(p.markets.expectedGoals.home, p.markets.expectedGoals.away, p.model.rho);
 }
 
+/** The corners and shots rules Forge may use: the tested sweet-spot lines, at the chance each held from. */
+const STAT_RULES = [...SWEET_SPOTS, ...SWEET_SPOT_FILLERS].filter((r) => isStatMarket(r.market));
+
+/**
+ * Corners and shots singles for one fixture, from the count model's chances
+ * (stat-markets-service.ts statChances). Only a tested line, at or above the
+ * chance it held its record from: these are graded from match stats, not the
+ * score, so they never join a same-game combo.
+ */
+function statCandidates(stats: Readonly<Record<string, number>> | undefined, allowed: Set<ForgeMarket>): Candidate[] {
+  if (!stats) return [];
+  return STAT_RULES.flatMap((rule) => {
+    const kind: ForgeMarket = rule.market.startsWith("corners:") ? "corners" : "shots";
+    const p = stats[rule.market];
+    if (!allowed.has(kind) || p === undefined || p < rule.min || p > SWEET_SPOT_MAX) return [];
+    const label = sweetSpotLabel(rule.market);
+    return [{ picks: [{ market: rule.market, label }], market: rule.market, label, probability: p, fairOdds: 1 / p }];
+  });
+}
+
 /** Every selection Forge may consider for one fixture, singles and combos. */
-export function candidatesFor(p: Prediction, opts: CandidateOptions): Candidate[] {
+export function candidatesFor(p: Prediction, opts: CandidateOptions, stats?: Readonly<Record<string, number>>): Candidate[] {
   const home = p.match.home.name;
   const away = p.match.away.name;
   const allowed = new Set(opts.markets.filter((m) => m !== "handicap" || opts.allowHandicap));
 
   const singles = p.picks.filter((pk) => {
+    // Corners and shots come from statCandidates, tested lines only.
+    if (isStatMarket(pk.market)) return false;
     const fm = GROUP_MARKET[pk.group];
     if (!fm || !allowed.has(fm)) return false;
     // Whole and quarter handicap lines can push or half-win; keep the slip binary.
@@ -264,7 +295,7 @@ export function candidatesFor(p: Prediction, opts: CandidateOptions): Candidate[
       });
     }
   }
-  return out;
+  return [...out, ...statCandidates(stats, allowed)];
 }
 
 /* -------------------------------------------------------------- selection */
@@ -421,6 +452,103 @@ export function forge(pool: PoolEntry[], settings: ForgeSettings, state: ForgeRe
 
   const bench = remaining.slice(0, 10).map((r) => toLeg(r.entry, r.best));
   return { legs, bench, dropped };
+}
+
+/* ------------------------------------------------------------ best first */
+
+/** The least likely leg a best-first build takes, by how big a price was asked for. */
+export function legFloorFor(target: number): number {
+  return target <= 2.5 ? 0.6 : target <= 8 ? 0.5 : 0.35;
+}
+
+/** Shorter than this a leg barely moves the price and is not worth its risk of a shock. */
+const BEST_MIN_LEG_ODDS = 1.15;
+/** A build may finish a little past the price asked for, never far past it. */
+const BEST_OVERSHOOT = 1.35;
+/** And counts as there once it is this close below it. */
+const BEST_REACHED = 0.95;
+
+/**
+ * How much a leg is worth leading with: its chance, a little more when it is
+ * the model's own pick for the game (tested as a pick, not just a number), a
+ * little less on thin data, and less again for a game the last slip used, so
+ * "Generate again" brings the next best rather than the same slip.
+ */
+function legQuality(entry: PoolEntry, c: Candidate, avoided: boolean): number {
+  const head = entry.prediction.topPick?.market === c.market ? 0.02 : 0;
+  const dq = entry.prediction.model.dataQuality / 100;
+  return c.probability + head - 0.06 * (1 - dq) - (avoided ? 0.05 : 0);
+}
+
+/**
+ * Forge's builder: the strongest read on the card first, then the next
+ * strongest, until the slip reaches the price asked for. Each game offers its
+ * single best leg; a game whose best leg would carry the slip far past the
+ * price offers a shorter one instead, or is skipped. As few games as it takes,
+ * up to settings.games.
+ *
+ * Where forge() (still the hub's builder) fits every leg to an even share of
+ * the target, this never takes a weaker read to make the arithmetic tidy.
+ */
+export function forgeBest(pool: PoolEntry[], settings: ForgeSettings, state: ForgeRequestState): ForgeResult {
+  const removed = new Set(state.removed);
+  const avoid = new Set(state.avoid);
+  const byId = new Map(pool.map((e) => [e.prediction.match.id, e]));
+
+  const legs: ForgeLeg[] = [];
+  const dropped: string[] = [];
+  for (const lock of state.locked) {
+    const entry = byId.get(lock.matchId);
+    const c = entry?.candidates.find((x) => x.market === lock.market);
+    if (entry && c) legs.push(toLeg(entry, c));
+    else dropped.push(lock.matchId);
+  }
+  const used = new Set(legs.map((l) => l.matchId));
+
+  const target = Math.max(1.05, settings.targetOdds);
+  const maxGames = Math.max(1, Math.min(13, Math.round(settings.games)));
+  const floor = legFloorFor(target);
+  // The shortest leg that can still reach the price inside the game limit: a
+  // big price needs every leg to carry some of it, or the strong short legs run
+  // out first (a 20 at 1.2 a leg would take 17 games).
+  const minOdds = Math.max(BEST_MIN_LEG_ODDS, Math.pow(target, 1 / maxGames) * 1.02);
+  const usable = (c: Candidate) => c.fairOdds >= minOdds && c.probability >= floor;
+
+  const ranked = pool
+    .filter((e) => !used.has(e.prediction.match.id) && !removed.has(e.prediction.match.id))
+    .flatMap((entry) => {
+      const avoided = avoid.has(entry.prediction.match.id);
+      const options = entry.candidates
+        .filter(usable)
+        .map((c) => ({ c, q: legQuality(entry, c, avoided) }))
+        .sort((a, b) => b.q - a.q);
+      return options.length ? [{ entry, options }] : [];
+    })
+    .sort((a, b) => b.options[0].q - a.options[0].q);
+
+  let odds = legs.reduce((o, l) => o * l.fairOdds, 1);
+  const taken = new Set<string>();
+  for (const r of ranked) {
+    if (legs.length >= maxGames || odds >= BEST_REACHED * target) break;
+    // The game's best leg, or its best that keeps the slip near the price.
+    const fit = r.options.find((o) => odds * o.c.fairOdds <= target * BEST_OVERSHOOT);
+    if (!fit) continue;
+    legs.push(toLeg(r.entry, fit.c));
+    taken.add(r.entry.prediction.match.id);
+    odds *= fit.c.fairOdds;
+  }
+
+  legs.sort((a, b) => Date.parse(a.kickoff) - Date.parse(b.kickoff));
+  const bench = ranked
+    .filter((r) => !taken.has(r.entry.prediction.match.id))
+    .slice(0, 10)
+    .map((r) => toLeg(r.entry, r.options[0].c));
+  return { legs, bench, dropped };
+}
+
+/** Swap for best-first slips: the strongest bench leg not already on the slip (the bench is best first). */
+export function nextBest(bench: ForgeLeg[], onSlip: Set<string>): ForgeLeg | null {
+  return bench.find((b) => !onSlip.has(b.matchId)) ?? null;
 }
 
 function clamp(v: number, lo: number, hi: number) {
