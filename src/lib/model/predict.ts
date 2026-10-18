@@ -583,8 +583,27 @@ export const HEADLINE_EXCLUDED: string[] = [...PAUSED_PICK_MARKETS];
  * 60% on 2025-26, and the extreme lines are either near-certain or long shots.
  * They are all still computed, listed and rankable below the headline.
  */
+/**
+ * Selections that may be the headline only when the model is well clear on
+ * them. Replayed over 12 months of 17 divisions and 2 years of 11 other
+ * leagues (6,700+ picks each, 18 Oct 2026):
+ *
+ *   Away Win    below 65% landed 53-65% as the pick; at 65%+, 78% (17 divisions)
+ *   Over 2.5    65-70% landed 66-67%; at 70%+, 73-76%
+ *
+ * Below the bar the next eligible selection is the pick. Overall the replay
+ * held level (77.5% and 72.5%), so this trims the weakest picks without
+ * buying the rate back elsewhere. Home or Away was tested the same way and
+ * left alone: in those games the next selection landed worse, not better.
+ */
+export const HEADLINE_MIN_PROBABILITY: Readonly<Record<string, number>> = {
+  "1x2:away": 0.65,
+  "ou:over:2.5": 0.7,
+};
+
 export function headlineEligible(p: Pick): boolean {
   if (p.probability > HEADLINE_MAX_PROBABILITY) return false;
+  if (p.probability < (HEADLINE_MIN_PROBABILITY[p.market] ?? 0)) return false;
   if (isPausedPick(p.market)) return false;
   const [family, , line] = p.market.split(":");
   if (family === "1x2" || family === "dc") return true;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildPrediction, HEADLINE_MAX_PROBABILITY, TOTALS_SHRINK } from "./predict";
+import { buildPrediction, headlineEligible, HEADLINE_MAX_PROBABILITY, TOTALS_SHRINK } from "./predict";
 import { isStatMarket, pausedHandicapCandidates, SWEET_SPOT_FILLERS, SWEET_SPOT_MAX, SWEET_SPOTS, sweetSpotLabel, sweetSpotPick } from "./sweet-spots";
 import { isPausedHandicap } from "./paused";
 import { STAT_LINES, statGrid, statMarkets, statSelections, type StatKind } from "./match-stats";
@@ -159,5 +159,16 @@ describe("totals calibration", () => {
     expect(total).toBeCloseTo(mean + TOTALS_SHRINK * (rawTotal - mean), 6);
     // Same ratio, so the 1X2 lean is preserved.
     expect(p.markets.expectedGoals.home / p.markets.expectedGoals.away).toBeCloseTo(raw.lambda / raw.mu, 6);
+  });
+});
+
+describe("headline floors", () => {
+  const pick = (market: string, probability: number) => ({ market, label: market, group: "Match Result" as const, probability, fairOdds: 1 / probability, confidence: 50 });
+  it("takes Away Win and Over 2.5 only when the model is well clear", () => {
+    expect(headlineEligible(pick("1x2:away", 0.6))).toBe(false);
+    expect(headlineEligible(pick("1x2:away", 0.66))).toBe(true);
+    expect(headlineEligible(pick("ou:over:2.5", 0.68))).toBe(false);
+    expect(headlineEligible(pick("ou:over:2.5", 0.72))).toBe(true);
+    expect(headlineEligible(pick("1x2:home", 0.6))).toBe(true);
   });
 });
