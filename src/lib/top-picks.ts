@@ -10,6 +10,7 @@ import type { FormEntry, Pick, Prediction } from "@/lib/model/predict";
 import type { StatMarkets } from "@/lib/model/match-stats";
 import { evaluatePick } from "@/lib/settlement";
 import { sweetSpotLabel } from "@/lib/model/sweet-spots";
+import { isPausedPick } from "@/lib/model/paused";
 
 export interface Variation {
   label: string;
@@ -250,7 +251,9 @@ export function buildTopPicks({ prediction: pr, corners }: TopPicksInput): TopPi
 
   const candidates = pr.picks
     .filter((x) => x.market !== head.market && x.group !== "Asian Handicap" && x.group !== "Correct Score" && x.probability >= MIN_EXTRA && x.probability <= MAX_EXTRA)
-    // The unders and no-draw lines the headline rules keep out stay out here too.
+    // What the headline rules keep out stays out here too: the paused unders, the
+    // 0.5 and 4.5 goal lines (near-certain or long shots), and no-draw unless it is the pick.
+    .filter((x) => !isPausedPick(x.market) && !/^ou:(over|under):(0\.5|4\.5)$/.test(x.market))
     .filter((x) => x.market !== "dc:home-away" || head.market === "dc:home-away")
     .sort((x, y) => y.confidence - x.confidence);
   const stat = corners ? cornersPick(corners) : null;
