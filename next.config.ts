@@ -69,6 +69,11 @@ const nextConfig: NextConfig = {
   // "X-Powered-By: Next.js" tells a scanner which framework's exploits to try.
   poweredByHeader: false,
 
+  // The brand faces the share image renders in, read from disk at request time.
+  outputFileTracingIncludes: {
+    "/api/match/\\[id\\]/share-image": ["./assets/fonts/**/*"],
+  },
+
   async headers() {
     const securityHeaders = [
       { key: "Content-Security-Policy", value: contentSecurityPolicy() },

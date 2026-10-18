@@ -76,7 +76,7 @@ function sideReason(form: readonly FormEntry[], other: readonly FormEntry[], tea
   return oppWinless >= 4 ? `Opponent winless in ${oppWinless}` : null;
 }
 
-function reasonsFor(p: Pick, pr: Prediction): string[] {
+function reasonsFor(p: Pick, pr: Prediction, corners: StatMarkets | null | undefined): string[] {
   const { home, away } = pr.form;
   const hName = pr.match.home.name;
   const aName = pr.match.away.name;
@@ -106,7 +106,10 @@ function reasonsFor(p: Pick, pr: Prediction): string[] {
   }
 
   const xg = pr.markets.expectedGoals;
-  if (family === "ou" || family === "btts") out.push(`${xg.total.toFixed(1)} goals projected`);
+  if (family === "corners") {
+    // Goals say nothing about a corners pick; the count model's own projection does.
+    if (corners) out.push(`${corners.expected.total.toFixed(1)} corners projected`);
+  } else if (family === "ou" || family === "btts") out.push(`${xg.total.toFixed(1)} goals projected`);
   else if (out.length === 0) out.push(`Expected goals ${xg.home.toFixed(1)} – ${xg.away.toFixed(1)}`);
   return out.slice(0, 2);
 }
@@ -241,7 +244,7 @@ export function buildTopPicks({ prediction: pr, corners }: TopPicksInput): TopPi
       group: p.group,
       probability: p.probability,
       headline: p === head,
-      reasons: reasonsFor(p, pr),
+      reasons: reasonsFor(p, pr, corners),
       variations: variationsFor(p, pr, corners),
       why: whyFor(p, pr, corners),
       ...(outcome ? { outcome } : {}),
