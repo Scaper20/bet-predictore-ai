@@ -78,7 +78,10 @@ export async function runSettlementPass(
   // Corners and shots picks wait days for their stats, so the sweep reads past them.
   const { data: pending, error } = await query.limit(600);
   if (error) throw error;
-  if (!pending || pending.length === 0) return 0;
+  if (!pending || pending.length === 0) {
+    await settleShadowPicks(admin).catch(() => 0);
+    return 0;
+  }
 
   let settledCount = 0;
   const statCache = new Map<string, StatGame[]>();
@@ -136,7 +139,46 @@ export async function runSettlementPass(
       .eq("id", row.id as string);
     if (!updateError) settledCount++;
   }
+  await settleShadowPicks(admin).catch(() => 0);
   return settledCount;
+}
+
+/**
+ * Grades the shadow picks (model/shadow.ts) from the results archive only.
+ * Every one shares its game with a predictions_log row, whose settlement
+ * above has already cached the final score, so this costs no provider call.
+ */
+export async function settleShadowPicks(admin: SupabaseClient): Promise<number> {
+  const { data: rows } = await admin
+    .from("shadow_picks")
+    .select("match_id, market")
+    .is("settled_at", null)
+    .lt("kickoff", new Date().toISOString())
+    .limit(500);
+  if (!rows || rows.length === 0) return 0;
+
+  const ids = [...new Set(rows.map((r) => r.match_id as string))];
+  const { data: results } = await admin
+    .from("match_results")
+    .select("match_id, home_goals, away_goals")
+    .in("match_id", ids)
+    .eq("status", "finished");
+  const scores = new Map((results ?? []).map((r) => [r.match_id as string, r]));
+
+  let n = 0;
+  for (const row of rows) {
+    const s = scores.get(row.match_id as string);
+    if (typeof s?.home_goals !== "number" || typeof s?.away_goals !== "number") continue;
+    const result = evaluatePick(row.market as string, s.home_goals, s.away_goals);
+    if (!result) continue;
+    const { error } = await admin
+      .from("shadow_picks")
+      .update({ result, actual_home_goals: s.home_goals, actual_away_goals: s.away_goals, settled_at: new Date().toISOString() })
+      .eq("match_id", row.match_id as string)
+      .eq("market", row.market as string);
+    if (!error) n++;
+  }
+  return n;
 }
 
 /* ------------------------------------------------- corners and shots picks */

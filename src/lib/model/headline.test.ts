@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildPrediction, HEADLINE_MAX_PROBABILITY, TOTALS_SHRINK } from "./predict";
-import { isStatMarket, SWEET_SPOT_FILLERS, SWEET_SPOT_MAX, SWEET_SPOTS, sweetSpotLabel, sweetSpotPick } from "./sweet-spots";
+import { isStatMarket, pausedHandicapCandidates, SWEET_SPOT_FILLERS, SWEET_SPOT_MAX, SWEET_SPOTS, sweetSpotLabel, sweetSpotPick } from "./sweet-spots";
+import { isPausedHandicap } from "./paused";
 import { STAT_LINES, statGrid, statMarkets, statSelections, type StatKind } from "./match-stats";
 import { statKindOf } from "../settlement";
 import { expectedRates, fitLeague } from "./fit";
@@ -84,13 +85,26 @@ describe("sweet spots", () => {
     expect(sweetSpotPick(picks, "serie-a")!.market).toBe("dc:home-draw");
   });
 
-  it("reads a whole handicap line as win against loss, since a refund is neither", () => {
+  it("reads a whole handicap line as win against loss, and logs it while it is paused", () => {
     // Away +1: the home side wins by two or more 15%, by exactly one 17% (a refund), otherwise away covers.
     const ah = [{ line: -1, home: 0.15, away: 0.68, push: 0.17 }];
-    const spot = sweetSpotPick([pick("dc:home-draw", 0.6)], "serie-a", [], ah)!;
-    expect(spot.market).toBe("ah:away:1");
-    expect(spot.probability).toBeCloseTo(0.68 / 0.83, 6);
-    expect(spot.label).toBe("Away +1 handicap");
+    expect(sweetSpotPick([pick("dc:home-draw", 0.6)], "serie-a", [], ah)).toBeNull();
+    const [shadow] = pausedHandicapCandidates([pick("dc:home-draw", 0.6)], "serie-a", ah);
+    expect(shadow.market).toBe("ah:away:1");
+    expect(shadow.probability).toBeCloseTo(0.68 / 0.83, 6);
+    expect(shadow.label).toBe("Away +1 handicap");
+  });
+
+  it("never picks a handicap of a goal or more, but keeps draw no bet", () => {
+    expect(sweetSpotPick([pick("ah:away:1.5", 0.8), pick("dc:home-draw", 0.6)], "serie-a")).toBeNull();
+    const dnb = [{ line: 0, home: 0.15, away: 0.55, push: 0.3 }];
+    expect(sweetSpotPick([pick("dc:home-draw", 0.6)], "serie-a", [], dnb)!.market).toBe("ah:away:0");
+    expect(isPausedHandicap("ah:away:1.5")).toBe(true);
+    expect(isPausedHandicap("ah:home:-1")).toBe(true);
+    expect(isPausedHandicap("ah:away:2")).toBe(true);
+    expect(isPausedHandicap("ah:away:0.5")).toBe(false);
+    expect(isPausedHandicap("ah:home:-0.5")).toBe(false);
+    expect(isPausedHandicap("ah:away:0")).toBe(false);
   });
 
   it("lets Under 12.5 corners compete, and shots only fill a game nothing else covers", () => {

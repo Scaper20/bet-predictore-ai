@@ -5,6 +5,7 @@ import { runSettlementPass } from "@/lib/settlement-runner";
 import { modelIdForMarket } from "@/lib/model/router";
 import { pickTier } from "@/lib/model/tiers";
 import { leagueByCode } from "@/lib/leagues";
+import { shadowPicks } from "@/lib/model/shadow";
 
 // Runs the football providers and Supabase's service-role client — both
 // Node-only. Proxy (src/proxy.ts) doesn't touch /api/ at all, so no session
@@ -87,5 +88,30 @@ async function logUpcomingPicks(admin: ReturnType<typeof supabaseAdmin>): Promis
 
   const { error } = await admin.from("predictions_log").upsert(rows, { onConflict: "match_id" });
   if (error) throw error;
+
+  // Watched, not published: the paused handicaps and GG/NG. Best effort, so a
+  // missing table (before 0059) never stops the real log.
+  const shadow = predictions
+    .filter((p) => p.sufficiency.publishable)
+    .flatMap((p) =>
+      shadowPicks(p).map((s) => ({
+        match_id: p.match.id,
+        market: s.market,
+        label: s.label,
+        probability: Math.round(s.probability * 10_000) / 10_000,
+        reason: s.reason,
+        league_code: p.match.league.code ?? null,
+        home_name: p.match.home.name,
+        away_name: p.match.away.name,
+        kickoff: p.match.kickoff,
+        logged_at: new Date().toISOString(),
+      })),
+    );
+  if (shadow.length > 0) {
+    await admin.from("shadow_picks").upsert(shadow, { onConflict: "match_id,market" }).then(
+      () => undefined,
+      () => undefined,
+    );
+  }
   return rows.length;
 }

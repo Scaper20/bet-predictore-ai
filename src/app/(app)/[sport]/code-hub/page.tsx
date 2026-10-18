@@ -57,8 +57,14 @@ export default async function CodeHubPage() {
   const paid = meets(entitlement.tier, "pro");
   const now = today.now;
   // Today's codes, then earlier four-day codes whose games are still on.
-  const codes = [...today.codes, ...running];
-  const scores = await finishedScores([...new Set(codes.flatMap((c) => c.legs.map((l) => l.matchId)))]);
+  const all = [...today.codes, ...running];
+  const scores = await finishedScores([...new Set(all.flatMap((c) => c.legs.map((l) => l.matchId)))]);
+  // A code leaves the board the moment a leg misses: there is nothing left to
+  // follow. It moves straight into the record below, so it is never hidden.
+  const missed = (c: (typeof all)[number]) =>
+    hubStatus(c.legs.map((l) => hubLegResult(l, scores[l.matchId])), c.firstKickoff, now) === "lost";
+  const codes = all.filter((c) => !missed(c));
+  const record = withMissed(past.days, all.filter(missed));
 
   return (
     <>
@@ -84,7 +90,11 @@ export default async function CodeHubPage() {
             <EmptyState
               icon="⏱"
               title="No codes left for today"
-              description="Today's games have started or there were too few strong reads to build from. Tomorrow's codes go up after midnight."
+              description={
+                all.length > 0
+                  ? "Today's codes have settled; see how they finished below. Tomorrow's codes go up after midnight."
+                  : "Today's games have started or there were too few strong reads to build from. Tomorrow's codes go up after midnight."
+              }
             />
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -112,7 +122,7 @@ export default async function CodeHubPage() {
           )}
         </section>
 
-        <PastCodes days={past.days} scores={past.scores} now={now} />
+        <PastCodes days={record} scores={{ ...past.scores, ...scores }} now={now} />
 
         <section className="grid gap-4 text-sm text-ink-muted sm:grid-cols-3">
           <HowItem title="Built by the model">
@@ -251,6 +261,17 @@ function PastCodes({
       )}
     </section>
   );
+}
+
+/** The record with today's missed codes added at the top of their day. */
+function withMissed<C extends { day: string }>(days: { day: string; codes: C[] }[], missed: C[]): { day: string; codes: C[] }[] {
+  const out = days.map((d) => ({ ...d, codes: [...d.codes] }));
+  for (const c of missed) {
+    const hit = out.find((d) => d.day === c.day);
+    if (hit) hit.codes.unshift(c);
+    else out.push({ day: c.day, codes: [c] });
+  }
+  return out.sort((a, b) => (a.day < b.day ? 1 : -1));
 }
 
 function shortDay(day: string): string {
