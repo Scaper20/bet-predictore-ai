@@ -93,4 +93,11 @@ describe("top picks", () => {
     expect(liveState("dc:away-draw", 1, 1)).toBe("winning");
     expect(liveState("ah:home:0", 1, 1)).toBe("level");
   });
+
+  it("never adds a paused under or a 4.5 line as an extra", () => {
+    const withUnders = [picks[0], pk("ou:under:4.5", 0.85, "Goals", "Under 4.5 Goals", 75), pk("ou:under:3.5", 0.8, "Goals", "Under 3.5 Goals", 70), ...picks.slice(1)];
+    const t = buildTopPicks({ prediction: pred({ picks: withUnders }) });
+    expect(t.some((x) => x.market.startsWith("ou:under"))).toBe(false);
+    expect(t[1].market).toBe("ou:over:1.5");
+  });
 });
