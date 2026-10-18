@@ -8,6 +8,7 @@ import { viewerForTier } from "@/lib/viewer";
 import { viewPrediction } from "@/lib/access";
 import { fixtureStatMarkets } from "@/lib/stat-markets-service";
 import { buildTopPicks, type LiveState, type TopPick } from "@/lib/top-picks";
+import { withStatOutcomes } from "@/lib/stat-results";
 import { RISK, riskFor } from "@/lib/model/risk";
 import { isStrong } from "@/lib/model/tiers";
 import { flagUrl } from "@/lib/flags";
@@ -270,7 +271,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const prediction = viewPrediction(detail.prediction, viewer);
   const { match } = detail;
   const extra = viewer.paid && !prediction.locked.proLeague ? await fixtureStatMarkets(match, detail.prediction).catch(() => null) : null;
-  const picks = buildTopPicks({ prediction, corners: extra?.stats.corners });
+  // Corners and shots grade from ESPN minutes after full time, not days later.
+  const picks = await withStatOutcomes(buildTopPicks({ prediction, corners: extra?.stats.corners }), match);
   if (picks.length === 0) return new Response("No picks to share for this match yet", { status: 404 });
 
   const [fontList, homeCrest, awayCrest] = await Promise.all([

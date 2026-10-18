@@ -2,7 +2,7 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getMatch } from "@/lib/providers";
-import { evaluatePick, evaluateStatPick, robustStatGrade, statKindOf, type PickResult } from "@/lib/settlement";
+import { evaluatePick, evaluateStatPick, statKindOf, type PickResult } from "@/lib/settlement";
 import { espnDay, espnStatsComplete, findEspnGame, type EspnResult } from "@/lib/archive/espn-shots";
 import { leagueByCode } from "@/lib/leagues";
 import { looseKey, nameBook, nameScope } from "@/lib/teams/canonical";
@@ -85,12 +85,13 @@ export async function runSettlementPass(
 
   let settledCount = 0;
   const statCache = new Map<string, StatGame[]>();
-  const espnCache: EspnCache = { games: new Map(), until: Date.now() + ESPN_BUDGET_MS };
+  // The pass behind a live poll gets a short ESPN budget; the daily sweep a long one.
+  const espnCache: EspnCache = { games: new Map(), until: Date.now() + (opts.maxAgeHours ? ESPN_QUICK_BUDGET_MS : ESPN_BUDGET_MS) };
   for (const row of pending) {
     const matchId = row.match_id as string;
-    // Corners and shots stats are never in within hours of the whistle; the
-    // daily sweep grades those, not the pass behind every live poll.
-    if (opts.maxAgeHours && statKindOf(row.market as string)) continue;
+    // A corners or shots pick waits until the game is surely over (ESPN has
+    // the counts minutes after); before that there is nothing to grade on.
+    if (statKindOf(row.market as string) && Date.now() - Date.parse(row.kickoff as string) < STAT_READY_MS) continue;
 
     const { data: cached } = await admin
       .from("match_results")
@@ -207,10 +208,10 @@ const STAT_WAIT_MS = 10 * 86_400_000;
 
 /**
  * A corners, shots or shots-on-target pick, graded from the counts in the
- * results archive (historical_results), which arrive with football-data.co.uk
- * two to five days after the game. Until then ESPN's scoreboard, which has
- * them within hours, grades it when its counts look complete and the result
- * is clear of the line (robustStatGrade); otherwise the pick stays open (null).
+ * results archive (historical_results) when it already has them, otherwise
+ * from ESPN's scoreboard, which has them minutes after full time. ESPN's
+ * counts are taken as final (decided 18 Oct 2026): a pick graded from them
+ * is not re-graded when the archive arrives.
  */
 async function gradeFromStats(
   admin: SupabaseClient,
@@ -253,7 +254,7 @@ async function gradeFromStats(
   if (counts) return evaluateStatPick(row.market, counts[0], counts[1]);
   const espn = await espnCounts(row, kind, espnCache);
   if (espn) {
-    const grade = robustStatGrade(row.market, espn[0], espn[1]);
+    const grade = evaluateStatPick(row.market, espn[0], espn[1]);
     if (grade) return grade;
   }
   return Date.now() - at > STAT_WAIT_MS ? "push" : null;
@@ -265,6 +266,9 @@ interface EspnCache {
   until: number;
 }
 const ESPN_BUDGET_MS = 40_000;
+const ESPN_QUICK_BUDGET_MS = 8_000;
+/** Kick-off plus a full game and stoppage: from here a stat pick can be graded. */
+const STAT_READY_MS = 115 * 60_000;
 
 /** The game's counts from ESPN's scoreboard (the kick-off day and the day before, as ESPN dates by US time), if complete. */
 async function espnCounts(row: StatRow, kind: "corners" | "shots" | "shotsOnTarget", cache: EspnCache): Promise<[number, number] | null> {

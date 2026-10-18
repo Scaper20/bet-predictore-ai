@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { evaluatePick, evaluateStatPick, robustStatGrade, statKindOf } from "./settlement";
+import { evaluatePick, evaluateStatPick, statKindOf } from "./settlement";
 
 describe("evaluatePick", () => {
   it("grades 1x2", () => {
@@ -82,15 +82,5 @@ describe("evaluateStatPick", () => {
     expect(statKindOf("corners:under:12.5")).toBe("corners");
     expect(statKindOf("ah:away:1.5")).toBeNull();
     expect(evaluatePick("corners:under:12.5", 1, 0)).toBeNull();
-  });
-});
-
-describe("robustStatGrade", () => {
-  it("grades only when a count off by one could not change the result", () => {
-    expect(robustStatGrade("corners:under:12.5", 4, 4)).toBe("win");
-    expect(robustStatGrade("corners:under:12.5", 7, 5)).toBeNull();
-    expect(robustStatGrade("corners:under:12.5", 9, 7)).toBe("lose");
-    expect(robustStatGrade("sot:most:home", 6, 2)).toBe("win");
-    expect(robustStatGrade("sot:most:home", 4, 3)).toBeNull();
   });
 });

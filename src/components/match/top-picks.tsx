@@ -5,6 +5,7 @@ import { isStrong } from "@/lib/model/tiers";
 import type { ViewedPrediction } from "@/lib/access";
 import type { StatMarkets } from "@/lib/model/match-stats";
 import { buildTopPicks, type TopPick } from "@/lib/top-picks";
+import { withStatOutcomes } from "@/lib/stat-results";
 import { SharePicksButton } from "@/components/match/share-picks-button";
 
 /**
@@ -13,8 +14,9 @@ import { SharePicksButton } from "@/components/match/share-picks-button";
  * one-line why (lib/top-picks.ts). Server-rendered, the why is a plain
  * <details>, so no script ships for it.
  */
-export function TopPicks({ prediction, corners }: { prediction: ViewedPrediction; corners?: StatMarkets | null }) {
-  const picks = buildTopPicks({ prediction, corners });
+export async function TopPicks({ prediction, corners }: { prediction: ViewedPrediction; corners?: StatMarkets | null }) {
+  // Corners and shots grade from ESPN minutes after full time, not days later.
+  const picks = await withStatOutcomes(buildTopPicks({ prediction, corners }), prediction.match);
   if (picks.length === 0) return null;
   const strong = isStrong(prediction.topPick, prediction.match.league.code);
 
