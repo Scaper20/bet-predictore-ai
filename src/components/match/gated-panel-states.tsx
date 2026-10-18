@@ -1,6 +1,5 @@
 /** Shared loading/unavailable states for panels that fetch their own
- * entitlement-checked data client-side (see asian-handicap-client.tsx,
- * analysis-rest-client.tsx). */
+ * entitlement-checked data client-side (see asian-handicap-client.tsx). */
 
 export function GatedPanelSkeleton({ title, rows = 4 }: { title?: string; rows?: number }) {
   return (

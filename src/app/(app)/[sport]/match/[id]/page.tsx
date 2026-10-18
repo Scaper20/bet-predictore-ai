@@ -19,10 +19,9 @@ import { Morph, morphName } from "@/components/motion/morph";
 import { AnimatedNumber } from "@/components/motion/animated-number";
 import { matchContext, type MatchContext } from "@/lib/stats/match-context";
 import type { Outcome } from "@/lib/stats/compute";
-import type { Analysis } from "@/lib/ai/analyst";
 import { AskAboutMatch, AskPageContext } from "@/components/ask/ask-page-context";
 import { PricesPanel, PricesPanelSkeleton } from "@/components/match/prices-panel";
-import { AnalysisPanel } from "@/components/match/analysis-panel";
+import { TopPicks } from "@/components/match/top-picks";
 import { LiveWinProbabilityPanel } from "@/components/match/live-win-probability-panel";
 import { LiveMatchProvider, LiveProgress, LiveScore, LiveStatusBadge } from "@/components/match/live-scoreboard";
 import { Gate } from "@/components/entitlements/gate";
@@ -95,7 +94,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   const detail = await matchDetail(decodeURIComponent(id)).catch(() => null);
   if (!detail) notFound();
 
-  const { match, analysis } = detail;
+  const { match } = detail;
   // Rendered per request (force-dynamic) with the viewer's own view
   // (lib/access.ts): a Pro-league match before kick-off reaches a free
   // viewer as the 1X2 split only. MatchAccessProvider still fetches the Pro
@@ -116,7 +115,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   const label = `${match.home.name} v ${match.away.name}`;
 
   const tabs: MatchTab[] = [
-    { key: "overview", label: "Overview", panel: <Overview match={match} prediction={prediction} analysis={analysis} ctx={ctx} live={live} label={label} proLeagueOpened={proLeagueOpened} /> },
+    { key: "overview", label: "Overview", panel: <Overview match={match} prediction={prediction} ctx={ctx} live={live} label={label} proLeagueOpened={proLeagueOpened} /> },
     { key: "markets", label: "Predictions", short: "Picks", panel: <Markets prediction={prediction} extra={proLocked ? null : extra} statsLocked={!viewer.paid} /> },
     { key: "stats", label: "Stats", panel: <MatchStats match={match} home={ctx.home} away={ctx.away} /> },
     ...(ctx.table
@@ -244,7 +243,6 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
 function Overview({
   match,
   prediction,
-  analysis,
   ctx,
   live,
   label,
@@ -252,7 +250,6 @@ function Overview({
 }: {
   match: Match;
   prediction: ViewedPrediction;
-  analysis: Analysis;
   ctx: MatchContext;
   live: boolean;
   proLeagueOpened: boolean;
@@ -269,10 +266,9 @@ function Overview({
           <Gate
             requires="vip"
             fallback={
-              <div className="card border-brand/25 bg-brand/[0.04] p-5">
-                <p className="flex items-center gap-2 text-sm font-semibold"><LiveDot /> Live win probability</p>
-                <p className="mt-1 text-xs text-ink-muted">Updates every ~25s as the match plays out. VIP unlocks this.</p>
-                <ButtonLink href="/account/billing?plan=vip" variant="ghost" className="mt-2 px-0 py-1 text-xs">Unlock VIP →</ButtonLink>
+              <div className="card flex items-center justify-between gap-3 border-brand/25 bg-brand/[0.04] px-4 py-3">
+                <p className="flex min-w-0 items-center gap-2 text-xs font-semibold"><LiveDot /> <span className="truncate">Live win probability · VIP</span></p>
+                <ButtonLink href="/account/billing?plan=vip" variant="ghost" className="shrink-0 px-0 py-1 text-xs">Unlock →</ButtonLink>
               </div>
             }
           >
@@ -331,8 +327,6 @@ function Overview({
             </div>
           </section>
         )}
-
-        <AnalysisPanel analysis={analysis} matchId={match.id} />
       </div>
 
       <aside className="min-w-0 space-y-5 lg:sticky lg:top-[calc(var(--header-h)+4.5rem)]">
@@ -391,6 +385,7 @@ function Markets({
     <div className="space-y-5">
       {/* Free and server-rendered: the 1X2 split is what search indexes and
           what earns the click, so it never sits behind a wall (lib/gating.ts). */}
+      <TopPicks prediction={prediction} corners={extra?.stats.corners} />
       <OutcomePanel prediction={prediction} />
       {/* The only numbers here a bookmaker produced; streamed, because two
           metered providers sit behind it. DepthGate is a conversion wall:

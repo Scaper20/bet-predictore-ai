@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import type { SlipView } from "@/components/slip/tracked-slip";
 import { useOverlay } from "@/components/ui/use-overlay";
 import { Spinner } from "@/components/ui/primitives";
@@ -21,15 +22,27 @@ export function slipImageUrl(view: SlipView): string {
 type Img = { status: "loading" } | { status: "ready"; blob: Blob; url: string } | { status: "failed" };
 
 /**
- * Share a tracked slip as a KiqStat slip image: a preview, then the phone's
- * own share sheet (WhatsApp, Telegram, X…) or a download. An image of the
- * picks and the model's chances, not a booking code.
+ * Share a KiqStat image: a preview, then the phone's own share sheet
+ * (WhatsApp, Telegram, X…) or a download. An image of the picks and the
+ * model's chances, not a booking code.
  */
-export function ShareSlipSheet({ view, onClose }: { view: SlipView; onClose: () => void }) {
+export function ShareImageSheet({
+  src,
+  title,
+  filename,
+  shareText,
+  onClose,
+}: {
+  src: string;
+  /** The sheet's heading and the share title, e.g. "combo". */
+  title: string;
+  filename: string;
+  shareText: string;
+  onClose: () => void;
+}) {
   const { containerRef, initialFocusRef } = useOverlay<HTMLDivElement, HTMLButtonElement>(true, onClose);
   const [img, setImg] = useState<Img>({ status: "loading" });
   const [note, setNote] = useState<string | null>(null);
-  const src = slipImageUrl(view);
 
   useEffect(() => {
     let objectUrl: string | null = null;
@@ -48,14 +61,14 @@ export function ShareSlipSheet({ view, onClose }: { view: SlipView; onClose: () 
     };
   }, [src]);
 
-  const file = img.status === "ready" ? new File([img.blob], "kiqstat-combo.png", { type: "image/png" }) : null;
+  const file = img.status === "ready" ? new File([img.blob], filename, { type: "image/png" }) : null;
   const canShareFile = typeof navigator !== "undefined" && !!file && !!navigator.canShare?.({ files: [file] });
 
   const download = () => {
     if (img.status !== "ready") return;
     const a = document.createElement("a");
     a.href = img.url;
-    a.download = "kiqstat-combo.png";
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -65,26 +78,28 @@ export function ShareSlipSheet({ view, onClose }: { view: SlipView; onClose: () 
   const share = async () => {
     if (!file) return;
     try {
-      await navigator.share({ files: [file], title: "My KiqStat combo", text: "My combo on KiqStat · kiqstat.app" });
+      await navigator.share({ files: [file], title: `KiqStat ${title}`, text: shareText });
     } catch (err) {
       // Closing the share sheet isn't a failure.
       if (err instanceof Error && err.name !== "AbortError") setNote("Couldn't open sharing here. Download the image instead.");
     }
   };
 
-  return (
+  // Portalled to the body: opened from inside an animated tab panel, a transformed
+  // ancestor would otherwise trap this fixed sheet inside the panel, off screen.
+  return createPortal(
     <div className="fixed inset-0 z-[70]" role="presentation">
       <button type="button" aria-label="Close" tabIndex={-1} onClick={onClose} className="slip-fade absolute inset-0 bg-black/60" />
       <div
         ref={containerRef}
         role="dialog"
         aria-modal="true"
-        aria-label="Share combo"
+        aria-label={`Share ${title}`}
         className="slip-rise absolute inset-x-0 bottom-0 flex max-h-[92dvh] flex-col rounded-t-2xl border-t border-line bg-shell shadow-2xl lg:inset-x-auto lg:bottom-auto lg:left-1/2 lg:top-1/2 lg:w-[30rem] lg:-translate-x-1/2 lg:-translate-y-1/2 lg:rounded-2xl lg:border"
       >
         <div className="mx-auto mt-2 h-1 w-10 rounded-full bg-line-strong lg:hidden" aria-hidden />
         <div className="flex items-center justify-between gap-3 px-4 py-3">
-          <p className="font-display text-lg font-bold">Share combo</p>
+          <p className="font-display text-lg font-bold">Share {title}</p>
           <button
             ref={initialFocusRef}
             type="button"
@@ -104,7 +119,7 @@ export function ShareSlipSheet({ view, onClose }: { view: SlipView; onClose: () 
             {img.status === "failed" && <p className="px-6 py-10 text-center text-sm text-ink-muted">Couldn&apos;t make the image. Close and try again.</p>}
             {img.status === "ready" && (
               // eslint-disable-next-line @next/next/no-img-element -- a blob: URL, which next/image can't optimise
-              <img src={img.url} alt="Your KiqStat combo" className="block w-full" />
+              <img src={img.url} alt={`Your KiqStat ${title}`} className="block w-full" />
             )}
           </div>
         </div>
@@ -132,6 +147,12 @@ export function ShareSlipSheet({ view, onClose }: { view: SlipView; onClose: () 
           {note && <p className="text-center text-xs text-ink-dim">{note}</p>}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
+}
+
+/** A tracked slip as a KiqStat slip image. */
+export function ShareSlipSheet({ view, onClose }: { view: SlipView; onClose: () => void }) {
+  return <ShareImageSheet src={slipImageUrl(view)} title="combo" filename="kiqstat-combo.png" shareText="My combo on KiqStat · kiqstat.app" onClose={onClose} />;
 }

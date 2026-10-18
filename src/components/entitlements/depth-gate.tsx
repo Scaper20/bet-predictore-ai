@@ -23,7 +23,7 @@ import { REQUIRE_ACCOUNT_FOR_DEPTH } from "@/lib/gating";
  * anyone is signed in. Verified, not assumed.
  *
  * That is the right trade here and it is why the paid <Gate> is built the
- * other way. Paid panels (asian-handicap-client, analysis-rest-client) fetch
+ * other way. Paid panels (asian-handicap-client) fetch
  * their own data after an entitlement check precisely so it never reaches an
  * unentitled client, because there the leak is revenue. Here the content is
  * free — the account is the price, not money — so the only thing a leak costs
