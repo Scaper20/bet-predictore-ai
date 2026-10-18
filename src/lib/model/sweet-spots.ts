@@ -32,6 +32,7 @@
  */
 
 import type { Pick } from "./predict";
+import { isPausedPick } from "./paused";
 import type { AsianHandicapLine } from "./poisson";
 
 export interface SweetSpot {
@@ -145,6 +146,26 @@ function groupOf(market: string): Pick["group"] {
   return "Match Result";
 }
 
+/**
+ * Every paused handicap rule that would have fired on this game, with its
+ * chance: what the pick would have been, for the shadow log.
+ */
+export function pausedHandicapCandidates(
+  picks: readonly Pick[],
+  leagueCode: string | undefined,
+  ah: readonly AsianHandicapLine[] = [],
+): { market: string; label: string; probability: number }[] {
+  if (!sweetSpotLeague(leagueCode)) return [];
+  const out: { market: string; label: string; probability: number }[] = [];
+  for (const rule of SWEET_SPOTS) {
+    if (!rule.market.startsWith("ah:") || !isPausedPick(rule.market)) continue;
+    const p = chanceOf(rule.market, picks, ah, undefined);
+    if (p === null || p < rule.min || p > SWEET_SPOT_MAX) continue;
+    out.push({ market: rule.market, label: sweetSpotLabel(rule.market), probability: p });
+  }
+  return out;
+}
+
 /** The game's sweet-spot pick, or null when no rule applies (or the competition was not tested). */
 export function sweetSpotPick(
   picks: readonly Pick[],
@@ -157,7 +178,7 @@ export function sweetSpotPick(
   for (const tier of [SWEET_SPOTS, SWEET_SPOT_FILLERS]) {
     let best: { rule: SweetSpot; p: number } | null = null;
     for (const rule of tier) {
-      if (barred.includes(rule.market)) continue;
+      if (barred.includes(rule.market) || isPausedPick(rule.market)) continue;
       const p = chanceOf(rule.market, picks, ah, stats);
       if (p === null || p < rule.min || p > SWEET_SPOT_MAX) continue;
       if (!best || rule.record > best.rule.record || (rule.record === best.rule.record && p > best.p)) best = { rule, p };

@@ -11,6 +11,23 @@
  */
 export const PAUSED_PICK_MARKETS: readonly string[] = ["ou:under:1.5", "ou:under:2.5", "ou:under:3.5"];
 
+/**
+ * Handicaps of a goal or more (+-1, +-1.5, +-2), paused 18 Oct 2026, the day
+ * after sweet spots made them picks. Away +1.5 at 74%+ applies to most games
+ * without a clear home favourite, so it took 26 of 68 picks on its first day,
+ * and its first three settled (4-1, 4-0, 2-0) all lost: one day of home wins
+ * by two sinks every one at once, which is fatal inside a code. Its 80%+
+ * record is replay only. Draw no bet (0) and the half-goal +-0.5 lines stay:
+ * they are double chance and the match result under another name.
+ *
+ * Still logged in public.shadow_picks and graded there, so the line can come
+ * back on a live record rather than a replay (model/shadow.ts).
+ */
+export function isPausedHandicap(market: string): boolean {
+  const m = market.match(/^ah:(home|away):([+-]?\d+(?:\.\d+)?)$/);
+  return Boolean(m && Math.abs(Number(m[2])) >= 1);
+}
+
 export function isPausedPick(market: string): boolean {
-  return PAUSED_PICK_MARKETS.includes(market) || market.startsWith("ou:under:");
+  return PAUSED_PICK_MARKETS.includes(market) || market.startsWith("ou:under:") || isPausedHandicap(market);
 }
