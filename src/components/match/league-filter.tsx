@@ -78,7 +78,7 @@ export function LeagueFilter({ proTags = false, counts }: { proTags?: boolean; c
           pro={proTags && isProLeague(l.code)}
           // The selected chip always shows; the rest give way on narrow screens.
           // With a league picked, the others wait for room: All leagues, the pick and More fit a 414px phone.
-          className={active === l.code ? "" : active ? (i >= 3 ? "hidden lg:flex" : "hidden sm:flex") : i >= 1 ? (i >= 3 ? "hidden lg:flex" : "hidden sm:flex") : ""}
+          className={active === l.code ? "min-w-0 shrink" : active ? (i >= 3 ? "hidden lg:flex" : "hidden sm:flex") : i >= 1 ? (i >= 3 ? "hidden lg:flex" : "hidden sm:flex") : ""}
         />
       ))}
       <button
@@ -182,16 +182,19 @@ function Chip({
     <Link
       href={href}
       aria-current={active ? "page" : undefined}
-      className={`flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border px-3.5 py-2.5 text-sm font-medium transition-colors sm:px-4 ${
+      className={`flex items-center gap-2 whitespace-nowrap rounded-full border px-3.5 py-2.5 text-sm font-medium transition-colors sm:px-4 ${
+        className.includes("shrink") ? "" : "shrink-0"
+      } ${
         active
           ? "border-brand/40 bg-brand/12 text-brand"
           : "border-line bg-surface text-ink-muted hover:border-line-strong hover:text-ink"
       } ${className}`}
     >
-      {code && <LeagueLogo code={code} size={20} />}
-      {label}
+      {code && <span className="shrink-0"><LeagueLogo code={code} size={20} /></span>}
+      {/* A long name ("Conference League") gives way with an ellipsis rather than pushing the page wider than the phone. */}
+      <span className="min-w-0 truncate">{label}</span>
       {pro && (
-        <span title="Pro league" className="rounded-full bg-violet/15 px-1.5 py-0.5 text-[9.5px] font-bold tracking-wide text-violet">
+        <span title="Pro league" className="shrink-0 rounded-full bg-violet/15 px-1.5 py-0.5 text-[9.5px] font-bold tracking-wide text-violet">
           PRO
         </span>
       )}
