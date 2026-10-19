@@ -179,6 +179,11 @@ export default async function PricingPage({ searchParams }: PageProps<"/pricing"
                 A plan paid once buys a fixed period and nothing renews. Card auto-renew
                 {sellsAbroad ? " (Nigeria only)" : ""} renews until cancelled, and cancelling ends
                 future charges while leaving access in place for the period already paid for.
+                Refunds: 7 days on a first payment, 48 hours on a renewal, see the{" "}
+                <Link href="/refunds" className="text-brand underline underline-offset-2">
+                  refund policy
+                </Link>
+                .
               </p>
               <p>
                 18+ only. If it stops being fun,{" "}

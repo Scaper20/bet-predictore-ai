@@ -3,6 +3,7 @@ import "server-only";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { verifyTransaction } from "@/lib/paystack/client";
 import { nextPeriodEnd } from "@/lib/flutterwave/period";
+import { recordCommission } from "@/lib/partner-commission";
 import { sendEmail } from "@/lib/email";
 import { receiptEmail } from "@/lib/email-templates";
 import type { BillingCycle } from "@/lib/pricing";
@@ -88,6 +89,17 @@ export async function grantPaystackOnce(reference: string): Promise<OnceOutcome>
     },
     { onConflict: "user_id" },
   );
+
+  await recordCommission({
+    userId: payment.user_id as string,
+    reference,
+    provider: "paystack",
+    plan: String(payment.plan),
+    currency: tx.currency ?? "NGN",
+    grossMinor: tx.amount,
+    feeMinor: typeof tx.fees === "number" ? tx.fees : null,
+    paidAt: now,
+  });
 
   const email = tx.customer?.email;
   if (email) {

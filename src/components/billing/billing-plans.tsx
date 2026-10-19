@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { Badge, Button } from "@/components/ui/primitives";
 import { formatMoney, NIGERIA, type Market } from "@/lib/payments/markets";
@@ -208,6 +209,12 @@ export function BillingPlans({
           );
         })}
       </div>
+      <p className="mt-4 text-center text-xs text-ink-dim">
+        Refunds: 7 days on a first payment, 48 hours on a renewal.{" "}
+        <Link href="/refunds" className="underline underline-offset-2 hover:text-ink">
+          Refund policy
+        </Link>
+      </p>
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { tierFromPlanCode } from "@/lib/paystack/plan-codes";
 import { sendEmail } from "@/lib/email";
 import { receiptEmail, subscriptionCanceledEmail } from "@/lib/email-templates";
 import type { Tier } from "@/lib/entitlements";
+import { recordCommission } from "@/lib/partner-commission";
 import { grantPaystackOnce } from "@/lib/paystack/once";
 
 // Node's crypto module, not Edge-safe — Proxy (formerly middleware) already
@@ -108,6 +109,31 @@ export async function POST(request: Request) {
         // Idempotent by design: `paystack_reference` is unique, so a
         // redelivered event just re-applies the same update.
         await admin.from("payments").update({ status: "success", raw_event: event }).eq("paystack_reference", reference);
+      }
+
+      // Partner commission, for a first charge and for every renewal. A
+      // renewal carries none of our metadata, so the payer is found the way
+      // the renewal handling below finds them: customer_code, then email.
+      if (reference && typeof amount === "number") {
+        let payerId = asString(metadata?.userId);
+        if (!payerId && customerCode) {
+          const { data: sub } = await admin.from("subscriptions").select("user_id").eq("paystack_customer_code", customerCode).maybeSingle();
+          payerId = sub?.user_id as string | undefined;
+        }
+        if (!payerId && customerEmail) {
+          const { data: prof } = await admin.from("profiles").select("id").ilike("email", customerEmail).maybeSingle();
+          payerId = prof?.id as string | undefined;
+        }
+        if (payerId) {
+          await recordCommission({
+            userId: payerId,
+            reference,
+            provider: "paystack",
+            currency: asString(data.currency) ?? "NGN",
+            grossMinor: amount,
+            feeMinor: typeof data.fees === "number" ? data.fees : null,
+          });
+        }
       }
 
       // First charge on a plan-based checkout: our own metadata is present

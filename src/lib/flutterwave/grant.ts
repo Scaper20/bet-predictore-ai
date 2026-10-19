@@ -4,6 +4,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { verifyByReference } from "@/lib/flutterwave/client";
 import { nextPeriodEnd } from "@/lib/flutterwave/period";
 import { formatMoney } from "@/lib/payments/markets";
+import { recordCommission } from "@/lib/partner-commission";
 import { sendEmail } from "@/lib/email";
 import { receiptEmail } from "@/lib/email-templates";
 import type { BillingCycle } from "@/lib/pricing";
@@ -81,6 +82,17 @@ export async function grantFlutterwavePayment(txRef: string): Promise<GrantOutco
     },
     { onConflict: "user_id" },
   );
+
+  await recordCommission({
+    userId: payment.user_id as string,
+    reference: txRef,
+    provider: "flutterwave",
+    plan: String(payment.plan),
+    currency: tx.currency,
+    grossMinor: Math.round(tx.amount * 100),
+    feeMinor: typeof tx.app_fee === "number" ? Math.round(tx.app_fee * 100) : null,
+    paidAt: now,
+  });
 
   const email = tx.customer?.email;
   if (email) {

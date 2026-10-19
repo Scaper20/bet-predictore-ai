@@ -46,6 +46,7 @@ const COLUMNS = [
       { href: "/how-it-works", label: "How Our Picks Work" },
       { href: "/guides", label: "Guides" },
       { href: "/help", label: "Help Centre" },
+      { href: "/refunds", label: "Refund Policy" },
       { href: "/responsible-use", label: "Responsible Use" },
     ],
   },
