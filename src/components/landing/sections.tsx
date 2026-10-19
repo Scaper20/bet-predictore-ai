@@ -26,11 +26,11 @@ const FEATURES = [
       "or high risk label taken from how picks like it have actually landed. Share them as an image in one tap.",
   },
   {
-    icon: "🚩",
-    title: "Corners and shots, not just goals",
+    icon: "📈",
+    title: "Match stats",
     body:
-      "Corners, shots and shots-on-target picks sit beside the goal markets, and each match page " +
-      "shows both clubs' numbers. They're graded from the match stats minutes after the final whistle.",
+      "Shots, shots on target and corners for every game, live and at full time, beside both clubs' " +
+      "averages over their last ten league games. Picks on them are graded minutes after the final whistle.",
   },
   {
     icon: "⚡",
@@ -38,13 +38,6 @@ const FEATURES = [
     body:
       "Every running match across the competitions we track, refreshed continuously with " +
       "the clock and the scoreline straight from the feed.",
-  },
-  {
-    icon: "🧩",
-    title: "Code Hub combos",
-    body:
-      "Ready-made combos every day, from 2 to 20 odds, built from the model's strongest reads. " +
-      "A combo leaves the board the moment a game misses, and every result stays on the record.",
   },
   {
     icon: "🎯",
@@ -69,10 +62,10 @@ const FEATURES = [
   },
   {
     icon: "🌍",
-    title: "African football, paid your way",
+    title: "African football, worldwide",
     body:
-      "NPFL and CAF competitions alongside Europe's leagues, in your own time zone. Pay once by bank " +
-      "transfer, OPay, PalmPay or USSD, or with Mobile Money, M-Pesa or card abroad.",
+      "NPFL and CAF competitions alongside the Premier League and the rest of Europe, with kick-off " +
+      "times in your own time zone and prices in your own currency.",
   },
 ];
 
@@ -85,7 +78,7 @@ export function Features() {
           title="Everything you need to read a match properly"
           description="The numbers behind every pick."
         />
-        <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {FEATURES.map((f) => (
             <div key={f.title} className="card card-hover p-5 sm:p-7">
               <div className="grid size-11 place-items-center rounded-lg bg-surface-2 text-xl">
@@ -265,10 +258,6 @@ export const FAQS = [
   {
     q: "What do low, medium and high risk mean?",
     a: "They come from our own graded record, not a guess. Picks the model rates 65% or more have landed about 7 in 10 times, picks from 55% to 65% about 6 in 10, and picks under 55% about half the time. The label sits beside every pick so you can see at a glance how often picks like it come in.",
-  },
-  {
-    q: "How do I pay?",
-    a: "In Nigeria, pay once by bank transfer, OPay, PalmPay, USSD or card. You get the plan for the month, three months or year you choose, and nothing renews. You can choose card auto-renew instead if you prefer. Outside Nigeria you pay in your own currency by Mobile Money, M-Pesa or card.",
   },
   {
     q: "Is this legal where I live?",

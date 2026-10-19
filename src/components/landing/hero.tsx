@@ -49,7 +49,7 @@ export function Hero({ liveCount, board }: { liveCount: number; board: ReactNode
 
           <p className="mt-6 max-w-xl text-lg leading-relaxed text-ink-muted">
             Every match gets its <strong className="text-ink">top three picks</strong>, a risk label
-            from our own graded record, and the numbers behind them: goals, corners and shots, fitted
+            from our own graded record, and the numbers behind them, from goals to match stats, fitted
             to real completed matches. Every miss stays on the record. See the chance, then decide for
             yourself.
           </p>

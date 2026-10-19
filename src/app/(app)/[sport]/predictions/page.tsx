@@ -4,7 +4,8 @@ import { PageHeader } from "@/components/ui/page-header";
 import { LeagueFilter } from "@/components/match/league-filter";
 import { ProLeaguesBanner } from "@/components/entitlements/pro-league-lock";
 import { isProLeague } from "@/lib/pro-leagues";
-import { PredictionCard } from "@/components/match/prediction-card";
+import { PickRow } from "@/components/match/pick-row";
+import { riskFor, type RiskLevel } from "@/lib/model/risk";
 import { CoverageNotice } from "@/components/ui/coverage-notice";
 import { Badge, ButtonLink, EmptyState } from "@/components/ui/primitives";
 import { BestBetOfDay } from "@/components/landing/best-bet-of-day";
@@ -59,15 +60,19 @@ export const revalidate = 300;
 export default async function PredictionsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ league?: string; tier?: string }>;
+  searchParams: Promise<{ league?: string; tier?: string; risk?: string; sort?: string }>;
 }) {
-  const { league, tier } = await searchParams;
+  const { league, tier, risk: riskParam, sort } = await searchParams;
   const strongOnly = tier === "strong";
+  const risk = (["low", "medium", "high"] as RiskLevel[]).find((r) => r === riskParam);
+  const byChance = sort === "chance";
   const def = league ? leagueByCode(league) : undefined;
 
-  const feed = await upcomingFeed(5, def ? league : undefined).catch(() => null);
+  // Every game with a prediction in the next two weeks, not just the first
+  // few: the list rows are light enough to show a whole fortnight.
+  const feed = await upcomingFeed(WINDOW_DAYS, def ? league : undefined).catch(() => null);
   const [rawPredictions, rawBest, viewer] = await Promise.all([
-    feed ? predictBatch(feed.matches, 18).catch(() => []) : Promise.resolve([]),
+    feed ? predictBatch(feed.matches, MAX_GAMES).catch(() => []) : Promise.resolve([]),
     // Slate-wide, so only pinned on the unfiltered view — under a specific
     // league filter it could point somewhere the visitor didn't ask to see.
     def ? Promise.resolve(null) : bestBetOfDay().catch(() => null),
@@ -97,11 +102,31 @@ export default async function PredictionsPage({
   const preferences = await getPreferences();
   const followed = new Set(def ? [] : preferences.leagues);
 
-  const publishable = predictions.filter((p) => p.sufficiency.publishable && (!strongOnly || isStrong(p.topPick, p.match.league.code)));
+  const publishable = predictions.filter(
+    (p) =>
+      p.sufficiency.publishable &&
+      p.topPick &&
+      (!strongOnly || isStrong(p.topPick, p.match.league.code)) &&
+      // A locked pick's chance never reaches the page, so it has no risk to filter on.
+      (!risk || (!p.locked.pick && riskFor(p.topPick.probability) === risk)),
+  );
+  // Games per competition, for the league filter. Only on the unfiltered
+  // view, where the feed holds every competition.
+  const counts: Record<string, number> | undefined = def
+    ? undefined
+    : predictions.reduce<Record<string, number>>((acc, p) => {
+        const code = p.match.league.code;
+        if (code && p.sufficiency.publishable) acc[code] = (acc[code] ?? 0) + 1;
+        return acc;
+      }, {});
   const withheld = predictions.filter((p) => !p.sufficiency.publishable);
 
   // Live first, then the rest of today, then tomorrow and on (lib/pick-sections.ts).
-  const sections = pickSections(publishable, { followed });
+  const sections = pickSections(publishable, { followed }).map((s) =>
+    byChance
+      ? { ...s, items: [...s.items].sort((a, b) => Number(b.locked.pick ? 0 : b.topPick!.probability) - Number(a.locked.pick ? 0 : a.topPick!.probability)) }
+      : s,
+  );
 
   return (
     <>
@@ -113,7 +138,7 @@ export default async function PredictionsPage({
 
       <div className={`${containerClass()} space-y-7 py-7 sm:py-10`}>
         <Suspense fallback={<div className="h-10" />}>
-          <LeagueFilter proTags={!viewer.paid} />
+          <LeagueFilter proTags={!viewer.paid} counts={counts} />
         </Suspense>
 
         {!viewer.paid && def && isProLeague(def.code) ? (
@@ -122,7 +147,7 @@ export default async function PredictionsPage({
           <ProLeaguesBanner held={proHeld} />
         ) : null}
 
-        <TierToggle strongOnly={strongOnly} league={def ? league : undefined} />
+        <PickFilters strongOnly={strongOnly} risk={risk} byChance={byChance} league={def ? league : undefined} />
 
         {feed && <CoverageNotice coverage={feed.coverage} />}
 
@@ -138,8 +163,12 @@ export default async function PredictionsPage({
             />
           ) : (
             <>
-              {strongOnly && sections.length === 0 && (
-                <EmptyState icon="★" title="No Strong picks right now" description="Strong picks are our most confident. Some days there are none." />
+              {(strongOnly || risk) && sections.length === 0 && (
+                <EmptyState
+                  icon={strongOnly ? "★" : "⚖"}
+                  title={strongOnly ? "No Strong picks right now" : `No ${risk} risk picks right now`}
+                  description={strongOnly ? "Strong picks are our most confident. Some days there are none." : "Try another risk level or all picks."}
+                />
               )}
               {sections.map((section) => (
                 <section key={section.key} className="scroll-reveal">
@@ -149,11 +178,9 @@ export default async function PredictionsPage({
                     <Badge tone={section.live ? "rose" : "brand"}>{section.items.length}</Badge>
                     <span className="h-px flex-1 bg-line" />
                   </div>
-                  <div className="stagger grid gap-4 sm:grid-cols-2 sm:gap-5 xl:grid-cols-3">
-                    {section.items.map((p, i) => (
-                      <div key={p.match.id} className="min-w-0" style={{ ["--i" as string]: i }}>
-                        <PredictionCard prediction={p} morph={p.match.id !== bestBet?.match.id} />
-                      </div>
+                  <div className="card overflow-hidden">
+                    {section.items.map((p) => (
+                      <PickRow key={p.match.id} prediction={p} />
                     ))}
                   </div>
                 </section>
@@ -188,25 +215,67 @@ export default async function PredictionsPage({
   );
 }
 
-/** All picks, or only the Strong ones (confidence 63+ in a tested division, src/lib/model/tiers.ts). */
-function TierToggle({ strongOnly, league }: { strongOnly: boolean; league?: string }) {
-  const href = (strong: boolean) => {
+/** Days of fixtures the page lists, and the most games it will model at once. */
+const WINDOW_DAYS = 14;
+const MAX_GAMES = 900;
+
+/**
+ * Which picks and in what order: all or Strong only, one risk level, and
+ * kick-off order or highest chance first. All in the URL, so a filtered view
+ * can be shared and the page stays server-rendered.
+ */
+function PickFilters({
+  strongOnly,
+  risk,
+  byChance,
+  league,
+}: {
+  strongOnly: boolean;
+  risk?: RiskLevel;
+  byChance: boolean;
+  league?: string;
+}) {
+  const href = (next: { strong?: boolean; risk?: RiskLevel | null; chance?: boolean }) => {
     const q = new URLSearchParams();
     if (league) q.set("league", league);
+    const strong = next.strong ?? strongOnly;
+    const r = next.risk === undefined ? risk : next.risk;
+    const c = next.chance ?? byChance;
     if (strong) q.set("tier", "strong");
+    if (r) q.set("risk", r);
+    if (c) q.set("sort", "chance");
     const qs = q.toString();
     return `${sportPath("predictions")}${qs ? `?${qs}` : ""}`;
   };
-  const tab = (active: boolean) =>
-    `rounded-md px-3.5 py-1.5 text-xs font-semibold transition-colors ${active ? "bg-surface-3 text-ink" : "text-ink-muted hover:text-ink"}`;
+  const chip = (active: boolean) =>
+    `inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-semibold transition-colors ${
+      active ? "border-brand/40 bg-brand/12 text-brand" : "border-line bg-surface text-ink-muted hover:text-ink"
+    }`;
+  const dot = { low: "bg-brand", medium: "bg-amber", high: "bg-rose" } as const;
   return (
-    <nav aria-label="Which picks" className="inline-flex rounded-lg border border-line bg-surface-2 p-0.5">
-      <Link href={href(false)} className={tab(!strongOnly)} aria-current={!strongOnly ? "page" : undefined}>
-        All picks
-      </Link>
-      <Link href={href(true)} className={tab(strongOnly)} aria-current={strongOnly ? "page" : undefined}>
-        <span className="text-amber" aria-hidden>★</span> Strong picks
-      </Link>
-    </nav>
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <nav aria-label="Which picks" className="flex flex-wrap items-center gap-2">
+        <Link href={href({ strong: false, risk: null })} className={chip(!strongOnly && !risk)} aria-current={!strongOnly && !risk ? "page" : undefined}>
+          All picks
+        </Link>
+        <Link href={href({ strong: !strongOnly })} className={chip(strongOnly)} aria-current={strongOnly ? "page" : undefined}>
+          <span className="text-amber" aria-hidden>★</span> Strong
+        </Link>
+        {(["low", "medium", "high"] as const).map((r) => (
+          <Link key={r} href={href({ risk: risk === r ? null : r })} className={chip(risk === r)} aria-current={risk === r ? "page" : undefined}>
+            <span className={`size-1.5 rounded-full ${dot[r]}`} aria-hidden />
+            {r === "low" ? "Low risk" : r === "medium" ? "Medium" : "High"}
+          </Link>
+        ))}
+      </nav>
+      <nav aria-label="Order" className="inline-flex rounded-lg border border-line bg-surface-2 p-0.5 text-xs font-semibold">
+        <Link href={href({ chance: false })} className={`rounded-md px-3 py-1.5 ${!byChance ? "bg-surface-3 text-ink" : "text-ink-muted hover:text-ink"}`}>
+          Kick-off
+        </Link>
+        <Link href={href({ chance: true })} className={`rounded-md px-3 py-1.5 ${byChance ? "bg-surface-3 text-ink" : "text-ink-muted hover:text-ink"}`}>
+          Best chance
+        </Link>
+      </nav>
+    </div>
   );
 }
