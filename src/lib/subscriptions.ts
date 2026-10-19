@@ -9,8 +9,8 @@ export interface SubscriptionRow {
   paystack_subscription_code: string | null;
   current_period_end: string | null;
   pass_expires_at: string | null;
-  /** null on rows from before Flutterwave (Paystack); "flutterwave" = a prepaid period. */
-  provider: "paystack" | "flutterwave" | null;
+  /** null on rows from before Flutterwave (Paystack); "flutterwave" or "paystack_once" = a prepaid period. */
+  provider: "paystack" | "flutterwave" | "paystack_once" | null;
 }
 
 /** Raw `subscriptions` row for the signed-in user, or null. Pass an
@@ -37,16 +37,21 @@ export async function getSubscriptionRow(
 export function hasLivePaidSubscription(row: SubscriptionRow | null): boolean {
   return (
     !!row &&
-    // A Flutterwave period is prepaid: nothing recurs, nothing to cancel.
-    row.provider !== "flutterwave" &&
+    // A prepaid period: nothing recurs, nothing to cancel.
+    !isPrepaid(row) &&
     (row.tier === "pro" || row.tier === "vip") &&
     (row.status === "active" || row.status === "past_due")
   );
 }
 
-/** When a running Flutterwave (prepaid) plan ends, or null when there isn't one. */
+/** A prepaid period, bought through Flutterwave or once through Paystack: it ends, it never renews. */
+export function isPrepaid(row: Pick<SubscriptionRow, "provider"> | null): boolean {
+  return row?.provider === "flutterwave" || row?.provider === "paystack_once";
+}
+
+/** When a running prepaid plan ends, or null when there isn't one. */
 export function prepaidUntil(row: SubscriptionRow | null, now = new Date()): Date | null {
-  if (!row || row.provider !== "flutterwave" || !row.current_period_end) return null;
+  if (!row || !isPrepaid(row) || !row.current_period_end) return null;
   const until = new Date(row.current_period_end);
   return until > now ? until : null;
 }

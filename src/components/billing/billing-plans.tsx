@@ -9,6 +9,7 @@ import {
 import type { Tier } from "@/lib/entitlements";
 
 const ALL_CYCLES: BillingCycle[] = ["monthly", "quarterly", "yearly"];
+const SPAN: Record<BillingCycle, string> = { monthly: "one month", quarterly: "3 months", yearly: "a year" };
 
 export function BillingPlans({
   currentTier,
@@ -33,15 +34,16 @@ export function BillingPlans({
   prepaid?: { tier: "pro" | "vip"; until: string } | null;
 }) {
   const flutterwave = market.provider === "flutterwave";
-  // Flutterwave sells every cycle wherever a market has prices; Paystack
-  // only the cycles with a plan code configured.
-  const sold = flutterwave ? { pro: ALL_CYCLES, vip: ALL_CYCLES } : available;
+  // Every cycle is sold as a prepaid period (Flutterwave abroad, pay once
+  // through Paystack in Nigeria). Card auto-renew in Nigeria is offered only
+  // on the cycles with a Paystack plan code configured (`available`).
+  const sold = { pro: ALL_CYCLES, vip: ALL_CYCLES };
   const cycles = ALL_CYCLES.filter((c) => sold.pro.includes(c) || sold.vip.includes(c));
   const untilText = prepaid
     ? new Date(prepaid.until).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
     : "";
   const [cycle, setCycle] = useState<BillingCycle>(cycles.includes(initialCycle) ? initialCycle : "monthly");
-  const [pending, setPending] = useState<PlanTier | null>(null);
+  const [pending, setPending] = useState<PlanTier | `${PlanTier}:renew` | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   /**
@@ -55,22 +57,24 @@ export function BillingPlans({
     if (!prepaid) {
       return tier === currentTier ? { label: "Current plan", disabled: true } : { disabled: false };
     }
-    if (!flutterwave) {
-      return { label: tier === prepaid.tier ? `Paid until ${untilText}` : "Available when your plan ends", disabled: true };
-    }
     if (tier === prepaid.tier) return { label: pending === tier ? "Redirecting…" : "Add more time", disabled: false };
     if (prepaid.tier === "vip") return { label: `VIP runs until ${untilText}`, disabled: true };
     return { disabled: false };
   }
 
-  async function checkout(tier: "pro" | "vip", tierCycle: BillingCycle) {
+  /**
+   * `renew`: a Paystack card subscription. Otherwise a prepaid period, paid
+   * once with any method: Flutterwave abroad, Paystack without a plan in
+   * Nigeria (a plan checkout can only take a card).
+   */
+  async function checkout(tier: "pro" | "vip", tierCycle: BillingCycle, renew = false) {
     setError(null);
-    setPending(tier);
+    setPending(renew ? `${tier}:renew` : tier);
     try {
       const res = await fetch(flutterwave ? "/api/billing/flutterwave/checkout" : "/api/billing/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tier, cycle: tierCycle, country: market.country }),
+        body: JSON.stringify({ tier, cycle: tierCycle, country: market.country, once: !flutterwave && !renew }),
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body.error ?? "Checkout failed.");
@@ -122,6 +126,10 @@ export function BillingPlans({
               ? (market.prices?.[plan.id as "pro" | "vip"] ?? {})
               : plan.price
             : {};
+          // Card auto-renew: Nigeria only, on a cycle with a plan code, and
+          // not over a running prepaid period (it would replace it).
+          const renewable =
+            recurring && !flutterwave && !prepaid && available[plan.id as "pro" | "vip"].includes(tierCycle);
           const price = prices[tierCycle];
           const unavailable = recurring && (!sold[plan.id as "pro" | "vip"].includes(tierCycle) || !price);
           const saving = recurring ? priceSaving(prices, tierCycle) : null;
@@ -177,6 +185,24 @@ export function BillingPlans({
                           ? "Redirecting…"
                           : `Get ${plan.name}`)}
                 </Button>
+              )}
+              {plan.id !== "free" && !flutterwave && !button.disabled && !blocked && !unavailable && (
+                <p className="mt-2 text-center text-[11px] leading-snug text-ink-dim">
+                  Bank transfer, OPay, PalmPay, USSD or card. Pays for {SPAN[tierCycle]}, no auto-renew.
+                  {renewable && (
+                    <>
+                      {" "}
+                      <button
+                        type="button"
+                        disabled={pending !== null}
+                        onClick={() => checkout(plan.id as "pro" | "vip", tierCycle, true)}
+                        className="font-semibold text-ink-muted underline underline-offset-2 hover:text-ink disabled:opacity-50"
+                      >
+                        {pending === `${plan.id}:renew` ? "Redirecting…" : "Auto-renew with a card instead"}
+                      </button>
+                    </>
+                  )}
+                </p>
               )}
             </div>
           );

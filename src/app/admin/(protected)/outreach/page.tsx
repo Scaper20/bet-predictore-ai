@@ -33,6 +33,12 @@ const CAMPAIGNS: { type: CampaignType; label: string; description: string }[] = 
     description: "One-off note to everyone: the new name and address, nothing else changes, and why we renamed.",
   },
   {
+    type: "announce_pay_once",
+    label: "Pay by transfer, OPay or PalmPay",
+    description:
+      "For everyone not on a paid plan: Pro and VIP can now be paid once by bank transfer, OPay, PalmPay, USSD or card, with nothing renewing. Links straight to Plan & billing.",
+  },
+  {
     type: "checkout_reminder",
     label: "Unfinished checkout",
     description:

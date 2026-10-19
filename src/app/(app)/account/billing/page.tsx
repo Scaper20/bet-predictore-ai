@@ -83,7 +83,7 @@ export default async function BillingPage({ searchParams }: PageProps<"/account/
         <p className="mt-3 text-sm text-ink-muted">
           {market.provider === "flutterwave"
             ? `Pay in ${market.currency} through Flutterwave: ${market.methodsLabel}. Each payment buys a set period — nothing renews or charges you again, so there's nothing to cancel.`
-            : "From a single matchday to a full season. Payments are handled by Paystack — cancel a subscription anytime from here."}
+            : "Pay once by bank transfer, OPay, PalmPay, USSD or card: you get the plan for the period you choose, and nothing renews. Prefer it automatic? Each plan can auto-renew from a card instead, and you can cancel that anytime from here. Payments are handled by Paystack."}
         </p>
         {sellsAbroad && (
           <div className="mt-4">

@@ -37,14 +37,14 @@ const faqs = (sellsAbroad: boolean) => [
   {
     q: "Can I cancel?",
     a: sellsAbroad
-      ? "In Nigeria, plans are subscriptions: cancel from Plan & billing at any time, and you keep access for the period you have already paid for with nothing charged after that. Outside Nigeria each payment buys a set period that never renews, so there is nothing to cancel."
-      : "Yes, from Plan & billing in your account, at any time. Cancelling stops the next renewal — you keep access for the period you have already paid for, and nothing is charged after that.",
+      ? "A plan paid once buys a set period and never renews, so there is nothing to cancel. That is how every payment outside Nigeria works, and the default in Nigeria. If you chose card auto-renew in Nigeria, cancel from Plan & billing at any time: you keep access for the period already paid for, and nothing is charged after that."
+      : "A plan paid once buys a set period and never renews, so there is nothing to cancel. If you chose card auto-renew, cancel from Plan & billing at any time: you keep access for the period already paid for, and nothing is charged after that.",
   },
   {
     q: "How do I pay?",
     a: sellsAbroad
-      ? "In Nigeria through Paystack, in naira, by card or bank transfer. Elsewhere through Flutterwave, in your own currency: Mobile Money in Ghana, Uganda, Rwanda, Tanzania, Zambia and francophone Africa, M-Pesa in Kenya, and cards everywhere (US dollars outside the countries we price locally). We never see or store your card details."
-      : "Through Paystack, in Naira. Cards and bank transfer are both supported. We never see or store your card details.",
+      ? "In Nigeria through Paystack, in naira: bank transfer, OPay, PalmPay, USSD or card. Elsewhere through Flutterwave, in your own currency: Mobile Money in Ghana, Uganda, Rwanda, Tanzania, Zambia and francophone Africa, M-Pesa in Kenya, and cards everywhere (US dollars outside the countries we price locally). We never see or store your card details."
+      : "Through Paystack, in naira: bank transfer, OPay, PalmPay, USSD or card. We never see or store your card details.",
   },
   {
     q: "Is my subscription tied to football?",
@@ -176,10 +176,9 @@ export default async function PricingPage({ searchParams }: PageProps<"/pricing"
                   : "All prices are in Nigerian Naira and include any applicable taxes unless stated otherwise. Payments are processed by Paystack."}
               </p>
               <p>
-                {sellsAbroad ? "In Nigeria, subscriptions" : "Subscriptions"} renew
-                automatically until cancelled, and cancelling ends future charges while leaving
-                access in place for the period already paid for.
-                {sellsAbroad ? " Outside Nigeria, each payment buys a fixed period and nothing renews." : ""}
+                A plan paid once buys a fixed period and nothing renews. Card auto-renew
+                {sellsAbroad ? " (Nigeria only)" : ""} renews until cancelled, and cancelling ends
+                future charges while leaving access in place for the period already paid for.
               </p>
               <p>
                 18+ only. If it stops being fun,{" "}

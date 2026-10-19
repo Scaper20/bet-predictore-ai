@@ -9,6 +9,7 @@ import {
   freeSurveyEmail,
   whatsappCommunityAnnouncementEmail,
   rebrandAnnouncementEmail,
+  payOnceAnnouncementEmail,
   unfinishedCheckoutEmail,
 } from "@/lib/email-templates";
 import { classifySegment, type CampaignType } from "@/lib/outreach";
@@ -103,7 +104,8 @@ export async function enqueueCampaign(campaign: CampaignType): Promise<{ enqueue
 
   const subByUser = new Map((subs ?? []).map((s) => [s.user_id as string, { tier: s.tier as string, status: s.status as string }]));
 
-  const wantSegment = campaign === "survey_subscribed" ? "subscribed" : campaign === "survey_free" ? "free" : null;
+  const wantSegment =
+    campaign === "survey_subscribed" ? "subscribed" : campaign === "survey_free" || campaign === "announce_pay_once" ? "free" : null;
 
   // Checkout reminder: only people who left checkout and never paid since,
   // and who weren't reminded in the last 30 days (by this or the daily job).
@@ -201,6 +203,10 @@ async function buildCampaignEmail(
 
   if (campaign === "announce_rebrand") {
     return rebrandAnnouncementEmail({ unsubscribeUrl });
+  }
+
+  if (campaign === "announce_pay_once") {
+    return payOnceAnnouncementEmail({ unsubscribeUrl });
   }
 
   if (campaign === "announce_whatsapp") {

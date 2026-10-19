@@ -8,6 +8,8 @@ import { nairaToKobo } from "@/lib/paystack/money";
 import { cyclePrice, planById, type BillingCycle } from "@/lib/pricing";
 import { SITE_URL as SITE } from "@/lib/site-url";
 import { getSubscriptionRow, hasLivePaidSubscription, prepaidUntil } from "@/lib/subscriptions";
+import { canBuy } from "@/lib/flutterwave/period";
+import { ONCE_SUFFIX } from "@/lib/paystack/once";
 
 const CYCLES: BillingCycle[] = ["monthly", "quarterly", "yearly"];
 
@@ -21,8 +23,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Sign in first." }, { status: 401 });
   }
 
-  const body = (await request.json()) as { tier?: string; cycle?: string };
+  const body = (await request.json()) as { tier?: string; cycle?: string; once?: boolean };
   const tier = body.tier;
+  // Pay once: a prepaid period with no Paystack plan, so the checkout offers
+  // every method (bank transfer, OPay, PalmPay, USSD, pay with bank, card).
+  // A plan checkout can only be renewed from a card, and hides the rest.
+  const once = body.once === true;
   const cycle: BillingCycle = CYCLES.includes(body.cycle as BillingCycle) ? (body.cycle as BillingCycle) : "monthly";
 
   // Passes were withdrawn in October 2026; a stale page asking for one is
@@ -45,9 +51,14 @@ export async function POST(request: Request) {
     );
   }
 
-  // A subscription would replace a prepaid Flutterwave period on the same
-  // row and throw away the days left on it.
-  const prepaid = prepaidUntil(existing);
+  if (once) {
+    const allowed = canBuy(existing, tier, new Date());
+    if (!allowed.ok) return NextResponse.json({ error: allowed.reason }, { status: 409 });
+  }
+
+  // A subscription would replace a prepaid period on the same row and throw
+  // away the days left on it. Paying once instead adds time to it.
+  const prepaid = once ? null : prepaidUntil(existing);
   if (prepaid) {
     const date = prepaid.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
     return NextResponse.json(
@@ -72,8 +83,8 @@ export async function POST(request: Request) {
       amountKobo: nairaToKobo(amountNaira),
       reference,
       callbackUrl: `${SITE}/account/billing/callback`,
-      planCode: planCodeFor(tier, cycle),
-      metadata: { userId: user.id, tier, cycle },
+      planCode: once ? undefined : planCodeFor(tier, cycle),
+      metadata: once ? { userId: user.id, tier, cycle, once: "1" } : { userId: user.id, tier, cycle },
     });
   } catch (error) {
     return NextResponse.json(
@@ -93,7 +104,7 @@ export async function POST(request: Request) {
       user_id: user.id,
       paystack_reference: reference,
       amount_kobo: nairaToKobo(amountNaira),
-      plan: `${tier}:${cycle}`,
+      plan: `${tier}:${cycle}${once ? ONCE_SUFFIX : ""}`,
       status: "pending",
     });
 
