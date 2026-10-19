@@ -66,7 +66,7 @@ export function LeagueFilter({ proTags = false, counts }: { proTags?: boolean; c
   const moreCount = all.filter((l) => has(l) && !featured.includes(l)).length;
 
   return (
-    <div ref={wrap} className="relative flex items-center gap-2">
+    <div ref={wrap} className="relative flex min-w-0 items-center gap-2">
       <Chip href={href()} active={!active} label="All leagues" />
       {featured.map((l, i) => (
         <Chip
@@ -77,7 +77,8 @@ export function LeagueFilter({ proTags = false, counts }: { proTags?: boolean; c
           code={l.code}
           pro={proTags && isProLeague(l.code)}
           // The selected chip always shows; the rest give way on narrow screens.
-          className={active === l.code ? "" : i >= 1 ? (i >= 3 ? "hidden lg:flex" : "hidden sm:flex") : ""}
+          // With a league picked, the others wait for room: All leagues, the pick and More fit a 414px phone.
+          className={active === l.code ? "" : active ? (i >= 3 ? "hidden lg:flex" : "hidden sm:flex") : i >= 1 ? (i >= 3 ? "hidden lg:flex" : "hidden sm:flex") : ""}
         />
       ))}
       <button
@@ -90,9 +91,9 @@ export function LeagueFilter({ proTags = false, counts }: { proTags?: boolean; c
         }`}
       >
         {/* "More" alone on the narrowest phones, where the full label pushed the row off screen. */}
-        <span className="min-[400px]:hidden">More</span>
-        <span className="hidden min-[400px]:inline">More leagues</span>
-        {counts && moreCount > 0 && <span className="tnum hidden rounded-full bg-surface-3 px-1.5 text-[11px] text-ink-muted min-[400px]:inline">{moreCount}</span>}
+        <span className="min-[480px]:hidden">More</span>
+        <span className="hidden min-[480px]:inline">More leagues</span>
+        {counts && moreCount > 0 && <span className="tnum hidden rounded-full bg-surface-3 px-1.5 text-[11px] text-ink-muted min-[480px]:inline">{moreCount}</span>}
         <svg viewBox="0 0 20 20" className={`size-4 transition-transform ${open ? "rotate-180" : ""}`} fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
           <path d="m5 7.5 5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
