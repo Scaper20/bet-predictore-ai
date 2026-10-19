@@ -84,6 +84,8 @@ export interface FlutterwaveTransaction {
   status: string;
   amount: number;
   currency: string;
+  /** Flutterwave's fee in major units, when it reports one. */
+  app_fee?: number | null;
   customer?: { email?: string; name?: string };
   meta?: Record<string, unknown> | null;
 }

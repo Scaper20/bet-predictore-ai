@@ -85,7 +85,7 @@ const GROUPS: FaqGroup[] = [
       {
         q: "How do I cancel?",
         text: "cancel subscription renewal refund",
-        a: <A>From <L href="/account/billing">Plan &amp; billing</L>, any time. Cancelling stops the next renewal; you keep access for the time already paid for.</A>,
+        a: <A>From <L href="/account/billing">Plan &amp; billing</L>, any time. Cancelling stops the next renewal; you keep access for the time already paid for. Refunds follow our <L href="/refunds">refund policy</L>: 7 days on a first payment, 48 hours on a renewal.</A>,
       },
       {
         q: "I paid but my plan didn't unlock",

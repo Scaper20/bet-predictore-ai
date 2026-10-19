@@ -63,6 +63,9 @@ export interface VerifyTransactionResult {
   status: "success" | "failed" | "abandoned";
   reference: string;
   amount: number;
+  /** The fee Paystack charged, in kobo, when it reports one. */
+  fees?: number | null;
+  currency?: string;
   customer: { email: string; customer_code: string };
   plan?: string;
   metadata: Record<string, string> | null;

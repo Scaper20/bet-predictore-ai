@@ -9,6 +9,8 @@ import { welcomeEmail } from "@/lib/email-templates";
 import { safeNext } from "@/lib/safe-redirect";
 import { POST_AUTH_DESTINATION } from "@/lib/routes";
 import { FIRST_TOUCH_COOKIE, type FirstTouch } from "@/lib/first-touch";
+import { PARTNER_REF_COOKIE } from "@/lib/partner-ref";
+import { attributeSignup } from "@/lib/partner-attribution";
 import { markAuthChange } from "@/lib/auth-hint-server";
 
 export type AuthActionState = { error: string | null };
@@ -124,6 +126,11 @@ export async function signUp(_prev: AuthActionState, formData: FormData): Promis
         signup_landing_page: firstTouch.landingPage,
       })
       .eq("id", signUpData.user.id);
+  }
+
+  // A partner's link, if this browser clicked one in the last 90 days.
+  if (signUpData?.user) {
+    await attributeSignup(signUpData.user.id, (await cookies()).get(PARTNER_REF_COOKIE)?.value);
   }
 
   void sendEmail({ to: email, ...welcomeEmail() });

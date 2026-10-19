@@ -61,6 +61,7 @@ KiqStat is a sports analytics product: it holds no customer funds, and no money 
 - [How our picks work](${SITE}/how-it-works), [guides](${SITE}/guides) and [help](${SITE}/help)
 - [Track record](${SITE}${sportPath("trackRecord")}): every settled pick and how it did
 - [Pricing](${SITE}/pricing)
+- [Refund policy](${SITE}/refunds)
 - [Responsible use](${SITE}/responsible-use)
 
 ## Competitions covered

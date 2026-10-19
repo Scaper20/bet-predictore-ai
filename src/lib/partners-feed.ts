@@ -1,5 +1,7 @@
 import "server-only";
 
+import { createHash } from "node:crypto";
+
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { balances, minPayout, type Balance, type CommissionRecord, type PayoutLine } from "@/lib/partners";
 
@@ -225,4 +227,89 @@ export async function getPayoutSheet(): Promise<PayoutLine[]> {
           amountMinor: b.payable,
         })),
     );
+}
+
+/* ------------------------------------------------- the partner's own view */
+
+export interface DashboardCommission {
+  /** An anonymous label for the paying user: stable per user, reveals nothing about them. */
+  ref: string;
+  plan: string | null;
+  kind: "commission" | "clawback";
+  currency: string;
+  amountMinor: number;
+  status: "pending" | "paid" | "reversed";
+  payableAt: string;
+  createdAt: string;
+}
+
+export interface PartnerDashboard {
+  name: string;
+  slug: string;
+  rateBps: number;
+  status: "active" | "suspended";
+  signups: number;
+  subscribers: number;
+  balances: Balance[];
+  commissions: DashboardCommission[];
+  payouts: { currency: string; totalMinor: number; paidAt: string }[];
+}
+
+const anonRef = (partnerId: string, userId: string | null): string =>
+  userId ? "#" + createHash("sha256").update(`${partnerId}:${userId}`).digest("hex").slice(0, 6).toUpperCase() : "#------";
+
+/**
+ * What a partner sees: their numbers and nothing that identifies a customer
+ * (NDPR). Looked up by the signed-in user's id, never by anything the browser
+ * sends, so one partner cannot ask for another's.
+ */
+export async function getPartnerDashboard(userId: string): Promise<PartnerDashboard | null> {
+  const admin = supabaseAdmin();
+  const { data: raw } = await admin.from("partners").select(PARTNER_COLUMNS).eq("user_id", userId).maybeSingle();
+  if (!raw) return null;
+  const p = partnerFrom(raw as Record<string, unknown>);
+
+  const [commissionsRes, payoutsRes, signups] = await Promise.all([
+    admin
+      .from("partner_commissions")
+      .select("user_id, kind, plan, currency, amount_minor, status, payable_at, created_at")
+      .eq("partner_id", p.id)
+      .order("created_at", { ascending: false })
+      .limit(ROW_LIMIT),
+    admin.from("partner_payouts").select("currency, total_minor, paid_at").eq("partner_id", p.id).order("paid_at", { ascending: false }).limit(50),
+    admin.from("profiles").select("id", { count: "exact", head: true }).eq("referred_by_partner", p.id),
+  ]);
+
+  const rows = (commissionsRes.data ?? []) as {
+    user_id: string | null;
+    kind: "commission" | "clawback";
+    plan: string | null;
+    currency: string;
+    amount_minor: number;
+    status: "pending" | "paid" | "reversed";
+    payable_at: string;
+    created_at: string;
+  }[];
+  const payers = new Set(rows.filter((r) => r.kind === "commission" && r.status !== "reversed" && r.user_id).map((r) => r.user_id));
+
+  return {
+    name: p.name,
+    slug: p.slug,
+    rateBps: p.rateBps,
+    status: p.status,
+    signups: signups.count ?? 0,
+    subscribers: payers.size,
+    balances: balances(rows),
+    commissions: rows.slice(0, 100).map((r) => ({
+      ref: anonRef(p.id, r.user_id),
+      plan: r.plan,
+      kind: r.kind,
+      currency: r.currency,
+      amountMinor: Number(r.amount_minor),
+      status: r.status,
+      payableAt: r.payable_at,
+      createdAt: r.created_at,
+    })),
+    payouts: (payoutsRes.data ?? []).map((r) => ({ currency: r.currency as string, totalMinor: Number(r.total_minor), paidAt: r.paid_at as string })),
+  };
 }

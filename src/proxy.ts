@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { type NextFetchEvent, type NextRequest, NextResponse } from "next/server";
 import { FIRST_TOUCH_COOKIE, type FirstTouch, trimFirstTouchValue } from "@/lib/first-touch";
+import { PARTNER_REF_COOKIE, PARTNER_REF_DAYS, cleanRefParam, encodePartnerRef } from "@/lib/partner-ref";
 import { MAINTENANCE_BYPASS_COOKIE, isMaintenanceExempt, maintenanceHtml } from "@/lib/maintenance";
 import { COUNTRY_COOKIE } from "@/lib/visitor";
 
@@ -88,6 +89,7 @@ export async function proxy(request: NextRequest, event: NextFetchEvent) {
   }
 
   captureFirstTouch(request, response);
+  capturePartnerRef(request, response);
 
   // Which country's prices to show (lib/visitor.ts). Same rules as bx_auth:
   // a display hint only, written only when it changes.
@@ -247,6 +249,27 @@ function captureFirstTouch(request: NextRequest, response: NextResponse) {
     secure: process.env.NODE_ENV === "production",
     path: "/",
     maxAge: 60 * 60 * 24 * 90,
+  });
+}
+
+/**
+ * Partner links (/?ref=<slug>): the first valid one clicked wins and is kept
+ * for 90 days. A later partner's link does not replace it and nothing
+ * refreshes its expiry, so a partner cannot extend or steal an attribution.
+ * Top-level navigations only, like first-touch.
+ */
+function capturePartnerRef(request: NextRequest, response: NextResponse) {
+  const slug = cleanRefParam(request.nextUrl.searchParams.get("ref"));
+  if (!slug || request.cookies.get(PARTNER_REF_COOKIE)) return;
+  const mode = request.headers.get("sec-fetch-mode");
+  if (mode && mode !== "navigate") return;
+
+  response.cookies.set(PARTNER_REF_COOKIE, encodePartnerRef(slug, Date.now()), {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 60 * 60 * 24 * PARTNER_REF_DAYS,
   });
 }
 

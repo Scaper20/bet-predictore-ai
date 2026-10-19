@@ -114,9 +114,13 @@ export type CommissionResult =
   | { ok: true; row: CommissionRow }
   | { ok: false; reason: "payment_not_successful" | "outside_window" | "nothing_to_pay" };
 
+/** Calendar months later, clamped to the month's last day (29 Feb + 12 months is 28 Feb, as the agreement says). */
 export function addMonths(d: Date, months: number): Date {
   const out = new Date(d);
+  out.setUTCDate(1);
   out.setUTCMonth(out.getUTCMonth() + months);
+  const lastDay = new Date(Date.UTC(out.getUTCFullYear(), out.getUTCMonth() + 1, 0)).getUTCDate();
+  out.setUTCDate(Math.min(d.getUTCDate(), lastDay));
   return out;
 }
 

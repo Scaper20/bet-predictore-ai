@@ -2,6 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { supabaseServer, supabaseConfigured } from "@/lib/supabase/server";
 import { safeNext } from "@/lib/safe-redirect";
 import { getPreferencesFor, hasOnboarded } from "@/lib/preferences";
+import { PARTNER_REF_COOKIE } from "@/lib/partner-ref";
+import { attributeSignup } from "@/lib/partner-attribution";
 import { FIRST_TOUCH_COOKIE, type FirstTouch } from "@/lib/first-touch";
 
 /**
@@ -68,6 +70,8 @@ export async function GET(request: NextRequest) {
       } catch {
         // Corrupted/missing cookie — this signup just has no attribution.
       }
+
+      await attributeSignup(data.user.id, request.cookies.get(PARTNER_REF_COOKIE)?.value);
 
       return NextResponse.redirect(new URL(`/onboarding?next=${encodeURIComponent(requestedNext)}`, url.origin));
     }

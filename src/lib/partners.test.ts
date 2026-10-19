@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  addMonths,
   balances,
   buildCommission,
   commissionMinor,
@@ -106,5 +107,13 @@ describe("balances and payouts", () => {
   it("writes the transfer sheet, defusing spreadsheet formulas", () => {
     const csv = payoutCsv([{ partner: '=Ada "Tips"', slug: "ada", bankName: "GTBank", accountNumber: "0123456789", accountName: "Ada O.", currency: "NGN", amountMinor: 1_234_500 }]);
     expect(csv.split("\n")[1]).toBe(`"'=Ada ""Tips""",ada,GTBank,0123456789,Ada O.,NGN,12345.00`);
+  });
+});
+
+describe("anniversary", () => {
+  it("ends a 29 February start on 28 February the next year", () => {
+    expect(addMonths(new Date("2028-02-29T10:00:00Z"), 12).toISOString()).toBe("2029-02-28T10:00:00.000Z");
+    expect(inCommissionWindow(new Date("2028-02-29T10:00:00Z"), new Date("2029-02-27T10:00:00Z"))).toBe(true);
+    expect(inCommissionWindow(new Date("2028-02-29T10:00:00Z"), new Date("2029-02-28T10:00:00Z"))).toBe(false);
   });
 });
