@@ -89,8 +89,10 @@ export function LeagueFilter({ proTags = false, counts }: { proTags?: boolean; c
           open ? "border-brand/40 bg-brand/12 text-brand" : "border-line bg-surface text-ink-muted hover:border-line-strong hover:text-ink"
         }`}
       >
-        More leagues
-        {counts && moreCount > 0 && <span className="tnum rounded-full bg-surface-3 px-1.5 text-[11px] text-ink-muted">{moreCount}</span>}
+        {/* "More" alone on the narrowest phones, where the full label pushed the row off screen. */}
+        <span className="min-[400px]:hidden">More</span>
+        <span className="hidden min-[400px]:inline">More leagues</span>
+        {counts && moreCount > 0 && <span className="tnum hidden rounded-full bg-surface-3 px-1.5 text-[11px] text-ink-muted min-[400px]:inline">{moreCount}</span>}
         <svg viewBox="0 0 20 20" className={`size-4 transition-transform ${open ? "rotate-180" : ""}`} fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
           <path d="m5 7.5 5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>

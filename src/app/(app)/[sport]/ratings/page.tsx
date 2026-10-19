@@ -191,11 +191,12 @@ function Scale() {
     <div className="card p-4 sm:p-5">
       <div className="h-2.5 w-full rounded-full" style={{ background: `linear-gradient(90deg, ${stops})` }} />
       <div className="mt-2 grid grid-cols-5 text-[11px] text-ink-dim">
-        <span>1 · Struggling</span>
+        {/* The end labels shrink to the numbers on the narrowest phones. */}
+        <span>1<span className="hidden min-[360px]:inline"> · Struggling</span></span>
         <span className="text-center">Weak</span>
         <span className="text-center">Average</span>
         <span className="text-center">Strong</span>
-        <span className="text-right">Elite · 10</span>
+        <span className="text-right"><span className="hidden min-[360px]:inline">Elite · </span>10</span>
       </div>
     </div>
   );

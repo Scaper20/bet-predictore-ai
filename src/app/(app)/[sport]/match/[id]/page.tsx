@@ -349,9 +349,9 @@ function Overview({
 
 function Fact({ label, value, hot = false, index }: { label: string; value: React.ReactNode; hot?: boolean; index: number }) {
   return (
-    <div style={{ ["--i" as string]: index }} className={`rounded-xl border px-3 py-3 text-center ${hot ? "border-brand/25 bg-brand/[0.06]" : "border-line bg-surface"}`}>
+    <div style={{ ["--i" as string]: index }} className={`min-w-0 rounded-xl border px-2 py-3 text-center sm:px-3 ${hot ? "border-brand/25 bg-brand/[0.06]" : "border-line bg-surface"}`}>
       <p className="truncate text-[10px] font-medium uppercase tracking-wider text-ink-dim">{label}</p>
-      <p className={`tnum mt-1 whitespace-nowrap font-mono tracking-tighter text-base font-medium sm:text-xl sm:tracking-tight ${hot ? "text-brand" : "text-ink"}`}>{value}</p>
+      <p className={`tnum mt-1 whitespace-nowrap font-mono tracking-tighter text-sm font-medium min-[360px]:text-[15px] min-[400px]:text-base sm:text-xl sm:tracking-tight ${hot ? "text-brand" : "text-ink"}`}>{value}</p>
     </div>
   );
 }
