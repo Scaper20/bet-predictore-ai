@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { CLUB_LEAGUES, INTERNATIONAL_LEAGUES } from "@/lib/leagues";
 import { isProLeague } from "@/lib/pro-leagues";
+import { LeagueLogo } from "@/components/ui/league-logo";
+import { ScrollRow } from "@/components/ui/scroll-row";
 
 /**
  * Horizontal league chips; the active one is derived from the URL.
@@ -23,7 +25,7 @@ export function LeagueFilter({ proTags = false }: { proTags?: boolean }) {
   };
 
   return (
-    <div className="no-scrollbar relative -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
+    <ScrollRow label="Competition" className="-mx-4 gap-2 px-4 pb-1 sm:mx-0 sm:px-0">
       <Chip href={href()} active={!active} label="All leagues" />
       {CLUB_LEAGUES.map((l) => (
         <Chip
@@ -31,7 +33,7 @@ export function LeagueFilter({ proTags = false }: { proTags?: boolean }) {
           href={href(l.code)}
           active={active === l.code}
           label={l.shortName}
-          flag={l.flag}
+          code={l.code}
           pro={proTags && isProLeague(l.code)}
         />
       ))}
@@ -44,10 +46,10 @@ export function LeagueFilter({ proTags = false }: { proTags?: boolean }) {
           href={href(l.code)}
           active={active === l.code}
           label={l.shortName}
-          flag={l.flag}
+          code={l.code}
         />
       ))}
-    </div>
+    </ScrollRow>
   );
 }
 
@@ -55,13 +57,13 @@ function Chip({
   href,
   active,
   label,
-  flag,
+  code,
   pro = false,
 }: {
   href: string;
   active: boolean;
   label: string;
-  flag?: string;
+  code?: string;
   pro?: boolean;
 }) {
   // py-2.5 over py-2 gives 42px rather than 38. These sit in a horizontally
@@ -70,13 +72,14 @@ function Chip({
   return (
     <Link
       href={href}
+      aria-current={active ? "page" : undefined}
       className={`flex shrink-0 items-center gap-2 rounded-full border px-4 py-2.5 text-sm font-medium transition-colors ${
         active
           ? "border-brand/40 bg-brand/12 text-brand"
           : "border-line bg-surface text-ink-muted hover:border-line-strong hover:text-ink"
       }`}
     >
-      {flag && <span aria-hidden>{flag}</span>}
+      {code && <LeagueLogo code={code} size={20} />}
       {label}
       {pro && (
         <span title="Pro league" className="rounded-full bg-violet/15 px-1.5 py-0.5 text-[9.5px] font-bold tracking-wide text-violet">

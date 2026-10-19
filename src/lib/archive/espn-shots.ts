@@ -131,8 +131,8 @@ export function matchShots(espn: EspnResult[], rows: ArchiveRow[]): ShotUpdate[]
   return out;
 }
 
-/** One day of a competition's finished games from ESPN, with shots where listed. */
-export async function espnDay(slug: string, day: Date): Promise<EspnResult[]> {
+/** One day of a competition's finished games from ESPN, with shots where listed (and games in play, when asked). */
+export async function espnDay(slug: string, day: Date, opts: { live?: boolean } = {}): Promise<EspnResult[]> {
   const ymd = day.toISOString().slice(0, 10).replace(/-/g, "");
   const r = await fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/${slug}/scoreboard?dates=${ymd}`, {
     signal: AbortSignal.timeout(15_000),
@@ -142,7 +142,7 @@ export async function espnDay(slug: string, day: Date): Promise<EspnResult[]> {
     events?: {
       date: string;
       competitions?: {
-        status?: { type?: { completed?: boolean } };
+        status?: { type?: { completed?: boolean; state?: string } };
         competitors: { homeAway: string; score?: string; team: { displayName: string }; statistics?: { name: string; displayValue?: string }[] }[];
       }[];
     }[];
@@ -150,7 +150,9 @@ export async function espnDay(slug: string, day: Date): Promise<EspnResult[]> {
   const out: EspnResult[] = [];
   for (const e of data.events ?? []) {
     const c = e.competitions?.[0];
-    if (!c || c.status?.type?.completed !== true) continue;
+    if (!c) continue;
+    const done = c.status?.type?.completed === true;
+    if (!done && !(opts.live && c.status?.type?.state === "in")) continue;
     const h = c.competitors.find((x) => x.homeAway === "home");
     const a = c.competitors.find((x) => x.homeAway === "away");
     if (!h || !a) continue;

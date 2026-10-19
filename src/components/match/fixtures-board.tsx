@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import type { Match } from "@/lib/types";
 import { Crest } from "@/components/ui/crest";
+import { LeagueLogo } from "@/components/ui/league-logo";
+import { ScrollRow } from "@/components/ui/scroll-row";
 import { Badge } from "@/components/ui/primitives";
 import { SlidingTabs } from "@/components/motion/sliding-tabs";
 import { FixtureRow } from "@/components/match/fixture-row";
@@ -175,7 +177,7 @@ export function FixturesBoard({ matches, league, windowDays }: { matches: Match[
         </div>
 
         {visible.length > 2 && (
-          <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+          <ScrollRow label="Jump to competition" className="-mx-4 gap-2 px-4 sm:mx-0 sm:px-0">
             {visible.map((g) => (
               <a
                 key={g.key}
@@ -183,12 +185,12 @@ export function FixturesBoard({ matches, league, windowDays }: { matches: Match[
                 onClick={() => collapsed.has(g.key) && toggle(g.key)}
                 className="flex shrink-0 items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink-muted transition-colors hover:border-line-strong hover:text-ink"
               >
-                {g.flag && <span aria-hidden>{g.flag}</span>}
+                {g.tracked ? <LeagueLogo code={g.key} size={16} /> : g.flag && <span aria-hidden>{g.flag}</span>}
                 <span className="max-w-40 truncate">{g.shortName}</span>
                 <span className="tnum text-ink-dim">{g.matches.length}</span>
               </a>
             ))}
-          </div>
+          </ScrollRow>
         )}
       </div>
 
@@ -268,7 +270,9 @@ function LeagueCard({ group, open, onToggle }: { group: LiveGroup; open: boolean
         aria-expanded={open}
         className={`flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-2/50 sm:px-5 ${open ? "border-b border-line" : ""}`}
       >
-        {group.flag ? (
+        {group.tracked ? (
+          <LeagueLogo code={group.key} size={28} />
+        ) : group.flag ? (
           <span className="grid size-7 shrink-0 place-items-center rounded-full bg-surface-2 text-base" aria-hidden>
             {group.flag}
           </span>

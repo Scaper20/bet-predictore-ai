@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Crest } from "@/components/ui/crest";
+import { LeagueLogo } from "@/components/ui/league-logo";
 import type { LiveGroup } from "@/lib/live-board";
 
 /** A competition's card of rows, the Live board's look, for server-rendered lists. */
@@ -7,7 +8,9 @@ export function LeagueGroupCard({ group, aside, children }: { group: LiveGroup; 
   return (
     <section className="card overflow-hidden">
       <div className="flex items-center gap-3 border-b border-line px-4 py-3 sm:px-5">
-        {group.flag ? (
+        {group.tracked ? (
+          <LeagueLogo code={group.key} size={28} />
+        ) : group.flag ? (
           <span className="grid size-7 shrink-0 place-items-center rounded-full bg-surface-2 text-base" aria-hidden>
             {group.flag}
           </span>

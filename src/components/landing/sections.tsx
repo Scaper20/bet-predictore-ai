@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LeagueLogo } from "@/components/ui/league-logo";
 import { ButtonLink, SectionHeading } from "@/components/ui/primitives";
 import { PricingTable } from "@/components/pricing/pricing-table";
 import { flutterwaveConfigured } from "@/lib/flutterwave/client";
@@ -18,6 +19,20 @@ const FEATURES = [
       "matches. The same maths quant desks use.",
   },
   {
+    icon: "🥇",
+    title: "Top picks, with the why",
+    body:
+      "Every match gets its three best picks, each with a plain-English reason and a low, medium " +
+      "or high risk label taken from how picks like it have actually landed. Share them as an image in one tap.",
+  },
+  {
+    icon: "🚩",
+    title: "Corners and shots, not just goals",
+    body:
+      "Corners, shots and shots-on-target picks sit beside the goal markets, and each match page " +
+      "shows both clubs' numbers. They're graded from the match stats minutes after the final whistle.",
+  },
+  {
     icon: "⚡",
     title: "Live scores that keep up",
     body:
@@ -25,11 +40,18 @@ const FEATURES = [
       "the clock and the scoreline straight from the feed.",
   },
   {
+    icon: "🧩",
+    title: "Code Hub combos",
+    body:
+      "Ready-made combos every day, from 2 to 20 odds, built from the model's strongest reads. " +
+      "A combo leaves the board the moment a game misses, and every result stays on the record.",
+  },
+  {
     icon: "🎯",
     title: "Every prediction from one distribution",
     body:
-      "Match result, over/under, both teams to score, two results and correct score all read off the same scoreline " +
-      "grid — so the numbers can never contradict each other.",
+      "Match result, over/under, GG/NG, double chance and correct score all read off the same scoreline " +
+      "grid, so the numbers can never contradict each other.",
   },
   {
     icon: "🧮",
@@ -39,18 +61,18 @@ const FEATURES = [
       "price the selection has to beat, and tell you whether it is worth taking at all.",
   },
   {
-    icon: "🌍",
-    title: "African football, worldwide",
-    body:
-      "NPFL and CAF competitions alongside the Premier League and the rest of Europe. Kickoff " +
-      "times in your own time zone, prices in your own currency, and Mobile Money, M-Pesa or card to pay.",
-  },
-  {
     icon: "🔍",
     title: "It shows its working",
     body:
-      "Sample size, data quality and model uncertainty on every prediction. When the history " +
-      "is too thin, we say so and publish no pick at all.",
+      "Sample size, data quality and model uncertainty on every prediction, and a public track record " +
+      "with every miss left in. When the history is too thin, we publish no pick at all.",
+  },
+  {
+    icon: "🌍",
+    title: "African football, paid your way",
+    body:
+      "NPFL and CAF competitions alongside Europe's leagues, in your own time zone. Pay once by bank " +
+      "transfer, OPay, PalmPay or USSD, or with Mobile Money, M-Pesa or card abroad.",
   },
 ];
 
@@ -164,7 +186,7 @@ export function Leagues() {
                   href={scoresPath("fixtures", { league: l.code })}
                   className="card card-hover flex min-w-0 items-center gap-2.5 px-3 py-2.5 sm:px-4 sm:py-3"
                 >
-                  <span className="shrink-0 text-lg" aria-hidden>{l.flag}</span>
+                  <LeagueLogo code={l.code} size={28} />
                   <span className="min-w-0">
                     <span className="block truncate text-sm font-medium">{l.shortName}</span>
                     <span className="block truncate text-[11px] text-ink-dim">{l.country}</span>
@@ -239,6 +261,14 @@ export const FAQS = [
   {
     q: "Do you predict Super Eagles and other international matches?",
     a: "Yes. AFCON, World Cup and qualifiers, the Euros, Nations League, Copa America, Gold Cup and international friendlies are all covered. National teams play too rarely for one tournament to rate them, so each side is rated on every international in its confederation, and tournament finals are modelled at a neutral venue.",
+  },
+  {
+    q: "What do low, medium and high risk mean?",
+    a: "They come from our own graded record, not a guess. Picks the model rates 65% or more have landed about 7 in 10 times, picks from 55% to 65% about 6 in 10, and picks under 55% about half the time. The label sits beside every pick so you can see at a glance how often picks like it come in.",
+  },
+  {
+    q: "How do I pay?",
+    a: "In Nigeria, pay once by bank transfer, OPay, PalmPay, USSD or card. You get the plan for the month, three months or year you choose, and nothing renews. You can choose card auto-renew instead if you prefer. Outside Nigeria you pay in your own currency by Mobile Money, M-Pesa or card.",
   },
   {
     q: "Is this legal where I live?",

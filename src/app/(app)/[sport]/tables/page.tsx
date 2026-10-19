@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { LeagueLogo } from "@/components/ui/league-logo";
 import { LocalTime } from "@/components/ui/local-time";
 import { Suspense } from "react";
 import { PageHeader } from "@/components/ui/page-header";
@@ -56,7 +57,7 @@ export default async function TablesPage({ searchParams }: { searchParams: Promi
         {table && table.rows.length > 0 ? (
           <section className="card overflow-hidden">
             <div className="flex flex-wrap items-center gap-3 border-b border-line px-4 py-3.5 sm:px-5">
-              <span className="text-lg" aria-hidden>{def.flag}</span>
+              <LeagueLogo code={def.code} size={28} />
               <h2 className="font-display text-lg font-bold">{def.name}</h2>
               {table.season && <span className="text-xs text-ink-dim">{table.season.replace(/^(\d{4})-(\d{2})(\d{2})$/, "$1-$3")}</span>}
               <span className="ml-auto">
