@@ -10,7 +10,6 @@ import { useLivePicks } from "@/components/match/use-live-picks";
 import { isStaleInPlay } from "@/lib/match-status";
 import { LiveDot } from "@/components/ui/primitives";
 import { useTickingMinute } from "@/components/match/use-live-clock";
-import { isStatMarket } from "@/lib/model/sweet-spots";
 
 /**
  * The one thing a pick card lets you do without opening the match: put the
@@ -32,6 +31,21 @@ export function LiveScoresProvider({
   return <LiveScores.Provider value={scores}>{children}</LiveScores.Provider>;
 }
 
+/**
+ * A listed game's state as the page knows it now: the shared live poll first,
+ * then what the page was rendered with. Counts the minute on between polls.
+ */
+export function useLiveScore(match: Pick<Match, "id" | "kickoff" | "status" | "minute" | "score">) {
+  const live = useContext(LiveScores)[match.id];
+  const state: LegScore = live ?? { status: match.status, minute: match.minute ?? null, home: match.score.home, away: match.score.away };
+  // A feed stuck on "live" long after kickoff reads as full time (match-status.ts).
+  const stale = isStaleInPlay(state.status as Match["status"], match.kickoff);
+  const inPlay = !stale && (state.status === "live" || state.status === "halftime");
+  const over = state.status === "finished" || stale;
+  const minute = useTickingMinute(state.minute, state.status as Match["status"], live?.observedAt ?? Number.NaN);
+  return { state, inPlay, over, minute, halftime: state.status === "halftime" };
+}
+
 type CardMatch = Pick<Match, "id" | "kickoff" | "status" | "minute" | "score"> & {
   home: { name: string };
   away: { name: string };
@@ -43,11 +57,14 @@ export function PickAction({
   pick,
   locked = false,
   className = "",
+  scoreOnly = false,
 }: {
   match: CardMatch;
   pick: ModelPick | null;
   locked?: boolean;
   className?: string;
+  /** Just the score once the game is on, where the row shows the minute itself. */
+  scoreOnly?: boolean;
 }) {
   const live = useContext(LiveScores)[match.id];
   const { legs, add, remove } = useSlip();
@@ -74,15 +91,15 @@ export function PickAction({
           inPlay ? "bg-signal/12 text-signal" : "bg-surface-3 text-ink-muted"
         } ${className}`}
       >
-        {inPlay && <LiveDot />}
-        <span>{inPlay ? (state.status === "halftime" ? "HT" : minute ? `${minute}'` : "LIVE") : "FT"}</span>
+        {inPlay && !scoreOnly && <LiveDot />}
+        {!(scoreOnly && inPlay) && <span>{inPlay ? (state.status === "halftime" ? "HT" : minute ? `${minute}'` : "LIVE") : "FT"}</span>}
         {hasScore && <span className="tnum text-ink">{state.home} – {state.away}</span>}
       </span>
     );
   }
 
-  // Corners and shots picks are graded from match stats, which a combo cannot follow.
-  if (!pick || isStatMarket(pick.market)) return null;
+  // Corners and shots legs are tracked too: the slip asks for their counts (use-slip-scores.ts).
+  if (!pick) return null;
 
   if (locked) {
     return (

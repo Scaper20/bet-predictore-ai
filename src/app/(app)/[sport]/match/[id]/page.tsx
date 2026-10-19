@@ -28,7 +28,8 @@ import { Gate } from "@/components/entitlements/gate";
 import { DepthGate } from "@/components/entitlements/depth-gate";
 import { JsonLd } from "@/components/seo/json-ld";
 import { matchJsonLd } from "@/lib/seo/match-jsonld";
-import { fixtureStatMarkets, type FixtureStatMarkets } from "@/lib/stat-markets-service";
+import { fixtureStatMarkets, teamStatAverages, type FixtureStatMarkets } from "@/lib/stat-markets-service";
+import { espnCountsFor } from "@/lib/stat-results";
 import { GoalExtrasPanel, StatPanel } from "@/components/match/stat-panels";
 import { matchDetail } from "@/lib/service";
 import { getViewer } from "@/lib/viewer";
@@ -103,12 +104,17 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   const prediction = viewPrediction(detail.prediction, viewer);
   const proLocked = Boolean(prediction.locked.proLeague);
   const proLeagueOpened = !viewer.paid && !proLocked && isProLeague(match.league.code);
-  const [ctx, extra] = await Promise.all([
+  const started = match.status === "live" || match.status === "halftime" || match.status === "finished";
+  const [ctx, extra, counts, averages] = await Promise.all([
     matchContext(match).catch((): MatchContext => ({ teamIds: { home: null, away: null }, home: null, away: null, table: null })),
     // Corners, cards, shots and more goal markets; the referee where one is
     // named (the English divisions, about a week ahead). Pro only: not even
     // computed for a free viewer, so none of it can reach their page.
     viewer.paid ? fixtureStatMarkets(match, detail.prediction).catch(() => null) : Promise.resolve(null),
+    // The game's own corners and shots (ESPN) once it is on, and both clubs'
+    // per-game averages: facts, so open to every viewer.
+    started ? espnCountsFor(match).catch(() => null) : Promise.resolve(null),
+    teamStatAverages(match).catch(() => null),
   ]);
   const referee = extra?.referee ?? null;
   const live = isLive(match);
@@ -117,7 +123,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   const tabs: MatchTab[] = [
     { key: "overview", label: "Overview", panel: <Overview match={match} prediction={prediction} ctx={ctx} live={live} label={label} proLeagueOpened={proLeagueOpened} /> },
     { key: "markets", label: "Predictions", short: "Picks", panel: <Markets prediction={prediction} extra={proLocked ? null : extra} statsLocked={!viewer.paid} /> },
-    { key: "stats", label: "Stats", panel: <MatchStats match={match} home={ctx.home} away={ctx.away} /> },
+    { key: "stats", label: "Stats", panel: <MatchStats match={match} home={ctx.home} away={ctx.away} counts={counts} averages={averages} /> },
     ...(ctx.table
       ? [{
           key: "table",
@@ -343,9 +349,9 @@ function Overview({
 
 function Fact({ label, value, hot = false, index }: { label: string; value: React.ReactNode; hot?: boolean; index: number }) {
   return (
-    <div style={{ ["--i" as string]: index }} className={`rounded-xl border px-3 py-3 text-center ${hot ? "border-brand/25 bg-brand/[0.06]" : "border-line bg-surface"}`}>
+    <div style={{ ["--i" as string]: index }} className={`min-w-0 rounded-xl border px-2 py-3 text-center sm:px-3 ${hot ? "border-brand/25 bg-brand/[0.06]" : "border-line bg-surface"}`}>
       <p className="truncate text-[10px] font-medium uppercase tracking-wider text-ink-dim">{label}</p>
-      <p className={`tnum mt-1 whitespace-nowrap font-mono tracking-tighter text-base font-medium sm:text-xl sm:tracking-tight ${hot ? "text-brand" : "text-ink"}`}>{value}</p>
+      <p className={`tnum mt-1 whitespace-nowrap font-mono tracking-tighter text-sm font-medium min-[360px]:text-[15px] min-[400px]:text-base sm:text-xl sm:tracking-tight ${hot ? "text-brand" : "text-ink"}`}>{value}</p>
     </div>
   );
 }

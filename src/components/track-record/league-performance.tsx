@@ -1,4 +1,5 @@
 import { leagueByCode } from "@/lib/leagues";
+import { LeagueLogo } from "@/components/ui/league-logo";
 import { percent } from "@/lib/format";
 import { MIN_PUBLISHABLE_SAMPLE, isPublishable, type SettledRecord } from "@/lib/performance";
 
@@ -86,13 +87,9 @@ export function LeaguePerformance({
                 className="card flex items-center justify-between gap-3 px-4 py-3"
               >
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-ink">
-                    {league?.flag && (
-                      <span className="mr-1.5" aria-hidden>
-                        {league.flag}
-                      </span>
-                    )}
-                    {league?.shortName ?? code}
+                  <p className="flex min-w-0 items-center gap-2 text-sm font-semibold text-ink">
+                    <LeagueLogo code={code} size={18} />
+                    <span className="truncate">{league?.shortName ?? code}</span>
                   </p>
                   <p className="tnum mt-0.5 text-xs text-ink-muted">
                     {record.wins}–{record.losses}

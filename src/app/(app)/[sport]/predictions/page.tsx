@@ -1,26 +1,24 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import Link from "next/link";
 import { PageHeader } from "@/components/ui/page-header";
 import { LeagueFilter } from "@/components/match/league-filter";
 import { ProLeaguesBanner } from "@/components/entitlements/pro-league-lock";
 import { isProLeague } from "@/lib/pro-leagues";
-import { PredictionCard } from "@/components/match/prediction-card";
+import { PickList } from "@/components/match/pick-list";
+import type { RiskLevel } from "@/lib/model/risk";
 import { CoverageNotice } from "@/components/ui/coverage-notice";
 import { Badge, ButtonLink, EmptyState } from "@/components/ui/primitives";
 import { BestBetOfDay } from "@/components/landing/best-bet-of-day";
-import { predictBatch, upcomingFeed, bestBetOfDay } from "@/lib/service";
 import { getPreferences } from "@/lib/preferences";
 import { leagueByCode } from "@/lib/leagues";
 import { FixtureRow } from "@/components/match/fixture-row";
 import { containerClass } from "@/components/ui/container";
 import { sportPath, scoresPath } from "@/lib/routes";
 import { isStrong } from "@/lib/model/tiers";
-import Link from "next/link";
-import { getViewer } from "@/lib/viewer";
-import { viewPrediction } from "@/lib/access";
-import { pickSections } from "@/lib/pick-sections";
 import { LiveScoresProvider } from "@/components/match/pick-action";
-import { LiveDot } from "@/components/ui/primitives";
+import { loadPicks, parsePickQuery } from "@/lib/pick-feed";
+import { PICK_BATCH } from "@/lib/pick-list";
 
 /**
  * One title per league view. Without this every ?league= variant shared the
@@ -59,49 +57,30 @@ export const revalidate = 300;
 export default async function PredictionsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ league?: string; tier?: string }>;
+  searchParams: Promise<{ league?: string; tier?: string; risk?: string; sort?: string }>;
 }) {
-  const { league, tier } = await searchParams;
-  const strongOnly = tier === "strong";
-  const def = league ? leagueByCode(league) : undefined;
-
-  const feed = await upcomingFeed(5, def ? league : undefined).catch(() => null);
-  const [rawPredictions, rawBest, viewer] = await Promise.all([
-    feed ? predictBatch(feed.matches, 18).catch(() => []) : Promise.resolve([]),
-    // Slate-wide, so only pinned on the unfiltered view — under a specific
-    // league filter it could point somewhere the visitor didn't ask to see.
-    def ? Promise.resolve(null) : bestBetOfDay().catch(() => null),
-    getViewer(),
-  ]);
-  // Locked picks and markets are stripped here, on the server, for a free
-  // viewer (lib/access.ts): every match still shows.
-  const predictions = rawPredictions.map((p) => viewPrediction(p, viewer));
-  const bestBet = rawBest ? viewPrediction(rawBest, viewer) : null;
-  const proHeld = predictions.filter((p) => p.locked.proLeague).length;
-
+  const params = await searchParams;
+  const q = parsePickQuery(params);
   /*
-   * Followed competitions float to the top of the unfiltered view.
-   *
-   * This is what makes the onboarding questionnaire honest: the leagues
-   * someone picked at sign-up have to visibly change what they see, or they
-   * learn the questions were theatre. Deliberately a re-ordering, not a
-   * filter — hiding everything else would make the page feel broken and
-   * strand a user whose leagues have nothing on today.
-   *
-   * getPreferences() reads cookies, which pins this route to dynamic
-   * rendering, so the `revalidate` above has no effect here and what keeps
-   * the rate-limited feeds safe is the in-memory provider cache. That's an
-   * accepted cost on this page only — in a shared layout it would make every
-   * page dynamic, which is what the comment in (app)/layout.tsx is about.
+   * Followed competitions float to the top of each day on the unfiltered
+   * view, so the leagues someone picked at sign-up visibly change what they
+   * see. A re-ordering, not a filter. getPreferences() reads cookies, which
+   * makes this route dynamic; the in-memory provider and prediction caches
+   * are what keep the feeds safe.
    */
   const preferences = await getPreferences();
-  const followed = new Set(def ? [] : preferences.leagues);
-
-  const publishable = predictions.filter((p) => p.sufficiency.publishable && (!strongOnly || isStrong(p.topPick, p.match.league.code)));
-  const withheld = predictions.filter((p) => !p.sufficiency.publishable);
-
-  // Live first, then the rest of today, then tomorrow and on (lib/pick-sections.ts).
-  const sections = pickSections(publishable, { followed });
+  const { def, feed, predictions, rows, withheld, bestBet, counts, proHeld, paid } = await loadPicks(
+    { ...q, followed: preferences.leagues },
+    { withBest: true },
+  );
+  const { strongOnly, risk, byChance } = q;
+  const league = def?.code;
+  // The query the list sends back for each next batch, so its offsets line up.
+  const query = new URLSearchParams(
+    Object.entries({ league, tier: strongOnly ? "strong" : undefined, risk, sort: byChance ? "chance" : undefined }).filter(
+      (e): e is [string, string] => typeof e[1] === "string",
+    ),
+  ).toString();
 
   return (
     <>
@@ -113,100 +92,129 @@ export default async function PredictionsPage({
 
       <div className={`${containerClass()} space-y-7 py-7 sm:py-10`}>
         <Suspense fallback={<div className="h-10" />}>
-          <LeagueFilter proTags={!viewer.paid} />
+          <LeagueFilter proTags={!paid} counts={counts} />
         </Suspense>
 
-        {!viewer.paid && def && isProLeague(def.code) ? (
+        {!paid && def && isProLeague(def.code) ? (
           <ProLeaguesBanner league={{ code: def.code, name: def.name }} held={proHeld} />
-        ) : !viewer.paid && proHeld > 0 ? (
+        ) : !paid && proHeld > 0 ? (
           <ProLeaguesBanner held={proHeld} />
         ) : null}
 
-        <TierToggle strongOnly={strongOnly} league={def ? league : undefined} />
+        <PickFilters strongOnly={strongOnly} risk={risk} byChance={byChance} league={league} />
 
         {feed && <CoverageNotice coverage={feed.coverage} />}
 
-        <LiveScoresProvider matches={[...(bestBet ? [bestBet] : []), ...publishable].map((p) => ({ id: p.match.id, kickoff: p.match.kickoff, status: p.match.status }))}>
-          {bestBet?.topPick && (!strongOnly || isStrong(bestBet.topPick, bestBet.match.league.code)) && <BestBetOfDay prediction={bestBet} />}
+        {bestBet?.topPick && (!strongOnly || isStrong(bestBet.topPick, bestBet.match.league.code)) && (
+          <LiveScoresProvider matches={[{ id: bestBet.match.id, kickoff: bestBet.match.kickoff, status: bestBet.match.status }]}>
+            <BestBetOfDay prediction={bestBet} />
+          </LiveScoresProvider>
+        )}
 
-          {predictions.length === 0 ? (
-            <EmptyState
-              icon="🎯"
-              title="No fixtures to model right now"
-              description="Check back when the next fixtures are out."
-              action={<ButtonLink href={scoresPath("fixtures")} variant="secondary">Browse fixtures</ButtonLink>}
-            />
-          ) : (
-            <>
-              {strongOnly && sections.length === 0 && (
-                <EmptyState icon="★" title="No Strong picks right now" description="Strong picks are our most confident. Some days there are none." />
-              )}
-              {sections.map((section) => (
-                <section key={section.key} className="scroll-reveal">
-                  <div className="mb-4 flex items-center gap-3">
-                    {section.live && <LiveDot />}
-                    <h2 className="font-display text-xl font-bold">{section.title}</h2>
-                    <Badge tone={section.live ? "rose" : "brand"}>{section.items.length}</Badge>
-                    <span className="h-px flex-1 bg-line" />
-                  </div>
-                  <div className="stagger grid gap-4 sm:grid-cols-2 sm:gap-5 xl:grid-cols-3">
-                    {section.items.map((p, i) => (
-                      <div key={p.match.id} className="min-w-0" style={{ ["--i" as string]: i }}>
-                        <PredictionCard prediction={p} morph={p.match.id !== bestBet?.match.id} />
-                      </div>
-                    ))}
-                  </div>
-                </section>
-              ))}
+        {predictions.length === 0 ? (
+          <EmptyState
+            icon="🎯"
+            title="No fixtures to model right now"
+            description="Check back when the next fixtures are out."
+            action={<ButtonLink href={scoresPath("fixtures")} variant="secondary">Browse fixtures</ButtonLink>}
+          />
+        ) : (
+          <>
+            {(strongOnly || risk) && rows.length === 0 && (
+              <EmptyState
+                icon={strongOnly ? "★" : "⚖"}
+                title={strongOnly ? "No Strong picks right now" : `No ${risk} risk picks right now`}
+                description={strongOnly ? "Strong picks are our most confident. Some days there are none." : "Try another risk level or all picks."}
+              />
+            )}
+            {/* Keyed on the filters, so a new filter starts a fresh list. */}
+            <PickList key={query} initial={rows.slice(0, PICK_BATCH)} total={rows.length} query={query} />
 
-              {!strongOnly && withheld.length > 0 && (
-                <details className="card group overflow-hidden">
-                  <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-3.5 sm:px-5">
-                    <Badge tone="amber">{withheld.length}</Badge>
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-semibold text-ink">Not enough history to call</span>
-                      <span className="block text-xs text-ink-dim">Real fixtures in competitions too new to the model to stand a pick on.</span>
-                    </span>
-                    <svg viewBox="0 0 20 20" className="size-4 shrink-0 text-ink-dim transition-transform duration-300 group-open:rotate-180" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-                      <path d="m5 7.5 5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </summary>
-                  <ul className="divide-y divide-line border-t border-line">
-                    {withheld.map((p) => (
-                      <li key={p.match.id}>
-                        <FixtureRow match={p.match} />
-                      </li>
-                    ))}
-                  </ul>
-                </details>
-              )}
-            </>
-          )}
-        </LiveScoresProvider>
+            {!strongOnly && !risk && withheld.length > 0 && (
+              <details className="card group overflow-hidden">
+                <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-3.5 sm:px-5">
+                  <Badge tone="amber">{withheld.length}</Badge>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-semibold text-ink">Not enough history to call</span>
+                    <span className="block text-xs text-ink-dim">Real fixtures in competitions too new to the model to stand a pick on.</span>
+                  </span>
+                  <svg viewBox="0 0 20 20" className="size-4 shrink-0 text-ink-dim transition-transform duration-300 group-open:rotate-180" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                    <path d="m5 7.5 5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </summary>
+                <ul className="divide-y divide-line border-t border-line">
+                  {withheld.slice(0, 60).map((p) => (
+                    <li key={p.match.id}>
+                      <FixtureRow match={p.match} />
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            )}
+          </>
+        )}
       </div>
     </>
   );
 }
 
-/** All picks, or only the Strong ones (confidence 63+ in a tested division, src/lib/model/tiers.ts). */
-function TierToggle({ strongOnly, league }: { strongOnly: boolean; league?: string }) {
-  const href = (strong: boolean) => {
+/**
+ * Which picks and in what order: all or Strong only, one risk level, and
+ * kick-off order or highest chance first. All in the URL, so a filtered view
+ * can be shared and the page stays server-rendered.
+ */
+function PickFilters({
+  strongOnly,
+  risk,
+  byChance,
+  league,
+}: {
+  strongOnly: boolean;
+  risk?: RiskLevel;
+  byChance: boolean;
+  league?: string;
+}) {
+  const href = (next: { strong?: boolean; risk?: RiskLevel | null; chance?: boolean }) => {
     const q = new URLSearchParams();
     if (league) q.set("league", league);
+    const strong = next.strong ?? strongOnly;
+    const r = next.risk === undefined ? risk : next.risk;
+    const c = next.chance ?? byChance;
     if (strong) q.set("tier", "strong");
+    if (r) q.set("risk", r);
+    if (c) q.set("sort", "chance");
     const qs = q.toString();
     return `${sportPath("predictions")}${qs ? `?${qs}` : ""}`;
   };
-  const tab = (active: boolean) =>
-    `rounded-md px-3.5 py-1.5 text-xs font-semibold transition-colors ${active ? "bg-surface-3 text-ink" : "text-ink-muted hover:text-ink"}`;
+  const chip = (active: boolean) =>
+    `inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-semibold transition-colors ${
+      active ? "border-brand/40 bg-brand/12 text-brand" : "border-line bg-surface text-ink-muted hover:text-ink"
+    }`;
+  const dot = { low: "bg-brand", medium: "bg-amber", high: "bg-rose" } as const;
   return (
-    <nav aria-label="Which picks" className="inline-flex rounded-lg border border-line bg-surface-2 p-0.5">
-      <Link href={href(false)} className={tab(!strongOnly)} aria-current={!strongOnly ? "page" : undefined}>
-        All picks
-      </Link>
-      <Link href={href(true)} className={tab(strongOnly)} aria-current={strongOnly ? "page" : undefined}>
-        <span className="text-amber" aria-hidden>★</span> Strong picks
-      </Link>
-    </nav>
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <nav aria-label="Which picks" className="flex flex-wrap items-center gap-2">
+        <Link href={href({ strong: false, risk: null })} className={chip(!strongOnly && !risk)} aria-current={!strongOnly && !risk ? "page" : undefined}>
+          All picks
+        </Link>
+        <Link href={href({ strong: !strongOnly })} className={chip(strongOnly)} aria-current={strongOnly ? "page" : undefined}>
+          <span className="text-amber" aria-hidden>★</span> Strong
+        </Link>
+        {(["low", "medium", "high"] as const).map((r) => (
+          <Link key={r} href={href({ risk: risk === r ? null : r })} className={chip(risk === r)} aria-current={risk === r ? "page" : undefined}>
+            <span className={`size-1.5 rounded-full ${dot[r]}`} aria-hidden />
+            {r === "low" ? "Low risk" : r === "medium" ? "Medium" : "High"}
+          </Link>
+        ))}
+      </nav>
+      <nav aria-label="Order" className="inline-flex rounded-lg border border-line bg-surface-2 p-0.5 text-xs font-semibold">
+        <Link href={href({ chance: false })} className={`rounded-md px-3 py-1.5 ${!byChance ? "bg-surface-3 text-ink" : "text-ink-muted hover:text-ink"}`}>
+          Kick-off
+        </Link>
+        <Link href={href({ chance: true })} className={`rounded-md px-3 py-1.5 ${byChance ? "bg-surface-3 text-ink" : "text-ink-muted hover:text-ink"}`}>
+          Best chance
+        </Link>
+      </nav>
+    </div>
   );
 }

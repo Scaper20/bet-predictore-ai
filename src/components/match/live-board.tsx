@@ -4,6 +4,8 @@ import Link from "next/link";
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { Match } from "@/lib/types";
 import { Crest } from "@/components/ui/crest";
+import { LeagueLogo } from "@/components/ui/league-logo";
+import { ScrollRow } from "@/components/ui/scroll-row";
 import { Badge, EmptyState, ButtonLink, LiveDot } from "@/components/ui/primitives";
 import { matchPath, scoresPath } from "@/lib/routes";
 import { groupLiveMatches, matchProgress, searchLiveGroups, type LiveGroup } from "@/lib/live-board";
@@ -196,7 +198,8 @@ export function LiveBoard({ initial, initialAt }: { initial: Match[]; initialAt:
 
         {visible.length > 2 && (
           <div className="flex items-center gap-3">
-            <div className="no-scrollbar -mx-4 flex min-w-0 flex-1 gap-2 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+            <div className="min-w-0 flex-1">
+            <ScrollRow label="Jump to competition" className="-mx-4 gap-2 px-4 sm:mx-0 sm:px-0">
               {visible.map((g) => (
                 <a
                   key={g.key}
@@ -206,11 +209,12 @@ export function LiveBoard({ initial, initialAt }: { initial: Match[]; initialAt:
                   }}
                   className="flex shrink-0 items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink-muted transition-colors hover:border-line-strong hover:text-ink"
                 >
-                  {g.flag && <span aria-hidden>{g.flag}</span>}
+                  {g.tracked ? <LeagueLogo code={g.key} size={16} /> : g.flag && <span aria-hidden>{g.flag}</span>}
                   <span className="max-w-40 truncate">{g.shortName}</span>
                   <span className="tnum text-ink-dim">{g.matches.length}</span>
                 </a>
               ))}
+            </ScrollRow>
             </div>
             {visible.length > 3 && (
               <button
@@ -316,7 +320,9 @@ function LeagueGroup({
           open ? "border-b border-line" : ""
         }`}
       >
-        {group.flag ? (
+        {group.tracked ? (
+          <LeagueLogo code={group.key} size={28} />
+        ) : group.flag ? (
           <span className="grid size-7 shrink-0 place-items-center rounded-full bg-surface-2 text-base" aria-hidden>
             {group.flag}
           </span>

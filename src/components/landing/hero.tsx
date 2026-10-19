@@ -48,9 +48,10 @@ export function Hero({ liveCount, board }: { liveCount: number; board: ReactNode
           </h1>
 
           <p className="mt-6 max-w-xl text-lg leading-relaxed text-ink-muted">
-            Every prediction on this site is fitted to <strong className="text-ink">real completed
-            matches</strong> — not vibes, not recycled pundit picks. See the probability, see the
-            sample size behind it, then decide for yourself.
+            Every match gets its <strong className="text-ink">top three picks</strong>, a risk label
+            from our own graded record, and the numbers behind them, from goals to match stats, fitted
+            to real completed matches. Every miss stays on the record. See the chance, then decide for
+            yourself.
           </p>
 
           <div className="mt-8 flex flex-wrap gap-3">

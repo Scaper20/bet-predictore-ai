@@ -25,17 +25,31 @@ function day(slug: string, d: Date): Promise<EspnResult[]> {
   return cached(key, 5 * 60_000, () => espnDay(slug, d)).catch(() => []);
 }
 
-/** A finished match's corners and shots counts from ESPN, when they are complete; null otherwise. */
+/** One competition-day from ESPN with games still in play, shared for a minute. */
+function liveDay(slug: string, d: Date): Promise<EspnResult[]> {
+  const key = `espn-live:${slug}:${d.toISOString().slice(0, 10)}`;
+  return cached(key, 60_000, () => espnDay(slug, d, { live: true })).catch(() => []);
+}
+
+/**
+ * A match's corners and shots counts from ESPN: complete ones for a finished
+ * match (the grading rule), and whatever ESPN has so far for a game in play,
+ * for display only. Null when ESPN has nothing for it.
+ */
 export async function espnCountsFor(
-  m: Pick<Match, "kickoff" | "home" | "away" | "score" | "league">,
+  m: Pick<Match, "kickoff" | "home" | "away" | "score" | "league"> & { status?: Match["status"] },
 ): Promise<StatCounts | null> {
   const slug = m.league.code ? leagueByCode(m.league.code)?.ids.espn : undefined;
   if (!slug || m.score.home === null || m.score.away === null) return null;
+  const inPlay = m.status === "live" || m.status === "halftime";
   const at = Date.parse(m.kickoff);
+  const fetchDay = inPlay ? liveDay : day;
   // ESPN dates games by US time, so a late kick-off can sit on the day before.
-  const games = (await Promise.all([day(slug, new Date(at)), day(slug, new Date(at - 86_400_000))])).flat();
+  const games = (await Promise.all([fetchDay(slug, new Date(at)), fetchDay(slug, new Date(at - 86_400_000))])).flat();
   const g = findEspnGame(games, { home: m.home.name, away: m.away.name, kickoff: at, hg: m.score.home, ag: m.score.away });
-  if (!g || !espnStatsComplete(g)) return null;
+  if (!g) return null;
+  const all = [g.hc, g.ac, g.hs, g.as, g.hsot, g.asot];
+  if (inPlay ? all.some((x) => x === undefined) : !espnStatsComplete(g)) return null;
   return { corners: [g.hc!, g.ac!], shots: [g.hs!, g.as!], shotsOnTarget: [g.hsot!, g.asot!] };
 }
 

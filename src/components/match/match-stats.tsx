@@ -7,6 +7,8 @@ import { RatingDial } from "@/components/stats/rating-dial";
 import { Crest } from "@/components/ui/crest";
 import { matchPath, sportPath } from "@/lib/routes";
 import { percent } from "@/lib/format";
+import type { StatCounts } from "@/lib/stat-results";
+import type { TeamStatAverage } from "@/lib/stat-markets-service";
 
 export interface SideStats {
   results: TeamResult[];
@@ -21,8 +23,82 @@ export interface SideStats {
  * away club's growing right, the larger value lit. All from each club's
  * last ten finished games (every competition), straight from the database.
  */
-export function MatchStats({ match, home, away }: { match: Match; home: SideStats | null; away: SideStats | null }) {
+export function MatchStats({
+  match,
+  home,
+  away,
+  counts = null,
+  averages = null,
+}: {
+  match: Match;
+  home: SideStats | null;
+  away: SideStats | null;
+  /** This game's corners and shots (ESPN), live or at full time. */
+  counts?: StatCounts | null;
+  /** Each club's corners and shots per game in this competition. */
+  averages?: { home: TeamStatAverage | null; away: TeamStatAverage | null } | null;
+}) {
+  const live = match.status === "live" || match.status === "halftime";
+  const thisMatch = counts ? (
+    <section className="card overflow-hidden">
+      <div className="flex items-center justify-between gap-3 border-b border-line px-5 py-3.5">
+        <TeamTag team={match.home} />
+        <span className="text-[10.5px] font-semibold uppercase tracking-wider text-ink-dim">{live ? "This match, live" : "This match"}</span>
+        <TeamTag team={match.away} right />
+      </div>
+      <div className="space-y-4 px-5 py-5">
+        {(
+          [
+            ["Shots", counts.shots],
+            ["Shots on target", counts.shotsOnTarget],
+            ["Corners", counts.corners],
+          ] as const
+        ).map(([label, [h, a]], i) => (
+          <CompareRow key={label} label={label} h={h} a={a} fmt={(v) => String(v)} index={i} />
+        ))}
+      </div>
+    </section>
+  ) : null;
+
+  const ah = averages?.home;
+  const aa = averages?.away;
+  const avgRows: { label: string; h: number; a: number; lower: boolean }[] = [];
+  if (ah && aa) {
+    const add = (label: string, h: number | undefined, a: number | undefined, lower = false) => {
+      if (typeof h === "number" && typeof a === "number") avgRows.push({ label, h, a, lower });
+    };
+    add("Corners per game", ah.corners?.[0], aa.corners?.[0]);
+    add("Corners conceded per game", ah.corners?.[1], aa.corners?.[1], true);
+    add("Shots per game", ah.shots?.[0], aa.shots?.[0]);
+    add("Shots on target per game", ah.shotsOnTarget?.[0], aa.shotsOnTarget?.[0]);
+    add("Shots on target conceded", ah.shotsOnTarget?.[1], aa.shotsOnTarget?.[1], true);
+  }
+  const averagesCard = avgRows.length > 0 ? (
+    <section className="card overflow-hidden">
+      <div className="flex items-center justify-between gap-3 border-b border-line px-5 py-3.5">
+        <TeamTag team={match.home} />
+        <span className="text-center text-[10.5px] font-semibold uppercase tracking-wider text-ink-dim">
+          Corners &amp; shots · last {Math.max(ah!.games, aa!.games)} league games
+        </span>
+        <TeamTag team={match.away} right />
+      </div>
+      <div className="space-y-4 px-5 py-5">
+        {avgRows.map((r, i) => (
+          <CompareRow key={r.label} label={r.label} h={r.h} a={r.a} fmt={(v) => v.toFixed(1)} lowerIsBetter={r.lower} index={i} />
+        ))}
+      </div>
+    </section>
+  ) : null;
+
   if (!home && !away) {
+    if (thisMatch || averagesCard) {
+      return (
+        <div className="space-y-5">
+          {thisMatch}
+          {averagesCard}
+        </div>
+      );
+    }
     return (
       <section className="card p-6 text-center text-sm text-ink-dim">
         No recent results for either club in the data yet.
@@ -44,6 +120,7 @@ export function MatchStats({ match, home, away }: { match: Match; home: SideStat
 
   return (
     <div className="space-y-5">
+      {thisMatch}
       {(h.rating !== null || a.rating !== null) && (
         <section className="card p-5 sm:p-6">
           <div className="mb-4 flex items-baseline justify-between gap-3">
@@ -71,6 +148,8 @@ export function MatchStats({ match, home, away }: { match: Match; home: SideStat
           ))}
         </div>
       </section>
+
+      {averagesCard}
 
       <section className="card p-5 sm:p-6">
         <h2 className="mb-4 font-sans text-sm font-semibold uppercase tracking-wider text-ink-muted">Recent results</h2>

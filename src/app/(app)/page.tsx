@@ -113,11 +113,12 @@ export default async function HomePage() {
         items={[
           "Real fixtures only",
           "Fitted on completed matches",
+          "Top 3 picks on every match",
+          "Low · medium · high risk labels",
+          "Match stats",
           "Live scores",
-          "Value after the vig",
           "NPFL + CAF covered",
-          "Sample size on every pick",
-          "Local-currency pricing",
+          "Every miss on the record",
           "18+ use responsibly",
         ]}
       />

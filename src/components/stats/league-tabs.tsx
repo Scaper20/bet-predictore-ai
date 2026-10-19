@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
+import { LeagueLogo } from "@/components/ui/league-logo";
 
 export interface LeagueTab {
   code: string;
@@ -48,7 +49,7 @@ export function LeagueTabs({ leagues, active, param = "league" }: { leagues: Lea
                 : "border-line bg-surface text-ink-muted hover:border-line-strong hover:text-ink"
             }`}
           >
-            {l.flag && <span aria-hidden>{l.flag}</span>}
+            <LeagueLogo code={l.code} size={20} fallback={l.flag} />
             {l.label}
           </Link>
         );

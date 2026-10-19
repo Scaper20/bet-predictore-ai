@@ -107,3 +107,51 @@ export async function statChances(match: Match): Promise<Record<string, number> 
     return undefined;
   }
 }
+
+/** Per game, for and against, over a club's recent games in this competition. */
+export interface TeamStatAverage {
+  games: number;
+  corners: [number, number] | null;
+  shots: [number, number] | null;
+  shotsOnTarget: [number, number] | null;
+}
+
+const AVG_GAMES = 10;
+
+/**
+ * Both clubs' corners, shots and shots on target per game, for and against,
+ * from their last ten games in this competition that carry the statistics
+ * (the archive the corners and shots model is fitted on). Null for a club
+ * with no such games, or a competition with no stats.
+ */
+export async function teamStatAverages(match: Match): Promise<{ home: TeamStatAverage | null; away: TeamStatAverage | null }> {
+  const none = { home: null, away: null };
+  const code = match.league.code;
+  if (!code) return none;
+  const def = leagueByCode(code);
+  const scope = def ? nameScope(def) : null;
+  const book = scope ? await nameBook(scope) : null;
+  const key = (n: string) => looseKey(book?.canonical.get(looseKey(n)) ?? n);
+  const rows = await archivedStatRows(code);
+  if (rows.length === 0) return none;
+
+  const forTeam = (name: string): TeamStatAverage | null => {
+    const k = key(name);
+    const games = rows.filter((r) => key(r.homeName) === k || key(r.awayName) === k).slice(0, AVG_GAMES);
+    if (games.length === 0) return null;
+    const avg = (kind: "corners" | "shots" | "shotsOnTarget"): [number, number] | null => {
+      const xs = games.filter((g) => g[kind]);
+      if (xs.length === 0) return null;
+      let f = 0;
+      let a = 0;
+      for (const g of xs) {
+        const home = key(g.homeName) === k;
+        f += g[kind]![home ? 0 : 1];
+        a += g[kind]![home ? 1 : 0];
+      }
+      return [f / xs.length, a / xs.length];
+    };
+    return { games: games.length, corners: avg("corners"), shots: avg("shots"), shotsOnTarget: avg("shotsOnTarget") };
+  };
+  return { home: forTeam(match.home.name), away: forTeam(match.away.name) };
+}
