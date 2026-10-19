@@ -1,15 +1,12 @@
 import Link from "next/link";
-import type { Prediction } from "@/lib/model/predict";
-import type { ViewedPrediction } from "@/lib/access";
 import { percent } from "@/lib/format";
 import { LocalTime } from "@/components/ui/local-time";
 import { Crest } from "@/components/ui/crest";
-import { leagueByCode } from "@/lib/leagues";
 import { matchPath } from "@/lib/routes";
-import { isStrong } from "@/lib/model/tiers";
 import { RISK, riskFor } from "@/lib/model/risk";
 import { LockedSelection, ProTag } from "@/components/entitlements/locked-pick";
 import { PickAction } from "@/components/match/pick-action";
+import type { PickRowData } from "@/lib/pick-list";
 
 /**
  * One match on the Picks page, in a dense list instead of a card grid.
@@ -20,55 +17,51 @@ import { PickAction } from "@/components/match/pick-action";
  * the two clubs stacked with their chances, and our pick on a line right
  * under them, the chance and the add button to the right.
  *
- * One markup for both, laid out by the .pr-* rules in globals.css. The page
- * lists every game for two weeks, several hundred rows, and the markup is
- * sent twice (as HTML and in the page data), so the classes are short and
- * nothing is rendered twice that CSS can place instead.
+ * One markup for both, laid out by the .pr-* rules in globals.css. Rendered
+ * from PickRowData (lib/pick-list.ts) so the list can add rows in the
+ * browser as the visitor scrolls (pick-list.tsx).
  */
-export function PickRow({ prediction }: { prediction: Prediction | ViewedPrediction }) {
-  const { match, markets, topPick } = prediction;
-  if (!topPick) return null;
-  const locked = "locked" in prediction ? prediction.locked : { pick: false, markets: false, proLeague: false };
-  const href = matchPath(match.id);
-  const homeLeads = markets.home >= markets.away && markets.home >= markets.draw;
-  const awayLeads = markets.away > markets.home && markets.away >= markets.draw;
-  const league = match.league.code ? leagueByCode(match.league.code) : undefined;
-  const risk = locked.pick ? null : riskFor(topPick.probability);
-  const pct = Math.round(topPick.probability * 100);
+export function PickRow({ row }: { row: PickRowData }) {
+  const { pick, locked } = row;
+  const href = matchPath(row.id);
+  const homeLeads = row.home.p >= row.away.p && row.home.p >= 1 - row.home.p - row.away.p;
+  const awayLeads = row.away.p > row.home.p && row.away.p >= 1 - row.home.p - row.away.p;
+  const risk = locked ? null : riskFor(pick.probability);
+  const pct = Math.round(pick.probability * 100);
+  const code = row.league.code;
 
-  // Only what the slip and the live score need, not the whole match.
-  const slim = {
-    id: match.id,
-    kickoff: match.kickoff,
-    status: match.status,
-    minute: match.minute,
-    score: match.score,
-    home: { name: match.home.name },
-    away: { name: match.away.name },
-    league: { name: match.league.name },
+  const match = {
+    id: row.id,
+    kickoff: row.kickoff,
+    status: row.status,
+    minute: row.minute,
+    score: row.score,
+    home: { name: row.home.name },
+    away: { name: row.away.name },
+    league: { name: row.league.name },
   };
   // eslint-disable-next-line @next/next/no-img-element -- a 16px static badge, hundreds per page
-  const logo = league ? <img className={`pr-lg${DARK.has(league.code) ? " pr-lgd" : ""}`} src={`/leagues/${league.code}.webp`} alt="" loading="lazy" /> : null;
+  const logo = code ? <img className={`pr-lg${DARK.has(code) ? " pr-lgd" : ""}`} src={`/leagues/${code}.webp`} alt="" loading="lazy" /> : null;
 
   return (
     <div className="pr">
       <Link href={href} prefetch={false} className="pr-time">
-        <LocalTime iso={match.kickoff} />
+        <LocalTime iso={row.kickoff} />
       </Link>
-      <Link href={href} prefetch={false} className="pr-teams" title={`${match.league.name}: ${match.home.name} v ${match.away.name}`}>
+      <Link href={href} prefetch={false} className="pr-teams" title={`${row.league.name}: ${row.home.name} v ${row.away.name}`}>
         <span className="pr-wide">{logo}</span>
-        <Team team={match.home} p={markets.home} lead={homeLeads} />
+        <Team team={row.home} lead={homeLeads} />
         <span className="pr-v">v</span>
-        <Team team={match.away} p={markets.away} lead={awayLeads} />
+        <Team team={row.away} lead={awayLeads} />
       </Link>
       <Link href={href} prefetch={false} className="pr-pick">
         <span className="pr-narrow">{logo}</span>
-        {locked.pick ? <LockedSelection group={topPick.group} className="pr-name" /> : <span className="pr-name">{topPick.label}</span>}
-        {isStrong(topPick, match.league.code) && <span className="pr-strong">★ Strong</span>}
+        {locked ? <LockedSelection group={pick.group} className="pr-name" /> : <span className="pr-name">{pick.label}</span>}
+        {row.strong && <span className="pr-strong">★ Strong</span>}
         {risk && <span className={`pr-risk pr-${risk} pr-narrow`}>{RISK[risk].label.replace(" risk", "")}</span>}
       </Link>
       <span className="pr-chance">
-        {locked.pick ? (
+        {locked ? (
           // On a phone the Unlock button under it already says it.
           <span className="pr-wide">
             <ProTag />
@@ -84,7 +77,7 @@ export function PickRow({ prediction }: { prediction: Prediction | ViewedPredict
       </span>
       <span className="pr-riskcol">{risk && <span className={`pr-risk pr-${risk}`} title={RISK[risk].record}>{RISK[risk].label}</span>}</span>
       <span className="pr-act">
-        <PickAction match={slim} pick={topPick} locked={locked.pick} />
+        <PickAction match={match} pick={pick} locked={locked} />
       </span>
     </div>
   );
@@ -96,12 +89,12 @@ const DARK = new Set([
   "belgian-pro-league", "scottish-premiership", "international-friendlies", "world-cup", "afcon",
 ]);
 
-function Team({ team, p, lead }: { team: Prediction["match"]["home"]; p: number; lead: boolean }) {
+function Team({ team, lead }: { team: PickRowData["home"]; lead: boolean }) {
   return (
     <span className="pr-team">
       <Crest src={team.crest} name={team.name} size={18} />
       <span className={lead ? "pr-lead" : undefined}>{team.name}</span>
-      <em>{percent(p)}</em>
+      <em>{percent(team.p)}</em>
     </span>
   );
 }
