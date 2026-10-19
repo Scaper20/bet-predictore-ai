@@ -6,6 +6,7 @@ import { tierFromPlanCode } from "@/lib/paystack/plan-codes";
 import { sendEmail } from "@/lib/email";
 import { receiptEmail, subscriptionCanceledEmail } from "@/lib/email-templates";
 import type { Tier } from "@/lib/entitlements";
+import { grantPaystackOnce } from "@/lib/paystack/once";
 
 // Node's crypto module, not Edge-safe — Proxy (formerly middleware) already
 // excludes this route from its matcher (see src/proxy.ts) so no session
@@ -94,6 +95,14 @@ export async function POST(request: Request) {
       const customerEmail = asString(customer?.email);
       const metadata = asRecord(data.metadata);
       const amount = typeof data.amount === "number" ? data.amount : undefined;
+
+      // Pay once: re-verified and granted as a prepaid period, before the
+      // generic success update below (which would make the grant think it
+      // had already run).
+      if (reference && metadata?.once === "1") {
+        await grantPaystackOnce(reference);
+        break;
+      }
 
       if (reference) {
         // Idempotent by design: `paystack_reference` is unique, so a

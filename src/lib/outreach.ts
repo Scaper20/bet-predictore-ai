@@ -6,7 +6,8 @@ export type CampaignType =
   | "survey_free"
   | "announce_whatsapp"
   | "announce_rebrand"
-  | "checkout_reminder";
+  | "checkout_reminder"
+  | "announce_pay_once";
 export type SurveyType = Extract<CampaignType, "survey_subscribed" | "survey_free">;
 
 /**

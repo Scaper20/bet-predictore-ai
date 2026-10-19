@@ -11,6 +11,7 @@ const CAMPAIGNS = new Set<CampaignType>([
   "announce_whatsapp",
   "announce_rebrand",
   "checkout_reminder",
+  "announce_pay_once",
 ]);
 
 // A "use server" actions file can't export `maxDuration` the way a route.ts
@@ -81,7 +82,7 @@ export async function getOutreachOverview(): Promise<OutreachOverview | { error:
   const gate = await checkAdmin();
   if (!gate.ok) return { error: gate.error };
 
-  const [segments, warmCheckin, surveySubscribed, surveyFree, announceWhatsapp, announceRebrand, checkoutReminder] = await Promise.all([
+  const [segments, warmCheckin, surveySubscribed, surveyFree, announceWhatsapp, announceRebrand, checkoutReminder, announcePayOnce] = await Promise.all([
     segmentCounts(),
     campaignProgress("warm_checkin"),
     campaignProgress("survey_subscribed"),
@@ -89,6 +90,7 @@ export async function getOutreachOverview(): Promise<OutreachOverview | { error:
     campaignProgress("announce_whatsapp"),
     campaignProgress("announce_rebrand"),
     campaignProgress("checkout_reminder"),
+    campaignProgress("announce_pay_once"),
   ]);
 
   return {
@@ -100,6 +102,7 @@ export async function getOutreachOverview(): Promise<OutreachOverview | { error:
       announce_whatsapp: announceWhatsapp,
       announce_rebrand: announceRebrand,
       checkout_reminder: checkoutReminder,
+      announce_pay_once: announcePayOnce,
     },
   };
 }

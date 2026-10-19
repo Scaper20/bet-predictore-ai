@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { verifyTransaction } from "@/lib/paystack/client";
 import { grantFlutterwavePayment } from "@/lib/flutterwave/grant";
+import { grantPaystackOnce } from "@/lib/paystack/once";
 import { ButtonLink } from "@/components/ui/primitives";
 import { sportPath } from "@/lib/routes";
 
@@ -17,7 +18,8 @@ export const metadata: Metadata = { title: "Payment" };
  * Flutterwave sends people back with `status=…&tx_ref=betrix_fw_…`. There
  * the page also runs the grant, which re-verifies with Flutterwave and is
  * idempotent with the webhook, so access shows up even if the webhook is
- * slow or misconfigured.
+ * slow or misconfigured. A pay-once Paystack payment is granted here the
+ * same way (lib/paystack/once.ts).
  */
 export default async function BillingCallbackPage({
   searchParams,
@@ -35,11 +37,16 @@ export default async function BillingCallbackPage({
       status = outcome === "granted" || outcome === "already" ? "success" : outcome === "failed" ? "failed" : "unknown";
     }
   } else if (reference) {
-    try {
-      const result = await verifyTransaction(reference);
-      status = result.status === "success" ? "success" : "failed";
-    } catch {
-      status = "unknown";
+    const once = await grantPaystackOnce(reference).catch(() => "pending" as const);
+    if (once !== "unknown") {
+      status = once === "granted" || once === "already" ? "success" : once === "failed" ? "failed" : "unknown";
+    } else {
+      try {
+        const result = await verifyTransaction(reference);
+        status = result.status === "success" ? "success" : "failed";
+      } catch {
+        status = "unknown";
+      }
     }
   }
 

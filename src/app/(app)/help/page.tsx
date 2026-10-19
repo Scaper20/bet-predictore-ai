@@ -75,11 +75,11 @@ const GROUPS: FaqGroup[] = [
       },
       {
         q: "How do I pay?",
-        text: "pay paystack flutterwave card transfer ussd mobile money mpesa",
+        text: "pay paystack flutterwave card transfer ussd opay palmpay gtbank mobile money mpesa",
         a: sellsAbroad ? (
-          <A>In Nigeria through Paystack, in naira, by card or bank transfer. Elsewhere through Flutterwave, in your own currency: Mobile Money, M-Pesa or card. Outside Nigeria each payment buys a set period that never renews. We never see or store your card details.</A>
+          <A>In Nigeria through Paystack, in naira: bank transfer, OPay, PalmPay, USSD or card. Elsewhere through Flutterwave, in your own currency: Mobile Money, M-Pesa or card. A plan paid once buys a set period that never renews; in Nigeria you can choose card auto-renew instead. We never see or store your card details.</A>
         ) : (
-          <A>Through Paystack, in naira, by card or bank transfer. We never see or store your card details.</A>
+          <A>Through Paystack, in naira: bank transfer, OPay, PalmPay, USSD or card. We never see or store your card details.</A>
         ),
       },
       {

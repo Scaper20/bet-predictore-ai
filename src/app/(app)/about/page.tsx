@@ -41,7 +41,7 @@ const FAQ: { q: string; a: string }[] = [
   },
   {
     q: "How do I pay, and is it safe?",
-    a: "Payments go through Paystack, in Naira, by card or bank transfer. KiqStat never sees or stores your card details, and you can cancel a plan at any time.",
+    a: "Payments go through Paystack, in naira, by bank transfer, OPay, PalmPay, USSD or card. KiqStat never sees or stores your card details, and a plan paid once never renews.",
   },
   {
     q: "How do I spot someone pretending to be KiqStat?",

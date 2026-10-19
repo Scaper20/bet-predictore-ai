@@ -60,7 +60,7 @@ export const NIGERIA: Market = {
   flag: "🇳🇬",
   currency: "NGN",
   provider: "paystack",
-  methodsLabel: "Card, bank transfer or USSD",
+  methodsLabel: "Bank transfer, OPay, PalmPay, USSD or card",
 };
 
 export const ELSEWHERE: Market = {

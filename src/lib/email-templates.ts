@@ -360,3 +360,22 @@ export function rebrandAnnouncementEmail(opts: { unsubscribeUrl: string }): { su
     `),
   };
 }
+
+export function payOnceAnnouncementEmail(opts: { unsubscribeUrl: string }): { subject: string; html: string } {
+  return {
+    subject: "Pay for KiqStat with OPay, PalmPay or bank transfer",
+    html: emailLayout(`
+      <p style="margin:0 0 16px;">Hi there,</p>
+      <p style="margin:0 0 16px;">A few of you told us you couldn't find OPay, PalmPay or your bank when you
+      tried to upgrade. That's fixed.</p>
+      <p style="margin:0 0 16px;">Pro and VIP can now be <strong>paid once</strong> by bank transfer, OPay,
+      PalmPay, USSD (GTBank *737 and others) or card. You get the plan for the month, 3 months or year you
+      choose, and nothing renews or charges you again.</p>
+      <p style="margin:0 0 16px;">Pro is &#8358;5,000 a month: every pick type, Forge, Ask KiqStat and the full
+      match breakdowns. Prefer it automatic? You can still choose card auto-renew on the same page.</p>
+      ${button(`${SITE_URL}/account/billing`, "Choose a plan")}
+      <p style="margin:24px 0 0;">Thanks for sticking with us.<br>— Scaper, Founder &amp; CEO, KiqStat</p>
+      ${unsubscribeFooter(opts.unsubscribeUrl)}
+    `),
+  };
+}
