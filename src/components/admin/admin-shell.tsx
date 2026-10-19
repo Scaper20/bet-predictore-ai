@@ -16,6 +16,7 @@ const BASE_NAV = [
   { href: "/admin/users", label: "Users" },
   { href: "/admin/traffic", label: "Traffic" },
   { href: "/admin/payments", label: "Payments" },
+  { href: "/admin/partners", label: "Partners" },
   { href: "/admin/model-performance", label: "Model performance" },
   { href: "/admin/audit-log", label: "Audit log" },
   { href: "/admin/team", label: "Team" },
