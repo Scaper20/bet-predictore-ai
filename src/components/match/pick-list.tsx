@@ -5,6 +5,7 @@ import { PickRow } from "@/components/match/pick-row";
 import { LiveScoresProvider } from "@/components/match/pick-action";
 import { Badge, LiveDot } from "@/components/ui/primitives";
 import type { PickRowData } from "@/lib/pick-list";
+import { PickRowSkeleton } from "@/components/ui/skeleton";
 
 /**
  * The Picks page's list, loaded a batch at a time.
@@ -81,8 +82,9 @@ export function PickList({ initial, total, query }: { initial: PickRowData[]; to
       </div>
 
       {!done && (
-        <div ref={sentinel} className="flex justify-center py-6">
+        <div ref={sentinel} className="pt-4">
           {state === "error" ? (
+            <div className="flex justify-center py-2">
             <button
               type="button"
               onClick={() => {
@@ -93,11 +95,14 @@ export function PickList({ initial, total, query }: { initial: PickRowData[]; to
             >
               Couldn&apos;t load more. Try again
             </button>
+            </div>
           ) : (
-            <span className="flex items-center gap-2 text-sm text-ink-dim" aria-live="polite">
-              <span className="size-4 animate-spin rounded-full border-2 border-line border-t-brand" aria-hidden />
-              Loading more games…
-            </span>
+            // The next rows' shape, so the list grows into them rather than jumping.
+            <div className="card overflow-hidden" role="status" aria-label="Loading more games">
+              <PickRowSkeleton />
+              <PickRowSkeleton />
+              <PickRowSkeleton />
+            </div>
           )}
         </div>
       )}
