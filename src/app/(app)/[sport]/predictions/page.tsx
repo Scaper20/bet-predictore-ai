@@ -19,6 +19,7 @@ import { isStrong } from "@/lib/model/tiers";
 import { LiveScoresProvider } from "@/components/match/pick-action";
 import { loadPicks, parsePickQuery } from "@/lib/pick-feed";
 import { PICK_BATCH } from "@/lib/pick-list";
+import { ProductIcon } from "@/components/icons/product-icon";
 
 /**
  * One title per league view. Without this every ?league= variant shared the
@@ -113,7 +114,7 @@ export default async function PredictionsPage({
 
         {predictions.length === 0 ? (
           <EmptyState
-            icon="🎯"
+            icon={<ProductIcon name="calendar" className="size-6" />}
             title="No fixtures to model right now"
             description="Check back when the next fixtures are out."
             action={<ButtonLink href={scoresPath("fixtures")} variant="secondary">Browse fixtures</ButtonLink>}
@@ -122,7 +123,7 @@ export default async function PredictionsPage({
           <>
             {(strongOnly || risk) && rows.length === 0 && (
               <EmptyState
-                icon={strongOnly ? "★" : "⚖"}
+                icon={<ProductIcon name={strongOnly ? "star" : "scale"} className="size-6" />}
                 title={strongOnly ? "No Strong picks right now" : `No ${risk} risk picks right now`}
                 description={strongOnly ? "Strong picks are our most confident. Some days there are none." : "Try another risk level or all picks."}
               />
