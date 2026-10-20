@@ -7,67 +7,68 @@ import { Container, containerClass } from "@/components/ui/container";
 import { Reveal } from "@/components/ui/reveal";
 import { CLUB_LEAGUES, INTERNATIONAL_LEAGUES } from "@/lib/leagues";
 import { sportPath, scoresPath } from "@/lib/routes";
+import { ProductIcon } from "@/components/icons/product-icon";
 
 /* ---------------------------------------------------------------- Features */
 
 const FEATURES = [
   {
-    icon: "📊",
+    icon: "chart",
     title: "A real model, not a hunch",
     body:
       "Time-weighted attack and defence ratings, fitted by maximum likelihood on completed " +
       "matches. The same maths quant desks use.",
   },
   {
-    icon: "🥇",
+    icon: "medal",
     title: "Top picks, with the why",
     body:
       "Every match gets its three best picks, each with a plain-English reason and a low, medium " +
       "or high risk label taken from how picks like it have actually landed. Share them as an image in one tap.",
   },
   {
-    icon: "📈",
+    icon: "trending-up",
     title: "Match stats",
     body:
       "Shots, shots on target and corners for every game, live and at full time, beside both clubs' " +
       "averages over their last ten league games. Picks on them are graded minutes after the final whistle.",
   },
   {
-    icon: "⚡",
+    icon: "bolt",
     title: "Live scores that keep up",
     body:
       "Every running match across the competitions we track, refreshed continuously with " +
       "the clock and the scoreline straight from the feed.",
   },
   {
-    icon: "🎯",
+    icon: "target",
     title: "Every prediction from one distribution",
     body:
       "Match result, over/under, GG/NG, double chance and correct score all read off the same scoreline " +
       "grid, so the numbers can never contradict each other.",
   },
   {
-    icon: "🧮",
+    icon: "scale",
     title: "Value, margin stripped out",
     body:
       "Paste in the price you have been offered. We strip the margin, compare it against the " +
       "price the selection has to beat, and tell you whether it is worth taking at all.",
   },
   {
-    icon: "🔍",
+    icon: "search",
     title: "It shows its working",
     body:
       "Sample size, data quality and model uncertainty on every prediction, and a public track record " +
       "with every miss left in. When the history is too thin, we publish no pick at all.",
   },
   {
-    icon: "🌍",
+    icon: "globe",
     title: "African football, worldwide",
     body:
       "NPFL and CAF competitions alongside the Premier League and the rest of Europe, with kick-off " +
       "times in your own time zone and prices in your own currency.",
   },
-];
+] as const;
 
 export function Features() {
   return (
@@ -81,8 +82,8 @@ export function Features() {
         <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {FEATURES.map((f) => (
             <div key={f.title} className="card card-hover p-5 sm:p-7">
-              <div className="grid size-11 place-items-center rounded-lg bg-surface-2 text-xl">
-                {f.icon}
+              <div className="grid size-11 place-items-center rounded-lg bg-surface-2 text-brand">
+                <ProductIcon name={f.icon} className="size-5" />
               </div>
               <h3 className="mt-4 text-base font-semibold">{f.title}</h3>
               <p className="mt-2 text-sm leading-relaxed text-ink-muted">{f.body}</p>
