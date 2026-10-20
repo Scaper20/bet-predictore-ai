@@ -3,6 +3,7 @@ import { Badge, ButtonLink, LiveDot } from "@/components/ui/primitives";
 import { Container } from "@/components/ui/container";
 import { sportPath } from "@/lib/routes";
 import { LEAGUES } from "@/lib/leagues";
+import { ProductIcon } from "@/components/icons/product-icon";
 
 /**
  * The board is passed in rather than built here, so this stays a Server
@@ -35,8 +36,9 @@ export function Hero({ liveCount, board }: { liveCount: number; board: ReactNode
 
         <div>
           <Badge tone="brand" className="mb-6 max-w-full">
+            <ProductIcon name="globe" className="size-3.5 shrink-0" />
             <span className="truncate">
-              🌍 Built in Nigeria<span className="hidden sm:inline">, for football fans across Africa and the world</span>
+              Built in Nigeria<span className="hidden sm:inline">, for football fans across Africa and the world</span>
               <span className="sm:hidden"> for Africa and the world</span>
             </span>
           </Badge>

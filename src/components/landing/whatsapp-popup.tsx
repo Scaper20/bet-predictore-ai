@@ -109,7 +109,9 @@ export function WhatsAppPopup() {
             aria-label="Close"
             className="absolute right-4 top-4 grid size-7 place-items-center rounded-full bg-surface-2 text-sm text-ink-dim transition-colors hover:text-ink"
           >
-            ✕
+            <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden="true">
+              <path d="m6 6 12 12M18 6 6 18" />
+            </svg>
           </button>
 
           <div className="mb-4 grid size-12 place-items-center rounded-xl border border-brand/25 bg-brand/12 text-brand">
