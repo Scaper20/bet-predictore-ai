@@ -7,9 +7,6 @@ import dynamic from "next/dynamic";
 // JavaScript every page pays for — on a low-end Android phone that startup
 // cost, not the network, is what holds back the first screen.
 const ChatWidget = dynamic(() => import("@/components/support/chat-widget").then((m) => m.ChatWidget), { ssr: false });
-const WhatsAppPopup = dynamic(() => import("@/components/landing/whatsapp-popup").then((m) => m.WhatsAppPopup), {
-  ssr: false,
-});
 const GiftPopup = dynamic(() => import("@/components/account/gift-popup").then((m) => m.GiftPopup), { ssr: false });
 const InstallPrompt = dynamic(() => import("@/components/pwa/install-prompt").then((m) => m.InstallPrompt), {
   ssr: false,
@@ -28,7 +25,6 @@ export function DeferredWidgets() {
     <>
       <SlipSheet />
       <ChatWidget />
-      <WhatsAppPopup />
       <GiftPopup />
       <InstallPrompt />
       <NotificationPrompt />

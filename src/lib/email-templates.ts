@@ -379,3 +379,118 @@ export function payOnceAnnouncementEmail(opts: { unsubscribeUrl: string }): { su
     `),
   };
 }
+
+/* ------------------------------------------------------------ VIP chat */
+
+const VIP_CHAT_DAILY = [
+  "<strong>The day's Strong picks</strong>: the model's surest reads, Pro leagues included",
+  "<strong>Four ready-made combos</strong> priced about 2, 3, 5 and 10, built from the day's strongest reads",
+  "<strong>Live calls in the big games</strong>, and your questions answered first",
+];
+
+function vipChatList(): string {
+  return `<ul style="margin:12px 0 0;padding-left:20px;">${VIP_CHAT_DAILY.map((p) => `<li style="margin:6px 0;">${p}</li>`).join("")}</ul>`;
+}
+
+/** The Strong picks' live record (lib/vip-chat.ts strongRecordLine), or nothing when the sample is too small. */
+function vipRecord(record: string | null): string {
+  if (!record) return "";
+  return `<p style="margin:16px 0 0;padding:12px 14px;border-radius:10px;background:#f3f8e6;">
+    <strong>Strong picks: ${record}.</strong>
+    <a href="${SITE_URL}${sportPath("trackRecord")}" style="color:#4f6b00;">Every result</a> is public.</p>`;
+}
+
+const VIP_CHAT_SMALL_PRINT = `<p style="margin:20px 0 0;font-size:12px;color:#6b7670;">Chances, not promises: even the
+  surest reads miss, and a combo is lost if any one game in it is. 18+.</p>`;
+
+const VIP_CHAT_HOW_TO_JOIN = `<p style="margin:20px 0 0;"><strong>Joining takes a minute:</strong> open the VIP chat page,
+  add the WhatsApp number you'll join with and tap Join. We let in requests from VIP members' numbers, usually
+  within a few hours.</p>`;
+
+/**
+ * VIP chat launch, to everyone on a live Pro or VIP plan. VIP members are
+ * invited in; Pro members hear what VIP now adds.
+ */
+export function vipChatLaunchEmail(opts: { tier: "pro" | "vip"; record: string | null; unsubscribeUrl: string }): {
+  subject: string;
+  html: string;
+} {
+  if (opts.tier === "vip") {
+    return {
+      subject: "Your VIP chat on WhatsApp is open",
+      html: emailLayout(`
+        <p style="margin:0 0 16px;">Hi there,</p>
+        <p style="margin:0;">As a VIP member you now have a place in the <strong>KiqStat VIP chat</strong>, a
+        members-only WhatsApp group. Every day before kick-off it gets:</p>
+        ${vipChatList()}
+        ${vipRecord(opts.record)}
+        ${VIP_CHAT_HOW_TO_JOIN}
+        ${button(`${SITE_URL}/vip`, "Join the VIP chat")}
+        <p style="margin:24px 0 0;">See you in there.<br>— Scaper, Founder &amp; CEO, KiqStat</p>
+        ${VIP_CHAT_SMALL_PRINT}
+        ${unsubscribeFooter(opts.unsubscribeUrl)}
+      `),
+    };
+  }
+  return {
+    subject: "New for VIP: our surest picks every day, on WhatsApp",
+    html: emailLayout(`
+      <p style="margin:0 0 16px;">Hi there,</p>
+      <p style="margin:0;">Thanks for being on Pro. We've opened something new for VIP members: the
+      <strong>KiqStat VIP chat</strong>, a members-only WhatsApp group. Every day before kick-off it gets:</p>
+      ${vipChatList()}
+      ${vipRecord(opts.record)}
+      <p style="margin:20px 0 0;">VIP keeps everything you have on Pro, plus the chat, live win
+      probability, 100 Ask KiqStat questions a day and priority support. Your Pro plan carries on as it is if you'd
+      rather stay.</p>
+      ${button(`${SITE_URL}/vip`, "See the VIP chat")}
+      <p style="margin:24px 0 0;">— Scaper, Founder &amp; CEO, KiqStat</p>
+      ${VIP_CHAT_SMALL_PRINT}
+      ${unsubscribeFooter(opts.unsubscribeUrl)}
+    `),
+  };
+}
+
+/** The follow-up to VIP members who haven't opened the chat yet. */
+export function vipChatReminderEmail(opts: { record: string | null; unsubscribeUrl: string }): { subject: string; html: string } {
+  return {
+    subject: "Your seat in the VIP chat is still waiting",
+    html: emailLayout(`
+      <p style="margin:0 0 16px;">Hi there,</p>
+      <p style="margin:0;">You're on VIP, but you haven't joined the <strong>VIP chat</strong> on WhatsApp yet. It's
+      included in your plan, and it's where these land every morning:</p>
+      ${vipChatList()}
+      ${vipRecord(opts.record)}
+      ${VIP_CHAT_HOW_TO_JOIN}
+      ${button(`${SITE_URL}/vip`, "Join the VIP chat")}
+      <p style="margin:24px 0 0;">— Scaper, Founder &amp; CEO, KiqStat</p>
+      ${VIP_CHAT_SMALL_PRINT}
+      ${unsubscribeFooter(opts.unsubscribeUrl)}
+    `),
+  };
+}
+
+/** The VIP chat, to everyone not on a paid plan. */
+export function vipChatFreeEmail(opts: { record: string | null; unsubscribeUrl: string }): { subject: string; html: string } {
+  return {
+    subject: "Our surest picks of the day, every day, on WhatsApp",
+    html: emailLayout(`
+      <p style="margin:0 0 16px;">Hi there,</p>
+      <p style="margin:0;">Every day our model marks a few picks as <strong>Strong</strong>: the games it is surest
+      of. We've opened a members-only WhatsApp group, the <strong>KiqStat VIP chat</strong>, where every morning before
+      kick-off VIP members get:</p>
+      ${vipChatList()}
+      ${vipRecord(opts.record)}
+      <p style="margin:20px 0 8px;font-weight:700;">What the model got right lately</p>
+      <a href="${SITE_URL}${sportPath("trackRecord")}" style="text-decoration:none;">
+        <img src="${SITE_URL}/api/og/recent-wins" width="496" alt="KiqStat's most recent winning picks" style="display:block;width:100%;max-width:496px;height:auto;border:0;border-radius:10px;">
+      </a>
+      <p style="margin:20px 0 0;">The chat comes with the VIP plan, and you can pay once for a month with nothing
+      renewing. Everything you have for free stays free, the WhatsApp community included.</p>
+      ${button(`${SITE_URL}/vip`, "See the VIP chat")}
+      <p style="margin:24px 0 0;">— Scaper, Founder &amp; CEO, KiqStat</p>
+      ${VIP_CHAT_SMALL_PRINT}
+      ${unsubscribeFooter(opts.unsubscribeUrl)}
+    `),
+  };
+}

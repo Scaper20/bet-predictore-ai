@@ -5,7 +5,7 @@ import webpush from "web-push";
 // @ts-expect-error -- untyped CommonJS module
 import ece from "http_ece";
 import { dailyPayload } from "@/lib/push/messages";
-import { isAllowedPushEndpoint, parseSubscription, parseTopics } from "@/lib/push/subscription";
+import { isAllowedPushEndpoint, parseSubscription, parseTopics, topicFor } from "@/lib/push/subscription";
 import { appDayBounds } from "@/lib/format";
 import type { PersonalizedPick } from "@/lib/for-you";
 
@@ -189,5 +189,18 @@ describe("Strong pick alerts", () => {
     expect(strongResultPayload({ ...e, result: "win", score: { home: 1, away: 0 } })?.title).toContain("won");
     expect(strongResultPayload({ ...e, result: "lose", score: { home: 3, away: 2 } })?.body).toContain("Arsenal 3–2 Leeds");
     expect(strongResultPayload({ ...e, result: "push" })).toBeNull();
+  });
+});
+
+describe("topicFor", () => {
+  it("leaves the topic off for Apple, which rejects it", () => {
+    expect(topicFor("https://web.push.apple.com/QGx7abc", "daily")).toBeUndefined();
+  });
+  it("keeps it for every other push service", () => {
+    expect(topicFor("https://fcm.googleapis.com/fcm/send/abc", "daily")).toBe("daily");
+    expect(topicFor("https://updates.push.services.mozilla.com/wpush/v2/abc", "daily")).toBe("daily");
+  });
+  it("sends none when there is none", () => {
+    expect(topicFor("https://fcm.googleapis.com/fcm/send/abc", undefined)).toBeUndefined();
   });
 });

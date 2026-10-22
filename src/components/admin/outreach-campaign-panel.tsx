@@ -27,11 +27,17 @@ export function OutreachCampaignPanel({
   label,
   description,
   initialProgress,
+  audience,
+  previews = [],
 }: {
   campaign: CampaignType;
   label: string;
   description: string;
   initialProgress: Progress;
+  /** How many people queuing would reach now, when the page knows. */
+  audience?: number;
+  /** Links to /admin/outreach/preview, one per version of the email. */
+  previews?: { label: string; href: string }[];
 }) {
   const [progress, setProgress] = useState<Progress>(initialProgress);
   const [enqueuing, setEnqueuing] = useState(false);
@@ -96,6 +102,17 @@ export function OutreachCampaignPanel({
           {progress.failed > 0 && <Badge tone="rose">{progress.failed} failed</Badge>}
         </div>
       </div>
+
+      {(audience !== undefined || previews.length > 0) && (
+        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+          {audience !== undefined && <span className="text-ink-muted">Would reach {audience} now</span>}
+          {previews.map((p) => (
+            <a key={p.href} href={p.href} target="_blank" rel="noreferrer" className="text-brand underline underline-offset-2">
+              {p.label}
+            </a>
+          ))}
+        </div>
+      )}
 
       <div className="mt-4 flex flex-wrap gap-2">
         <Button type="button" variant="secondary" disabled={enqueuing} onClick={handleEnqueue} className="text-xs">

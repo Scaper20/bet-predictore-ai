@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { classifySegment, SURVEY_QUESTIONS, answerLabel, averageAnswer } from "@/lib/outreach";
+import { classifySegment, SURVEY_QUESTIONS, answerLabel, averageAnswer, vipChatAudience } from "@/lib/outreach";
 
 describe("classifySegment", () => {
   it("classifies a null subscription row as free", () => {
@@ -81,5 +81,23 @@ describe("averageAnswer", () => {
       { answers: {} },
     ];
     expect(averageAnswer(rows, "nps")).toBe(9);
+  });
+});
+
+describe("vipChatAudience", () => {
+  it("launches to Pro and VIP, each with their own tier", () => {
+    expect(vipChatAudience("vip_chat_launch", "pro", false)).toBe("pro");
+    expect(vipChatAudience("vip_chat_launch", "vip", true)).toBe("vip");
+    expect(vipChatAudience("vip_chat_launch", null, false)).toBeNull();
+  });
+  it("reminds only VIP members who haven't opened the chat", () => {
+    expect(vipChatAudience("vip_chat_reminder", "vip", false)).toBe("vip");
+    expect(vipChatAudience("vip_chat_reminder", "vip", true)).toBeNull();
+    expect(vipChatAudience("vip_chat_reminder", "pro", false)).toBeNull();
+  });
+  it("sends the free email only to people without a live plan", () => {
+    expect(vipChatAudience("vip_chat_free", null, false)).toBe("free");
+    expect(vipChatAudience("vip_chat_free", "pro", false)).toBeNull();
+    expect(vipChatAudience("vip_chat_free", "vip", false)).toBeNull();
   });
 });

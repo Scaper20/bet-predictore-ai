@@ -1,4 +1,5 @@
 import { Hero } from "@/components/landing/hero";
+import { ProductIcon } from "@/components/icons/product-icon";
 import { Marquee } from "@/components/landing/marquee";
 import type { Metadata } from "next";
 import { Faq, FAQS, Features, FinalCta, HowItWorks, Leagues, Pricing } from "@/components/landing/sections";
@@ -159,7 +160,7 @@ function TodaysPicks({ previews, free }: { previews: Awaited<ReturnType<typeof p
       {usable.length === 0 ? (
         <div className="mt-10">
           <EmptyState
-            icon="⚽"
+            icon={<ProductIcon name="calendar" className="size-6" />}
             title="No fixtures with enough history right now"
             description="Check back when the next fixtures are out."
             action={<ButtonLink href={scoresPath("fixtures")} variant="secondary">Browse all fixtures</ButtonLink>}

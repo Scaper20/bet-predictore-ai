@@ -11,8 +11,14 @@ import {
   rebrandAnnouncementEmail,
   payOnceAnnouncementEmail,
   unfinishedCheckoutEmail,
+  vipChatLaunchEmail,
+  vipChatReminderEmail,
+  vipChatFreeEmail,
 } from "@/lib/email-templates";
-import { classifySegment, type CampaignType } from "@/lib/outreach";
+import { classifySegment, isVipChatCampaign, vipChatAudience, VIP_CHAT_CAMPAIGNS, type CampaignType, type VipChatCampaign } from "@/lib/outreach";
+import { livePlans } from "@/lib/paid-users";
+import { settledRecords } from "@/lib/performance-store";
+import { strongRecordLine } from "@/lib/vip-chat";
 import { SITE_URL } from "@/lib/site-url";
 import { WHATSAPP_COMMUNITY_URL } from "@/lib/whatsapp-community";
 import type { Tier } from "@/lib/entitlements";
@@ -96,6 +102,7 @@ export async function enqueueCampaign(campaign: CampaignType): Promise<{ enqueue
   }
 
   const admin = supabaseAdmin();
+  if (isVipChatCampaign(campaign)) return enqueueVipChat(admin, campaign);
 
   const [{ data: profiles }, { data: subs }] = await Promise.all([
     admin.from("profiles").select("id, email").eq("marketing_opt_out", false).not("email", "is", null),
@@ -139,6 +146,73 @@ export async function enqueueCampaign(campaign: CampaignType): Promise<{ enqueue
   }
 
   return { enqueued: (inserted ?? []).length };
+}
+
+/** Everyone a VIP chat campaign would reach right now, with the tier their email is written for. */
+async function vipChatRecipients(
+  admin: ReturnType<typeof supabaseAdmin>,
+  campaign: VipChatCampaign,
+): Promise<{ id: string; email: string; tier: "free" | "pro" | "vip" }[]> {
+  const [{ data: profiles }, plans, { data: opened }] = await Promise.all([
+    admin.from("profiles").select("id, email").eq("marketing_opt_out", false).not("email", "is", null),
+    livePlans(admin),
+    admin.from("vip_chat_members").select("user_id").not("last_opened_at", "is", null),
+  ]);
+  const inChat = new Set((opened ?? []).map((r) => r.user_id as string));
+  return (profiles ?? []).flatMap((p) => {
+    const tier = vipChatAudience(campaign, plans.get(p.id as string) ?? null, inChat.has(p.id as string));
+    return tier ? [{ id: p.id as string, email: p.email as string, tier }] : [];
+  });
+}
+
+async function enqueueVipChat(admin: ReturnType<typeof supabaseAdmin>, campaign: VipChatCampaign): Promise<{ enqueued: number; error?: string }> {
+  const people = await vipChatRecipients(admin, campaign);
+  if (people.length === 0) return { enqueued: 0 };
+  const { data: inserted, error } = await admin
+    .from("email_campaign_recipients")
+    .upsert(
+      people.map((p) => ({ campaign, user_id: p.id, email: p.email, tier: p.tier })),
+      { onConflict: "campaign,user_id", ignoreDuplicates: true },
+    )
+    .select("user_id");
+  if (error) return { enqueued: 0, error: "Couldn't queue recipients. Try again." };
+  return { enqueued: (inserted ?? []).length };
+}
+
+/** How many people each VIP chat campaign would reach if queued now, opted-out users excluded. */
+export async function vipChatAudienceCounts(): Promise<Record<VipChatCampaign, number>> {
+  const admin = supabaseAdmin();
+  const counts = await Promise.all(VIP_CHAT_CAMPAIGNS.map((c) => vipChatRecipients(admin, c).then((r) => r.length)));
+  return Object.fromEntries(VIP_CHAT_CAMPAIGNS.map((c, i) => [c, counts[i]])) as Record<VipChatCampaign, number>;
+}
+
+/** The Strong picks' 30-day record for the VIP chat emails, or null when there's too little to quote. */
+async function strongRecord(): Promise<string | null> {
+  const settled = await settledRecords({ sinceDays: 30 }).catch(() => null);
+  return settled ? strongRecordLine(settled.strong) : null;
+}
+
+function vipChatEmail(campaign: VipChatCampaign, tier: string | null, record: string | null, unsubscribeUrl: string) {
+  if (campaign === "vip_chat_launch") return vipChatLaunchEmail({ tier: tier === "vip" ? "vip" : "pro", record, unsubscribeUrl });
+  if (campaign === "vip_chat_reminder") return vipChatReminderEmail({ record, unsubscribeUrl });
+  return vipChatFreeEmail({ record, unsubscribeUrl });
+}
+
+/**
+ * An email as a recipient would get it, for the admin preview: no one is
+ * queued and nothing is sent. Only the announcements, whose content doesn't
+ * depend on a stored row; `tier` picks the version of the VIP chat launch.
+ */
+export async function previewCampaignEmail(campaign: CampaignType, tier: string | null): Promise<{ subject: string; html: string } | null> {
+  const unsubscribeUrl = `${SITE_URL}/unsubscribe/preview`;
+  if (isVipChatCampaign(campaign)) return vipChatEmail(campaign, tier, await strongRecord(), unsubscribeUrl);
+  if (campaign === "warm_checkin") return warmCheckInEmail({ unsubscribeUrl });
+  if (campaign === "announce_rebrand") return rebrandAnnouncementEmail({ unsubscribeUrl });
+  if (campaign === "announce_pay_once") return payOnceAnnouncementEmail({ unsubscribeUrl });
+  if (campaign === "announce_whatsapp" && WHATSAPP_COMMUNITY_URL) {
+    return whatsappCommunityAnnouncementEmail({ communityUrl: WHATSAPP_COMMUNITY_URL, unsubscribeUrl });
+  }
+  return null;
 }
 
 /** User id → the plan of their latest unfinished checkout, for people who never paid after it. */
@@ -199,6 +273,15 @@ async function buildCampaignEmail(
       nigeria: attempt.provider === "paystack",
       unsubscribeUrl,
     });
+  }
+
+  if (isVipChatCampaign(campaign)) {
+    if (campaign === "vip_chat_reminder") {
+      // Queued before they joined: the reminder no longer applies.
+      const { data: member } = await admin.from("vip_chat_members").select("last_opened_at").eq("user_id", recipient.user_id).maybeSingle();
+      if (member?.last_opened_at) return null;
+    }
+    return vipChatEmail(campaign, recipient.tier, await strongRecord(), unsubscribeUrl);
   }
 
   if (campaign === "announce_rebrand") {
@@ -266,7 +349,7 @@ export async function sendNextBatch(campaign: CampaignType, batchSize: number): 
     const unsubscribeUrl = `${SITE_URL}/unsubscribe/${recipient.id}`;
     try {
       const email = await buildCampaignEmail(admin, campaign, recipient, unsubscribeUrl);
-      if (!email) throw new Error("No content to send (missing survey row or checkout).");
+      if (!email) throw new Error("Nothing to send anymore (no survey row or checkout, or already in the VIP chat).");
 
       await sendEmail({ to: recipient.email, subject: email.subject, html: email.html, from: outreachFrom() });
       await admin

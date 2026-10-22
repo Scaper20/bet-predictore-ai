@@ -11,7 +11,7 @@ import { BillingPlans } from "@/components/billing/billing-plans";
 import { MarketPicker } from "@/components/billing/market-picker";
 import { ManageSubscriptionButton } from "@/components/billing/manage-subscription-button";
 import { BillingHistory, type PaymentRow } from "@/components/billing/billing-history";
-import { SectionHeading } from "@/components/ui/primitives";
+import { ButtonLink, SectionHeading } from "@/components/ui/primitives";
 import { availableCycles } from "@/lib/paystack/plan-codes";
 import type { BillingCycle } from "@/lib/pricing";
 
@@ -94,6 +94,15 @@ export default async function BillingPage({ searchParams }: PageProps<"/account/
           </div>
         )}
       </div>
+      {entitlement.tier === "vip" && (
+        <div className="card mx-auto mt-8 flex max-w-2xl flex-col items-start gap-4 border-brand/30 p-5 sm:flex-row sm:items-center">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-ink">Your VIP chat is waiting</p>
+            <p className="mt-1 text-sm text-ink-muted">Add the number you use on WhatsApp and join the members-only room.</p>
+          </div>
+          <ButtonLink href="/vip" className="w-full shrink-0 sm:w-auto">Open the VIP chat</ButtonLink>
+        </div>
+      )}
       <div className="mt-10">
         <BillingPlans
           currentTier={entitlement.tier}

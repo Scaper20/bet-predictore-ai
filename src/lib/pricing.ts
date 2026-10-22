@@ -88,9 +88,11 @@ export const PLANS: PlanDefinition[] = [
   {
     id: "vip",
     name: "VIP",
-    description: "Live win probability, the most questions and priority help.",
+    description: "Daily Strong picks and 2 to 10 combos in the VIP WhatsApp chat, live win probability and priority help.",
     features: [
       "Everything in Pro",
+      "The VIP chat on WhatsApp: the day's Strong picks and combos priced 2 to 10, every day before kick-off",
+      "Live calls in the big games, and your questions answered first",
       "Live in-play win probability, updating as the match unfolds",
       "Ask KiqStat: 100 questions a day",
       "Priority support: your messages go to the front of the queue",
@@ -174,9 +176,10 @@ export const PLAN_MATRIX: MatrixGroup[] = [
     ],
   },
   {
-    group: "Alerts and support",
+    group: "Alerts, chat and support",
     rows: [
       { label: "Morning picks notification", values: { free: true, pro: true, vip: true } },
+      { label: "WhatsApp", values: { free: "Free community", pro: "Free community", vip: "VIP chat" } },
       { label: "Strong pick alerts, kick-off and result", values: { free: false, pro: true, vip: true } },
       { label: "Priority support", values: { free: false, pro: false, vip: true } },
     ],

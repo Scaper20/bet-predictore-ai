@@ -253,7 +253,7 @@ export function EmptyState({
   title: string;
   description: string;
   action?: ReactNode;
-  icon?: string;
+  icon?: ReactNode;
 }) {
   return (
     <div className="card grid place-items-center px-6 py-10 sm:py-16 text-center">

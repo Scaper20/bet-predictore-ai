@@ -12,6 +12,7 @@ const BASE_NAV = [
   { href: "/admin/tickets", label: "Tickets" },
   { href: "/admin/feedback", label: "Feedback" },
   { href: "/admin/whatsapp-digest", label: "WhatsApp digest" },
+  { href: "/admin/vip-chat", label: "VIP chat" },
   { href: "/admin/outreach", label: "Outreach" },
   { href: "/admin/users", label: "Users" },
   { href: "/admin/traffic", label: "Traffic" },
