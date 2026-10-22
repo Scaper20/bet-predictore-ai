@@ -2,6 +2,7 @@ import "server-only";
 
 import webpush, { WebPushError } from "web-push";
 import type { PushPayload } from "@/lib/push/messages";
+import { topicFor } from "@/lib/push/subscription";
 
 /**
  * Sends Web Push messages with the app's VAPID keys.
@@ -70,7 +71,7 @@ export async function sendPush(
     await webpush.sendNotification(
       { endpoint: target.endpoint, keys: { p256dh: target.p256dh, auth: target.auth } },
       JSON.stringify(payload),
-      { TTL: opts.ttl, topic: opts.topic, urgency: opts.urgency ?? "normal", timeout: 10_000 },
+      { TTL: opts.ttl, topic: topicFor(target.endpoint, opts.topic), urgency: opts.urgency ?? "normal", timeout: 10_000 },
     );
     return "sent";
   } catch (err) {

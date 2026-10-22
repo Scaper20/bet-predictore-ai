@@ -73,3 +73,21 @@ export function parseTopics(value: unknown): Partial<PushTopics> {
   }
   return out;
 }
+
+/**
+ * The Topic header for a device, or none.
+ *
+ * Apple's push service (web.push.apple.com) answers every message carrying
+ * one with 400 BadWebPushTopic, even a plain "daily" that meets the spec, so
+ * the morning push never reached an iPhone. The header only folds
+ * an unread message into the next one; leaving it off for Apple costs a
+ * phone that was off all day at most a second notification.
+ */
+export function topicFor(endpoint: string, topic: string | undefined): string | undefined {
+  if (!topic) return undefined;
+  try {
+    return new URL(endpoint).hostname.endsWith(".push.apple.com") ? undefined : topic;
+  } catch {
+    return topic;
+  }
+}
