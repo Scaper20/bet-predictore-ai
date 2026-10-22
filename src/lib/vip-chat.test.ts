@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatWhatsAppNumber, normaliseInviteUrl, normaliseWhatsAppNumber, rosterStatus } from "./vip-chat";
+import { formatWhatsAppNumber, normaliseInviteUrl, normaliseWhatsAppNumber, rosterStatus, strongRecordLine } from "./vip-chat";
 
 describe("normaliseWhatsAppNumber", () => {
   it("reads Nigerian numbers written locally", () => {
@@ -53,5 +53,14 @@ describe("rosterStatus", () => {
   it("tells members who are in from those who have not joined", () => {
     expect(rosterStatus({ vip: true, openedAt: "2026-10-01", removedAt: null })).toBe("in");
     expect(rosterStatus({ vip: true, openedAt: null, removedAt: null })).toBe("not-joined");
+  });
+});
+
+describe("strongRecordLine", () => {
+  it("quotes the record with its sample", () => {
+    expect(strongRecordLine({ wins: 54, sample: 66 })).toBe("54 of 66 landed in the last 30 days, 82%");
+  });
+  it("says nothing on a small sample", () => {
+    expect(strongRecordLine({ wins: 9, sample: 10 })).toBeNull();
   });
 });

@@ -2,15 +2,21 @@ import { WHATSAPP_COMMUNITY_URL } from "@/lib/whatsapp-community";
 import { WhatsAppIcon } from "@/components/icons/whatsapp-icon";
 import { ButtonLink, ExternalButtonLink } from "@/components/ui/primitives";
 import { containerClass } from "@/components/ui/container";
+import { settledRecords } from "@/lib/performance-store";
+import { strongRecordLine } from "@/lib/vip-chat";
 
 /**
  * The two WhatsApp rooms side by side: the free community, open to anyone,
  * and the VIP chat, which /vip sells to everyone else and opens to VIP
- * members. The free card renders only when NEXT_PUBLIC_WHATSAPP_COMMUNITY_URL
- * is set (lib/whatsapp-community.ts); the VIP card always does, since /vip
- * explains itself even before the group's link is in.
+ * members, pitched on the Strong picks' live 30-day record. The free card
+ * renders only when NEXT_PUBLIC_WHATSAPP_COMMUNITY_URL is set
+ * (lib/whatsapp-community.ts); the VIP card always does, since /vip explains
+ * itself even before the group's link is in.
  */
-export function WhatsAppPromo() {
+export async function WhatsAppPromo() {
+  const settled = await settledRecords({ sinceDays: 30 }).catch(() => null);
+  const record = settled ? strongRecordLine(settled.strong) : null;
+
   return (
     <section className={`${containerClass()} py-6 sm:py-8`}>
       <div className={`grid gap-4 ${WHATSAPP_COMMUNITY_URL ? "md:grid-cols-2" : ""}`}>
@@ -51,9 +57,12 @@ export function WhatsAppPromo() {
               <h2 className="font-display text-xl font-extrabold leading-tight text-ink">VIP chat</h2>
             </div>
           </div>
-          <p className="relative mt-4 flex-1 text-sm leading-relaxed text-ink-muted">
-            A small members-only room: the day&rsquo;s best reads before kick-off, Pro leagues included, live calls
-            during the big games and your questions answered first.
+          <p className="relative mt-4 text-sm leading-relaxed text-ink-muted">
+            Every day before kick-off: the day&rsquo;s Strong picks, Pro leagues included, and four ready-made combos
+            priced about 2, 3, 5 and 10. Plus live calls in the big games.
+          </p>
+          <p className="relative mt-3 flex-1 text-sm font-medium text-ink">
+            {record ? <>Strong picks: {record}.</> : null}
           </p>
           <ButtonLink href="/vip" className="relative mt-5 w-full gap-2 sm:w-auto sm:self-start">
             <WhatsAppIcon className="size-[18px]" />

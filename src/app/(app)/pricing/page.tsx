@@ -32,7 +32,7 @@ const faqs = (sellsAbroad: boolean) => [
   },
   {
     q: "What is the VIP chat?",
-    a: "A members-only WhatsApp group that comes with VIP: the day's best reads before kick-off, Pro leagues included, live calls during the big games and your questions answered first. Join from kiqstat.app/vip with the number you use on WhatsApp; it is checked against your plan before you are let in. The free WhatsApp community stays open to everyone.",
+    a: "A members-only WhatsApp group that comes with VIP. Every day before kick-off it gets the day's Strong picks, Pro leagues included, and four ready-made combos priced about 2, 3, 5 and 10, plus live calls in the big games and your questions answered first. They are chances, not promises: every result stays on the public track record. Join from kiqstat.app/vip with the number you use on WhatsApp; it is checked against your plan before you are let in. The free WhatsApp community stays open to everyone.",
   },
   {
     q: "What happened to passes?",

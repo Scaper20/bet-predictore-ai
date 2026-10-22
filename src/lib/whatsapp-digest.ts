@@ -210,7 +210,7 @@ export function formatPicksMessage(picks: PersonalizedPick[], proHeld = 0): stri
  * Closes the daily picks message: where the free community is pointed at the
  * VIP chat (/vip sells it to anyone who isn't VIP yet).
  */
-export const VIP_LINE = `👑 VIP chat: the best reads before kick-off, live calls in the big games, questions answered first → ${SITE_URL}/vip`;
+export const VIP_LINE = `👑 VIP chat: every day's Strong picks and combos priced 2 to 10, before kick-off → ${SITE_URL}/vip`;
 
 export function formatAccaMessage(acca: DigestAcca): string {
   const legLines = acca.legs.map(
