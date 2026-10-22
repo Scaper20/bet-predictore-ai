@@ -4,12 +4,13 @@ import { useEffect, useSyncExternalStore } from "react";
 
 /**
  * Coordinates the handful of full-screen timed/celebratory overlays mounted
- * together in (app)/layout.tsx (GiftPopup, WhatsAppPopup) so at most one is
+ * together in (app)/layout.tsx (GiftPopup, the tour, the install and
+ * notification prompts) so at most one is
  * ever visible at once — two `fixed inset-0` dialogs stacking would run two
  * useOverlay focus traps and Escape handlers simultaneously. A gift is the
  * rarer, more time-sensitive one (and its "seen" state is server-side, so
- * skipping it isn't an option the way re-showing the WhatsApp popup
- * tomorrow is) — it always wins.
+ * skipping it isn't an option the way re-showing a prompt tomorrow is) —
+ * it always wins.
  */
 let active = false;
 const listeners = new Set<() => void>();
@@ -35,7 +36,7 @@ export function useClaimsPriorityPopup(showing: boolean) {
   }, [showing]);
 }
 
-/** Call from a lower-priority popup (WhatsAppPopup) to know whether the
+/** Call from a lower-priority popup (InstallPrompt) to know whether the
  * priority slot is currently held by something else. */
 export function usePriorityPopupActive(): boolean {
   return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);

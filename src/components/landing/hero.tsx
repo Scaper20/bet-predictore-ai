@@ -22,18 +22,6 @@ export function Hero({ liveCount, board }: { liveCount: number; board: ReactNode
       />
 
       <Container className="relative grid gap-8 sm:gap-14 py-10 sm:py-16 lg:grid-cols-[1.1fr_0.9fr] lg:items-center lg:gap-10 lg:py-24">
-        {/* Live board leads: today's real predictions, not marketing copy, is
-            the first thing anyone sees. No entrance animation on either
-            column: they started at opacity 0, which kept the hero out of the
-            browser's largest-paint measurement and made the page score as if
-            its main content painted seconds late. */}
-        <div>
-          {board}
-          <p className="mt-3 text-center text-xs text-ink-dim">
-            Real fixtures, straight from the live feeds.
-          </p>
-        </div>
-
         <div>
           <Badge tone="brand" className="mb-6 max-w-full">
             <ProductIcon name="globe" className="size-3.5 shrink-0" />
@@ -69,11 +57,24 @@ export function Hero({ liveCount, board }: { liveCount: number; board: ReactNode
             </ButtonLink>
           </div>
 
-          <dl className="mt-12 grid max-w-lg grid-cols-3 gap-6">
+          <dl className="mt-8 grid max-w-lg grid-cols-3 gap-6 sm:mt-12">
             <Stat value={`${LEAGUES.length}`} label="Competitions covered" />
             <Stat value="Free" label="No card required" />
             <Stat value="18+" label="Use responsibly" />
           </dl>
+        </div>
+
+        {/* On a phone the headline and its buttons come first, so the page
+            says what KiqStat is before showing it; from lg the board takes
+            the left column. No entrance animation on either column: they
+            started at opacity 0, which kept the hero out of the browser's
+            largest-paint measurement and made the page score as if its main
+            content painted seconds late. */}
+        <div className="lg:order-first">
+          {board}
+          <p className="mt-3 text-center text-xs text-ink-dim">
+            Real fixtures, straight from the live feeds.
+          </p>
         </div>
       </Container>
     </section>

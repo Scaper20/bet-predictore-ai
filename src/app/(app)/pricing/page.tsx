@@ -31,6 +31,10 @@ const faqs = (sellsAbroad: boolean) => [
     a: "No. Every pick and every prediction type on every match is free, along with live scores, fixtures and results. Pro adds winning margins, half-time predictions, the full breakdowns, value against the market price and more from Forge and Ask KiqStat.",
   },
   {
+    q: "What is the VIP chat?",
+    a: "A members-only WhatsApp group that comes with VIP: the day's best reads before kick-off, Pro leagues included, live calls during the big games and your questions answered first. Join from kiqstat.app/vip with the number you use on WhatsApp; it is checked against your plan before you are let in. The free WhatsApp community stays open to everyone.",
+  },
+  {
     q: "What happened to passes?",
     a: "Passes are no longer sold; everything they unlocked is now in Pro. A pass you already bought keeps working until it runs out.",
   },

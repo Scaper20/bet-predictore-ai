@@ -1,45 +1,65 @@
 import { WHATSAPP_COMMUNITY_URL } from "@/lib/whatsapp-community";
 import { WhatsAppIcon } from "@/components/icons/whatsapp-icon";
-import { ExternalButtonLink } from "@/components/ui/primitives";
+import { ButtonLink, ExternalButtonLink } from "@/components/ui/primitives";
 import { containerClass } from "@/components/ui/container";
 
-/** Renders nothing until NEXT_PUBLIC_WHATSAPP_COMMUNITY_URL is set — see
- * that file for why. */
+/**
+ * The two WhatsApp rooms side by side: the free community, open to anyone,
+ * and the VIP chat, which /vip sells to everyone else and opens to VIP
+ * members. The free card renders only when NEXT_PUBLIC_WHATSAPP_COMMUNITY_URL
+ * is set (lib/whatsapp-community.ts); the VIP card always does, since /vip
+ * explains itself even before the group's link is in.
+ */
 export function WhatsAppPromo() {
-  if (!WHATSAPP_COMMUNITY_URL) return null;
-
   return (
     <section className={`${containerClass()} py-6 sm:py-8`}>
-      <div className="card relative flex flex-col items-start gap-6 overflow-hidden p-6 sm:flex-row sm:items-center sm:p-8">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0"
-          style={{ background: "radial-gradient(480px 220px at 85% 15%, color-mix(in oklab, var(--color-brand) 10%, transparent), transparent)" }}
-        />
+      <div className={`grid gap-4 ${WHATSAPP_COMMUNITY_URL ? "md:grid-cols-2" : ""}`}>
+        {WHATSAPP_COMMUNITY_URL && (
+          <div className="card relative flex flex-col overflow-hidden p-6 sm:p-7">
+            <div className="flex items-center gap-3">
+              <span className="grid size-11 shrink-0 place-items-center rounded-xl border border-line bg-surface-2 text-ink">
+                <WhatsAppIcon className="size-6" />
+              </span>
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-ink-dim">Free</p>
+                <h2 className="font-display text-xl font-extrabold leading-tight text-ink">WhatsApp community</h2>
+              </div>
+            </div>
+            <p className="mt-4 flex-1 text-sm leading-relaxed text-ink-muted">
+              One message a day before kick-off with today&rsquo;s picks from the free leagues. Open to everyone,
+              leave anytime.
+            </p>
+            <ExternalButtonLink href={WHATSAPP_COMMUNITY_URL} variant="secondary" className="mt-5 w-full gap-2 sm:w-auto sm:self-start">
+              <WhatsAppIcon className="size-[18px]" />
+              Join free
+            </ExternalButtonLink>
+          </div>
+        )}
 
-        <div className="relative flex size-14 shrink-0 items-center justify-center rounded-2xl border border-brand/25 bg-brand/12 text-brand">
-          <WhatsAppIcon className="size-7" />
-        </div>
-
-        <div className="relative min-w-0 flex-1">
-          <span className="text-xs font-bold uppercase tracking-[0.14em] text-brand">New</span>
-          <h2 className="font-display mt-1 text-2xl font-extrabold leading-tight text-ink">
-            Get today&rsquo;s value picks on WhatsApp
-          </h2>
-          <p className="mt-2 max-w-xl text-sm leading-relaxed text-ink-muted">
-            Join the community — one message a day, before kickoff, to everyone at once. Only
-            picks that clear our sample-size bar. Free, leave anytime.
+        <div className="card relative flex flex-col overflow-hidden border-brand/30 p-6 sm:p-7">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0"
+            style={{ background: "radial-gradient(420px 200px at 90% 0%, color-mix(in oklab, var(--color-brand) 12%, transparent), transparent)" }}
+          />
+          <div className="relative flex items-center gap-3">
+            <span className="grid size-11 shrink-0 place-items-center rounded-xl border border-brand/25 bg-brand/12 text-brand">
+              <WhatsAppIcon className="size-6" />
+            </span>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-brand">VIP</p>
+              <h2 className="font-display text-xl font-extrabold leading-tight text-ink">VIP chat</h2>
+            </div>
+          </div>
+          <p className="relative mt-4 flex-1 text-sm leading-relaxed text-ink-muted">
+            A small members-only room: the day&rsquo;s best reads before kick-off, Pro leagues included, live calls
+            during the big games and your questions answered first.
           </p>
+          <ButtonLink href="/vip" className="relative mt-5 w-full gap-2 sm:w-auto sm:self-start">
+            <WhatsAppIcon className="size-[18px]" />
+            See the VIP chat
+          </ButtonLink>
         </div>
-
-        <ExternalButtonLink
-          href={WHATSAPP_COMMUNITY_URL}
-          className="relative w-full shrink-0 gap-2 sm:w-auto"
-          variant="primary"
-        >
-          <WhatsAppIcon className="size-[18px]" />
-          Join the WhatsApp community
-        </ExternalButtonLink>
       </div>
     </section>
   );

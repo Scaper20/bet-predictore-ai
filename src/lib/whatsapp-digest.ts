@@ -203,8 +203,14 @@ export function formatPicksMessage(picks: PersonalizedPick[], proHeld = 0): stri
       ? `🔒 +${proHeld} more pick${proHeld === 1 ? "" : "s"} today in Pro leagues (Champions League, Serie A, Bundesliga and more), for Pro members before kick-off → ${SITE_URL}/pricing`
       : null;
 
-  return [header, ...lines, ...(pro ? [pro] : []), footer].join("\n\n");
+  return [header, ...lines, ...(pro ? [pro] : []), footer, VIP_LINE].join("\n\n");
 }
+
+/**
+ * Closes the daily picks message: where the free community is pointed at the
+ * VIP chat (/vip sells it to anyone who isn't VIP yet).
+ */
+export const VIP_LINE = `👑 VIP chat: the best reads before kick-off, live calls in the big games, questions answered first → ${SITE_URL}/vip`;
 
 export function formatAccaMessage(acca: DigestAcca): string {
   const legLines = acca.legs.map(
@@ -235,6 +241,7 @@ export function buildDigestFromPicks(picks: PersonalizedPick[], proHeld = 0): Da
         "*KiqStat — Today's Picks*",
         `All ${proHeld} of today's picks are in Pro leagues (Champions League, Serie A, Bundesliga and more). Pro members have them now; everyone sees them at kick-off.`,
         `${SITE_URL}/pricing`,
+        VIP_LINE,
       ].join("\n\n"),
       accaMessages: [],
     };
