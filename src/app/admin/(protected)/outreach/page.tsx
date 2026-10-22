@@ -1,10 +1,42 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { getOutreachOverview } from "@/app/actions/admin/outreach";
 import { OutreachCampaignPanel } from "@/components/admin/outreach-campaign-panel";
 import { Badge, ButtonLink } from "@/components/ui/primitives";
-import type { CampaignType } from "@/lib/outreach";
+import type { CampaignType, VipChatCampaign } from "@/lib/outreach";
 
 export const metadata: Metadata = { title: "Outreach" };
+
+const preview = (campaign: CampaignType, tier?: string) =>
+  `/admin/outreach/preview?campaign=${campaign}${tier ? `&tier=${tier}` : ""}`;
+
+/** The VIP chat launch, in the order to send it. */
+const VIP_CHAT: { type: VipChatCampaign; label: string; description: string; previews: { label: string; href: string }[] }[] = [
+  {
+    type: "vip_chat_launch",
+    label: "1 · VIP chat launch: Pro and VIP",
+    description:
+      "Everyone on a live Pro or VIP plan, paid or gifted. VIP members are invited to join; Pro members hear what VIP now adds. Both carry the Strong picks' live 30-day record.",
+    previews: [
+      { label: "Preview VIP version", href: preview("vip_chat_launch", "vip") },
+      { label: "Preview Pro version", href: preview("vip_chat_launch", "pro") },
+    ],
+  },
+  {
+    type: "vip_chat_reminder",
+    label: "2 · VIP chat reminder: VIP only",
+    description:
+      "VIP members who haven't opened the chat yet. Send a few days after the launch; anyone who joins in the meantime is skipped, even if already queued.",
+    previews: [{ label: "Preview", href: preview("vip_chat_reminder") }],
+  },
+  {
+    type: "vip_chat_free",
+    label: "3 · VIP chat for free users",
+    description:
+      "Everyone not on a live paid plan: the daily Strong picks and 2 to 10 combos in the VIP chat, the 30-day record and the latest winning picks, linking to /vip.",
+    previews: [{ label: "Preview", href: preview("vip_chat_free") }],
+  },
+];
 
 const CAMPAIGNS: { type: CampaignType; label: string; description: string }[] = [
   {
@@ -75,6 +107,31 @@ export default async function AdminOutreachPage() {
         <Badge tone="neutral">{overview.segments.optedOut} opted out</Badge>
       </div>
 
+      <section className="space-y-3">
+        <div>
+          <h2 className="text-sm font-semibold text-ink">VIP chat launch</h2>
+          <p className="mt-1 max-w-2xl text-xs text-ink-muted">
+            Three emails, in this order. Set the group&rsquo;s invite link in{" "}
+            <Link href="/admin/vip-chat" className="text-brand underline underline-offset-2">VIP chat</Link> before sending the
+            first, or VIP members will find no join button. Preview each before queuing.
+          </p>
+        </div>
+        <div className="grid gap-4 lg:grid-cols-3">
+          {VIP_CHAT.map((c) => (
+            <OutreachCampaignPanel
+              key={c.type}
+              campaign={c.type}
+              label={c.label}
+              description={c.description}
+              initialProgress={overview.progress[c.type]}
+              audience={overview.audience[c.type]}
+              previews={c.previews}
+            />
+          ))}
+        </div>
+      </section>
+
+      <h2 className="pt-2 text-sm font-semibold text-ink">Other campaigns</h2>
       <div className="grid gap-4 sm:grid-cols-2">
         {CAMPAIGNS.map((c) => (
           <OutreachCampaignPanel

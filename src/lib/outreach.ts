@@ -7,7 +7,38 @@ export type CampaignType =
   | "announce_whatsapp"
   | "announce_rebrand"
   | "checkout_reminder"
-  | "announce_pay_once";
+  | "announce_pay_once"
+  | "vip_chat_launch"
+  | "vip_chat_reminder"
+  | "vip_chat_free";
+/** The VIP chat campaigns, which pick their audience by live plan (vipChatAudience). */
+export const VIP_CHAT_CAMPAIGNS = ["vip_chat_launch", "vip_chat_reminder", "vip_chat_free"] as const;
+export type VipChatCampaign = (typeof VIP_CHAT_CAMPAIGNS)[number];
+
+export function isVipChatCampaign(c: CampaignType): c is VipChatCampaign {
+  return (VIP_CHAT_CAMPAIGNS as readonly string[]).includes(c);
+}
+
+/**
+ * Who a VIP chat campaign goes to, given each user's live plan (paid or
+ * gifted, expiry respected) and whether they have opened the chat:
+ *
+ * - vip_chat_launch: everyone on a live Pro or VIP plan.
+ * - vip_chat_reminder: VIP members who haven't opened the chat yet.
+ * - vip_chat_free: everyone not on a live paid plan.
+ *
+ * Returns the tier to record and template by, or null to leave them out.
+ */
+export function vipChatAudience(
+  campaign: VipChatCampaign,
+  plan: "pro" | "vip" | null,
+  openedChat: boolean,
+): "free" | "pro" | "vip" | null {
+  if (campaign === "vip_chat_launch") return plan;
+  if (campaign === "vip_chat_reminder") return plan === "vip" && !openedChat ? "vip" : null;
+  return plan === null ? "free" : null;
+}
+
 export type SurveyType = Extract<CampaignType, "survey_subscribed" | "survey_free">;
 
 /**
