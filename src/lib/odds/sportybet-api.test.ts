@@ -2,12 +2,14 @@ import { describe, expect, it } from "vitest";
 import upcoming from "./__fixtures__/sportybet-upcoming.json";
 import share from "./__fixtures__/sportybet-share.json";
 import resultsFixture from "./__fixtures__/sportybet-results.json";
+import shareBuilder from "./__fixtures__/sportybet-share-builder.json";
 import {
   builderRequest,
   parseBuilderQuote,
   parseEventResult,
   parseResults,
   parseShareResponse,
+  parseShareTicket,
   parseTournamentList,
   parseUpcoming,
   scoreVerdict,
@@ -194,5 +196,26 @@ describe("Bet Builder pricing", () => {
     expect(
       shareRequest([{ eventId: "sr:match:1", marketId: "29", outcomeId: "74", parentBetBuilderMarketId: "bb1" }]).selections[0],
     ).toEqual({ eventId: "sr:match:1", marketId: "29", specifier: null, outcomeId: "74", parentBetBuilderMarketId: "bb1" });
+  });
+});
+
+describe("parseShareTicket", () => {
+  it("reads every selection with its game, price and builder parent", () => {
+    const t = parseShareTicket(shareBuilder)!;
+    expect(t.code).toBe("YNTG36");
+    expect(t.legs).toHaveLength(5);
+    const [home, over, gg, combo, single] = t.legs;
+    expect(home).toMatchObject({ eventId: "sr:match:72221334", marketId: "1", outcomeId: "1", homeName: "Aston Villa", awayName: "Man City" });
+    expect(home.parentBetBuilderMarketId).toBeTruthy();
+    expect(over.parentBetBuilderMarketId).toBe(home.parentBetBuilderMarketId);
+    expect(gg.specifier).toBeUndefined();
+    expect(combo).toMatchObject({ marketId: "37", specifier: "total=1.5", outcomeId: "804", homeName: "Arsenal" });
+    expect(combo.parentBetBuilderMarketId).toBeUndefined();
+    expect(single.odds).toBeGreaterThan(1);
+    expect(single.tournamentId).toBe("sr:tournament:17");
+  });
+
+  it("refuses an invalid code", () => {
+    expect(parseShareTicket({ bizCode: 19000, message: "The code is invalid." })).toBeNull();
   });
 });

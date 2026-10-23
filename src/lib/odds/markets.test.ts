@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isQuotable, matchesSelection, offeredOn, readOdds, toSportyBet, toSportyBetBuilder } from "./markets";
+import { builderCombo, fromSportyBet, isQuotable, matchesSelection, offeredOn, readOdds, toSportyBet, toSportyBetBuilder } from "./markets";
 
 describe("toSportyBet", () => {
   it("maps every market family the model publishes", () => {
@@ -156,5 +156,34 @@ describe("toSportyBetBuilder", () => {
     expect(toSportyBetBuilder("combo:1x2:home+ou:over:2+btts:yes")).toBeNull();
     expect(toSportyBetBuilder("combo:1x2:home+ah:home:-1")).toBeNull();
     expect(toSportyBetBuilder("1x2:home")).toBeNull();
+  });
+});
+
+describe("fromSportyBet", () => {
+  it("reverses every market we map, ready-made combos included", () => {
+    const ours = [
+      "1x2:home", "1x2:draw", "1x2:away",
+      "dc:home-draw", "dc:home-away", "dc:away-draw",
+      "btts:yes", "btts:no",
+      "ou:over:2.5", "ou:under:1.5", "ou:over:3",
+      "ah:home:-1.5", "ah:away:1.5", "ah:home:0", "ah:away:-0.5",
+      "combo:1x2:home+ou:over:2.5", "combo:1x2:draw+btts:no", "combo:ou:under:2.5+btts:yes",
+      "combo:dc:away-draw+ou:over:3.5", "combo:dc:home-away+btts:yes",
+    ];
+    for (const m of ours) {
+      const sel = toSportyBet(m)!;
+      expect(fromSportyBet(sel), m).toBe(m);
+    }
+  });
+
+  it("returns null for markets we don't read", () => {
+    expect(fromSportyBet({ marketId: "45", outcomeId: "274" })).toBeNull();
+    expect(fromSportyBet({ marketId: "18", outcomeId: "12", specifier: "total=abc" })).toBeNull();
+    expect(fromSportyBet({ marketId: "1", outcomeId: "9" })).toBeNull();
+  });
+
+  it("joins a Bet Builder's parts into one combo id", () => {
+    expect(builderCombo(["1x2:home", "ou:over:2.5", "btts:yes"])).toBe("combo:1x2:home+ou:over:2.5+btts:yes");
+    expect(builderCombo(["1x2:home"])).toBeNull();
   });
 });

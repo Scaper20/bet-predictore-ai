@@ -272,3 +272,63 @@ export function readOdds(raw: unknown): number | undefined {
   const value = Number(trimmed);
   return Number.isFinite(value) && value > 1 ? value : undefined;
 }
+
+const invert = (table: Record<string, string>) => Object.fromEntries(Object.entries(table).map(([k, v]) => [v, k]));
+const FROM_1X2 = invert(ONE_X_TWO);
+const FROM_DC = invert(DOUBLE_CHANCE);
+const FROM_BTTS = invert(BTTS);
+const FROM_TOTALS = invert(TOTALS);
+const FROM_HANDICAP = invert(HANDICAP);
+
+/** One part of a combo outcome key ("home", "under", "yes", ...) back to our market id. */
+function comboPart(family: string, value: string, line: string | undefined): string | null {
+  if (family === "1x2") return `1x2:${value}`;
+  if (family === "dc") return `dc:${value}`;
+  if (family === "btts") return `btts:${value}`;
+  if (family === "ou") return line ? `ou:${value}:${line}` : null;
+  return null;
+}
+
+/**
+ * Our market id for a SportyBet selection, or null for anything we do not
+ * map (correct score, corners, players, ...). The exact reverse of
+ * toSportyBet, ready-made combo markets included, so a code read back from
+ * SportyBet (code-scan.ts) speaks the same language as our picks.
+ */
+export function fromSportyBet(sel: SportyBetSelection): string | null {
+  const { marketId, outcomeId, specifier } = sel;
+  if (marketId === "1") return FROM_1X2[outcomeId] ? `1x2:${FROM_1X2[outcomeId]}` : null;
+  if (marketId === "10") return FROM_DC[outcomeId] ? `dc:${FROM_DC[outcomeId]}` : null;
+  if (marketId === "29") return FROM_BTTS[outcomeId] ? `btts:${FROM_BTTS[outcomeId]}` : null;
+  if (marketId === "18") {
+    const line = specifier?.match(/^total=(\d+(?:\.\d+)?)$/)?.[1];
+    return line && FROM_TOTALS[outcomeId] ? `ou:${FROM_TOTALS[outcomeId]}:${line}` : null;
+  }
+  if (marketId === "16") {
+    const raw = specifier?.match(/^hcp=(-?\d+(?:\.\d+)?)$/)?.[1];
+    const side = FROM_HANDICAP[outcomeId];
+    if (raw === undefined || !side) return null;
+    const home = Number(raw);
+    const line = side === "home" ? home : -home;
+    return `ah:${side}:${line === 0 ? 0 : line}`;
+  }
+  for (const [families, combo] of Object.entries(COMBO_MARKETS)) {
+    if (combo.marketId !== marketId) continue;
+    const key = Object.entries(combo.outcomes).find(([, id]) => id === outcomeId)?.[0];
+    if (!key) return null;
+    const line = combo.lined ? specifier?.match(/^total=(\d+\.5)$/)?.[1] : undefined;
+    if (combo.lined && !line) return null;
+    const [fa, fb] = families.split("&");
+    const [va, vb] = key.split("&");
+    const a = comboPart(fa, va, line);
+    const b = comboPart(fb, vb, line);
+    return a && b ? `${COMBO}${a}+${b}` : null;
+  }
+  return null;
+}
+
+/** A Bet Builder's parts (each a single market of ours) as one combo id. */
+export function builderCombo(parts: readonly string[]): string | null {
+  if (parts.length < 2 || parts.some((p) => p.startsWith(COMBO))) return null;
+  return `${COMBO}${parts.join("+")}`;
+}

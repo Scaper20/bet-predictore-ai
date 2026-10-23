@@ -9,12 +9,14 @@ import {
   parseEventResult,
   parseResults,
   parseShareResponse,
+  parseShareTicket,
   parseTournamentList,
   parseUpcoming,
   shareRequest,
   type BuilderQuote,
   type EventResult,
   type SportyBetEvent,
+  type Ticket,
   type TournamentEntry,
 } from "./sportybet-api";
 
@@ -282,4 +284,11 @@ export async function fetchResults(tournamentId: string, from: number, to: numbe
 export async function fetchEventResult(eventId: string): Promise<EventResult | null> {
   if (!/^sr:match:\d+$/.test(eventId)) return null;
   return parseEventResult(await call(`/factsCenter/event?eventId=${eventId}&productId=3`));
+}
+
+/** A shared code read back in full: every selection with its game and current price. */
+export async function readShareTicket(code: string): Promise<Ticket | null> {
+  const clean = code.trim().toUpperCase();
+  if (!/^[A-Z0-9]{4,12}$/.test(clean)) return null;
+  return parseShareTicket(await call(`/orders/share/${encodeURIComponent(clean)}`));
 }

@@ -14,6 +14,7 @@ import { switchOn } from "@/lib/switches";
 import { bookingAvailable } from "@/lib/odds/booking-code";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { WaitlistWall } from "@/components/code-hub/waitlist-wall";
+import { CodeEditor } from "@/components/code-hub/code-editor";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/football/code-hub" },
@@ -114,6 +115,8 @@ export default async function CodeHubPage() {
             </div>
           )}
         </section>
+
+        <CodeEditor signedIn={entitlement.signedIn || preview} />
 
         <section className="grid gap-4 text-sm text-ink-muted sm:grid-cols-3">
           <HowItem title="Built by the model">

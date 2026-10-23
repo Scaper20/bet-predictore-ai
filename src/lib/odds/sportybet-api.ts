@@ -332,3 +332,84 @@ export function scoreVerdict(ours: { home: number; away: number }, theirs: Event
   }
   return "mismatch";
 }
+
+/** One selection on a shared code, with the game it is on, as SportyBet loads it. */
+export interface TicketLeg {
+  eventId: string;
+  marketId: string;
+  outcomeId: string;
+  specifier?: string;
+  /** Set on every part of a Bet Builder; the parts share it. */
+  parentBetBuilderMarketId?: string;
+  homeName: string | null;
+  awayName: string | null;
+  kickoff: number | null;
+  tournamentId: string | null;
+  /** SportyBet's own label for the pick, e.g. "Home & Over 2.5". */
+  desc: string | null;
+  /** The price SportyBet quotes now (codes hold picks, not prices). */
+  odds: number | null;
+}
+
+export interface Ticket {
+  code: string;
+  deadline: number | null;
+  legs: TicketLeg[];
+}
+
+/**
+ * A shared code read back in full (GET /orders/share/{code}): every
+ * selection, joined to the game and current price SportyBet returns beside
+ * it. Null for an invalid or expired code.
+ */
+export function parseShareTicket(body: unknown): Ticket | null {
+  const data = okData(body);
+  if (!data) return null;
+  const code = text(data.shareCode);
+  const ticket = data.ticket as { selections?: unknown[] } | undefined;
+  if (!code || !Array.isArray(ticket?.selections) || ticket.selections.length === 0) return null;
+
+  interface ApiTicketOutcome extends ApiEvent {
+    markets?: (ApiMarket & { desc?: unknown; outcomes?: (ApiOutcome & { desc?: unknown })[] })[];
+  }
+  const outcomes = (Array.isArray(data.outcomes) ? data.outcomes : []) as ApiTicketOutcome[];
+  const legs: TicketLeg[] = [];
+  for (const raw of ticket.selections as Record<string, unknown>[]) {
+    const eventId = text(raw.eventId);
+    const marketId = text(raw.marketId) ?? (typeof raw.marketId === "number" ? String(raw.marketId) : null);
+    const outcomeId = text(raw.outcomeId) ?? (typeof raw.outcomeId === "number" ? String(raw.outcomeId) : null);
+    if (!eventId || !marketId || !outcomeId) continue;
+    const specifier = text(raw.specifier) ?? undefined;
+    // SportyBet returns one outcome entry per selection, carrying that
+    // selection's own market and outcome; match on all four ids.
+    const event = outcomes.find(
+      (o) =>
+        text(o.eventId) === eventId &&
+        (o.markets ?? []).some(
+          (m) =>
+            String(m.id) === marketId &&
+            (text(m.specifier) ?? undefined) === specifier &&
+            (m.outcomes ?? []).some((x) => String(x.id) === outcomeId),
+        ),
+    );
+    const market = event?.markets?.find((m) => String(m.id) === marketId && (text(m.specifier) ?? undefined) === specifier);
+    const outcome = market?.outcomes?.find((x) => String(x.id) === outcomeId);
+    const kickoff = Number(event?.estimateStartTime);
+    const odds = Number(outcome?.odds);
+    legs.push({
+      eventId,
+      marketId,
+      outcomeId,
+      ...(specifier ? { specifier } : {}),
+      ...(text(raw.parentBetBuilderMarketId) ? { parentBetBuilderMarketId: text(raw.parentBetBuilderMarketId)! } : {}),
+      homeName: text(event?.homeTeamName),
+      awayName: text(event?.awayTeamName),
+      kickoff: Number.isFinite(kickoff) && kickoff > 0 ? kickoff : null,
+      tournamentId: text(event?.sport?.category?.tournament?.id),
+      desc: text((outcome as { desc?: unknown } | undefined)?.desc),
+      odds: Number.isFinite(odds) && odds > 1 ? odds : null,
+    });
+  }
+  const deadline = Number(data.deadline);
+  return legs.length ? { code: code.toUpperCase(), deadline: Number.isFinite(deadline) ? deadline : null, legs } : null;
+}
