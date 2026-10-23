@@ -21,6 +21,7 @@ const VERDICT: Record<Verdict, { tone: "brand" | "neutral" | "amber" | "rose"; l
   fair: { tone: "neutral", label: "Fair" },
   risky: { tone: "rose", label: "Risky" },
   unreadable: { tone: "amber", label: "Can't read" },
+  locked: { tone: "neutral", label: "Pro" },
 };
 
 /** The edited code as slip legs, which the booking route already understands. */
@@ -221,7 +222,7 @@ function EditedCard({ result, before, mode }: { result: EditResult; before: Scan
         <p className="mt-3 text-xs text-ink-dim">
           Left off:{" "}
           {left.map((g) => `${g.homeName ?? "?"} v ${g.awayName ?? "?"}`).join(", ")}. A game is left off when it starts
-          within 10 minutes or we can&apos;t read it.
+          within 10 minutes, we can&apos;t read it, or its read is Pro-only until kick-off.
         </p>
       )}
       <div className="mt-4 border-t border-line pt-4">

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getEntitlement } from "@/lib/entitlements";
-import { scanCode } from "@/lib/code-scan";
+import { viewerForTier } from "@/lib/viewer";
+import { scanCode, scanForViewer } from "@/lib/code-scan";
 
 /**
  * Reads any SportyBet code and returns the model's read of every game in it
@@ -40,7 +41,9 @@ export async function POST(request: Request) {
   if (!/^[A-Z0-9]{4,12}$/.test(code)) {
     return NextResponse.json({ error: "That doesn't look like a SportyBet code." }, { status: 400, headers: NO_STORE });
   }
-  const scan = await scanCode(code).catch(() => null);
+  const read = await scanCode(code).catch(() => null);
+  // Pro-league games stay locked for a free viewer until kick-off, as on every other page.
+  const scan = read ? scanForViewer(read, await viewerForTier(entitlement.tier)) : null;
   if (!scan) {
     return NextResponse.json(
       { error: "SportyBet doesn't recognise that code, or it has expired." },

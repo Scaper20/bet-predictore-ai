@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Badge, Button, Input, Spinner } from "@/components/ui/primitives";
 import { LocalTime } from "@/components/ui/local-time";
 import { odds, percent } from "@/lib/format";
-import type { CommunityPost } from "@/lib/code-hub-posts";
+import type { CommunityPost } from "@/lib/code-hub-posts-core";
 import { POSTS_PER_DAY } from "@/lib/code-hub-posts-core";
 
 const SHARE = (code: string) => `https://www.sportybet.com/ng/?shareCode=${encodeURIComponent(code)}`;
@@ -167,7 +167,13 @@ function PostCard({ post, rank, highlight = false }: { post: CommunityPost; rank
         <Stat label="SportyBet odds" value={post.odds === null ? "–" : odds(post.odds)} />
         <Stat
           label="Our chance"
-          value={post.chance === null ? `${post.readable} of ${post.games.length} read` : percent(post.chance, post.chance < 0.1 ? 1 : 0)}
+          value={
+            post.chance !== null
+              ? percent(post.chance, post.chance < 0.1 ? 1 : 0)
+              : post.games.some((g) => g.verdict === "locked")
+                ? "With Pro"
+                : `${post.readable} of ${post.games.length} read`
+          }
         />
       </dl>
 
@@ -204,7 +210,7 @@ function PostCard({ post, rank, highlight = false }: { post: CommunityPost; rank
               <span className="flex shrink-0 items-center gap-2">
                 {g.probability !== null && <span className="font-mono text-xs text-ink-muted">{percent(g.probability)}</span>}
                 <Badge tone={g.verdict === "strong" ? "brand" : g.verdict === "risky" ? "rose" : g.verdict === "unreadable" ? "amber" : "neutral"}>
-                  {g.verdict === "unreadable" ? "Can't read" : g.verdict[0].toUpperCase() + g.verdict.slice(1)}
+                  {g.verdict === "unreadable" ? "Can't read" : g.verdict === "locked" ? "Pro" : g.verdict[0].toUpperCase() + g.verdict.slice(1)}
                 </Badge>
               </span>
             </li>

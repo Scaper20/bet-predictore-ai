@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import shareBuilder from "@/lib/odds/__fixtures__/sportybet-share-builder.json";
 import { parseShareTicket } from "@/lib/odds/sportybet-api";
-import { gamesFromTicket, scoreCode, verdictFor, type ScoredGame } from "./code-scan-core";
+import { gamesFromTicket, lockGames, scoreCode, verdictFor, type ScoredGame } from "./code-scan-core";
 
 describe("gamesFromTicket", () => {
   it("turns a Bet Builder into one same-game combo and keeps the rest as they are", () => {
@@ -42,5 +42,19 @@ describe("scoreCode", () => {
 
   it("uses the site's risk bands", () => {
     expect([0.7, 0.65, 0.5, 0.44, null].map(verdictFor)).toEqual(["strong", "strong", "fair", "risky", "unreadable"]);
+  });
+});
+
+describe("lockGames", () => {
+  const g = (matchId: string, probability: number): ScoredGame => ({
+    eventId: matchId, market: "1x2:home", homeName: "A", awayName: "B", kickoff: 1, tournamentId: null, desc: null,
+    price: 1.5, builder: false, matchId, leagueCode: "x", probability, label: "A", verdict: verdictFor(probability),
+  });
+
+  it("hides the chance of a locked game, and with it the code's", () => {
+    const out = lockGames([g("open", 0.7), g("pro", 0.6)], (x) => x.matchId === "pro");
+    expect(out[0]).toMatchObject({ probability: 0.7, verdict: "strong" });
+    expect(out[1]).toMatchObject({ probability: null, verdict: "locked" });
+    expect(scoreCode(out).chance).toBeNull();
   });
 });

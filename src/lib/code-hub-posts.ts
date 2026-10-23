@@ -1,9 +1,10 @@
 import "server-only";
 
 import { scanCode } from "@/lib/code-scan";
-import type { ScoredGame } from "@/lib/code-scan-core";
 import { cached } from "@/lib/providers/cache";
 import { POSTS_PER_DAY, byRank, gradeCode, rankScore, recordOf, type PosterRecord } from "./code-hub-posts-core";
+
+export { posterName, postForViewer } from "./code-hub-posts-core";
 
 /**
  * Community codes on the Code Hub (0070_code_hub_posts.sql): members post a
@@ -12,34 +13,8 @@ import { POSTS_PER_DAY, byRank, gradeCode, rankScore, recordOf, type PosterRecor
  * the settlement pass.
  */
 
-export interface PostGame {
-  matchId: string | null;
-  market: string | null;
-  label: string;
-  homeName: string | null;
-  awayName: string | null;
-  kickoff: number | null;
-  probability: number | null;
-  verdict: ScoredGame["verdict"];
-}
-
-export interface CommunityPost {
-  id: number;
-  code: string;
-  authorName: string;
-  record: PosterRecord;
-  postedAt: string;
-  games: PostGame[];
-  readable: number;
-  odds: number | null;
-  chance: number | null;
-  fairness: number | null;
-  score: number;
-  firstKickoff: string;
-  lastKickoff: string;
-  status: "live" | "settled" | "removed";
-  result: "won" | "lost" | "void" | null;
-}
+export type { CommunityPost, PostGame } from "./code-hub-posts-core";
+import type { CommunityPost, PostGame } from "./code-hub-posts-core";
 
 async function admin() {
   const { supabaseAdmin } = await import("@/lib/supabase/admin");
@@ -164,6 +139,7 @@ export async function postCode(userId: string, authorName: string, code: string)
 
   const games: PostGame[] = scan.games.map((g) => ({
     matchId: g.matchId,
+    leagueCode: g.leagueCode,
     market: g.market,
     label: g.label,
     homeName: g.homeName,
@@ -197,12 +173,6 @@ export async function postCode(userId: string, authorName: string, code: string)
   }
   const recs = await records([userId]);
   return { ok: true, post: fromRow(data as Row, recs.get(userId) ?? { landed: 0, missed: 0 }) };
-}
-
-/** A poster's display name: their profile name, else the start of their email. */
-export function posterName(displayName: string | null, email: string | null): string {
-  const name = displayName?.trim() || email?.split("@")[0]?.trim() || "Member";
-  return name.slice(0, 24);
 }
 
 /**

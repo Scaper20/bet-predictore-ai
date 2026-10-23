@@ -4,6 +4,8 @@
  * writing.
  */
 import { evaluatePick, type PickResult } from "@/lib/settlement";
+import { proLeagueLocked, type Viewer } from "@/lib/access";
+import type { ScoredGame } from "@/lib/code-scan-core";
 
 /** Below this chance a code sinks to the bottom, however well it is priced. */
 export const LONGSHOT_CHANCE = 0.03;
@@ -75,4 +77,69 @@ export function recordOf(results: readonly (string | null)[]): PosterRecord {
     landed: results.filter((r) => r === "won").length,
     missed: results.filter((r) => r === "lost").length,
   };
+}
+
+export interface PostGame {
+  matchId: string | null;
+  /** Our league code, for the Pro lock when the post is shown (absent on posts before it was kept). */
+  leagueCode?: string | null;
+  market: string | null;
+  label: string;
+  homeName: string | null;
+  awayName: string | null;
+  kickoff: number | null;
+  probability: number | null;
+  verdict: ScoredGame["verdict"];
+}
+
+export interface CommunityPost {
+  id: number;
+  code: string;
+  authorName: string;
+  record: PosterRecord;
+  postedAt: string;
+  games: PostGame[];
+  readable: number;
+  odds: number | null;
+  chance: number | null;
+  fairness: number | null;
+  score: number;
+  firstKickoff: string;
+  lastKickoff: string;
+  status: "live" | "settled" | "removed";
+  result: "won" | "lost" | "void" | null;
+}
+
+/**
+ * A poster's public name: their profile name, else "Member" and a short tag
+ * from their account id. Never any part of their email, which is private.
+ * The tag only tells two nameless posters apart; it is not a secret.
+ */
+export function posterName(displayName: string | null, userId: string): string {
+  const name = displayName?.trim().replace(/\s+/g, " ");
+  if (name) return name.slice(0, 24);
+  let h = 0x811c9dc5;
+  for (let i = 0; i < userId.length; i++) h = Math.imul(h ^ userId.charCodeAt(i), 0x01000193);
+  return `Member ${(h >>> 0).toString(16).slice(-4).toUpperCase().padStart(4, "0")}`;
+}
+
+/**
+ * A post as this viewer may see it: games still Pro-only for them lose the
+ * model's chance, and the code's chance goes with them (the same rule as the
+ * editor, code-scan-core.ts lockGames).
+ */
+export function postForViewer(post: CommunityPost, viewer: Viewer, now = Date.now()): CommunityPost {
+  if (viewer.paid) return post;
+  let hidden = false;
+  const games = post.games.map((g) => {
+    const locked =
+      g.probability !== null &&
+      !!g.matchId &&
+      g.kickoff !== null &&
+      proLeagueLocked({ id: g.matchId, kickoff: new Date(g.kickoff).toISOString(), league: { code: g.leagueCode } }, viewer, now);
+    if (!locked) return g;
+    hidden = true;
+    return { ...g, probability: null, verdict: "locked" as const };
+  });
+  return hidden ? { ...post, games, chance: null } : post;
 }

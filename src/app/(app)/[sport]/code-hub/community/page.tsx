@@ -5,7 +5,8 @@ import { CommunityCodes } from "@/components/code-hub/community-codes";
 import { HubTabs } from "@/components/code-hub/hub-tabs";
 import { WaitlistWall } from "@/components/code-hub/waitlist-wall";
 import { hubGate, onWaitlist } from "@/lib/code-hub-gate";
-import { communityPosts } from "@/lib/code-hub-posts";
+import { communityPosts, postForViewer } from "@/lib/code-hub-posts";
+import { viewerForTier } from "@/lib/viewer";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/football/code-hub/community" },
@@ -27,13 +28,14 @@ export default async function CodeCommunityPage() {
       </>
     );
   }
-  const community = await communityPosts();
+  const [community, viewer] = await Promise.all([communityPosts(), viewerForTier(entitlement.tier)]);
+  const shown = (posts: typeof community.open) => posts.map((p) => postForViewer(p, viewer));
   return (
     <>
       <PageHeader eyebrow="Code Hub" title="Community codes" description="Codes from members, ranked by the model." />
       <Container className="space-y-6 py-4 sm:space-y-8 sm:py-10">
         <HubTabs active="codeCommunity" />
-        <CommunityCodes initial={community.open} recent={community.recent} signedIn={entitlement.signedIn} />
+        <CommunityCodes initial={shown(community.open)} recent={shown(community.recent)} signedIn={entitlement.signedIn} />
       </Container>
     </>
   );

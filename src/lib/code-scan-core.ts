@@ -66,7 +66,7 @@ export function gamesFromTicket(legs: readonly TicketLeg[]): CodeGame[] {
   return out.sort((a, b) => (a.kickoff ?? Infinity) - (b.kickoff ?? Infinity));
 }
 
-export type Verdict = "strong" | "fair" | "risky" | "unreadable";
+export type Verdict = "strong" | "fair" | "risky" | "unreadable" | "locked";
 
 /** Our read of one pick. Strong from 65%, risky under 45%: the site's own risk bands. */
 export function verdictFor(probability: number | null): Verdict {
@@ -112,4 +112,22 @@ export function scoreCode(games: readonly ScoredGame[]): CodeScore {
     readable,
     total: games.length,
   };
+}
+
+/**
+ * A free viewer's read: a game whose pick is still Pro-only (access.ts
+ * proLeagueLocked: a Pro league before kick-off) keeps its game and pick but
+ * loses the model's chance, so pasting a code never opens what the
+ * predictions pages hold back. The code's own chance goes with it, since it
+ * would give the hidden one away.
+ */
+export function lockGames<T extends { probability: number | null; verdict: Verdict; reason?: string }>(
+  games: readonly T[],
+  locked: (game: T) => boolean,
+): T[] {
+  return games.map((g) =>
+    g.probability !== null && locked(g)
+      ? { ...g, probability: null, verdict: "locked" as const, reason: "Pro league: our read opens at kick-off, or with Pro." }
+      : g,
+  );
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getEntitlement } from "@/lib/entitlements";
-import { editorGames, scanCode } from "@/lib/code-scan";
+import { viewerForTier } from "@/lib/viewer";
+import { editorGames, scanCode, scanForViewer } from "@/lib/code-scan";
 import { saferCode, targetCode } from "@/lib/code-editor";
 
 /**
@@ -44,15 +45,17 @@ export async function POST(request: Request) {
   }
   const target = typeof body?.target === "number" && body.target >= 1.2 && body.target <= 1000 ? body.target : null;
 
-  const scan = await scanCode(code).catch(() => null);
+  const read = await scanCode(code).catch(() => null);
+  // Pro-league games stay locked for a free viewer until kick-off, as on every other page.
+  const scan = read ? scanForViewer(read, await viewerForTier(entitlement.tier)) : null;
   if (!scan) {
     return NextResponse.json({ error: "SportyBet doesn't recognise that code, or it has expired." }, { status: 404, headers: NO_STORE });
   }
   const games = editorGames(scan).filter((g) => g.kickoff > Date.now() + 10 * 60_000);
-  const { predictions: _predictions, ...read } = scan;
+  const { predictions: _predictions, ...shown } = scan;
   return NextResponse.json(
     {
-      scan: read,
+      scan: shown,
       safer: games.length ? saferCode(games) : null,
       target: games.length && target ? targetCode(games, target) : null,
     },

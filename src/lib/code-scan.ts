@@ -9,7 +9,8 @@ import type { Prediction } from "@/lib/model/predict";
 import { findFixture } from "@/lib/odds/match-fixture";
 import { readShareTicket } from "@/lib/odds/sportybet-direct";
 import { allSportyBetTournaments } from "@/lib/odds/sportybet-links";
-import { gamesFromTicket, scoreCode, verdictFor, type CodeGame, type CodeScore, type ScoredGame } from "./code-scan-core";
+import { proLeagueLocked, type Viewer } from "@/lib/access";
+import { gamesFromTicket, lockGames, scoreCode, verdictFor, type CodeGame, type CodeScore, type ScoredGame } from "./code-scan-core";
 
 /**
  * Reads anyone's SportyBet code and puts the model on every game in it.
@@ -97,6 +98,24 @@ export async function scanCode(code: string): Promise<CodeScan | null> {
     }),
   );
   return { code: ticket.code, deadline: ticket.deadline, games: scored, predictions, ...scoreCode(scored) };
+}
+
+/**
+ * The scan as this viewer may see it: a game still Pro-only for them loses
+ * the model's chance (code-scan-core.ts lockGames) and its prediction, so the
+ * editor cannot re-pick it either. Every route that returns a scan goes
+ * through this.
+ */
+export function scanForViewer(scan: CodeScan, viewer: Viewer): CodeScan {
+  const games = lockGames(
+    scan.games,
+    (g) =>
+      !!g.matchId &&
+      proLeagueLocked({ id: g.matchId, kickoff: new Date(g.kickoff ?? 0).toISOString(), league: { code: g.leagueCode } }, viewer),
+  );
+  const locked = new Set(games.filter((g) => g.verdict === "locked").map((g) => g.matchId));
+  const predictions = new Map([...scan.predictions].filter(([id]) => !locked.has(id)));
+  return { ...scan, games, predictions, ...scoreCode(games) };
 }
 
 /** What the editor may pick from: the markets Forge builds with, singles and same-game pairs. */
