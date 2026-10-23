@@ -80,10 +80,10 @@ export function CodeEditor({ signedIn }: { signedIn: boolean }) {
   return (
     <section className="card space-y-5 p-4 sm:p-6" aria-labelledby="editor-heading">
       <div>
-        <h2 id="editor-heading" className="font-display text-lg font-bold sm:text-2xl">
+        <h2 id="editor-heading" className="sr-only">
           Check any code. Make it safer.
         </h2>
-        <p className="mt-1 text-sm text-ink-muted">
+        <p className="text-sm text-ink-muted">
           Paste a SportyBet code. We read every game on it, give the model&apos;s read of each pick, and re-pick it to be
           safer or to land near the odds you want.
         </p>
@@ -117,13 +117,13 @@ export function CodeEditor({ signedIn }: { signedIn: boolean }) {
                 placeholder="Odds, e.g. 10"
                 aria-label="Target odds"
                 inputMode="decimal"
-                className="w-28"
+                className="w-28 shrink-0"
               />
               <Button
                 variant="secondary"
                 onClick={() => run("target")}
                 disabled={pending || code.length < 4 || !(Number(target) > 1.2)}
-                className="py-2.5"
+                className="flex-1 whitespace-nowrap py-2.5 sm:flex-none"
               >
                 {pending && mode === "target" && <Spinner className="size-3.5" />}
                 Hit these odds
