@@ -3,11 +3,12 @@ import { getModelPerformance, type MarketBreakdown } from "@/lib/admin-analytics
 import { StatCard } from "@/components/admin/stat-card";
 import { EmptyState } from "@/components/ui/primitives";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { pairedLogLoss, priceSkill, type PriceSkill, type PricedOutcome } from "@/lib/odds/price-skill";
 
 export const metadata: Metadata = { title: "Model performance" };
 
 export default async function ModelPerformancePage() {
-  const [perf, shadow] = await Promise.all([getModelPerformance(), getShadowRecord()]);
+  const [perf, shadow, prices] = await Promise.all([getModelPerformance(), getShadowRecord(), getPriceRecord()]);
   const totalSettled = perf.overall.wins + perf.overall.losses + perf.overall.pushes;
 
   if (totalSettled === 0) {
@@ -27,7 +28,9 @@ export default async function ModelPerformancePage() {
     <div className="space-y-8">
       <h1 className="font-display text-2xl font-bold">Model performance</h1>
 
-      <ShadowSection rows={shadow} />
+      <PricesSection data={prices} />
+
+      <ShadowSection rows={shadow.filter((r) => r.reason !== "market-total")} />
 
       <section className="grid gap-4 sm:grid-cols-4">
         <StatCard
@@ -88,6 +91,7 @@ async function getShadowRecord(): Promise<ShadowRow[]> {
     const { data } = await supabaseAdmin()
       .from("shadow_picks")
       .select("market, label, reason, probability, result")
+      .neq("reason", "market-total")
       .order("kickoff", { ascending: false })
       .limit(5000);
     const by = new Map<string, ShadowRow & { sum: number }>();
@@ -113,6 +117,151 @@ async function getShadowRecord(): Promise<ShadowRow[]> {
   } catch {
     return [];
   }
+}
+
+interface PriceRecord {
+  skill: PriceSkill;
+  /** Published picks SportyBet rated 8 points or more below us: the Code Hub safety filter, measured. */
+  doubted: { n: number; landed: number; stated: number } | null;
+  /** Market-informed totals against the model's own chance, same selections. */
+  marketTotal: { n: number; a: number; b: number } | null;
+  marketTotalPending: number;
+}
+
+const DOUBT_GAP = 0.08;
+
+async function getPriceRecord(): Promise<PriceRecord> {
+  const empty: PriceRecord = { skill: { clv: null, forecasts: null }, doubted: null, marketTotal: null, marketTotalPending: 0 };
+  try {
+    const db = supabaseAdmin();
+    const [{ data: picks }, { data: shadow }] = await Promise.all([
+      db
+        .from("predictions_log")
+        .select("probability, market_prob_at_publish, price_at_publish, closing_price, result")
+        .not("market_prob_at_publish", "is", null)
+        .order("kickoff", { ascending: false })
+        .limit(5000),
+      db
+        .from("shadow_picks")
+        .select("probability, model_probability, result")
+        .eq("reason", "market-total")
+        .order("kickoff", { ascending: false })
+        .limit(5000),
+    ]);
+    const rows: PricedOutcome[] = (picks ?? []).map((r) => ({
+      probability: Number(r.probability),
+      marketProbability: r.market_prob_at_publish === null ? null : Number(r.market_prob_at_publish),
+      priceAtPublish: r.price_at_publish === null ? null : Number(r.price_at_publish),
+      closingPrice: r.closing_price === null ? null : Number(r.closing_price),
+      result: r.result as PricedOutcome["result"],
+    }));
+    const doubtedRows = rows.filter(
+      (r) => r.marketProbability !== null && r.probability - r.marketProbability >= DOUBT_GAP && (r.result === "win" || r.result === "lose"),
+    );
+    const settled = (shadow ?? []).filter((r) => (r.result === "win" || r.result === "lose") && r.model_probability !== null);
+    return {
+      skill: priceSkill(rows),
+      doubted: doubtedRows.length
+        ? {
+            n: doubtedRows.length,
+            landed: doubtedRows.filter((r) => r.result === "win").length / doubtedRows.length,
+            stated: doubtedRows.reduce((s, r) => s + r.probability, 0) / doubtedRows.length,
+          }
+        : null,
+      marketTotal: pairedLogLoss(
+        settled.map((r) => ({ a: Number(r.probability), b: Number(r.model_probability), won: r.result === "win" })),
+      ),
+      marketTotalPending: (shadow ?? []).filter((r) => r.result === null).length,
+    };
+  } catch {
+    return empty;
+  }
+}
+
+const MARKET_TOTAL_MIN = 200;
+
+function PricesSection({ data }: { data: PriceRecord }) {
+  const { clv, forecasts } = data.skill;
+  const pct = (v: number) => `${Math.round(v * 1000) / 10}%`;
+  const mt = data.marketTotal;
+  const ready = mt && mt.n >= MARKET_TOTAL_MIN;
+  return (
+    <section className="card space-y-5 p-5 sm:p-6">
+      <div>
+        <h2 className="mb-1 font-sans text-sm font-semibold uppercase tracking-wider text-ink-muted">Against SportyBet&rsquo;s prices</h2>
+        <p className="max-w-2xl text-xs leading-relaxed text-ink-dim">
+          Every pick logged since price recording began carries SportyBet&rsquo;s price at publish and at kick-off. Nothing here changes a
+          published pick: it is the evidence for when prices should.
+        </p>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        <StatCard label="Beat the closing price" value={clv ? pct(clv.beatClose) : "—"} />
+        <StatCard label="Average closing line value" value={clv ? `${clv.average >= 0 ? "+" : ""}${pct(clv.average)}` : "—"} />
+        <StatCard label="Picks with both prices" value={clv ? clv.n.toLocaleString() : "0"} />
+      </div>
+
+      {forecasts ? (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[28rem] text-left text-xs">
+            <thead className="text-ink-dim">
+              <tr className="border-b border-line">
+                <th className="py-2 pr-3 font-medium">Forecast, {forecasts.n} decided picks</th>
+                <th className="py-2 pr-3 text-right font-medium">Brier</th>
+                <th className="py-2 text-right font-medium">Log loss</th>
+              </tr>
+            </thead>
+            <tbody className="tnum">
+              {(
+                [
+                  ["The model", forecasts.model],
+                  ["SportyBet, margin removed", forecasts.market],
+                  ["Half and half", forecasts.blend],
+                ] as const
+              ).map(([label, s]) => {
+                const best = Math.min(forecasts.model.logLoss, forecasts.market.logLoss, forecasts.blend.logLoss) === s.logLoss;
+                return (
+                  <tr key={label} className="border-b border-line/60">
+                    <td className={`py-2 pr-3 font-semibold ${best ? "text-brand" : "text-ink"}`}>{label}</td>
+                    <td className="py-2 pr-3 text-right">{s.brier.toFixed(4)}</td>
+                    <td className="py-2 text-right">{s.logLoss.toFixed(4)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          <p className="mt-2 text-xs text-ink-dim">Lower is better. If the blend keeps winning, the prices know something the model doesn&rsquo;t.</p>
+        </div>
+      ) : (
+        <p className="text-sm text-ink-dim">No priced pick has settled yet. Prices are recorded from the hourly sync in production.</p>
+      )}
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="rounded-xl border border-line p-4 text-xs">
+          <p className="font-semibold text-ink">When SportyBet doubts us by {Math.round(DOUBT_GAP * 100)} points or more</p>
+          <p className="mt-1 text-ink-dim">
+            {data.doubted
+              ? `${data.doubted.n} picks: landed ${pct(data.doubted.landed)} against a stated ${pct(data.doubted.stated)}. If they keep landing short, the Code Hub should leave such picks out.`
+              : "None settled yet."}
+          </p>
+        </div>
+        <div className="rounded-xl border border-line p-4 text-xs">
+          <p className="font-semibold text-ink">Market-informed totals (over/under 1.5 and 3.5)</p>
+          <p className="mt-1 text-ink-dim">
+            {mt
+              ? `${mt.n} graded: log loss ${mt.a.toFixed(4)} with the market's total against ${mt.b.toFixed(4)} for the model alone. `
+              : "None graded yet. "}
+            {data.marketTotalPending} waiting.{" "}
+            {ready
+              ? mt.a < mt.b
+                ? "The market's total is ahead: worth using in published goals picks."
+                : "The model alone is ahead: leave it off."
+              : `A call needs ${MARKET_TOTAL_MIN} graded.`}
+          </p>
+        </div>
+      </div>
+    </section>
+  );
 }
 
 function ShadowSection({ rows }: { rows: ShadowRow[] }) {

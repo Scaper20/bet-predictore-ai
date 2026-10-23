@@ -8,6 +8,7 @@ import { modelIdForMarket } from "@/lib/model/router";
 import { pickTier } from "@/lib/model/tiers";
 import { leagueByCode } from "@/lib/leagues";
 import { shadowPicks } from "@/lib/model/shadow";
+import { marketTotalPicks } from "@/lib/model/market-total";
 
 // Runs the football providers and Supabase's service-role client — both
 // Node-only. Proxy (src/proxy.ts) doesn't touch /api/ at all, so no session
@@ -121,6 +122,35 @@ async function logUpcomingPicks(admin: ReturnType<typeof supabaseAdmin>): Promis
         ...priced(p.match.id, s.market),
       })),
     );
+  // Market-informed totals, watched beside the model (model/market-total.ts):
+  // only where SportyBet prices over/under 2.5 for the game.
+  const marketTotals = predictions
+    .filter((p) => p.sufficiency.publishable)
+    .flatMap((p) => {
+      const snap = latest.get(p.match.id);
+      const over = snap ? priceInSnapshot(snap.prices, "ou:over:2.5")?.fairProbability : undefined;
+      if (over === undefined) return [];
+      return marketTotalPicks(p.markets.expectedGoals, p.model.rho, over).map((m) => ({
+        match_id: p.match.id,
+        market: m.market,
+        label: m.label,
+        probability: m.probability,
+        model_probability: m.modelProbability,
+        reason: "market-total",
+        league_code: p.match.league.code ?? null,
+        home_name: p.match.home.name,
+        away_name: p.match.away.name,
+        kickoff: p.match.kickoff,
+        logged_at: new Date().toISOString(),
+        ...priced(p.match.id, m.market),
+      }));
+    });
+  if (marketTotals.length > 0) {
+    await admin.from("shadow_picks").upsert(marketTotals, { onConflict: "match_id,market" }).then(
+      () => undefined,
+      () => undefined,
+    );
+  }
   if (shadow.length > 0) {
     await admin.from("shadow_picks").upsert(shadow, { onConflict: "match_id,market" }).then(
       () => undefined,
