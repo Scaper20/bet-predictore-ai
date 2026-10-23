@@ -112,14 +112,16 @@ export function CodeEditor({ signedIn }: { signedIn: boolean }) {
               Make it safer
             </Button>
             <div className="flex gap-2">
-              <Input
-                value={target}
-                onChange={(e) => setTarget(e.target.value.replace(/[^0-9.]/g, "").slice(0, 6))}
-                placeholder="Odds, e.g. 10"
-                aria-label="Target odds"
-                inputMode="decimal"
-                className="w-28 shrink-0"
-              />
+              {/* The width sits on a wrapper: Input is always w-full, which a w-28 on it cannot beat. */}
+              <div className="w-28 shrink-0">
+                <Input
+                  value={target}
+                  onChange={(e) => setTarget(e.target.value.replace(/[^0-9.]/g, "").slice(0, 6))}
+                  placeholder="Odds, e.g. 10"
+                  aria-label="Target odds"
+                  inputMode="decimal"
+                />
+              </div>
               <Button
                 variant="secondary"
                 onClick={() => run("target")}
@@ -136,12 +138,14 @@ export function CodeEditor({ signedIn }: { signedIn: boolean }) {
       )}
 
       {data && (
-        <div className="grid gap-4 lg:grid-cols-2">
+        // min-w-0 on the grid and its cards: without it a card grows to its
+        // longest one-line game name and runs off a phone's screen.
+        <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-2">
           <ScanCard scan={data.scan} />
           {edited ? (
             <EditedCard result={edited} before={data.scan} mode={mode} />
           ) : (
-            <div className="rounded-xl border border-dashed border-line p-5 text-sm text-ink-muted">
+            <div className="min-w-0 rounded-xl border border-dashed border-line p-5 text-sm text-ink-muted">
               {mode === "target" && !data.target
                 ? "Enter the odds you want and tap Hit these odds."
                 : "None of these games can still be re-picked: they have started, or we can't read them."}
@@ -155,8 +159,8 @@ export function CodeEditor({ signedIn }: { signedIn: boolean }) {
 
 function ScanCard({ scan }: { scan: ScanView }) {
   return (
-    <div className="rounded-xl border border-line bg-surface-2/40 p-4">
-      <div className="flex items-baseline justify-between gap-3">
+    <div className="min-w-0 rounded-xl border border-line bg-surface-2/40 p-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <p className="font-mono text-sm font-bold tracking-[0.12em]">{scan.code}</p>
         <p className="text-xs text-ink-dim">
           {scan.readable} of {scan.total} games read
@@ -166,8 +170,8 @@ function ScanCard({ scan }: { scan: ScanView }) {
       <ul className="mt-3 space-y-2">
         {scan.games.map((g) => (
           <li key={`${g.eventId}-${g.market}`} className="flex items-start justify-between gap-3 text-sm">
-            <span className="min-w-0">
-              <span className="block truncate font-semibold">{g.label}</span>
+            <span className="min-w-0 flex-1">
+              <span className="block break-words font-semibold">{g.label}</span>
               <span className="block truncate text-xs text-ink-dim">
                 {g.homeName} v {g.awayName}
                 {g.kickoff && (
@@ -176,8 +180,9 @@ function ScanCard({ scan }: { scan: ScanView }) {
                     <LocalTime iso={new Date(g.kickoff).toISOString()} kind="dayTime" />
                   </>
                 )}
-                {g.reason && ` · ${g.reason}`}
               </span>
+              {/* Why a game wasn't read: worth reading in full, so it wraps rather than being cut off. */}
+              {g.reason && <span className="mt-0.5 block text-xs text-amber">{g.reason}</span>}
             </span>
             <span className="flex shrink-0 items-center gap-2">
               {g.probability !== null && <span className="font-mono text-xs text-ink-muted">{percent(g.probability)}</span>}
@@ -196,8 +201,8 @@ function EditedCard({ result, before, mode }: { result: EditResult; before: Scan
   const left = before.games.filter((g) => !g.matchId || !kept.has(g.matchId));
   const dropped = left.length;
   return (
-    <div className="rounded-xl border border-brand/30 bg-brand/5 p-4">
-      <div className="flex items-baseline justify-between gap-3">
+    <div className="min-w-0 rounded-xl border border-brand/30 bg-brand/5 p-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <p className="text-sm font-semibold">{mode === "safer" ? "Safer version" : "Re-picked for your odds"}</p>
         <p className="text-xs text-ink-dim">
           {changed} changed{dropped > 0 ? `, ${dropped} dropped` : ""}
@@ -207,12 +212,12 @@ function EditedCard({ result, before, mode }: { result: EditResult; before: Scan
       <ul className="mt-3 space-y-2">
         {result.games.map((g) => (
           <li key={g.matchId} className="flex items-start justify-between gap-3 text-sm">
-            <span className="min-w-0">
-              <span className="block truncate font-semibold">{g.label}</span>
+            <span className="min-w-0 flex-1">
+              <span className="block break-words font-semibold">{g.label}</span>
               <span className="block truncate text-xs text-ink-dim">
                 {g.homeName} v {g.awayName}
-                {g.from && <span className="text-amber"> · was {g.from.label}</span>}
               </span>
+              {g.from && <span className="block break-words text-xs text-amber">was {g.from.label}</span>}
             </span>
             <span className="shrink-0 font-mono text-xs text-ink-muted">{percent(g.probability)}</span>
           </li>
