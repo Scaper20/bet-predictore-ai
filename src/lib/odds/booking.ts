@@ -1,7 +1,8 @@
-import { toSportyBet } from "./markets";
+import { matchesSelection, toSportyBet, toSportyBetBuilder } from "./markets";
+import type { RawMarket } from "./sportybet-api";
 
 /**
- * Turning our picks into the selections parse.bot's book_bet takes.
+ * Turning our picks into the selections SportyBet's share code takes.
  *
  * Pure, and checked before a credit is spent: every reason a booking would
  * fail or come back wrong is caught here for free, rather than discovered at
@@ -14,6 +15,12 @@ export interface BookingLeg {
   eventId: string;
   /** Epoch ms. */
   kickoff: number;
+  /**
+   * The event's markets as SportyBet lists them. Only needed for a same-game
+   * combo that goes on as a Bet Builder, whose pricing call wants each part's
+   * odds and probability.
+   */
+  markets?: readonly RawMarket[];
 }
 
 /** book_bet's input, one entry per selection. */
@@ -22,6 +29,20 @@ export interface BookSelection {
   marketId: string;
   outcomeId: string;
   specifier?: string;
+  /**
+   * Set at booking time on every part of a Bet Builder, from SportyBet's
+   * pricing call (sportybet-direct.ts priceBetBuilder). Never part of the
+   * signature: it is minted afresh for every booking.
+   */
+  parentBetBuilderMarketId?: string;
+}
+
+/** One same-game combo going on as a Bet Builder: its parts, priced as listed. */
+export interface BuilderGroup {
+  /** The leg it came from, for reporting a refusal against the right pick. */
+  index: number;
+  eventId: string;
+  parts: { selection: BookSelection; odds: string; probability: string }[];
 }
 
 export type BookingProblem =
@@ -30,10 +51,14 @@ export type BookingProblem =
   | { kind: "unmapped-market"; index: number; market: string }
   | { kind: "bad-event-id"; index: number; eventId: string }
   | { kind: "started"; index: number }
-  | { kind: "duplicate-event"; index: number; eventId: string };
+  | { kind: "duplicate-event"; index: number; eventId: string }
+  /** A Bet Builder part SportyBet isn't pricing on this game right now. */
+  | { kind: "builder-unavailable"; index: number }
+  /** SportyBet's Bet Builder said these parts can't be combined (e.g. home win and draw). */
+  | { kind: "builder-refused"; index: number };
 
 export type BookingPlan =
-  | { ok: true; selections: BookSelection[]; signature: string; firstKickoff: number }
+  | { ok: true; selections: BookSelection[]; builders: BuilderGroup[]; signature: string; firstKickoff: number }
   | { ok: false; problems: BookingProblem[] };
 
 /** Most legs on one code. SportyBet's own limit is higher; nobody needs more. */
@@ -53,7 +78,9 @@ const EVENT_ID = /^sr:match:\d+$/;
  *
  * Two legs on the same game are refused rather than merged: SportyBet will
  * not combine most markets on one event, and the user should see that before
- * a credit is spent, not after.
+ * a credit is spent, not after. One leg that is itself a same-game combo
+ * goes on as SportyBet's ready-made combo market, or failing that as a Bet
+ * Builder: several selections on one event, priced together at booking.
  */
 export function planBooking(legs: readonly BookingLeg[], now = Date.now()): BookingPlan {
   const problems: BookingProblem[] = [];
@@ -62,9 +89,34 @@ export function planBooking(legs: readonly BookingLeg[], now = Date.now()): Book
 
   const seen = new Set<string>();
   const selections: BookSelection[] = [];
+  const builders: BuilderGroup[] = [];
   legs.forEach((leg, index) => {
     const mapped = toSportyBet(leg.market);
-    if (!mapped) problems.push({ kind: "unmapped-market", index, market: leg.market });
+    const parts = mapped ? null : toSportyBetBuilder(leg.market);
+    if (!mapped && !parts) problems.push({ kind: "unmapped-market", index, market: leg.market });
+    if (parts) {
+      const priced = parts.map((sel) => {
+        const outcome = (leg.markets ?? [])
+          .find((m) => matchesSelection(m, sel))
+          ?.outcomes?.find((o) => String(o.id) === sel.outcomeId);
+        const odds = outcome?.odds;
+        const probability = outcome?.probability;
+        return odds !== undefined && probability !== undefined
+          ? {
+              selection: { eventId: leg.eventId, marketId: sel.marketId, outcomeId: sel.outcomeId, ...(sel.specifier ? { specifier: sel.specifier } : {}) },
+              odds: String(odds),
+              probability: String(probability),
+            }
+          : null;
+      });
+      if (priced.some((p) => p === null)) {
+        problems.push({ kind: "builder-unavailable", index });
+      } else {
+        const ok = priced as BuilderGroup["parts"];
+        builders.push({ index, eventId: leg.eventId, parts: ok });
+        selections.push(...ok.map((p) => p.selection));
+      }
+    }
     if (!EVENT_ID.test(leg.eventId)) problems.push({ kind: "bad-event-id", index, eventId: leg.eventId });
     if (!(leg.kickoff - now > KICKOFF_MARGIN_MS)) problems.push({ kind: "started", index });
     if (seen.has(leg.eventId)) problems.push({ kind: "duplicate-event", index, eventId: leg.eventId });
@@ -83,6 +135,7 @@ export function planBooking(legs: readonly BookingLeg[], now = Date.now()): Book
   return {
     ok: true,
     selections,
+    builders,
     signature: selectionSignature(selections),
     firstKickoff: Math.min(...legs.map((l) => l.kickoff)),
   };

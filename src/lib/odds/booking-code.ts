@@ -1,8 +1,16 @@
 import "server-only";
 
-import { planBooking, readBooking, type BookedCode, type BookingLeg, type BookingProblem, type BookSelection } from "./booking";
+import {
+  planBooking,
+  readBooking,
+  type BookedCode,
+  type BookingLeg,
+  type BookingProblem,
+  type BookSelection,
+  type BuilderGroup,
+} from "./booking";
 import { parsebotCall, parsebotLive } from "./parsebot";
-import { createShareCode, directEnabled, readShareCode } from "./sportybet-direct";
+import { createShareCode, directEnabled, priceBetBuilder, readShareCode } from "./sportybet-direct";
 
 /**
  * A SportyBet booking code for a set of legs: from the cache when the same
@@ -57,9 +65,33 @@ export async function bookingAvailable(): Promise<boolean> {
   return (await directEnabled()) || (await parsebotLive());
 }
 
-async function bookDirect(selections: readonly BookSelection[]): Promise<(BookedCode & { readBack: boolean | null }) | null> {
+/**
+ * Books on SportyBet directly. Each Bet Builder is priced first, and its
+ * parent market id stamped on its parts; one SportyBet won't combine comes
+ * back as `refused` with the leg it was, so the user is told which pick.
+ */
+async function bookDirect(
+  selections: readonly BookSelection[],
+  builders: readonly BuilderGroup[],
+): Promise<(BookedCode & { readBack: boolean | null }) | { refused: number[] } | null> {
   if (!(await directEnabled())) return null;
-  const booked = await createShareCode(selections);
+  const parentOf = new Map<string, string>();
+  const refused: number[] = [];
+  for (const group of builders) {
+    const quote = await priceBetBuilder(group);
+    if (!quote) return null;
+    if (!quote.valid) {
+      refused.push(group.index);
+      continue;
+    }
+    for (const part of group.parts) parentOf.set(partKey(part.selection), quote.parentMarketId);
+  }
+  if (refused.length) return { refused };
+  const stamped = selections.map((s) => {
+    const parent = parentOf.get(partKey(s));
+    return parent ? { ...s, parentBetBuilderMarketId: parent } : s;
+  });
+  const booked = await createShareCode(stamped);
   if (!booked) return null;
   // Read back as the user's app will load it. An unreadable code is not
   // proof of a bad one (the booking itself already checked the count), so
@@ -68,6 +100,8 @@ async function bookDirect(selections: readonly BookSelection[]): Promise<(Booked
   if (check && check.selectionsCount !== selections.length) return null;
   return { ...booked, readBack: check ? true : null };
 }
+
+const partKey = (s: BookSelection) => [s.eventId, s.marketId, s.outcomeId, s.specifier ?? ""].join("|");
 
 async function bookViaParsebot(selections: readonly BookSelection[]): Promise<BookedCode | null> {
   const raw = await parsebotCall<unknown>("book_bet", {
@@ -119,8 +153,14 @@ export async function bookingCodeFor(legs: readonly BookingLeg[]): Promise<Booki
       cacheReadable = false;
     }
 
-    const direct = await bookDirect(plan.selections);
-    const parsebot = direct || !cacheReadable ? null : await bookViaParsebot(plan.selections);
+    const attempt = await bookDirect(plan.selections, plan.builders);
+    if (attempt && "refused" in attempt) {
+      return { ok: false, reason: "invalid", problems: attempt.refused.map((index) => ({ kind: "builder-refused", index })) };
+    }
+    const direct = attempt;
+    // parse.bot can't book a Bet Builder, so it is only a fallback for codes without one.
+    const parsebot =
+      direct || !cacheReadable || plan.builders.length > 0 ? null : await bookViaParsebot(plan.selections);
     const booked = direct ?? parsebot;
     if (!booked) return { ok: false, reason: "unavailable" };
 

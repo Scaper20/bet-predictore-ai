@@ -190,6 +190,38 @@ export function toSportyBetCombo(parts: readonly string[]): SportyBetSelection |
 const COMBO = "combo:";
 
 /**
+ * Markets SportyBet's Bet Builder accepts, among those we map, from its own
+ * catalogue (GET /factsCenter/betBuilder/markets, 23 Oct 2026). It bans whole
+ * lines: "total=2" on 18 and "hcp=-1" on 16, which can push.
+ */
+const BUILDER_MARKETS = new Set(["1", "10", "16", "18", "29"]);
+const WHOLE_LINE = /^(total|hcp)=-?\d+$/;
+
+/** Most parts on one builder. SportyBet allows more; a combo of ours never has. */
+const MAX_BUILDER_PARTS = 4;
+
+/**
+ * The parts of a same-game combo SportyBet has no ready-made market for,
+ * each as a single selection for its Bet Builder; null when one part can't
+ * go in a builder (an unmapped market, a whole line) or the combo has a
+ * ready-made market already (use toSportyBet).
+ */
+export function toSportyBetBuilder(market: string): SportyBetSelection[] | null {
+  if (!market.startsWith(COMBO) || toSportyBet(market)) return null;
+  const parts = market.slice(COMBO.length).split("+");
+  if (parts.length < 2 || parts.length > MAX_BUILDER_PARTS) return null;
+  const out: SportyBetSelection[] = [];
+  for (const part of parts) {
+    if (part.startsWith(COMBO)) return null;
+    const sel = toSportyBet(part);
+    if (!sel || !BUILDER_MARKETS.has(sel.marketId)) return null;
+    if (sel.specifier && WHOLE_LINE.test(sel.specifier)) return null;
+    out.push(sel);
+  }
+  return out;
+}
+
+/**
  * Whether SportyBet is offering this exact selection on this event right
  * now: the market, the line, and an active outcome. Lines differ by game, so
  * a mapping that is right in general can still be missing on the day.

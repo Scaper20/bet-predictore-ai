@@ -3,6 +3,8 @@ import upcoming from "./__fixtures__/sportybet-upcoming.json";
 import share from "./__fixtures__/sportybet-share.json";
 import resultsFixture from "./__fixtures__/sportybet-results.json";
 import {
+  builderRequest,
+  parseBuilderQuote,
   parseEventResult,
   parseResults,
   parseShareResponse,
@@ -160,5 +162,37 @@ describe("parseResults and scoreVerdict", () => {
     });
     expect(parseEventResult({ bizCode: 10000, data: { eventId: "sr:match:2", status: 1, setScore: "1:0", matchStatus: "H1" } })).toBeNull();
     expect(parseResults({ bizCode: 19999, data: {} })).toEqual([]);
+  });
+});
+
+describe("Bet Builder pricing", () => {
+  it("addresses each part by its Sportradar URN with SportyBet's odds and probability", () => {
+    expect(
+      builderRequest("sr:match:1", [
+        { selection: { eventId: "sr:match:1", marketId: "1", outcomeId: "1" }, odds: "3.15", probability: "0.30" },
+        { selection: { eventId: "sr:match:1", marketId: "18", outcomeId: "12", specifier: "total=2.5" }, odds: "1.72", probability: "0.56" },
+      ]),
+    ).toEqual({
+      eventId: "sr:match:1",
+      selections: [
+        { id: "uof:3/sr:sport:1/1/1?", odds: "3.15", probability: "0.30" },
+        { id: "uof:3/sr:sport:1/18/12?total=2.5", odds: "1.72", probability: "0.56" },
+      ],
+    });
+  });
+
+  it("reads the parent market id, and a refusal to combine", () => {
+    // Shapes as SportyBet answered on 23 Oct (Coventry v Fulham, Home + Over 2.5 + GG).
+    expect(
+      parseBuilderQuote({ bizCode: 10000, data: { odds: "5.65", probability: "0.17", marketId: "261023165047bb54301940", outcomeId: "1", valid: true } }),
+    ).toEqual({ valid: true, parentMarketId: "261023165047bb54301940", odds: 5.65 });
+    expect(parseBuilderQuote({ bizCode: 10000, data: { odds: "0.00", marketId: "261023165138bb54311142", valid: false } })).toEqual({ valid: false });
+    expect(parseBuilderQuote({ http: 500 })).toBeNull();
+  });
+
+  it("puts the parent id on each part of the share request", () => {
+    expect(
+      shareRequest([{ eventId: "sr:match:1", marketId: "29", outcomeId: "74", parentBetBuilderMarketId: "bb1" }]).selections[0],
+    ).toEqual({ eventId: "sr:match:1", marketId: "29", specifier: null, outcomeId: "74", parentBetBuilderMarketId: "bb1" });
   });
 });

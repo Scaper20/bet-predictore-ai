@@ -2,14 +2,17 @@ import "server-only";
 
 import { RateGate } from "@/lib/providers/http";
 import { switchOn } from "@/lib/switches";
-import type { BookedCode, BookSelection } from "./booking";
+import type { BookedCode, BookSelection, BuilderGroup } from "./booking";
 import {
+  builderRequest,
+  parseBuilderQuote,
   parseEventResult,
   parseResults,
   parseShareResponse,
   parseTournamentList,
   parseUpcoming,
   shareRequest,
+  type BuilderQuote,
   type EventResult,
   type SportyBetEvent,
   type TournamentEntry,
@@ -222,6 +225,17 @@ export async function fetchTournamentList(): Promise<TournamentEntry[] | null> {
 export async function createShareCode(selections: readonly BookSelection[]): Promise<BookedCode | null> {
   const body = await call("/orders/share", { method: "POST", body: shareRequest(selections) });
   return parseShareResponse(body, selections.length);
+}
+
+/**
+ * Prices one Bet Builder (several parts on one event) and returns the parent
+ * market id its parts must carry when booked, valid: false when SportyBet
+ * will not combine them, or null when it could not be asked. A fresh parent
+ * id is minted on every call, so this runs once per booking, just before it.
+ */
+export async function priceBetBuilder(group: BuilderGroup): Promise<BuilderQuote | null> {
+  const body = await call("/factsCenter/betBuilder/odds", { method: "POST", body: builderRequest(group.eventId, group.parts) });
+  return parseBuilderQuote(body);
 }
 
 /** Reads a code back as SportyBet will load it for the user, or null if it could not be read. */

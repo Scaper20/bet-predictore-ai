@@ -83,3 +83,39 @@ describe("readBooking", () => {
     expect(readBooking({ ...ok, deadline: "soon" }, 2)).toBeNull();
   });
 });
+
+describe("planBooking with a Bet Builder", () => {
+  const markets = [
+    { market_id: "1", specifier: null, outcomes: [{ id: "1", odds: "3.15", probability: "0.30" }] },
+    { market_id: "18", specifier: "total=2.5", outcomes: [{ id: "12", odds: "1.72", probability: "0.56" }] },
+    { market_id: "29", specifier: null, outcomes: [{ id: "74", odds: "1.61", probability: "0.59" }] },
+  ];
+
+  it("books a three-part same-game combo as one builder with SportyBet's own prices", () => {
+    const plan = planBooking(
+      [
+        { market: "combo:1x2:home+ou:over:2.5+btts:yes", eventId: "sr:match:1", kickoff: later, markets },
+        { market: "1x2:home", eventId: "sr:match:2", kickoff: later },
+      ],
+      NOW,
+    );
+    expect(plan.ok).toBe(true);
+    if (!plan.ok) return;
+    expect(plan.selections).toHaveLength(4);
+    expect(plan.builders).toHaveLength(1);
+    expect(plan.builders[0]).toMatchObject({ index: 0, eventId: "sr:match:1" });
+    expect(plan.builders[0].parts.map((p) => [p.selection.marketId, p.odds, p.probability])).toEqual([
+      ["1", "3.15", "0.30"],
+      ["18", "1.72", "0.56"],
+      ["29", "1.61", "0.59"],
+    ]);
+  });
+
+  it("refuses a builder part SportyBet isn't pricing on the game", () => {
+    const plan = planBooking(
+      [{ market: "combo:1x2:home+ou:over:3.5+btts:yes", eventId: "sr:match:1", kickoff: later, markets }],
+      NOW,
+    );
+    expect(plan).toEqual({ ok: false, problems: [{ kind: "builder-unavailable", index: 0 }] });
+  });
+});

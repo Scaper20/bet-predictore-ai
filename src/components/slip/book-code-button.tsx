@@ -14,11 +14,13 @@ type LegProblem =
   | "not-listed"
   | "starting"
   | "not-offered"
+  | "cant-combine"
   | "duplicate-game";
 
 const WHY: Record<LegProblem, string> = {
   "unsupported-market": "SportyBet codes can't carry this pick type yet.",
-  "same-game-combo": "SportyBet has no ready-made market for this same-game combo.",
+  "same-game-combo": "SportyBet can't put this same-game combo on a code.",
+  "cant-combine": "SportyBet won't combine these picks on one game.",
   "not-offered": "SportyBet isn't offering this line on this game right now.",
   "unsupported-competition": "This competition isn't linked to SportyBet yet.",
   "not-listed": "SportyBet isn't listing this game right now.",

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isQuotable, matchesSelection, offeredOn, readOdds, toSportyBet } from "./markets";
+import { isQuotable, matchesSelection, offeredOn, readOdds, toSportyBet, toSportyBetBuilder } from "./markets";
 
 describe("toSportyBet", () => {
   it("maps every market family the model publishes", () => {
@@ -135,5 +135,26 @@ describe("same-game combos", () => {
     expect(offeredOn(sel, markets)).toBe(true);
     expect(offeredOn(sel, markets.slice(0, 1))).toBe(false);
     expect(offeredOn(sel, [{ market_id: "37", specifier: "total=2.5", outcomes: [{ id: "794" }] }])).toBe(false);
+  });
+});
+
+describe("toSportyBetBuilder", () => {
+  it("splits a combo with no ready-made market into Bet Builder parts", () => {
+    expect(toSportyBetBuilder("combo:1x2:home+ou:over:2.5+btts:yes")).toEqual([
+      { marketId: "1", outcomeId: "1" },
+      { marketId: "18", outcomeId: "12", specifier: "total=2.5" },
+      { marketId: "29", outcomeId: "74" },
+    ]);
+    expect(toSportyBetBuilder("combo:1x2:home+ah:home:-1.5")).toEqual([
+      { marketId: "1", outcomeId: "1" },
+      { marketId: "16", outcomeId: "1714", specifier: "hcp=-1.5" },
+    ]);
+  });
+
+  it("leaves pairs with a ready-made market, whole lines and singles alone", () => {
+    expect(toSportyBetBuilder("combo:1x2:home+ou:over:2.5")).toBeNull();
+    expect(toSportyBetBuilder("combo:1x2:home+ou:over:2+btts:yes")).toBeNull();
+    expect(toSportyBetBuilder("combo:1x2:home+ah:home:-1")).toBeNull();
+    expect(toSportyBetBuilder("1x2:home")).toBeNull();
   });
 });

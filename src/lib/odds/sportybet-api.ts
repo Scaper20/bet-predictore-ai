@@ -21,7 +21,8 @@ export const BIZ_OK = 10000;
 export interface RawMarket {
   market_id?: string | number;
   specifier?: string | null;
-  outcomes?: { id?: string | number; odds?: unknown }[];
+  /** probability: SportyBet's own, which its Bet Builder pricing needs. */
+  outcomes?: { id?: string | number; odds?: unknown; probability?: unknown }[];
 }
 
 /** A fixture on SportyBet: the board shape, plus the ids the matcher learns from. */
@@ -40,6 +41,7 @@ export interface SportyBetEvent extends FixtureLike {
 interface ApiOutcome {
   id?: unknown;
   odds?: unknown;
+  probability?: unknown;
   isActive?: unknown;
 }
 
@@ -86,7 +88,7 @@ function readMarkets(markets: ApiMarket[] | undefined): RawMarket[] {
       .filter((o) => o.isActive === undefined || o.isActive === 1)
       .flatMap((o) => {
         const oid = text(o.id) ?? (typeof o.id === "number" ? String(o.id) : null);
-        return oid ? [{ id: oid, odds: o.odds }] : [];
+        return oid ? [{ id: oid, odds: o.odds, ...(o.probability !== undefined ? { probability: o.probability } : {}) }] : [];
       });
     if (outcomes.length === 0) continue;
     out.push({ market_id: id, specifier: text(m.specifier), outcomes });
@@ -173,6 +175,7 @@ export function shareRequest(selections: readonly BookSelection[]) {
       marketId: s.marketId,
       specifier: s.specifier ?? null,
       outcomeId: s.outcomeId,
+      ...(s.parentBetBuilderMarketId ? { parentBetBuilderMarketId: s.parentBetBuilderMarketId } : {}),
     })),
   };
 }
@@ -209,6 +212,41 @@ export function parseShareResponse(body: unknown, sent?: number): BookedCode | n
     deadline,
     selectionsCount: count,
   };
+}
+
+/**
+ * The Bet Builder pricing call's body (POST /factsCenter/betBuilder/odds).
+ * Each part is addressed by its Sportradar URN, "uof:<product>/<sport>/
+ * <market>/<outcome>?<specifier>", product 3 being pre-match, and must carry
+ * SportyBet's own odds and probability: without either it answers HTTP 500.
+ */
+export function builderRequest(eventId: string, parts: readonly { selection: BookSelection; odds: string; probability: string }[]) {
+  return {
+    eventId,
+    selections: parts.map((p) => ({
+      id: `uof:3/sr:sport:1/${p.selection.marketId}/${p.selection.outcomeId}?${p.selection.specifier ?? ""}`,
+      odds: p.odds,
+      probability: p.probability,
+    })),
+  };
+}
+
+export type BuilderQuote = { valid: true; parentMarketId: string; odds: number } | { valid: false };
+
+/**
+ * SportyBet's answer to a Bet Builder pricing call: the combined price and
+ * the parent market id every part must carry on the share code, or valid:
+ * false when the parts contradict each other (a home win and a draw). Null
+ * when the answer is not one at all.
+ */
+export function parseBuilderQuote(body: unknown): BuilderQuote | null {
+  const data = okData(body);
+  if (!data) return null;
+  if (data.valid !== true) return { valid: false };
+  const parentMarketId = text(data.marketId);
+  const odds = Number(data.odds);
+  if (!parentMarketId || !Number.isFinite(odds) || odds <= 1) return { valid: false };
+  return { valid: true, parentMarketId, odds };
 }
 
 /** The link that opens a code on SportyBet Nigeria. */
