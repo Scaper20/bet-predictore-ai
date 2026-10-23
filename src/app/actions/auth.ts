@@ -8,27 +8,14 @@ import { sendEmail } from "@/lib/email";
 import { welcomeEmail } from "@/lib/email-templates";
 import { safeNext } from "@/lib/safe-redirect";
 import { POST_AUTH_DESTINATION } from "@/lib/routes";
-import { FIRST_TOUCH_COOKIE, type FirstTouch } from "@/lib/first-touch";
+import { FIRST_TOUCH_COOKIE } from "@/lib/first-touch";
 import { PARTNER_REF_COOKIE } from "@/lib/partner-ref";
-import { attributeSignup } from "@/lib/partner-attribution";
+import { recordSignupSource } from "@/lib/signup-source";
 import { markAuthChange } from "@/lib/auth-hint-server";
 
 export type AuthActionState = { error: string | null };
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-/** Reads back whatever src/proxy.ts captured on this browser's first
- * request. Best-effort: a missing, expired, or corrupted cookie just means
- * this signup has no attribution recorded, never a failed signup. */
-async function readFirstTouch(): Promise<FirstTouch | null> {
-  try {
-    const raw = (await cookies()).get(FIRST_TOUCH_COOKIE)?.value;
-    if (!raw) return null;
-    return JSON.parse(decodeURIComponent(raw)) as FirstTouch;
-  } catch {
-    return null;
-  }
-}
 
 export async function signIn(_prev: AuthActionState, formData: FormData): Promise<AuthActionState> {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
@@ -108,29 +95,13 @@ export async function signUp(_prev: AuthActionState, formData: FormData): Promis
     }
   }
 
-  // Record where this user actually came from (see 0017_signup_attribution.sql
-  // and src/proxy.ts) — after the session is confirmed active, since the
-  // update runs through the caller's own RLS-scoped client
-  // (profiles_update_own requires auth.uid() = id, which needs that session).
-  const firstTouch = await readFirstTouch();
-  if (signUpData?.user && firstTouch) {
-    void supabase
-      .from("profiles")
-      .update({
-        signup_referrer_host: firstTouch.referrerHost,
-        signup_utm_source: firstTouch.utmSource,
-        signup_utm_medium: firstTouch.utmMedium,
-        signup_utm_campaign: firstTouch.utmCampaign,
-        signup_utm_term: firstTouch.utmTerm,
-        signup_utm_content: firstTouch.utmContent,
-        signup_landing_page: firstTouch.landingPage,
-      })
-      .eq("id", signUpData.user.id);
-  }
-
-  // A partner's link, if this browser clicked one in the last 90 days.
+  // Where this user came from: first touch and any partner link (lib/signup-source.ts).
   if (signUpData?.user) {
-    await attributeSignup(signUpData.user.id, (await cookies()).get(PARTNER_REF_COOKIE)?.value);
+    const jar = await cookies();
+    await recordSignupSource(signUpData.user.id, {
+      firstTouch: jar.get(FIRST_TOUCH_COOKIE)?.value,
+      partnerRef: jar.get(PARTNER_REF_COOKIE)?.value,
+    });
   }
 
   void sendEmail({ to: email, ...welcomeEmail() });

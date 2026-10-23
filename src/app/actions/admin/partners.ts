@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { checkAdmin, logAdminAction } from "@/lib/admin";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { MAX_RATE_BPS, minPayout, moneyText, slugify, validSlug } from "@/lib/partners";
+import { creditPastPayments } from "@/lib/partner-attribution";
 
 export type PartnerActionState = { error: string | null; message: string | null };
 
@@ -178,5 +179,59 @@ export async function reverseCommission(_prev: PartnerActionState, formData: For
         : data === "cancelled"
           ? "Reversed before payout. The partner won't be paid it."
           : "Already reversed.",
+  };
+}
+
+/**
+ * Credits an existing account to a partner by hand, for a referral the site
+ * missed (before the October 2026 fix, Google sign-ins were never credited).
+ * Then pays the partner's share of everything that account has already paid.
+ *
+ * Refuses an account already credited to anyone, the partner's own account,
+ * and one created before the partner existed, which can't have come through
+ * their link.
+ */
+export async function creditAccountToPartner(_prev: PartnerActionState, formData: FormData): Promise<PartnerActionState> {
+  const gate = await checkAdmin();
+  if (!gate.ok) return { error: gate.error, message: null };
+
+  const partnerId = clean(formData.get("partnerId"), 40);
+  const email = clean(formData.get("email"), 254).toLowerCase();
+  if (!UUID.test(partnerId)) return { error: "Unknown partner.", message: null };
+  if (!email) return { error: "Enter the account's email.", message: null };
+
+  const admin = supabaseAdmin();
+  const [{ data: partner }, { data: profile }] = await Promise.all([
+    admin.from("partners").select("id, slug, user_id, created_at").eq("id", partnerId).maybeSingle(),
+    admin.from("profiles").select("id, created_at, referred_by_partner").ilike("email", email).maybeSingle(),
+  ]);
+  if (!partner) return { error: "Unknown partner.", message: null };
+  if (!profile) return { error: "No account with that email.", message: null };
+  if (profile.id === partner.user_id) return { error: "That's the partner's own account.", message: null };
+  if (profile.referred_by_partner) {
+    return {
+      error: profile.referred_by_partner === partner.id ? "Already credited to this partner." : "Already credited to another partner.",
+      message: null,
+    };
+  }
+  if (Date.parse(profile.created_at as string) < Date.parse(partner.created_at as string)) {
+    return { error: "That account was created before this partner joined, so it can't have come through their link.", message: null };
+  }
+
+  const { data: updated, error } = await admin
+    .from("profiles")
+    .update({ referred_by_partner: partner.id, referred_at: new Date().toISOString() })
+    .eq("id", profile.id)
+    .is("referred_by_partner", null)
+    .select("id");
+  if (error || !updated?.length) return { error: "Couldn't credit it. Nothing was changed.", message: null };
+
+  const payments = await creditPastPayments(profile.id as string);
+  await logAdminAction(gate.identity, "partner.signup_credited", partner.id as string, { userId: profile.id, payments });
+  revalidatePath("/admin/partners");
+  revalidatePath(`/admin/partners/${partner.id}`);
+  return {
+    error: null,
+    message: payments > 0 ? `Credited, with commission on ${payments} past payment${payments === 1 ? "" : "s"}.` : "Credited. Their future payments will earn commission.",
   };
 }

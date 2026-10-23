@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import {
   createPartner,
+  creditAccountToPartner,
   payOutPartner,
   reverseCommission,
   setPartnerStatus,
@@ -130,6 +131,21 @@ export function ReverseForm({ id, partnerId }: { id: string; partnerId: string }
       <Input name="reason" placeholder="Reason, e.g. refunded" maxLength={200} aria-label="Reason" className="w-44 py-1.5 text-xs" required />
       <Button type="submit" variant="ghost" disabled={pending} className="px-3 py-1.5 text-xs">
         Reverse
+      </Button>
+      <Result state={state} />
+    </form>
+  );
+}
+
+/** Credits a missed referral to this partner by the account's email. */
+export function CreditSignupForm({ partnerId }: { partnerId: string }) {
+  const [state, action, pending] = useActionState(creditAccountToPartner, initial);
+  return (
+    <form action={action} className="flex flex-wrap items-center gap-2">
+      <input type="hidden" name="partnerId" value={partnerId} />
+      <Input name="email" type="email" placeholder="Their account email" aria-label="Account email" className="w-64 py-1.5 text-xs" required />
+      <Button type="submit" variant="secondary" disabled={pending} className="px-3 py-1.5 text-xs">
+        Credit to this partner
       </Button>
       <Result state={state} />
     </form>
