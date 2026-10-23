@@ -10,8 +10,8 @@ describe("mobile menu sections", () => {
     expect(menus[1].columns.flatMap((c) => c.links).map((l) => l.label)).toContain("Trends");
   });
 
-  it("groups Code Hub, Forge and My combos under Tools", () => {
+  it("groups the Code Hub pages, Forge and My combos under Tools", () => {
     const tools = menus.find((m) => m.id === "tools")!;
-    expect(tools.columns.flatMap((c) => c.links).map((l) => l.label)).toEqual(["Code Hub", "Forge", "My combos"]);
+    expect(tools.columns.flatMap((c) => c.links).map((l) => l.label)).toEqual(["Code Hub", "Code editor", "Code community", "Forge", "My combos"]);
   });
 });

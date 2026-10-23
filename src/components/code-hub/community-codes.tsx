@@ -63,13 +63,12 @@ export function CommunityCodes({
   };
 
   return (
-    <section className="card space-y-5 p-5 sm:p-6" aria-labelledby="community-heading">
+    <section className="space-y-5" aria-labelledby="community-heading">
       <div>
-        <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-brand">Community codes</p>
-        <h2 id="community-heading" className="mt-1 font-display text-xl font-bold sm:text-2xl">
+        <h2 id="community-heading" className="sr-only">
           Codes from members, ranked by the model
         </h2>
-        <p className="mt-1 text-sm text-ink-muted">
+        <p className="text-sm text-ink-muted">
           Post a SportyBet code and we read every game on it. Codes are ranked by the model&apos;s chance of landing and
           how fairly SportyBet prices them. Each poster&apos;s record is counted from their past codes.
         </p>

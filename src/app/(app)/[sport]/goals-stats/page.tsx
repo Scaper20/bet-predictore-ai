@@ -50,7 +50,7 @@ export default async function GoalsStatsPage({ searchParams }: { searchParams: P
         title={`${def.name} goals`}
         description={`Goal rates over the last ${WINDOW} league games.`}
       />
-      <div className={`${containerClass()} space-y-6 py-7 sm:py-10`}>
+      <div className={`${containerClass()} space-y-6 py-4 sm:py-10`}>
         <Suspense fallback={<div className="h-11" />}>
           <LeagueTabs leagues={STAT_LEAGUES} active={code} />
         </Suspense>

@@ -12,7 +12,7 @@ export default function Loading() {
   return (
     <>
       <PageHeader eyebrow="Predictions" title="Picks" description="Data insights from analysed football matches." />
-      <div className={`${containerClass()} space-y-7 py-7 sm:py-10`}>
+      <div className={`${containerClass()} space-y-7 py-4 sm:py-10`}>
         <ChipRowSkeleton />
         <div className="flex flex-wrap items-center justify-between gap-3" aria-hidden>
           <div className="flex gap-2">

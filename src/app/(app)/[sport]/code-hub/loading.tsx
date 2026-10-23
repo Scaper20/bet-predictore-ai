@@ -6,8 +6,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 export default function Loading() {
   return (
     <>
-      <PageHeader eyebrow="Code Hub" title="Today's codes" description="Ready-made codes from 2 to 20 odds, each with a SportyBet code." />
-      <Container className="py-8 sm:py-10">
+      <PageHeader eyebrow="Code Hub" title="Today's codes" />
+      <Container className="py-4 sm:py-10">
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3" aria-hidden>
           {[4, 5, 6].map((legs, i) => (
             <div key={i} className="card overflow-hidden">

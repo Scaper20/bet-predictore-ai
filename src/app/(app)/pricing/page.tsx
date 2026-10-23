@@ -83,7 +83,7 @@ export default async function PricingPage({ searchParams }: PageProps<"/pricing"
         description="Start free. Pay in your own currency."
       />
 
-      <Container className="py-7 sm:py-10">
+      <Container className="py-4 sm:py-10">
         <div className="flex flex-col items-center gap-3">
           <IntervalToggle value={interval} />
           {proSaving && (

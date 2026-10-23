@@ -91,7 +91,7 @@ export default async function PredictionsPage({
         description="Data insights from analysed football matches."
       />
 
-      <div className={`${containerClass()} space-y-7 py-7 sm:py-10`}>
+      <div className={`${containerClass()} space-y-7 py-4 sm:py-10`}>
         <Suspense fallback={<div className="h-10" />}>
           <LeagueFilter proTags={!paid} counts={counts} />
         </Suspense>

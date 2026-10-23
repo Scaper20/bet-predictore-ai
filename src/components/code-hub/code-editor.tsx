@@ -78,10 +78,9 @@ export function CodeEditor({ signedIn }: { signedIn: boolean }) {
   const edited = data ? (mode === "target" ? data.target : data.safer) : null;
 
   return (
-    <section className="card space-y-5 p-5 sm:p-6" aria-labelledby="editor-heading">
+    <section className="card space-y-5 p-4 sm:p-6" aria-labelledby="editor-heading">
       <div>
-        <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-brand">Code editor</p>
-        <h2 id="editor-heading" className="mt-1 font-display text-xl font-bold sm:text-2xl">
+        <h2 id="editor-heading" className="font-display text-lg font-bold sm:text-2xl">
           Check any code. Make it safer.
         </h2>
         <p className="mt-1 text-sm text-ink-muted">

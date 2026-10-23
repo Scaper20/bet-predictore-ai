@@ -5,18 +5,14 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Container } from "@/components/ui/container";
 import { Badge, EmptyState } from "@/components/ui/primitives";
 import { HubCard } from "@/components/code-hub/hub-card";
-import { getEntitlement, meets } from "@/lib/entitlements";
+import { meets } from "@/lib/entitlements";
 import { finishedScores, runningHub, todayHub } from "@/lib/code-hub-feed";
 import { codeState, hubAccess, hubLegResult, hubStatus } from "@/lib/code-hub";
 import { GENERATOR_ALLOWANCE } from "@/lib/code-hub-plans";
-import { checkAdmin } from "@/lib/admin";
-import { switchOn } from "@/lib/switches";
 import { bookingAvailable } from "@/lib/odds/booking-code";
-import { supabaseAdmin } from "@/lib/supabase/admin";
 import { WaitlistWall } from "@/components/code-hub/waitlist-wall";
-import { CodeEditor } from "@/components/code-hub/code-editor";
-import { CommunityCodes } from "@/components/code-hub/community-codes";
-import { communityPosts } from "@/lib/code-hub-posts";
+import { HubTabs } from "@/components/code-hub/hub-tabs";
+import { hubGate, onWaitlist } from "@/lib/code-hub-gate";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/football/code-hub" },
@@ -29,20 +25,11 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function CodeHubPage() {
-  const [entitlement, open, admin] = await Promise.all([
-    getEntitlement(),
-    switchOn("code_hub_open"),
-    checkAdmin().then((g) => g.ok),
-  ]);
-
-  // Behind the waitlist until it opens from /admin/parsebot. Admins see
-  // through it, and so does every Vercel preview build, so the real page can
-  // be checked (and screenshotted) before launch.
-  const preview = process.env.VERCEL_ENV === "preview";
-  if (!open && !admin && !preview) {
+  const { entitlement, open, admin, allowed } = await hubGate();
+  if (!allowed) {
     return (
       <>
-        <PageHeader eyebrow="Code Hub" title="Code Hub" description="Ready-made combos with SportyBet codes." />
+        <PageHeader eyebrow="Code Hub" title="Code Hub" />
         <Container className="py-10 sm:py-14">
           <WaitlistWall email={entitlement.email} joined={await onWaitlist(entitlement.userId)} />
         </Container>
@@ -50,7 +37,7 @@ export default async function CodeHubPage() {
     );
   }
 
-  const [today, running, live, community] = await Promise.all([todayHub(), runningHub(), bookingAvailable(), communityPosts()]);
+  const [today, running, live] = await Promise.all([todayHub(), runningHub(), bookingAvailable()]);
   const paid = meets(entitlement.tier, "pro");
   const now = today.now;
   // Today's codes, then earlier four-day codes whose games are still on.
@@ -67,7 +54,6 @@ export default async function CodeHubPage() {
       <PageHeader
         eyebrow="Code Hub"
         title="Today's codes"
-        description="Ready-made codes from 2 to 20 odds, each with a SportyBet code."
         actions={
           !open ? (
             <Badge tone="amber">{admin ? "Admin view" : "Preview"}: visitors see the waitlist until launch</Badge>
@@ -77,7 +63,8 @@ export default async function CodeHubPage() {
         }
       />
 
-      <Container className="space-y-12 py-8 sm:py-10">
+      <Container className="space-y-6 py-4 sm:space-y-12 sm:py-10">
+        <HubTabs active="codeHub" />
         <section aria-labelledby="today-heading">
           <h2 id="today-heading" className="sr-only">
             Today&apos;s codes
@@ -118,10 +105,6 @@ export default async function CodeHubPage() {
           )}
         </section>
 
-        <CodeEditor signedIn={entitlement.signedIn || preview} />
-
-        <CommunityCodes initial={community.open} recent={community.recent} signedIn={entitlement.signedIn} />
-
         <section className="grid gap-4 text-sm text-ink-muted sm:grid-cols-3">
           <HowItem title="Built by the model">
             Every game and pick comes from the same numbers as the predictions pages. The chance shown is the model&apos;s
@@ -142,19 +125,6 @@ export default async function CodeHubPage() {
       </Container>
     </>
   );
-}
-
-async function onWaitlist(userId: string | null): Promise<boolean> {
-  if (!userId) return false;
-  try {
-    const { count } = await supabaseAdmin()
-      .from("code_hub_waitlist")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", userId);
-    return (count ?? 0) > 0;
-  } catch {
-    return false;
-  }
 }
 
 function HowItem({ title, children }: { title: string; children: React.ReactNode }) {

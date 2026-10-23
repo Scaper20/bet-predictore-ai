@@ -18,7 +18,7 @@ export default function TrackedSlipsPage() {
         title="My combos"
         description="Your combos, followed pick by pick."
       />
-      <div className={`${containerClass()} py-7 sm:py-10`}>
+      <div className={`${containerClass()} py-4 sm:py-10`}>
         <TrackedSlipsView />
       </div>
     </>
