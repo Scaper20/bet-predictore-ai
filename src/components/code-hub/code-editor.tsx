@@ -192,7 +192,9 @@ function ScanCard({ scan }: { scan: ScanView }) {
 
 function EditedCard({ result, before, mode }: { result: EditResult; before: ScanView; mode: "safer" | "target" }) {
   const changed = result.games.filter((g) => g.from).length;
-  const dropped = before.games.length - result.games.length;
+  const kept = new Set(result.games.map((g) => g.matchId));
+  const left = before.games.filter((g) => !g.matchId || !kept.has(g.matchId));
+  const dropped = left.length;
   return (
     <div className="rounded-xl border border-brand/30 bg-brand/5 p-4">
       <div className="flex items-baseline justify-between gap-3">
@@ -216,6 +218,13 @@ function EditedCard({ result, before, mode }: { result: EditResult; before: Scan
           </li>
         ))}
       </ul>
+      {left.length > 0 && (
+        <p className="mt-3 text-xs text-ink-dim">
+          Left off:{" "}
+          {left.map((g) => `${g.homeName ?? "?"} v ${g.awayName ?? "?"}`).join(", ")}. A game is left off when it starts
+          within 10 minutes or we can&apos;t read it.
+        </p>
+      )}
       <div className="mt-4 border-t border-line pt-4">
         <BookCodeButton legs={toLegs(result)} label="Get the new SportyBet code" />
       </div>
