@@ -133,7 +133,7 @@ export function HubCard(props: HubCardProps) {
                 <p className="mt-0.5 font-mono text-xl font-bold tracking-[0.12em] text-ink-dim">••••••</p>
               </div>
               <p className="max-w-[10rem] text-right text-xs text-ink-muted">
-                {props.preview ? "Codes switch on at launch" : "Code arrives before the first kick-off"}
+                {props.preview ? "SportyBet codes are paused for now" : "Code arrives before the first kick-off"}
               </p>
             </div>
           )}

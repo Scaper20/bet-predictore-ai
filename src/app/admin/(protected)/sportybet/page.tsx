@@ -6,7 +6,7 @@ import { SwitchForm } from "@/components/admin/switch-form";
 import { LEAGUES, leagueByCode } from "@/lib/leagues";
 import { directHealth } from "@/lib/odds/sportybet-direct";
 import { TRUST_MIN_SHARE, TRUST_MIN_VOTES } from "@/lib/odds/sportybet-discover";
-import { tournamentRows } from "@/lib/odds/sportybet-links";
+import { allSportyBetTournaments, tournamentRows } from "@/lib/odds/sportybet-links";
 import type { Candidate } from "@/lib/odds/sportybet-match";
 import { shareLink } from "@/lib/odds/sportybet-api";
 import { matchPath } from "@/lib/routes";
@@ -101,6 +101,18 @@ interface Booking {
 }
 
 /** Ground truth: links checked against final scores, and every booking attempt. */
+/** What has to be true before the Code Hub opens to everyone. */
+async function launchState() {
+  const db = supabaseAdmin();
+  const day = new Date().toLocaleDateString("en-CA", { timeZone: "Africa/Lagos" });
+  const [codes, tournaments] = await Promise.all([
+    db.from("code_hub_codes").select("tier, booking_code").eq("day", day),
+    allSportyBetTournaments(),
+  ]);
+  const rows = (codes.data ?? []) as { tier: string; booking_code: string | null }[];
+  return { built: rows.length, booked: rows.filter((r) => r.booking_code).length, competitions: tournaments.size };
+}
+
 async function proof() {
   const db = supabaseAdmin();
   const now = Date.now();
@@ -167,7 +179,7 @@ async function proof() {
 const pct = (n: number, d: number) => (d > 0 ? `${Math.round((n / d) * 100)}%` : "–");
 
 export default async function AdminSportyBetPage() {
-  const [sw, data, rows, p] = await Promise.all([switchesFresh(), load(), tournamentRows(), proof()]);
+  const [sw, data, rows, p, launch] = await Promise.all([switchesFresh(), load(), tournamentRows(), proof(), launchState()]);
   const hardOff = process.env.SPORTYBET_DIRECT?.trim() === "off";
   const health = directHealth();
   const found = new Map(rows.map((r) => [r.league_code, r]));
@@ -183,6 +195,36 @@ export default async function AdminSportyBetPage() {
           by name again. What the matcher couldn&rsquo;t settle on its own is listed below.
         </p>
       </div>
+
+      <section className="card space-y-4 p-5 sm:p-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-sm font-semibold text-ink">Code Hub launch checklist</h2>
+          {sw.code_hub_open.enabled ? <Badge tone="brand">Open to everyone</Badge> : <Badge tone="amber">Waitlist</Badge>}
+        </div>
+        <ul className="space-y-1.5 text-sm">
+          <LaunchCheck
+            ok={sw.sportybet_direct.enabled && !hardOff && !(health.failedAt && (!health.okAt || health.failedAt > health.okAt))}
+            text="SportyBet direct is on and answering"
+          />
+          <LaunchCheck ok={launch.competitions >= 20} text={`${launch.competitions} competitions linked to SportyBet`} />
+          <LaunchCheck
+            ok={launch.built > 0 && launch.booked === launch.built}
+            text={`Today's hub codes booked: ${launch.booked} of ${launch.built}`}
+          />
+          <LaunchCheck
+            ok={p.bookings.attempts === 0 || p.bookings.booked / Math.max(1, p.bookings.attempts - p.bookings.problems) >= 0.9}
+            text={`Bookings this week: ${p.bookings.booked} codes from ${p.bookings.attempts} attempts`}
+          />
+          <LaunchCheck ok={p.totals.mismatch === 0} text={`Links confirmed by final score: ${p.totals.confirmed}, mismatched: ${p.totals.mismatch}`} />
+        </ul>
+        <p className="text-xs text-ink-dim">
+          When every line is green, open the hub from{" "}
+          <Link href="/admin/parsebot" className="text-brand hover:underline">
+            parse.bot &amp; Code Hub
+          </Link>
+          . Preview builds already show the open hub for checking.
+        </p>
+      </section>
 
       <section className="card space-y-5 p-5 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -506,5 +548,14 @@ function Stat({ label, value }: { label: string; value: string }) {
       <p className="text-[11px] font-medium uppercase tracking-wider text-ink-dim">{label}</p>
       <p className="mt-1 font-mono text-base">{value}</p>
     </div>
+  );
+}
+
+function LaunchCheck({ ok, text }: { ok: boolean; text: string }) {
+  return (
+    <li className={`flex items-center gap-2 ${ok ? "text-ink-muted" : "text-amber"}`}>
+      <span className="font-bold">{ok ? "✓" : "!"}</span>
+      {text}
+    </li>
   );
 }
