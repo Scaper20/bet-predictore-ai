@@ -3,8 +3,8 @@ import { supabaseServer, supabaseConfigured } from "@/lib/supabase/server";
 import { safeNext } from "@/lib/safe-redirect";
 import { getPreferencesFor, hasOnboarded } from "@/lib/preferences";
 import { PARTNER_REF_COOKIE } from "@/lib/partner-ref";
-import { attributeSignup } from "@/lib/partner-attribution";
-import { FIRST_TOUCH_COOKIE, type FirstTouch } from "@/lib/first-touch";
+import { recordSignupSource } from "@/lib/signup-source";
+import { FIRST_TOUCH_COOKIE } from "@/lib/first-touch";
 
 /**
  * Where Supabase sends people back to after they click a link in an email,
@@ -47,31 +47,11 @@ export async function GET(request: NextRequest) {
   if (data.user) {
     const prefs = await getPreferencesFor(supabase, data.user.id);
     if (!hasOnboarded(prefs)) {
-      // Best-effort, same as signUp()'s own attribution write — a user who
-      // arrived via OAuth still has a first-touch cookie from their first
-      // visit to the site, same source as the email/password path.
-      try {
-        const raw = request.cookies.get(FIRST_TOUCH_COOKIE)?.value;
-        const firstTouch = raw ? (JSON.parse(decodeURIComponent(raw)) as FirstTouch) : null;
-        if (firstTouch) {
-          void supabase
-            .from("profiles")
-            .update({
-              signup_referrer_host: firstTouch.referrerHost,
-              signup_utm_source: firstTouch.utmSource,
-              signup_utm_medium: firstTouch.utmMedium,
-              signup_utm_campaign: firstTouch.utmCampaign,
-              signup_utm_term: firstTouch.utmTerm,
-              signup_utm_content: firstTouch.utmContent,
-              signup_landing_page: firstTouch.landingPage,
-            })
-            .eq("id", data.user.id);
-        }
-      } catch {
-        // Corrupted/missing cookie — this signup just has no attribution.
-      }
-
-      await attributeSignup(data.user.id, request.cookies.get(PARTNER_REF_COOKIE)?.value);
+      // Where this user came from, same as signUp() (lib/signup-source.ts).
+      await recordSignupSource(data.user.id, {
+        firstTouch: request.cookies.get(FIRST_TOUCH_COOKIE)?.value,
+        partnerRef: request.cookies.get(PARTNER_REF_COOKIE)?.value,
+      });
 
       return NextResponse.redirect(new URL(`/onboarding?next=${encodeURIComponent(requestedNext)}`, url.origin));
     }

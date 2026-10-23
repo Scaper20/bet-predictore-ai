@@ -7,7 +7,7 @@ import { SITE_URL } from "@/lib/site-url";
 import { AdminTable, AdminTableHead, AdminTableRow, AdminTableCell } from "@/components/admin/admin-table";
 import { StatCard } from "@/components/admin/stat-card";
 import { CopyButton } from "@/components/admin/copy-button";
-import { PartnerForm, PartnerStatusForm, PayoutForm, ReverseForm } from "@/components/admin/partner-forms";
+import { CreditSignupForm, PartnerForm, PartnerStatusForm, PayoutForm, ReverseForm } from "@/components/admin/partner-forms";
 import { Badge, EmptyState, type Tone } from "@/components/ui/primitives";
 
 export const metadata: Metadata = { title: "Partner" };
@@ -131,6 +131,13 @@ export default async function AdminPartnerPage({ params }: { params: Promise<{ i
 
       <section className="space-y-3">
         <h2 className="text-sm font-semibold text-ink">Signups</h2>
+        <div className="space-y-1">
+          <CreditSignupForm partnerId={partner.id} />
+          <p className="text-xs text-ink-dim">
+            For a signup the site missed: credits the account to this partner and pays commission on anything it has
+            already paid.
+          </p>
+        </div>
         {signups.length === 0 ? (
           <p className="text-sm text-ink-muted">No one has signed up through this link yet.</p>
         ) : (
