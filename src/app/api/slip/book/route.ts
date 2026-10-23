@@ -5,7 +5,7 @@ import { checkAdmin } from "@/lib/admin";
 import { ALLOWANCE_WINDOW_MS, allowanceState, weeklyCodeAllowance } from "@/lib/code-hub-plans";
 import { bookingAvailable, bookingCodeFor, peekBookingCode } from "@/lib/odds/booking-code";
 import { KICKOFF_MARGIN_MS, MAX_LEGS, type BookingLeg, type BookingProblem } from "@/lib/odds/booking";
-import { toSportyBet } from "@/lib/odds/markets";
+import { offeredOn, toSportyBet } from "@/lib/odds/markets";
 import { findOnBoard } from "@/lib/odds/sportybet";
 import { shareLink } from "@/lib/odds/sportybet-api";
 import { codesGivenTo, logBooking, sportyBetTournament, type BookingLogEntry } from "@/lib/odds/sportybet-links";
@@ -54,6 +54,7 @@ type LegProblem =
   | "unsupported-competition"
   | "not-listed"
   | "starting"
+  | "not-offered"
   | "duplicate-game";
 
 interface IncomingLeg {
@@ -138,14 +139,12 @@ export async function POST(request: Request) {
         problems.push({ matchId, problem: "not-listed" });
         return;
       }
-      // Forge's same-game combos ("combo:a+b"): SportyBet will not put two
-      // selections from one game on a code, so say that rather than "unsupported".
-      if (market.startsWith("combo:")) {
-        problems.push({ matchId, problem: "same-game-combo" });
-        return;
-      }
-      if (!toSportyBet(market)) {
-        problems.push({ matchId, problem: "unsupported-market" });
+      // A same-game combo ("combo:a+b") goes on as SportyBet's ready-made
+      // combo market when one exists (markets.ts toSportyBetCombo); the rest
+      // (three parts, a handicap part) say so rather than "unsupported".
+      const selection = toSportyBet(market);
+      if (!selection) {
+        problems.push({ matchId, problem: market.startsWith("combo:") ? "same-game-combo" : "unsupported-market" });
         return;
       }
       if (kickoff - Date.now() <= KICKOFF_MARGIN_MS) {
@@ -163,6 +162,13 @@ export async function POST(request: Request) {
       ).catch(() => null);
       if (!event) {
         problems.push({ matchId, problem: "not-listed" });
+        return;
+      }
+      // Lines differ by game: refuse a selection SportyBet isn't offering on
+      // this one now, rather than have the whole code refused. A board with
+      // no markets at all (an old parse.bot copy) can't say, so it is let through.
+      if (event.markets.length > 0 && !offeredOn(selection, event.markets)) {
+        problems.push({ matchId, problem: "not-offered" });
         return;
       }
       legs[index] = { market, eventId: event.eventId, kickoff: event.kickoff };

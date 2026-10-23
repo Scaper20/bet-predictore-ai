@@ -8,6 +8,7 @@ import { appDayBounds } from "@/lib/format";
 import { priceQuotes } from "@/lib/odds";
 import { bookingAvailable, bookingCodeFor } from "@/lib/odds/booking-code";
 import { findOnBoard } from "@/lib/odds/sportybet";
+import { offeredOn, toSportyBet } from "@/lib/odds/markets";
 import { allSportyBetTournaments, logBooking } from "@/lib/odds/sportybet-links";
 import type { BookingLeg } from "@/lib/odds/booking";
 import {
@@ -190,6 +191,10 @@ function bookMissing(rows: HubCodeRow[]) {
           { leagueCode: leg.leagueCode, matchId: leg.matchId },
         ).catch(() => null);
         if (!event) break;
+        // A line SportyBet isn't offering on the day would get the whole code
+        // refused; leave the combo without a code instead, as for an unlisted game.
+        const selection = toSportyBet(leg.market);
+        if (!selection || (event.markets.length > 0 && !offeredOn(selection, event.markets))) break;
         legs.push({ market: leg.market, eventId: event.eventId, kickoff });
       }
       if (legs.length !== row.legs.length) {

@@ -44,8 +44,12 @@ const HEADERS = {
 
 const TIMEOUT_MS = 8_000;
 
-/** The markets our catalogue maps (markets.ts): 1X2, totals, double chance, BTTS, handicap. */
-const MARKET_IDS = "1,18,10,29,16";
+/**
+ * The markets our catalogue maps (markets.ts): 1X2, totals, double chance,
+ * BTTS, handicap, and the ready-made same-game combos 35, 36, 37, 546, 547,
+ * so a combo has a price and its line can be checked before booking.
+ */
+const MARKET_IDS = "1,18,10,29,16,35,36,37,546,547";
 
 /**
  * Filtered by tournament, SportyBet pages ten events at a time whatever
