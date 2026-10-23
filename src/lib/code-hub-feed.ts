@@ -5,11 +5,10 @@ import { cached } from "@/lib/providers/cache";
 import { predictBatch, upcomingFeed } from "@/lib/service";
 import { candidatesFor, type ForgeLeg } from "@/lib/forge";
 import { appDayBounds } from "@/lib/format";
-import { leagueByCode } from "@/lib/leagues";
 import { priceQuotes } from "@/lib/odds";
 import { bookingAvailable, bookingCodeFor } from "@/lib/odds/booking-code";
 import { findOnBoard } from "@/lib/odds/sportybet";
-import { logBooking } from "@/lib/odds/sportybet-links";
+import { allSportyBetTournaments, logBooking } from "@/lib/odds/sportybet-links";
 import type { BookingLeg } from "@/lib/odds/booking";
 import {
   CODE_RUN_MS,
@@ -123,13 +122,13 @@ async function buildToday(day: string): Promise<HubCodeRow[]> {
   const now = new Date();
   const soon = now.getTime() + LEAD_MS;
   const todayEnd = appDayBounds(now).end.getTime();
-  const { matches } = await upcomingFeed(2);
+  const [{ matches }, onSportyBet] = await Promise.all([upcomingFeed(2), allSportyBetTournaments()]);
   const inWindow = matches.filter((m) => {
     const t = Date.parse(m.kickoff);
     const code = m.league.code;
     // Only competitions SportyBet's board can be asked for by id: a leg on
     // any other game could never be turned into a code.
-    return m.status === "scheduled" && t > soon && t < todayEnd && Boolean(code && leagueByCode(code)?.ids.sportyBet);
+    return m.status === "scheduled" && t > soon && t < todayEnd && Boolean(code && onSportyBet.has(code));
   });
   const predictions = (await predictBatch(inWindow, 400)).filter((p) => p.sufficiency.publishable);
   const entry = (prediction: (typeof predictions)[number]) => ({

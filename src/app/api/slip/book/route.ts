@@ -8,7 +8,7 @@ import { KICKOFF_MARGIN_MS, MAX_LEGS, type BookingLeg, type BookingProblem } fro
 import { toSportyBet } from "@/lib/odds/markets";
 import { findOnBoard } from "@/lib/odds/sportybet";
 import { shareLink } from "@/lib/odds/sportybet-api";
-import { codesGivenTo, logBooking, type BookingLogEntry } from "@/lib/odds/sportybet-links";
+import { codesGivenTo, logBooking, sportyBetTournament, type BookingLogEntry } from "@/lib/odds/sportybet-links";
 
 /**
  * A SportyBet booking code for the user's combo.
@@ -153,7 +153,7 @@ export async function POST(request: Request) {
         return;
       }
       const league = leagueByProviderName(str(raw.league) ?? "");
-      if (!league?.ids.sportyBet) {
+      if (!league || !(await sportyBetTournament(league.code))) {
         problems.push({ matchId, problem: "unsupported-competition" });
         return;
       }

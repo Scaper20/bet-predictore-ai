@@ -4,9 +4,10 @@ import { Badge } from "@/components/ui/primitives";
 import { SportyBetForm } from "@/components/admin/sportybet-forms";
 import { SwitchForm } from "@/components/admin/switch-form";
 import { LEAGUES, leagueByCode } from "@/lib/leagues";
-import { directHealth, fetchTournamentList } from "@/lib/odds/sportybet-direct";
+import { directHealth } from "@/lib/odds/sportybet-direct";
+import { TRUST_MIN_SHARE, TRUST_MIN_VOTES } from "@/lib/odds/sportybet-discover";
+import { tournamentRows } from "@/lib/odds/sportybet-links";
 import type { Candidate } from "@/lib/odds/sportybet-match";
-import { nameSimilarity } from "@/lib/odds/sportybet-match";
 import { shareLink } from "@/lib/odds/sportybet-api";
 import { matchPath } from "@/lib/routes";
 import { switchesFresh } from "@/lib/switches";
@@ -165,32 +166,12 @@ async function proof() {
 
 const pct = (n: number, d: number) => (d > 0 ? `${Math.round((n / d) * 100)}%` : "–");
 
-/** Likely SportyBet tournaments for competitions that have no id yet. Suggestions only. */
-async function suggestions() {
-  const missing = LEAGUES.filter((l) => !l.ids.sportyBet);
-  if (missing.length === 0) return [];
-  const list = await fetchTournamentList();
-  if (!list) return null;
-  return missing.map((league) => ({
-    league,
-    options: list
-      .map((t) => ({
-        ...t,
-        score:
-          nameSimilarity(league.name, t.name) +
-          (league.country && nameSimilarity(league.country, t.category) > 0.6 ? 0.5 : 0),
-      }))
-      .filter((t) => t.score > 0.4)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 3),
-  }));
-}
-
 export default async function AdminSportyBetPage() {
-  const [sw, data, suggested, p] = await Promise.all([switchesFresh(), load(), suggestions(), proof()]);
+  const [sw, data, rows, p] = await Promise.all([switchesFresh(), load(), tournamentRows(), proof()]);
   const hardOff = process.env.SPORTYBET_DIRECT?.trim() === "off";
   const health = directHealth();
-  const linked = LEAGUES.filter((l) => l.ids.sportyBet);
+  const found = new Map(rows.map((r) => [r.league_code, r]));
+  const linked = LEAGUES.filter((l) => l.ids.sportyBet || found.get(l.code)?.status === "trusted");
 
   return (
     <div className="max-w-4xl space-y-8">
@@ -461,28 +442,59 @@ export default async function AdminSportyBetPage() {
       </section>
 
       <section className="card overflow-hidden">
-        <h2 className="border-b border-line px-5 py-3 text-sm font-semibold">Competitions without a SportyBet id</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-3">
+          <h2 className="text-sm font-semibold">Competitions on SportyBet</h2>
+          <SportyBetForm action="discover" fields={{}}>
+            Find competitions now
+          </SportyBetForm>
+        </div>
         <p className="border-b border-line px-5 py-2 text-xs text-ink-dim">
-          Suggestions read off SportyBet&rsquo;s tournament list. Check one on the live board, then add it to{" "}
-          <code>ids.sportyBet</code> in <code>src/lib/leagues.ts</code>. Ids are never filled in automatically.
+          A competition without a hand-set id is found from evidence: its own upcoming fixtures are matched against
+          SportyBet&rsquo;s whole board, and the tournament they are found in wins. Clear wins (at least{" "}
+          {TRUST_MIN_VOTES} fixtures, {Math.round(TRUST_MIN_SHARE * 100)}% of the votes) are used straight away; close
+          ones wait here. Runs daily, and finds a competition again once it has fixtures.
         </p>
-        {suggested === null ? (
-          <p className="px-5 py-4 text-sm text-ink-muted">SportyBet didn&rsquo;t answer just now.</p>
-        ) : (
-          <ul className="divide-y divide-line text-sm">
-            {suggested.map(({ league, options }) => (
-              <li key={league.code} className="px-5 py-2.5">
-                <span className="font-semibold">{league.name}</span>
-                <span className="text-xs text-ink-dim"> · {league.country ?? "international"}</span>
-                <p className="mt-1 font-mono text-xs text-ink-muted">
-                  {options.length === 0
-                    ? "no likely match"
-                    : options.map((o) => `${o.id} ${o.category} / ${o.name} (${o.eventSize})`).join("  ·  ")}
-                </p>
+        <ul className="divide-y divide-line text-sm">
+          {LEAGUES.map((l) => {
+            const row = found.get(l.code);
+            return (
+              <li key={l.code} className="flex flex-wrap items-center gap-3 px-5 py-2.5">
+                <span className="min-w-0 flex-1">
+                  <span className="font-semibold">{l.name}</span>
+                  <span className="block font-mono text-xs text-ink-muted">
+                    {l.ids.sportyBet
+                      ? `${l.ids.sportyBet} · hand-set`
+                      : row
+                        ? `${row.tournament_id} ${row.category} / ${row.tournament_name} · ${row.votes} of ${row.fixtures} fixtures` +
+                          (row.runner_up_votes ? ` (next best ${row.runner_up_votes})` : "")
+                        : "not found yet: no fixtures on SportyBet, or none upcoming"}
+                  </span>
+                </span>
+                {l.ids.sportyBet ? (
+                  <Badge tone="brand">Hand-set</Badge>
+                ) : row?.status === "trusted" ? (
+                  <Badge tone="brand">Found</Badge>
+                ) : row?.status === "pending" ? (
+                  <Badge tone="amber">Check</Badge>
+                ) : row?.status === "rejected" ? (
+                  <Badge tone="rose">Rejected</Badge>
+                ) : (
+                  <Badge>None</Badge>
+                )}
+                {!l.ids.sportyBet && row && row.status !== "trusted" && (
+                  <SportyBetForm action="tournament" fields={{ league: l.code, intent: "approve" }}>
+                    Use it
+                  </SportyBetForm>
+                )}
+                {!l.ids.sportyBet && row && row.status !== "rejected" && (
+                  <SportyBetForm action="tournament" variant="danger" fields={{ league: l.code, intent: "reject" }}>
+                    Wrong
+                  </SportyBetForm>
+                )}
               </li>
-            ))}
-          </ul>
-        )}
+            );
+          })}
+        </ul>
       </section>
     </div>
   );

@@ -1,9 +1,11 @@
 import "server-only";
 
+import { leagueByCode } from "@/lib/leagues";
 import { normaliseKey } from "@/lib/model/fit";
 import { cached } from "@/lib/providers/cache";
 import type { LearnedLink, MatchInput, MatchMethod, UnresolvedFixture } from "./sportybet-match";
 import type { SportyBetEvent } from "./sportybet-api";
+import type { Discovery } from "./sportybet-discover";
 
 /**
  * What the SportyBet matcher remembers, in the tables from migration 0066.
@@ -300,5 +302,119 @@ export async function codesGivenTo(userId: string, since: number): Promise<Map<s
     return first;
   } catch {
     return null;
+  }
+}
+
+export interface TournamentRow {
+  league_code: string;
+  tournament_id: string;
+  tournament_name: string;
+  category: string;
+  votes: number;
+  runner_up_votes: number;
+  fixtures: number;
+  status: "trusted" | "pending" | "rejected";
+  method: "discovered" | "manual";
+  updated_at: string;
+}
+
+/** Every stored tournament row, for the admin page and the lookup below. */
+export async function tournamentRows(): Promise<TournamentRow[]> {
+  try {
+    const { data, error } = await (await admin()).from("sportybet_tournaments").select("*");
+    return error ? [] : ((data ?? []) as TournamentRow[]);
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Trusted discovered ids, held for five minutes per instance. Kept here
+ * rather than in the shared TTL cache so a discovery or an admin's decision
+ * can clear it at once (forgetTournaments) and the sync that follows sees it.
+ */
+let trusted: { at: number; map: Promise<Map<string, string>> } | null = null;
+
+function trustedTournaments(): Promise<Map<string, string>> {
+  if (!trusted || Date.now() - trusted.at > 5 * 60_000) {
+    trusted = {
+      at: Date.now(),
+      map: tournamentRows().then((rows) => {
+        const out = new Map<string, string>();
+        for (const r of rows) if (r.status === "trusted") out.set(r.league_code, r.tournament_id);
+        return out;
+      }),
+    };
+  }
+  return trusted.map;
+}
+
+export function forgetTournaments(): void {
+  trusted = null;
+}
+
+/**
+ * A competition's SportyBet tournament id, or null when it has none yet.
+ *
+ * The hand-set id in leagues.ts first, always; otherwise one found from
+ * evidence and trusted (sportybet-discover.ts). Every SportyBet path asks
+ * here rather than reading leagues.ts, so a competition found tonight has
+ * prices and codes tomorrow without a deploy.
+ */
+export async function sportyBetTournament(leagueCode: string | undefined): Promise<string | null> {
+  if (!leagueCode) return null;
+  const set = leagueByCode(leagueCode)?.ids.sportyBet;
+  if (set) return set;
+  return (await trustedTournaments()).get(leagueCode) ?? null;
+}
+
+/** Every competition with a tournament id, hand-set or trusted: code -> id. */
+export async function allSportyBetTournaments(): Promise<Map<string, string>> {
+  const { LEAGUES } = await import("@/lib/leagues");
+  const out = new Map(await trustedTournaments());
+  for (const l of LEAGUES) if (l.ids.sportyBet) out.set(l.code, l.ids.sportyBet);
+  return out;
+}
+
+/**
+ * Stores a discovery. Never overwrites a row an admin decided (a manual row,
+ * or a rejection of the same tournament id), and never downgrades a trusted
+ * row to pending on a thinner week.
+ */
+export async function saveDiscovery(leagueCode: string, fixtures: number, found: Discovery): Promise<"saved" | "kept" | "none"> {
+  if (!found.best || !found.decision) return "none";
+  try {
+    const db = await admin();
+    const { data: existing } = await db
+      .from("sportybet_tournaments")
+      .select("tournament_id, status, method")
+      .eq("league_code", leagueCode)
+      .maybeSingle();
+    if (existing) {
+      if (existing.method === "manual") return "kept";
+      if (existing.status === "rejected" && existing.tournament_id === found.best.tournamentId) return "kept";
+      // A thinner week never undoes a clear one: only another clear result
+      // replaces a trusted row.
+      if (existing.status === "trusted" && found.decision === "pending") return "kept";
+    }
+    await db.from("sportybet_tournaments").upsert(
+      {
+        league_code: leagueCode,
+        tournament_id: found.best.tournamentId,
+        tournament_name: found.best.name,
+        category: found.best.category,
+        votes: found.best.votes,
+        runner_up_votes: found.runnerUp?.votes ?? 0,
+        fixtures,
+        status: found.decision,
+        method: "discovered",
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "league_code" },
+    );
+    forgetTournaments();
+    return "saved";
+  } catch {
+    return "none";
   }
 }

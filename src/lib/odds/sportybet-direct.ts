@@ -176,6 +176,32 @@ export async function fetchTournamentEvents(tournamentId: string): Promise<Sport
   return [...byId.values()].sort((a, b) => a.kickoff - b.kickoff);
 }
 
+/**
+ * SportyBet's whole upcoming football board, every competition, 1X2 only
+ * (markets are not needed to find where a fixture is listed). About two
+ * dozen pages; used once a day to find tournament ids (sportybet-discover.ts).
+ */
+export async function fetchFullBoard(maxPages = 40): Promise<SportyBetEvent[] | null> {
+  const byId = new Map<string, SportyBetEvent>();
+  for (let page = 1; page <= maxPages; page++) {
+    const q = new URLSearchParams({
+      sportId: "sr:sport:1",
+      marketId: "1",
+      pageSize: String(BOARD_PAGE),
+      pageNum: String(page),
+      option: "1",
+    });
+    const parsed = parseUpcoming(await call(`/factsCenter/pcUpcomingEvents?${q}`));
+    if (!parsed) {
+      if (page === 1) return null;
+      break;
+    }
+    if (parsed.events.length === 0) break;
+    for (const e of parsed.events) byId.set(e.eventId, e);
+  }
+  return [...byId.values()];
+}
+
 /** Every football tournament SportyBet lists, for suggesting league ids. */
 export async function fetchTournamentList(): Promise<TournamentEntry[] | null> {
   const body = await call("/factsCenter/sportList?sportId=sr%3Asport%3A1&productId=3");

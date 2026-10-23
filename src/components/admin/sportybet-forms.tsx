@@ -3,7 +3,9 @@
 import { useActionState, type ReactNode } from "react";
 import {
   judgeLink,
+  judgeTournament,
   linkFixture,
+  runDiscover,
   runSync,
   runVerify,
   unlinkFixture,
@@ -13,7 +15,15 @@ import { Button, Spinner } from "@/components/ui/primitives";
 
 const initial: SportyBetActionState = { error: null, message: null };
 
-const ACTIONS = { link: linkFixture, judge: judgeLink, sync: runSync, verify: runVerify, unlink: unlinkFixture } as const;
+const ACTIONS = {
+  link: linkFixture,
+  judge: judgeLink,
+  sync: runSync,
+  verify: runVerify,
+  unlink: unlinkFixture,
+  discover: runDiscover,
+  tournament: judgeTournament,
+} as const;
 
 /** One small form for one of the SportyBet matching actions, with its result inline. */
 export function SportyBetForm({

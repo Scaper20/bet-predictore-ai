@@ -3,8 +3,17 @@ import "server-only";
 import { LEAGUES, type LeagueDef } from "@/lib/leagues";
 import { dbUpcoming } from "@/lib/providers/db-source";
 import { sportyBetBoard } from "./sportybet";
-import { directEnabled } from "./sportybet-direct";
-import { memoryFor, saveEventLinks, saveLearned, saveUnresolved, storedEventLinks } from "./sportybet-links";
+import { directEnabled, fetchFullBoard } from "./sportybet-direct";
+import { voteTournaments, type Discovery } from "./sportybet-discover";
+import {
+  memoryFor,
+  saveDiscovery,
+  saveEventLinks,
+  saveLearned,
+  saveUnresolved,
+  sportyBetTournament,
+  storedEventLinks,
+} from "./sportybet-links";
 import { matchRound, type MatchMethod, type OurFixture } from "./sportybet-match";
 
 /**
@@ -45,7 +54,7 @@ export async function syncLeague(league: LeagueDef): Promise<LeagueSyncReport> {
     learned: 0,
     unresolved: 0,
   };
-  const tournamentId = league.ids.sportyBet;
+  const tournamentId = await sportyBetTournament(league.code);
   if (!tournamentId) return { ...report, error: "no SportyBet tournament id" };
 
   try {
@@ -114,9 +123,53 @@ export async function syncSportyBet(only?: readonly string[]): Promise<LeagueSyn
   if (!(await directEnabled())) return null;
   const reports: LeagueSyncReport[] = [];
   for (const league of LEAGUES) {
-    if (!league.ids.sportyBet) continue;
     if (only && !only.includes(league.code)) continue;
+    if (!(await sportyBetTournament(league.code))) continue;
     reports.push(await syncLeague(league));
+  }
+  return reports;
+}
+
+export interface DiscoveryReport {
+  league: string;
+  fixtures: number;
+  decision: Discovery["decision"];
+  best: Discovery["best"];
+  runnerUp: Discovery["runnerUp"];
+  stored: "saved" | "kept" | "none";
+}
+
+/**
+ * Finds the SportyBet tournament for every competition without a hand-set
+ * id, from where its own upcoming fixtures sit on SportyBet's board
+ * (sportybet-discover.ts). One read of the whole board serves every
+ * competition. Daily from the sync cron, and on demand from /admin/sportybet.
+ */
+export async function discoverTournaments(): Promise<DiscoveryReport[] | null> {
+  if (!(await directEnabled())) return null;
+  const wanted = LEAGUES.filter((l) => !l.ids.sportyBet);
+  const withFixtures: { league: LeagueDef; fixtures: OurFixture[] }[] = [];
+  for (const league of wanted) {
+    const matches = await dbUpcoming(DAYS_AHEAD, league.code).catch(() => []);
+    const fixtures = matches
+      .filter((m) => m.status === "scheduled")
+      .map((m) => ({ matchId: m.id, homeName: m.home.name, awayName: m.away.name, kickoff: Date.parse(m.kickoff) }));
+    if (fixtures.length) withFixtures.push({ league, fixtures });
+  }
+  if (withFixtures.length === 0) return [];
+
+  const board = await fetchFullBoard();
+  if (!board) return null;
+
+  const reports: DiscoveryReport[] = [];
+  for (const { league, fixtures } of withFixtures) {
+    const memory = await memoryFor(
+      league.code,
+      fixtures.flatMap((f) => [f.homeName, f.awayName]),
+    );
+    const found = voteTournaments(league, fixtures, board, { aliases: memory.aliases });
+    const stored = await saveDiscovery(league.code, fixtures.length, found);
+    reports.push({ league: league.code, fixtures: fixtures.length, decision: found.decision, best: found.best, runnerUp: found.runnerUp, stored });
   }
   return reports;
 }

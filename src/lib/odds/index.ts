@@ -6,7 +6,7 @@ import { assessValue, type ValueVerdict } from "@/lib/value";
 import { priceGap, ratePrice, type MarketQuote, type PriceVerdict } from "./consensus";
 import { consensusQuote, hasConsensusCoverage } from "./the-odds-api";
 import { sportyBetPrice, sportyBetPricedAt } from "./sportybet";
-import { leagueByCode } from "@/lib/leagues";
+import { sportyBetTournament } from "./sportybet-links";
 import { isQuotable } from "./markets";
 import type { FixtureLike } from "./match-fixture";
 
@@ -139,8 +139,8 @@ async function priceOne(pick: QuoteRequest): Promise<SelectionPricing> {
   ]);
 
   const price = typeof local === "number" ? local : null;
-  const tournamentId = pick.leagueCode ? leagueByCode(pick.leagueCode)?.ids.sportyBet : undefined;
-  const localAt = price !== null && tournamentId ? sportyBetPricedAt(tournamentId) : null;
+  const tournamentId = price !== null ? await sportyBetTournament(pick.leagueCode) : null;
+  const localAt = tournamentId ? sportyBetPricedAt(tournamentId) : null;
 
   // No blending. An average of a market median and a model estimate is a
   // number with no owner, and the point of keeping them apart is that the

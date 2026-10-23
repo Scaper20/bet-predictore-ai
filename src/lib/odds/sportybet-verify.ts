@@ -1,6 +1,6 @@
 import "server-only";
 
-import { leagueByCode } from "@/lib/leagues";
+import { sportyBetTournament } from "./sportybet-links";
 import { dbMatch } from "@/lib/providers/db-source";
 import { scoreVerdict, type EventResult } from "./sportybet-api";
 import { directEnabled, fetchEventResult, fetchResults } from "./sportybet-direct";
@@ -96,7 +96,7 @@ export async function verifyFinished(now = Date.now()): Promise<VerifyReport | n
   // Their side: one results call per competition over the links' span.
   const byTournament = new Map<string, typeof ready>();
   for (const item of ready) {
-    const tid = item.row.tournament_id ?? leagueByCode(item.row.league_code)?.ids.sportyBet;
+    const tid = item.row.tournament_id ?? (await sportyBetTournament(item.row.league_code));
     if (!tid) continue;
     byTournament.set(tid, [...(byTournament.get(tid) ?? []), item]);
   }

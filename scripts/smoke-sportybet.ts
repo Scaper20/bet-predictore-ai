@@ -13,6 +13,7 @@
  *   npx tsx --conditions=react-server scripts/smoke-sportybet.ts --league=premier-league
  *   npx tsx --conditions=react-server scripts/smoke-sportybet.ts --results=europa-league
  *   npx tsx --conditions=react-server scripts/smoke-sportybet.ts --backtest=finished.tsv --links=links.tsv
+ *   npx tsx --conditions=react-server scripts/smoke-sportybet.ts --discover=upcoming.tsv
  *
  * --fixtures is a TSV of our fixtures, one per line: league code, kickoff
  * (epoch ms), home name, away name. Without it only the boards are checked.
@@ -28,13 +29,24 @@
  * the learned club ids to start from (league, team key, competitor id), as
  * exported from public.sportybet_competitors; without it the run starts
  * from names alone.
+ *
+ * --discover finds the SportyBet tournament for each competition in the TSV
+ * (the --fixtures columns) the way the daily job does: one read of the whole
+ * board, then voteTournaments. Nothing is stored.
  */
 import { readFileSync } from "node:fs";
 import { LEAGUES } from "../src/lib/leagues";
 import { readEvent, scoreVerdict, type EventResult, type SportyBetEvent } from "../src/lib/odds/sportybet-api";
+import { voteTournaments } from "../src/lib/odds/sportybet-discover";
 import { findFixture, KICKOFF_TOLERANCE_MS } from "../src/lib/odds/match-fixture";
 import { planBooking } from "../src/lib/odds/booking";
-import { createShareCode, fetchResults, fetchTournamentEvents, readShareCode } from "../src/lib/odds/sportybet-direct";
+import {
+  createShareCode,
+  fetchFullBoard,
+  fetchResults,
+  fetchTournamentEvents,
+  readShareCode,
+} from "../src/lib/odds/sportybet-direct";
 import { matchRound, type MatchedFixture, type OurFixture } from "../src/lib/odds/sportybet-match";
 
 const arg = (name: string) => process.argv.find((a) => a.startsWith(`--${name}=`))?.split("=").slice(1).join("=");
@@ -97,11 +109,15 @@ async function backtest(path: string, linksPath?: string) {
   let listed = 0;
   let nameOnly = 0;
   const only = arg("league");
-  for (const league of LEAGUES.filter((l) => l.ids.sportyBet && (!only || l.code === only))) {
+  // --tid=mls=sr:tournament:242,serie-b=sr:tournament:53 for competitions
+  // whose id was discovered rather than hand-set.
+  const extra = new Map((arg("tid") ?? "").split(",").filter(Boolean).map((p) => p.split("=") as [string, string]));
+  const tidFor = (code: string) => LEAGUES.find((l) => l.code === code)?.ids.sportyBet ?? extra.get(code);
+  for (const league of LEAGUES.filter((l) => tidFor(l.code) && (!only || l.code === only))) {
     const ours = rows.filter((r) => r.league === league.code);
     if (ours.length === 0) continue;
     const kicks = ours.map((r) => r.kickoff);
-    const results = await fetchResults(league.ids.sportyBet!, Math.min(...kicks) - 6 * 3_600_000, Math.max(...kicks) + 6 * 3_600_000);
+    const results = await fetchResults(tidFor(league.code)!, Math.min(...kicks) - 6 * 3_600_000, Math.max(...kicks) + 6 * 3_600_000);
     if (!results) {
       console.log(`${league.code.padEnd(24)} SportyBet did not answer`);
       continue;
@@ -147,7 +163,25 @@ async function backtest(path: string, linksPath?: string) {
   for (const [method, t] of Object.entries(tally)) console.log(`  ${method.padEnd(12)} ${t.confirmed} confirmed, ${t.mismatch} mismatched`);
 }
 
+async function discover(path: string) {
+  const fixtures = readFixtures(path);
+  const board = await fetchFullBoard();
+  if (!board) throw new Error("SportyBet did not answer");
+  console.log(`Board: ${board.length} events\n`);
+  for (const code of [...new Set(fixtures.map((f) => f.league))]) {
+    const league = LEAGUES.find((l) => l.code === code);
+    if (!league) continue;
+    const ours = fixtures.filter((f) => f.league === code);
+    const out = voteTournaments(league, ours, board);
+    const best = out.best ? `${out.best.tournamentId} ${out.best.category} / ${out.best.name} (${out.best.votes})` : "none";
+    const next = out.runnerUp ? `  next: ${out.runnerUp.category} / ${out.runnerUp.name} (${out.runnerUp.votes})` : "";
+    console.log(`${code.padEnd(28)} ${String(out.decision ?? "-").padEnd(8)} ${ours.length} ours | ${best}${next}`);
+  }
+}
+
 async function main() {
+  const disc = arg("discover");
+  if (disc) return discover(disc);
   const results = arg("results");
   if (results) return printResults(results);
   const bt = arg("backtest");

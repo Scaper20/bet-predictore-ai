@@ -32,6 +32,9 @@ export interface SportyBetEvent extends FixtureLike {
   homeId?: string;
   awayId?: string;
   tournamentId?: string;
+  /** "Primera LPF", and its category, "Argentina": for finding a competition's tournament. */
+  tournamentName?: string;
+  category?: string;
 }
 
 interface ApiOutcome {
@@ -55,6 +58,7 @@ interface ApiEvent {
   awayTeamId?: unknown;
   awayTeamName?: unknown;
   markets?: ApiMarket[];
+  sport?: { category?: { name?: unknown; tournament?: { id?: unknown; name?: unknown } } };
 }
 
 function text(value: unknown): string | null {
@@ -91,7 +95,7 @@ function readMarkets(markets: ApiMarket[] | undefined): RawMarket[] {
 }
 
 /** One event, or null when it is missing anything the matcher relies on. */
-export function readEvent(raw: ApiEvent, tournamentId?: string): SportyBetEvent | null {
+export function readEvent(raw: ApiEvent, tournamentId?: string, tournamentName?: string): SportyBetEvent | null {
   const eventId = text(raw.eventId);
   const homeName = text(raw.homeTeamName);
   const awayName = text(raw.awayTeamName);
@@ -106,7 +110,9 @@ export function readEvent(raw: ApiEvent, tournamentId?: string): SportyBetEvent 
     markets: readMarkets(raw.markets),
     homeId: text(raw.homeTeamId) ?? undefined,
     awayId: text(raw.awayTeamId) ?? undefined,
-    tournamentId,
+    tournamentId: tournamentId ?? text(raw.sport?.category?.tournament?.id) ?? undefined,
+    tournamentName: tournamentName ?? text(raw.sport?.category?.tournament?.name) ?? undefined,
+    category: text(raw.sport?.category?.name) ?? undefined,
   };
 }
 
@@ -122,10 +128,11 @@ export function parseUpcoming(body: unknown): UpcomingPage | null {
   if (!data) return null;
   const tournaments = Array.isArray(data.tournaments) ? data.tournaments : [];
   const events: SportyBetEvent[] = [];
-  for (const t of tournaments as { id?: unknown; events?: ApiEvent[] }[]) {
+  for (const t of tournaments as { id?: unknown; name?: unknown; events?: ApiEvent[] }[]) {
     const tournamentId = text(t?.id) ?? undefined;
+    const tournamentName = text(t?.name) ?? undefined;
     for (const raw of t?.events ?? []) {
-      const event = readEvent(raw, tournamentId);
+      const event = readEvent(raw, tournamentId, tournamentName);
       if (event) events.push(event);
     }
   }

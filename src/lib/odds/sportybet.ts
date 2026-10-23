@@ -10,7 +10,7 @@ import { parsebotCall, parsebotLive } from "./parsebot";
 import { boardDecision, directBoardTtlMs, MAX_STALE_MS } from "./parsebot-budget";
 import type { RawMarket, SportyBetEvent } from "./sportybet-api";
 import { directEnabled, fetchTournamentEvents } from "./sportybet-direct";
-import { memoryFor, saveEventLinks, saveLearned, storedEventLink } from "./sportybet-links";
+import { memoryFor, saveEventLinks, saveLearned, sportyBetTournament, storedEventLink } from "./sportybet-links";
 import { matchOne } from "./sportybet-match";
 
 export type { SportyBetEvent } from "./sportybet-api";
@@ -189,7 +189,7 @@ export interface BoardLookup {
  */
 export async function findOnBoard(fixture: FixtureLike, lookup: BoardLookup): Promise<SportyBetEvent | null> {
   const league = lookup.leagueCode ? leagueByCode(lookup.leagueCode) : undefined;
-  const tournamentId = league?.ids.sportyBet;
+  const tournamentId = league ? await sportyBetTournament(league.code) : null;
   // No id, no lookup: scanning the unfiltered board for a competition it
   // does not know costs many calls for a hit that is rarely there.
   if (!league || !tournamentId) return null;

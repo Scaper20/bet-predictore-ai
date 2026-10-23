@@ -5,7 +5,8 @@ import { checkAdmin, logAdminAction } from "@/lib/admin";
 import { LEAGUES } from "@/lib/leagues";
 import { normaliseKey } from "@/lib/model/fit";
 import type { Candidate } from "@/lib/odds/sportybet-match";
-import { syncSportyBet } from "@/lib/odds/sportybet-sync";
+import { discoverTournaments, syncSportyBet } from "@/lib/odds/sportybet-sync";
+import { forgetTournaments } from "@/lib/odds/sportybet-links";
 import { verifyFinished } from "@/lib/odds/sportybet-verify";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
@@ -187,4 +188,44 @@ export async function unlinkFixture(_prev: SportyBetActionState, formData: FormD
   await logAdminAction(gate.identity, "sportybet.unlink", matchId, { eventId: link.event_id, ids });
   revalidatePath(PATH);
   return { error: null, message: "Unlinked. Both clubs will be learned again." };
+}
+
+/** Finds SportyBet tournaments for every competition without a hand-set id, now. */
+export async function runDiscover(_prev: SportyBetActionState, _formData: FormData): Promise<SportyBetActionState> {
+  const gate = await checkAdmin();
+  if (!gate.ok) return { error: gate.error, message: null };
+  const reports = await discoverTournaments();
+  if (!reports) return { error: "SportyBet didn't answer, or direct is switched off.", message: null };
+  await logAdminAction(gate.identity, "sportybet.discover", undefined, { found: reports.length });
+  revalidatePath(PATH);
+  const trusted = reports.filter((r) => r.decision === "trusted").length;
+  const pending = reports.filter((r) => r.decision === "pending").length;
+  return {
+    error: null,
+    message: `Checked ${reports.length} competitions with fixtures: ${trusted} found, ${pending} to check.`,
+  };
+}
+
+/** Accepts or rejects a discovered tournament for one competition. */
+export async function judgeTournament(_prev: SportyBetActionState, formData: FormData): Promise<SportyBetActionState> {
+  const gate = await checkAdmin();
+  if (!gate.ok) return { error: gate.error, message: null };
+  const league = String(formData.get("league") ?? "");
+  const intent = String(formData.get("intent") ?? "");
+  if (intent !== "approve" && intent !== "reject") return { error: "Unknown action.", message: null };
+  const { error } = await supabaseAdmin()
+    .from("sportybet_tournaments")
+    // An approval is final (manual); a rejection only blocks this tournament
+    // id, so a different, right one can still be found later.
+    .update({
+      status: intent === "approve" ? "trusted" : "rejected",
+      method: intent === "approve" ? "manual" : "discovered",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("league_code", league);
+  if (error) return { error: "Couldn't save that. Try again.", message: null };
+  forgetTournaments();
+  await logAdminAction(gate.identity, `sportybet.tournament.${intent}`, league);
+  revalidatePath(PATH);
+  return { error: null, message: intent === "approve" ? "In use from the next sync." : "Rejected; it won't be proposed again." };
 }

@@ -5,6 +5,7 @@ import { readBoard, writeBoard } from "@/lib/odds/boards";
 import { sportyBetBoard } from "@/lib/odds/sportybet";
 import { directEnabled } from "@/lib/odds/sportybet-direct";
 import { syncSportyBet } from "@/lib/odds/sportybet-sync";
+import { allSportyBetTournaments } from "@/lib/odds/sportybet-links";
 import { verifyFinished } from "@/lib/odds/sportybet-verify";
 import { parsebotLive } from "@/lib/odds/parsebot";
 import { fetchBoard, oddsApiBoardKey, oddsApiQuota, ODDS_API_BOARDS } from "@/lib/odds/the-odds-api";
@@ -74,8 +75,9 @@ export async function GET(request: Request) {
   } else if (!(await parsebotLive())) {
     report.sportybet.skipped = "SportyBet direct and parse.bot are both off";
   } else {
+    const tournaments = await allSportyBetTournaments();
     for (const league of LEAGUES) {
-      const tid = league.ids.sportyBet;
+      const tid = tournaments.get(league.code);
       if (!tid || !hasUpcoming(league.code)) continue;
       try {
         // Fresh boards are answered from storage at no cost; only stale ones call out.
