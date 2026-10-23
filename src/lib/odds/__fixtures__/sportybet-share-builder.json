@@ -1,0 +1,246 @@
+{
+ "bizCode": 10000,
+ "isAvailable": true,
+ "message": "Success",
+ "data": {
+  "shareCode": "YNTG36",
+  "shareURL": "http://www.sportybet.com/ng/?shareCode=YNTG36",
+  "ticket": {
+   "orderType": 2,
+   "selections": [
+    {
+     "eventId": "sr:match:72221334",
+     "marketId": "1",
+     "outcomeId": "1",
+     "productId": 3,
+     "parentBetBuilderMarketId": "261023165439bb54342704",
+     "sportId": "sr:sport:1"
+    },
+    {
+     "eventId": "sr:match:72221334",
+     "marketId": "18",
+     "specifier": "total=2.5",
+     "outcomeId": "12",
+     "productId": 3,
+     "parentBetBuilderMarketId": "261023165439bb54342704",
+     "sportId": "sr:sport:1"
+    },
+    {
+     "eventId": "sr:match:72221334",
+     "marketId": "29",
+     "outcomeId": "74",
+     "productId": 3,
+     "parentBetBuilderMarketId": "261023165439bb54342704",
+     "sportId": "sr:sport:1"
+    },
+    {
+     "eventId": "sr:match:72221332",
+     "marketId": "37",
+     "specifier": "total=1.5",
+     "outcomeId": "804",
+     "productId": 3,
+     "parentBetBuilderMarketId": "",
+     "sportId": "sr:sport:1"
+    },
+    {
+     "eventId": "sr:match:72221338",
+     "marketId": "29",
+     "outcomeId": "74",
+     "productId": 3,
+     "parentBetBuilderMarketId": "",
+     "sportId": "sr:sport:1"
+    }
+   ],
+   "bets": []
+  },
+  "deadline": 1793714400000,
+  "outcomes": [
+   {
+    "eventId": "sr:match:72221334",
+    "estimateStartTime": 1792841400000,
+    "status": 0,
+    "matchStatus": "Not start",
+    "homeTeamName": "Aston Villa",
+    "awayTeamName": "Man City",
+    "sport": {
+     "id": "sr:sport:1",
+     "name": "Football",
+     "category": {
+      "id": "sr:category:1",
+      "name": "England",
+      "tournament": {
+       "id": "sr:tournament:17",
+       "name": "Premier League"
+      }
+     }
+    },
+    "markets": [
+     {
+      "id": "1",
+      "specifier": null,
+      "desc": "1X2",
+      "status": 0,
+      "outcomes": [
+       {
+        "id": "1",
+        "odds": "4.95",
+        "probability": "0.1962980000",
+        "isActive": 1,
+        "desc": "Home"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "eventId": "sr:match:72221334",
+    "estimateStartTime": 1792841400000,
+    "status": 0,
+    "matchStatus": "Not start",
+    "homeTeamName": "Aston Villa",
+    "awayTeamName": "Man City",
+    "sport": {
+     "id": "sr:sport:1",
+     "name": "Football",
+     "category": {
+      "id": "sr:category:1",
+      "name": "England",
+      "tournament": {
+       "id": "sr:tournament:17",
+       "name": "Premier League"
+      }
+     }
+    },
+    "markets": [
+     {
+      "id": "18",
+      "specifier": "total=2.5",
+      "desc": "Over/Under",
+      "status": 0,
+      "outcomes": [
+       {
+        "id": "12",
+        "odds": "1.52",
+        "probability": "0.6293896187",
+        "isActive": 1,
+        "desc": "Over 2.5"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "eventId": "sr:match:72221334",
+    "estimateStartTime": 1792841400000,
+    "status": 0,
+    "matchStatus": "Not start",
+    "homeTeamName": "Aston Villa",
+    "awayTeamName": "Man City",
+    "sport": {
+     "id": "sr:sport:1",
+     "name": "Football",
+     "category": {
+      "id": "sr:category:1",
+      "name": "England",
+      "tournament": {
+       "id": "sr:tournament:17",
+       "name": "Premier League"
+      }
+     }
+    },
+    "markets": [
+     {
+      "id": "29",
+      "specifier": null,
+      "desc": "GG/NG",
+      "status": 0,
+      "outcomes": [
+       {
+        "id": "74",
+        "odds": "1.59",
+        "probability": "0.6040160000",
+        "isActive": 1,
+        "desc": "Yes"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "eventId": "sr:match:72221332",
+    "estimateStartTime": 1792850400000,
+    "status": 0,
+    "matchStatus": "Not start",
+    "homeTeamName": "Arsenal",
+    "awayTeamName": "Everton",
+    "sport": {
+     "id": "sr:sport:1",
+     "name": "Football",
+     "category": {
+      "id": "sr:category:1",
+      "name": "England",
+      "tournament": {
+       "id": "sr:tournament:17",
+       "name": "Premier League"
+      }
+     }
+    },
+    "markets": [
+     {
+      "id": "37",
+      "specifier": "total=1.5",
+      "desc": "1X2 & Over/Under 1.5",
+      "status": 0,
+      "outcomes": [
+       {
+        "id": "804",
+        "odds": "10.00",
+        "probability": "0.0835820000",
+        "isActive": 1,
+        "desc": "Away & Over 1.5"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "eventId": "sr:match:72221338",
+    "estimateStartTime": 1792850400000,
+    "status": 0,
+    "matchStatus": "Not start",
+    "homeTeamName": "Coventry City",
+    "awayTeamName": "Fulham",
+    "sport": {
+     "id": "sr:sport:1",
+     "name": "Football",
+     "category": {
+      "id": "sr:category:1",
+      "name": "England",
+      "tournament": {
+       "id": "sr:tournament:17",
+       "name": "Premier League"
+      }
+     }
+    },
+    "markets": [
+     {
+      "id": "29",
+      "specifier": null,
+      "desc": "GG/NG",
+      "status": 0,
+      "outcomes": [
+       {
+        "id": "74",
+        "odds": "1.61",
+        "probability": "0.5946340000",
+        "isActive": 1,
+        "desc": "Yes"
+       }
+      ]
+     }
+    ]
+   }
+  ],
+  "unavailableOutcomes": []
+ }
+}

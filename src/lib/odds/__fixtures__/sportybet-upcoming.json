@@ -1,0 +1,480 @@
+{
+ "bizCode": 10000,
+ "message": "0#0",
+ "data": {
+  "totalNum": 3,
+  "tournaments": [
+   {
+    "id": "sr:tournament:17",
+    "name": "Premier League",
+    "events": [
+     {
+      "eventId": "sr:match:72221344",
+      "estimateStartTime": 1792782000000,
+      "status": 0,
+      "matchStatus": "Not start",
+      "homeTeamId": "sr:competitor:32",
+      "homeTeamName": "Ipswich Town",
+      "awayTeamName": "Nottingham Forest",
+      "awayTeamId": "sr:competitor:14",
+      "markets": [
+       {
+        "id": "1",
+        "status": 0,
+        "outcomes": [
+         {
+          "id": "1",
+          "odds": "3.14",
+          "isActive": 1,
+          "desc": "Home"
+         },
+         {
+          "id": "2",
+          "odds": "3.59",
+          "isActive": 0,
+          "desc": "Draw"
+         },
+         {
+          "id": "3",
+          "odds": "2.37",
+          "isActive": 1,
+          "desc": "Away"
+         }
+        ]
+       },
+       {
+        "id": "18",
+        "specifier": "total=1.5",
+        "status": 0,
+        "outcomes": [
+         {
+          "id": "12",
+          "odds": "1.23",
+          "isActive": 1,
+          "desc": "Over 1.5"
+         },
+         {
+          "id": "13",
+          "odds": "4.40",
+          "isActive": 1,
+          "desc": "Under 1.5"
+         }
+        ]
+       },
+       {
+        "id": "18",
+        "specifier": "total=2.5",
+        "status": 0,
+        "outcomes": [
+         {
+          "id": "12",
+          "odds": "1.73",
+          "isActive": 1,
+          "desc": "Over 2.5"
+         },
+         {
+          "id": "13",
+          "odds": "2.15",
+          "isActive": 1,
+          "desc": "Under 2.5"
+         }
+        ]
+       },
+       {
+        "id": "10",
+        "status": 0,
+        "outcomes": [
+         {
+          "id": "9",
+          "odds": "1.59",
+          "isActive": 1,
+          "desc": "Home or Draw"
+         },
+         {
+          "id": "10",
+          "odds": "1.32",
+          "isActive": 1,
+          "desc": "Home or Away"
+         },
+         {
+          "id": "11",
+          "odds": "1.38",
+          "isActive": 1,
+          "desc": "Draw or Away"
+         }
+        ]
+       },
+       {
+        "id": "16",
+        "specifier": "hcp=-0.5",
+        "status": 0,
+        "outcomes": [
+         {
+          "id": "1714",
+          "odds": "2.95",
+          "isActive": 1,
+          "desc": "Home (-0.5)"
+         },
+         {
+          "id": "1715",
+          "odds": "1.40",
+          "isActive": 1,
+          "desc": "Away (+0.5)"
+         }
+        ]
+       },
+       {
+        "id": "16",
+        "specifier": "hcp=0",
+        "status": 0,
+        "outcomes": [
+         {
+          "id": "1714",
+          "odds": "2.20",
+          "isActive": 1,
+          "desc": "Home (0)"
+         },
+         {
+          "id": "1715",
+          "odds": "1.68",
+          "isActive": 1,
+          "desc": "Away (0)"
+         }
+        ]
+       },
+       {
+        "id": "29",
+        "status": 0,
+        "outcomes": [
+         {
+          "id": "74",
+          "odds": "1.62",
+          "isActive": 1,
+          "desc": "Yes"
+         },
+         {
+          "id": "76",
+          "odds": "2.30",
+          "isActive": 1,
+          "desc": "No"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "eventId": "sr:match:72221334",
+      "estimateStartTime": 1792841400000,
+      "status": 0,
+      "matchStatus": "Not start",
+      "homeTeamId": "sr:competitor:40",
+      "homeTeamName": "Aston Villa",
+      "awayTeamName": "Man City",
+      "awayTeamId": "sr:competitor:17",
+      "markets": [
+       {
+        "id": "1",
+        "status": 0,
+        "outcomes": [
+         {
+          "id": "1",
+          "odds": "5.07",
+          "isActive": 1,
+          "desc": "Home"
+         },
+         {
+          "id": "2",
+          "odds": "4.53",
+          "isActive": 1,
+          "desc": "Draw"
+         },
+         {
+          "id": "3",
+          "odds": "1.66",
+          "isActive": 1,
+          "desc": "Away"
+         }
+        ]
+       },
+       {
+        "id": "18",
+        "specifier": "total=1.5",
+        "status": 0,
+        "outcomes": [
+         {
+          "id": "12",
+          "odds": "1.16",
+          "isActive": 1,
+          "desc": "Over 1.5"
+         },
+         {
+          "id": "13",
+          "odds": "5.70",
+          "isActive": 1,
+          "desc": "Under 1.5"
+         }
+        ]
+       },
+       {
+        "id": "18",
+        "specifier": "total=2.5",
+        "status": 0,
+        "outcomes": [
+         {
+          "id": "12",
+          "odds": "1.52",
+          "isActive": 1,
+          "desc": "Over 2.5"
+         },
+         {
+          "id": "13",
+          "odds": "2.60",
+          "isActive": 1,
+          "desc": "Under 2.5"
+         }
+        ]
+       },
+       {
+        "id": "10",
+        "status": 0,
+        "outcomes": [
+         {
+          "id": "9",
+          "odds": "2.20",
+          "isActive": 1,
+          "desc": "Home or Draw"
+         },
+         {
+          "id": "10",
+          "odds": "1.23",
+          "isActive": 1,
+          "desc": "Home or Away"
+         },
+         {
+          "id": "11",
+          "odds": "1.19",
+          "isActive": 1,
+          "desc": "Draw or Away"
+         }
+        ]
+       },
+       {
+        "id": "16",
+        "specifier": "hcp=-0.5",
+        "status": 0,
+        "outcomes": [
+         {
+          "id": "1714",
+          "odds": "4.60",
+          "isActive": 1,
+          "desc": "Home (-0.5)"
+         },
+         {
+          "id": "1715",
+          "odds": "1.20",
+          "isActive": 1,
+          "desc": "Away (+0.5)"
+         }
+        ]
+       },
+       {
+        "id": "16",
+        "specifier": "hcp=0",
+        "status": 0,
+        "outcomes": [
+         {
+          "id": "1714",
+          "odds": "3.70",
+          "isActive": 1,
+          "desc": "Home (0)"
+         },
+         {
+          "id": "1715",
+          "odds": "1.28",
+          "isActive": 1,
+          "desc": "Away (0)"
+         }
+        ]
+       },
+       {
+        "id": "29",
+        "status": 0,
+        "outcomes": [
+         {
+          "id": "74",
+          "odds": "1.60",
+          "isActive": 1,
+          "desc": "Yes"
+         },
+         {
+          "id": "76",
+          "odds": "2.35",
+          "isActive": 1,
+          "desc": "No"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "eventId": "sr:match:72221332",
+      "estimateStartTime": 1792850400000,
+      "status": 0,
+      "matchStatus": "Not start",
+      "homeTeamId": "sr:competitor:42",
+      "homeTeamName": "Arsenal",
+      "awayTeamName": "Everton",
+      "awayTeamId": "sr:competitor:48",
+      "markets": [
+       {
+        "id": "1",
+        "status": 0,
+        "outcomes": [
+         {
+          "id": "1",
+          "odds": "1.47",
+          "isActive": 1,
+          "desc": "Home"
+         },
+         {
+          "id": "2",
+          "odds": "4.83",
+          "isActive": 1,
+          "desc": "Draw"
+         },
+         {
+          "id": "3",
+          "odds": "7.53",
+          "isActive": 1,
+          "desc": "Away"
+         }
+        ]
+       },
+       {
+        "id": "18",
+        "specifier": "total=1.5",
+        "status": 0,
+        "outcomes": [
+         {
+          "id": "12",
+          "odds": "1.26",
+          "isActive": 1,
+          "desc": "Over 1.5"
+         },
+         {
+          "id": "13",
+          "odds": "4.00",
+          "isActive": 1,
+          "desc": "Under 1.5"
+         }
+        ]
+       },
+       {
+        "id": "18",
+        "specifier": "total=2.5",
+        "status": 0,
+        "outcomes": [
+         {
+          "id": "12",
+          "odds": "1.81",
+          "isActive": 1,
+          "desc": "Over 2.5"
+         },
+         {
+          "id": "13",
+          "odds": "2.05",
+          "isActive": 1,
+          "desc": "Under 2.5"
+         }
+        ]
+       },
+       {
+        "id": "10",
+        "status": 0,
+        "outcomes": [
+         {
+          "id": "9",
+          "odds": "1.12",
+          "isActive": 1,
+          "desc": "Home or Draw"
+         },
+         {
+          "id": "10",
+          "odds": "1.20",
+          "isActive": 1,
+          "desc": "Home or Away"
+         },
+         {
+          "id": "11",
+          "odds": "2.60",
+          "isActive": 1,
+          "desc": "Draw or Away"
+         }
+        ]
+       },
+       {
+        "id": "16",
+        "specifier": "hcp=-0.5",
+        "status": 0,
+        "outcomes": [
+         {
+          "id": "1714",
+          "odds": "1.44",
+          "isActive": 1,
+          "desc": "Home (-0.5)"
+         },
+         {
+          "id": "1715",
+          "odds": "2.80",
+          "isActive": 1,
+          "desc": "Away (+0.5)"
+         }
+        ]
+       },
+       {
+        "id": "16",
+        "specifier": "hcp=0",
+        "status": 0,
+        "outcomes": [
+         {
+          "id": "1714",
+          "odds": "1.16",
+          "isActive": 1,
+          "desc": "Home (0)"
+         },
+         {
+          "id": "1715",
+          "odds": "5.30",
+          "isActive": 1,
+          "desc": "Away (0)"
+         }
+        ]
+       },
+       {
+        "id": "29",
+        "status": 0,
+        "outcomes": [
+         {
+          "id": "74",
+          "odds": "2.10",
+          "isActive": 1,
+          "desc": "Yes"
+         },
+         {
+          "id": "76",
+          "odds": "1.76",
+          "isActive": 1,
+          "desc": "No"
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "categoryName": "England",
+    "categoryId": "sr:category:1",
+    "showViewAll": true
+   }
+  ]
+ }
+}

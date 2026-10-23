@@ -100,7 +100,7 @@ export default async function TrackRecordPage({ params }: PageProps<"/[sport]/tr
     return (
       <>
         <PageHeader eyebrow="Track Record" title="Every published pick, graded" />
-        <div className={`${containerClass()} py-7 sm:py-10`}>
+        <div className={`${containerClass()} py-4 sm:py-10`}>
           <EmptyState
             icon="○"
             title="Not available yet"
@@ -117,7 +117,7 @@ export default async function TrackRecordPage({ params }: PageProps<"/[sport]/tr
     return (
       <>
         <PageHeader eyebrow="Track Record" title="Every published pick, graded" />
-        <div className={`${containerClass()} space-y-10 py-7 sm:py-10`}>
+        <div className={`${containerClass()} space-y-10 py-4 sm:py-10`}>
           <EmptyState
             icon="○"
             title="No settled picks yet"
@@ -137,7 +137,7 @@ export default async function TrackRecordPage({ params }: PageProps<"/[sport]/tr
         description="Every pick, logged before kickoff and graded after."
       />
 
-      <div className={`${containerClass()} space-y-10 py-7 sm:py-10`}>
+      <div className={`${containerClass()} space-y-10 py-4 sm:py-10`}>
         {/*
          * Strong picks first, every pick beside it: the two tiers of the
          * same log. The model card below breaks the full record down by

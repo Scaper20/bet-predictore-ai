@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   ALLOWED_ENDPOINTS,
+  directBoardTtlMs,
   boardDecision,
   boardTtlMs,
   capsFrom,
@@ -83,5 +84,16 @@ describe("boardDecision", () => {
   it("never calls when switched off and nothing is stored", () => {
     expect(boardDecision(null, false, NOW)).toBe("none");
     expect(boardDecision(null, true, NOW)).toBe("refresh");
+  });
+});
+
+describe("directBoardTtlMs", () => {
+  const NOW = 1_800_000_000_000;
+  const H = 3_600_000;
+  it("reads boards more often as kickoff nears, when prices move most", () => {
+    expect(directBoardTtlMs(NOW + H, NOW)).toBe(10 * 60_000);
+    expect(directBoardTtlMs(NOW + 4 * H, NOW)).toBe(30 * 60_000);
+    expect(directBoardTtlMs(NOW + 24 * H, NOW)).toBe(3 * H);
+    expect(directBoardTtlMs(null, NOW)).toBe(6 * H);
   });
 });

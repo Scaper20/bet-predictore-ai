@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { priceInSnapshot } from "@/lib/odds/market-prob";
+import { latestSnapshots } from "@/lib/odds/sportybet-links";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { upcomingFeed, predictBatch } from "@/lib/service";
 import { runSettlementPass } from "@/lib/settlement-runner";
@@ -6,6 +8,7 @@ import { modelIdForMarket } from "@/lib/model/router";
 import { pickTier } from "@/lib/model/tiers";
 import { leagueByCode } from "@/lib/leagues";
 import { shadowPicks } from "@/lib/model/shadow";
+import { marketTotalPicks } from "@/lib/model/market-total";
 
 // Runs the football providers and Supabase's service-role client — both
 // Node-only. Proxy (src/proxy.ts) doesn't touch /api/ at all, so no session
@@ -86,6 +89,17 @@ async function logUpcomingPicks(admin: ReturnType<typeof supabaseAdmin>): Promis
 
   if (rows.length === 0) return 0;
 
+  // SportyBet's price beside each pick, as it stood at this (last pre-kickoff)
+  // log run, with the market's fair probability. Closing prices are stamped
+  // at settlement; the pair is what closing line value is measured from.
+  const latest = await latestSnapshots(predictions.map((p) => p.match.id));
+  const priced = (matchId: string, market: string) => {
+    const snap = latest.get(matchId);
+    const price = snap ? priceInSnapshot(snap.prices, market) : null;
+    return { price_at_publish: price?.odds ?? null, market_prob_at_publish: price?.fairProbability ?? null };
+  };
+  for (const row of rows) Object.assign(row, priced(row.match_id, row.market));
+
   const { error } = await admin.from("predictions_log").upsert(rows, { onConflict: "match_id" });
   if (error) throw error;
 
@@ -105,8 +119,38 @@ async function logUpcomingPicks(admin: ReturnType<typeof supabaseAdmin>): Promis
         away_name: p.match.away.name,
         kickoff: p.match.kickoff,
         logged_at: new Date().toISOString(),
+        ...priced(p.match.id, s.market),
       })),
     );
+  // Market-informed totals, watched beside the model (model/market-total.ts):
+  // only where SportyBet prices over/under 2.5 for the game.
+  const marketTotals = predictions
+    .filter((p) => p.sufficiency.publishable)
+    .flatMap((p) => {
+      const snap = latest.get(p.match.id);
+      const over = snap ? priceInSnapshot(snap.prices, "ou:over:2.5")?.fairProbability : undefined;
+      if (over === undefined) return [];
+      return marketTotalPicks(p.markets.expectedGoals, p.model.rho, over).map((m) => ({
+        match_id: p.match.id,
+        market: m.market,
+        label: m.label,
+        probability: m.probability,
+        model_probability: m.modelProbability,
+        reason: "market-total",
+        league_code: p.match.league.code ?? null,
+        home_name: p.match.home.name,
+        away_name: p.match.away.name,
+        kickoff: p.match.kickoff,
+        logged_at: new Date().toISOString(),
+        ...priced(p.match.id, m.market),
+      }));
+    });
+  if (marketTotals.length > 0) {
+    await admin.from("shadow_picks").upsert(marketTotals, { onConflict: "match_id,market" }).then(
+      () => undefined,
+      () => undefined,
+    );
+  }
   if (shadow.length > 0) {
     await admin.from("shadow_picks").upsert(shadow, { onConflict: "match_id,market" }).then(
       () => undefined,

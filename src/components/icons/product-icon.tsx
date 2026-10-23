@@ -8,7 +8,8 @@ type ProductIconName =
   | "search"
   | "globe"
   | "calendar"
-  | "star";
+  | "star"
+  | "ticket";
 
 export function ProductIcon({
   name,
@@ -58,6 +59,10 @@ export function ProductIcon({
         <rect x="3.5" y="5" width="17" height="15.5" rx="2" />
         <path d="M7.5 3v4m9-4v4M3.5 9.5h17" />
         <path d="m9 14 2 2 4-4" />
+      </>}
+      {name === "ticket" && <>
+        <path d="M3.5 7.5A1.5 1.5 0 0 1 5 6h14a1.5 1.5 0 0 1 1.5 1.5V10a2 2 0 0 0 0 4v2.5A1.5 1.5 0 0 1 19 18H5a1.5 1.5 0 0 1-1.5-1.5V14a2 2 0 0 0 0-4z" />
+        <path d="M14.5 6v12" strokeDasharray="1.5 2" />
       </>}
       {name === "star" && <path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z" />}
     </svg>

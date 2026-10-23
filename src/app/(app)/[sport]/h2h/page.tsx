@@ -50,7 +50,7 @@ export default async function H2HPage({ searchParams }: { searchParams: Promise<
         title={ta && tb ? `${ta.name} v ${tb.name}` : "Head-to-head"}
         description="Any two teams, every meeting."
       />
-      <div className={`${containerClass()} space-y-6 py-7 sm:py-10`}>
+      <div className={`${containerClass()} space-y-6 py-4 sm:py-10`}>
         <div className="card p-4 sm:p-5">
           <Suspense fallback={<div className="h-14" />}>
             <TeamPicker a={ta} b={tb} />

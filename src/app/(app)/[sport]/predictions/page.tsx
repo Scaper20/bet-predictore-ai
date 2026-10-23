@@ -91,7 +91,7 @@ export default async function PredictionsPage({
         description="Data insights from analysed football matches."
       />
 
-      <div className={`${containerClass()} space-y-7 py-7 sm:py-10`}>
+      <div className={`${containerClass()} space-y-7 py-4 sm:py-10`}>
         <Suspense fallback={<div className="h-10" />}>
           <LeagueFilter proTags={!paid} counts={counts} />
         </Suspense>
@@ -188,13 +188,14 @@ function PickFilters({
     return `${sportPath("predictions")}${qs ? `?${qs}` : ""}`;
   };
   const chip = (active: boolean) =>
-    `inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-semibold transition-colors ${
+    `inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-xs font-semibold transition-colors ${
       active ? "border-brand/40 bg-brand/12 text-brand" : "border-line bg-surface text-ink-muted hover:text-ink"
     }`;
   const dot = { low: "bg-brand", medium: "bg-amber", high: "bg-rose" } as const;
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <nav aria-label="Which picks" className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3">
+      {/* One row that scrolls sideways on a phone, rather than two rows of chips. */}
+      <nav aria-label="Which picks" className="no-scrollbar -mx-4 flex items-center gap-2 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
         <Link href={href({ strong: false, risk: null })} className={chip(!strongOnly && !risk)} aria-current={!strongOnly && !risk ? "page" : undefined}>
           All picks
         </Link>
@@ -208,7 +209,7 @@ function PickFilters({
           </Link>
         ))}
       </nav>
-      <nav aria-label="Order" className="inline-flex rounded-lg border border-line bg-surface-2 p-0.5 text-xs font-semibold">
+      <nav aria-label="Order" className="inline-flex self-start rounded-lg border border-line bg-surface-2 p-0.5 text-xs font-semibold">
         <Link href={href({ chance: false })} className={`rounded-md px-3 py-1.5 ${!byChance ? "bg-surface-3 text-ink" : "text-ink-muted hover:text-ink"}`}>
           Kick-off
         </Link>

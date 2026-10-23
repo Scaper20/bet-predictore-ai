@@ -70,7 +70,7 @@ export default async function RatingsPage({ searchParams }: { searchParams: Prom
         title={national ? "National team ratings" : `${def?.name} ratings`}
         description="Every side rated 1 to 10."
       />
-      <div className={`${containerClass()} space-y-6 py-7 sm:py-10`}>
+      <div className={`${containerClass()} space-y-6 py-4 sm:py-10`}>
         <Suspense fallback={<div className="h-11" />}>
           <LeagueTabs leagues={TABS} active={code} />
         </Suspense>

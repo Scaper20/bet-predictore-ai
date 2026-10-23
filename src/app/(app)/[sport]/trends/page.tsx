@@ -28,7 +28,7 @@ export default async function TrendsPage() {
         title="Streaks to know before kick-off"
         description="Streaks for teams playing in the next three days."
       />
-      <div className={`${containerClass()} space-y-7 py-7 sm:py-10`}>
+      <div className={`${containerClass()} space-y-7 py-4 sm:py-10`}>
         {slate && slate.total > 0 && (
           <section className="stagger grid gap-3 sm:grid-cols-3">
             <Glance i={0} value={slate.total} label="games we rated for the next three days" />

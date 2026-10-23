@@ -1,0 +1,85 @@
+{
+ "bizCode": 10000,
+ "isAvailable": true,
+ "message": "Success",
+ "data": {
+  "shareCode": "G6X11U",
+  "shareURL": "http://www.sportybet.com/ng/?shareCode=G6X11U",
+  "ticket": {
+   "selections": [
+    {
+     "eventId": "sr:match:72221332",
+     "marketId": "1",
+     "outcomeId": "1",
+     "parentBetBuilderMarketId": "",
+     "sportId": "sr:sport:1",
+     "estimateStartTime": 1792850400000
+    },
+    {
+     "eventId": "sr:match:72221346",
+     "marketId": "18",
+     "specifier": "total=2.5",
+     "outcomeId": "12",
+     "parentBetBuilderMarketId": "",
+     "sportId": "sr:sport:1",
+     "estimateStartTime": 1792936800000
+    }
+   ]
+  },
+  "userId": "",
+  "deadline": 1793800800000,
+  "outcomes": [
+   {
+    "eventId": "sr:match:72221332",
+    "estimateStartTime": 1792850400000,
+    "status": 0,
+    "matchStatus": "Not start",
+    "homeTeamName": "Arsenal",
+    "awayTeamName": "Everton",
+    "sport": {
+     "id": "sr:sport:1",
+     "name": "Football",
+     "category": {
+      "id": "sr:category:1",
+      "name": "England",
+      "tournament": {
+       "id": "sr:tournament:17",
+       "name": "Premier League"
+      }
+     }
+    },
+    "bookingStatus": "Booked",
+    "bgEvent": false,
+    "parentBetBuilderMarketId": "",
+    "matchTrackerNotAllowed": false,
+    "banned": false
+   },
+   {
+    "eventId": "sr:match:72221346",
+    "estimateStartTime": 1792936800000,
+    "status": 0,
+    "matchStatus": "Not start",
+    "homeTeamName": "Liverpool",
+    "awayTeamName": "Brighton",
+    "sport": {
+     "id": "sr:sport:1",
+     "name": "Football",
+     "category": {
+      "id": "sr:category:1",
+      "name": "England",
+      "tournament": {
+       "id": "sr:tournament:17",
+       "name": "Premier League"
+      }
+     }
+    },
+    "bookingStatus": "Booked",
+    "bgEvent": false,
+    "parentBetBuilderMarketId": "",
+    "matchTrackerNotAllowed": false,
+    "banned": false
+   }
+  ],
+  "unavailableOutcomes": []
+ }
+}

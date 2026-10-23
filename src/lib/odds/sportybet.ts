@@ -1,15 +1,22 @@
 import "server-only";
 
+import { leagueByCode } from "@/lib/leagues";
 import { cached } from "@/lib/providers/cache";
 import { dataLayer } from "@/lib/providers/data-layer";
 import { readBoard, writeBoard } from "./boards";
 import { matchesSelection, readOdds, toSportyBet } from "./markets";
-import { findFixture, type FixtureLike } from "./match-fixture";
+import { type FixtureLike } from "./match-fixture";
 import { parsebotCall, parsebotLive } from "./parsebot";
-import { boardDecision, MAX_STALE_MS } from "./parsebot-budget";
+import { boardDecision, directBoardTtlMs, MAX_STALE_MS } from "./parsebot-budget";
+import type { RawMarket, SportyBetEvent } from "./sportybet-api";
+import { directEnabled, fetchTournamentEvents } from "./sportybet-direct";
+import { memoryFor, saveEventLinks, saveLearned, sportyBetTournament, storedEventLink } from "./sportybet-links";
+import { matchOne } from "./sportybet-match";
+
+export type { SportyBetEvent } from "./sportybet-api";
 
 /**
- * SportyBet prices, via parse.bot's marketplace API.
+ * SportyBet prices: straight from SportyBet first, parse.bot as a fallback.
  *
  * The reason this is worth having, and worth having FIRST among odds sources:
  * the backtest concluded the model is roughly market-efficient, returning
@@ -19,31 +26,22 @@ import { boardDecision, MAX_STALE_MS } from "./parsebot-budget";
  * that price actually lives. A global consensus feed cannot answer that
  * question; this can.
  *
- * Metered per call, which shapes everything below. get_upcoming_events costs
- * three credits and returns a competition's fixtures WITH their main markets
- * already attached, so one call serves every prediction in that competition.
- * Per-fixture get_event_odds is deliberately never used: two credits per
- * fixture for markets the board already carries.
+ * One board per competition: SportyBet's upcoming list filtered by its
+ * tournament id, markets attached, so one fetch serves every prediction in
+ * that competition. Each board is stored once in public.odds_boards and
+ * shared by every serverless instance.
  *
- * Each board is stored once in public.odds_boards and shared by every
- * serverless instance. A page only asks parse.bot when that stored board has
- * gone stale for how close its next game is (parsebot-budget.ts), and every
- * call goes through parsebot.ts: the kill switch, the allow-list and the
- * credit ledger. While the switch is off, no call is made at all and
- * prices come only from boards already stored.
+ * - Direct (sportybet-direct.ts) is free, so its boards refresh on a short
+ *   TTL. Its events carry Sportradar competitor ids, which is what lets the
+ *   matcher (sportybet-match.ts) learn a club once and stop comparing names.
+ * - parse.bot is metered, so it is only used when direct is switched off or
+ *   SportyBet is refusing us, and only when its own switch is on.
  *
- * Everything degrades to "no price". A switched-off client, a spent budget, a
+ * Everything degrades to "no price". A refused call, a spent budget, a
  * fixture that cannot be matched confidently — all resolve to undefined, which
  * assessValue() already treats as "the user has not given us a price", and the
  * UI already renders. There is no path here that invents an odds figure.
  */
-
-/** SportyBet's own market entry, as the payload presents it. */
-interface RawMarket {
-  market_id?: string | number;
-  specifier?: string | null;
-  outcomes?: { id?: string | number; odds?: unknown }[];
-}
 
 interface RawEvent {
   event_id?: string;
@@ -53,67 +51,105 @@ interface RawEvent {
   markets?: RawMarket[];
 }
 
-/** A fixture on SportyBet, in the shape findFixture needs. */
-export interface SportyBetEvent extends FixtureLike {
-  eventId: string;
-  markets: RawMarket[];
+/**
+ * When each competition's board was read from SportyBet, as last served on
+ * this instance. Prices move constantly, so a price is only shown with its
+ * age: "as of 14:05", never "live".
+ */
+const boardReadAt = new Map<string, number>();
+
+/** When the board behind a competition's prices was read, or null if never. */
+export function sportyBetPricedAt(tournamentId: string): number | null {
+  return boardReadAt.get(tournamentId) ?? null;
 }
 
 export function sportyBetBoardKey(page: number, pageSize: number, tournamentId?: string): string {
   return `sportybet:upcoming:${tournamentId ?? "all"}:${page}:${pageSize}`;
 }
 
-/**
- * One board: from the stored copy while it is fresh, from parse.bot when it
- * is stale and a call is allowed, written back so every instance shares it.
- *
- * `fromJob` is the snapshot cron, which may fetch whatever the data layer
- * says; page traffic in "db" mode never fetches.
- */
-export async function sportyBetBoard(
-  page: number,
-  pageSize: number,
-  tournamentId?: string,
-  fromJob = false,
-): Promise<SportyBetEvent[]> {
-  const key = sportyBetBoardKey(page, pageSize, tournamentId);
-  // Five minutes in memory on top of the shared copy, so a burst of renders
-  // on one instance costs one database read rather than one each.
-  return cached(`sportybet:board:${key}:${fromJob ? "job" : "page"}`, fromJob ? 0 : 5 * 60_000, async () => {
-    const stored = await readBoard<SportyBetEvent[]>(key);
-    const canFetch = (await parsebotLive()) && (fromJob || (await dataLayer()) !== "db");
-    const decision = boardDecision(
-      stored ? { fetchedAt: stored.fetchedAt, events: stored.payload } : null,
-      canFetch,
-    );
-    if (decision === "use" || decision === "stale-ok") return stored!.payload;
-    if (decision === "none") return [];
-
-    const fresh = await fetchUpcomingPage(page, pageSize, tournamentId);
-    if (fresh === null) {
-      // Refused (budget) or failed: an old board beats nothing, up to a point.
-      return stored && Date.now() - stored.fetchedAt < MAX_STALE_MS ? stored.payload : [];
-    }
-    // Stored even when empty, so a competition between rounds is not asked
-    // again on every render.
-    await writeBoard(key, "odds", fresh, { tournamentId: tournamentId ?? null, page }).catch(() => {});
-    return fresh;
-  });
+/** Stored separately from parse.bot's boards: they carry competitor ids, which those lack. */
+export function directBoardKey(tournamentId: string): string {
+  return `sportybet:direct:${tournamentId}`;
 }
 
 /**
- * One metered call for one page of upcoming football, markets attached.
- * Null when the call was not made or failed; an empty array when SportyBet
- * genuinely lists nothing.
+ * parse.bot's page size. The board is ordered by competition; page_size 200
+ * is rejected with a 502, and one call carrying tournament_id returns that
+ * competition's whole list.
  */
-async function fetchUpcomingPage(
-  page: number,
-  pageSize: number,
-  tournamentId?: string,
-): Promise<SportyBetEvent[] | null> {
+export const PAGE_SIZE = 100;
+
+/**
+ * One competition's board: the stored copy while it is fresh, otherwise
+ * SportyBet directly, otherwise parse.bot, otherwise an old copy, up to a
+ * point. Written back so every instance shares it.
+ *
+ * `fromJob` is a cron, which may fetch whatever the data layer says and
+ * skips the in-memory cache.
+ */
+export async function sportyBetBoard(tournamentId: string, fromJob = false): Promise<SportyBetEvent[]> {
+  return cached(`sportybet:board:${tournamentId}:${fromJob ? "job" : "page"}`, fromJob ? 0 : 5 * 60_000, async () => {
+    if (await directEnabled()) {
+      const key = directBoardKey(tournamentId);
+      const stored = await readBoard<SportyBetEvent[]>(key);
+      const decision = boardDecision(
+        stored ? { fetchedAt: stored.fetchedAt, events: stored.payload } : null,
+        true,
+        Date.now(),
+        directBoardTtlMs,
+      );
+      if (decision === "use") {
+        boardReadAt.set(tournamentId, stored!.fetchedAt);
+        return stored!.payload;
+      }
+      const fresh = await fetchTournamentEvents(tournamentId);
+      if (fresh) {
+        boardReadAt.set(tournamentId, Date.now());
+        // Stored even when empty, so a competition between rounds is not
+        // asked again on every render.
+        await writeBoard(key, "odds", fresh, { tournamentId, via: "direct" }).catch(() => {});
+        return fresh;
+      }
+      // Refused or unreachable: an old direct board beats a metered call
+      // while it is still fairly fresh.
+      if (stored && Date.now() - stored.fetchedAt < 6 * 3_600_000) {
+        boardReadAt.set(tournamentId, stored.fetchedAt);
+        return stored.payload;
+      }
+    }
+    return parsebotBoard(tournamentId, fromJob);
+  });
+}
+
+async function parsebotBoard(tournamentId: string, fromJob: boolean): Promise<SportyBetEvent[]> {
+  const key = sportyBetBoardKey(1, PAGE_SIZE, tournamentId);
+  const stored = await readBoard<SportyBetEvent[]>(key);
+  const canFetch = (await parsebotLive()) && (fromJob || (await dataLayer()) !== "db");
+  const decision = boardDecision(stored ? { fetchedAt: stored.fetchedAt, events: stored.payload } : null, canFetch);
+  if (decision === "use" || decision === "stale-ok") {
+    boardReadAt.set(tournamentId, stored!.fetchedAt);
+    return stored!.payload;
+  }
+  if (decision === "none") return [];
+
+  const fresh = await fetchParsebotPage(tournamentId);
+  if (fresh === null) {
+    if (stored && Date.now() - stored.fetchedAt < MAX_STALE_MS) {
+      boardReadAt.set(tournamentId, stored.fetchedAt);
+      return stored.payload;
+    }
+    return [];
+  }
+  boardReadAt.set(tournamentId, Date.now());
+  await writeBoard(key, "odds", fresh, { tournamentId, page: 1 }).catch(() => {});
+  return fresh;
+}
+
+/** One metered call for a competition's board. Null when not made or failed. */
+async function fetchParsebotPage(tournamentId: string): Promise<SportyBetEvent[] | null> {
   const body = await parsebotCall<{ tournaments?: { events?: RawEvent[] }[] }>("get_upcoming_events", {
-    query: { sport: "football", page, page_size: pageSize, tournament_id: tournamentId },
-    note: tournamentId ?? `page ${page}`,
+    query: { sport: "football", page: 1, page_size: PAGE_SIZE, tournament_id: tournamentId },
+    note: tournamentId,
   });
   if (!body) return null;
 
@@ -128,49 +164,58 @@ async function fetchUpcomingPage(
         awayName: event.away_team,
         kickoff: event.start_time,
         markets: event.markets ?? [],
+        tournamentId,
       });
     }
   }
   return out;
 }
 
-/**
- * The board is ordered by competition, not by kickoff.
- *
- * Measured, not assumed, and it is the fact the whole traversal turns on. Page
- * one carries the Premier League, LaLiga, the Bundesliga and Serie A; the
- * Brasileirao and the rest sit further back, and the board runs to 2,093
- * events in total. So "fetch the first three pages" -- which is what this did
- * -- silently meant "only the biggest four European leagues have prices", and
- * a Brazilian fixture rendered as Not listed while the model happily published
- * a pick on it.
- *
- * page_size does not rescue that: 200 is rejected outright with a 502, and 60
- * returns whole tournaments rather than a fixed count, so a page is between
- * about 30 and 60 events.
- */
-export const PAGE_SIZE = 100;
+export interface BoardLookup {
+  /** Our catalogue slug; its SportyBet tournament id decides which board. */
+  leagueCode?: string;
+  /** Our public match id ("fd:123"), when the caller has one: reuses a stored link. */
+  matchId?: string;
+}
 
 /**
  * The fixture on SportyBet's board, or null.
  *
- * Asking for the competition by id is the whole design. The board is ordered
- * by competition and runs to 2,093 events, so scanning it for a Brazilian
- * fixture meant eight sequential pages, thirty-seven seconds, and still no
- * result -- while one call carrying tournament_id returns that competition's
- * entire fixture list with markets attached.
+ * A fixture matched before (by the daily sync or an earlier lookup) is read
+ * back by id. Otherwise the matcher runs against the competition's board
+ * with everything it has learned: ids, names, aliases and anchors -- never
+ * elimination, which only the whole round can support. What it learns here
+ * is stored for next time.
  */
-export async function findOnBoard(
-  fixture: FixtureLike,
-  tournamentId?: string,
-): Promise<SportyBetEvent | null> {
-  // No id, no lookup. Competitions outside the catalogue used to scan the
-  // first two pages of the unfiltered board, but those boards are dominated
-  // by games kicking off within hours, so they went stale every hour: six
-  // credits an hour for a hit that was rarely there.
-  if (!tournamentId) return null;
-  const events = await sportyBetBoard(1, PAGE_SIZE, tournamentId);
-  return findFixture(fixture, events);
+export async function findOnBoard(fixture: FixtureLike, lookup: BoardLookup): Promise<SportyBetEvent | null> {
+  const league = lookup.leagueCode ? leagueByCode(lookup.leagueCode) : undefined;
+  const tournamentId = league ? await sportyBetTournament(league.code) : null;
+  // No id, no lookup: scanning the unfiltered board for a competition it
+  // does not know costs many calls for a hit that is rarely there.
+  if (!league || !tournamentId) return null;
+  const events = await sportyBetBoard(tournamentId);
+  if (events.length === 0) return null;
+
+  if (lookup.matchId) {
+    const stored = await storedEventLink(lookup.matchId);
+    const hit = stored && events.find((e) => e.eventId === stored.eventId);
+    if (hit) return hit;
+  }
+
+  const memory = await memoryFor(league.code, [fixture.homeName, fixture.awayName]);
+  const found = matchOne(fixture, events, memory);
+  if (!found) return null;
+  if (found.learned.length || lookup.matchId) {
+    // Best effort, off the response's critical path in practice: both
+    // swallow their own failures.
+    await Promise.all([
+      saveLearned(league.code, found.learned),
+      lookup.matchId
+        ? saveEventLinks(league.code, [{ matchId: lookup.matchId, event: found.event, method: found.method }])
+        : Promise.resolve(),
+    ]);
+  }
+  return found.event;
 }
 
 /**
@@ -183,12 +228,12 @@ export async function findOnBoard(
 export async function sportyBetPrice(
   fixture: FixtureLike,
   market: string,
-  tournamentId?: string,
+  lookup: BoardLookup,
 ): Promise<number | undefined> {
   const selection = toSportyBet(market);
   if (!selection) return undefined;
 
-  const event = await findOnBoard(fixture, tournamentId).catch(() => null);
+  const event = await findOnBoard(fixture, lookup).catch(() => null);
   if (!event) return undefined;
 
   const entry = event.markets.find((m) => matchesSelection(m, selection));

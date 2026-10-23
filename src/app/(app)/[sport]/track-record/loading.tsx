@@ -7,7 +7,7 @@ export default function Loading() {
   return (
     <>
       <PageHeader eyebrow="Track Record" title="Every published pick, graded" description="Every pick, logged before kickoff and graded after." />
-      <div className={`${containerClass()} space-y-8 py-7 sm:py-10`}>
+      <div className={`${containerClass()} space-y-8 py-4 sm:py-10`}>
         <StatTilesSkeleton count={4} />
         <div className="card p-5 sm:p-6" aria-hidden>
           <Skeleton className="h-3 w-32" />

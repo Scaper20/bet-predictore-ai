@@ -25,6 +25,10 @@
       "schedule": "0 7 * * *"
     },
     {
+      "path": "/api/cron/sportybet-sync",
+      "schedule": "30 4 * * *"
+    },
+    {
       "path": "/api/cron/code-hub",
       "schedule": "0 6 * * *"
     }

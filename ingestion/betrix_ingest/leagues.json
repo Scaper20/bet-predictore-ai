@@ -49,7 +49,8 @@
     "international": false,
     "ids": {
       "theSportsDb": "4481",
-      "espn": "uefa.europa"
+      "espn": "uefa.europa",
+      "sportyBet": "sr:tournament:679"
     },
     "archive": {
       "openfootball": {
@@ -68,7 +69,8 @@
     "international": false,
     "ids": {
       "theSportsDb": "5071",
-      "espn": "uefa.europa.conf"
+      "espn": "uefa.europa.conf",
+      "sportyBet": "sr:tournament:34480"
     },
     "archive": {
       "openfootball": {

@@ -183,9 +183,11 @@ export const LEAGUES: LeagueDef[] = [
     cupPool: UEFA_CUPS,
     // TheSportsDB ids for this and every competition added with it were
     // checked against lookupleague.php (name, sport, country), not assumed.
-    // API-Football and SportyBet ids are left off until they can be read off
-    // those services: a wrong one fails silently.
-    ids: { theSportsDb: "4481", espn: "uefa.europa" },
+    // API-Football ids are left off until they can be read off that
+    // service: a wrong one fails silently. The SportyBet ids here and on the
+    // Conference League were read off SportyBet's own tournament list
+    // (factsCenter/sportList, "International Clubs").
+    ids: { theSportsDb: "4481", espn: "uefa.europa", sportyBet: "sr:tournament:679" },
     archive: { openfootball: { repo: "champions-league", glob: "*/el.txt" } },
   },
   {
@@ -197,7 +199,7 @@ export const LEAGUES: LeagueDef[] = [
     flag: "🇪🇺",
     rank: 13,
     cupPool: UEFA_CUPS,
-    ids: { theSportsDb: "5071", espn: "uefa.europa.conf" },
+    ids: { theSportsDb: "5071", espn: "uefa.europa.conf", sportyBet: "sr:tournament:34480" },
     archive: { openfootball: { repo: "champions-league", glob: "*/conf.txt" } },
   },
   {

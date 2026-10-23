@@ -19,7 +19,7 @@ export default function Loading() {
         title="Live scores"
         description="Every match in play, updating live."
       />
-      <div className={`${containerClass()} space-y-5 py-7 sm:py-10`}>
+      <div className={`${containerClass()} space-y-5 py-4 sm:py-10`}>
         <div className="card space-y-4 p-4 sm:p-5">
           <Skeleton className="h-6 w-56" />
           <Skeleton className="h-10 w-full rounded-lg" />

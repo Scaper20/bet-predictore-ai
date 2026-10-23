@@ -2,11 +2,11 @@ import "server-only";
 
 import type { Match } from "@/lib/types";
 import type { Pick } from "@/lib/model/predict";
-import { leagueByCode } from "@/lib/leagues";
 import { assessValue, type ValueVerdict } from "@/lib/value";
 import { priceGap, ratePrice, type MarketQuote, type PriceVerdict } from "./consensus";
 import { consensusQuote, hasConsensusCoverage } from "./the-odds-api";
-import { sportyBetPrice } from "./sportybet";
+import { sportyBetPrice, sportyBetPricedAt } from "./sportybet";
+import { sportyBetTournament } from "./sportybet-links";
 import { isQuotable } from "./markets";
 import type { FixtureLike } from "./match-fixture";
 
@@ -43,8 +43,13 @@ export interface SelectionPricing {
   probability: number;
   /** The model's own break-even price. */
   breakEven: number;
-  /** SportyBet's live price, or null when it does not offer or list this. */
+  /** SportyBet's price, or null when it does not offer or list this. */
   local: number | null;
+  /**
+   * When SportyBet's board behind `local` was read (epoch ms). Prices move
+   * all the time, so a price is only ever shown with its age.
+   */
+  localAt: number | null;
   /** The market's de-vigged opinion, or null when it has none. */
   consensus: MarketQuote | null;
   /**
@@ -82,8 +87,10 @@ export interface QuoteRequest {
   awayName: string;
   /** Epoch milliseconds. */
   kickoff: number;
-  /** Catalogue slug. Without it there is a local price but no consensus. */
+  /** Catalogue slug. Without it there is neither a SportyBet price nor a consensus. */
   leagueCode?: string;
+  /** Our public match id, when known: lets SportyBet reuse a stored match. */
+  matchId?: string;
   market: string;
   label: string;
   /** The model's probability, used only where the market has no opinion. */
@@ -98,6 +105,7 @@ function requestFor(match: Match, pick: Pick): QuoteRequest {
     awayName: match.away.name,
     kickoff: Date.parse(match.kickoff),
     leagueCode: match.league.code,
+    matchId: match.id,
     market: pick.market,
     label: pick.label,
     probability: pick.probability,
@@ -119,19 +127,20 @@ async function priceOne(pick: QuoteRequest): Promise<SelectionPricing> {
     kickoff: pick.kickoff,
   };
 
-  // Asking SportyBet for the competition by id turns a scan of a 2,093-event
-  // board into one call. Absent for competitions outside the catalogue, which
-  // fall back to a shallow scan of the board's leading tournaments.
-  const tournamentId = pick.leagueCode ? leagueByCode(pick.leagueCode)?.ids.sportyBet : undefined;
-
+  // SportyBet is asked for the competition by its tournament id; a
+  // competition without one has no SportyBet price at all.
   const [local, quote] = await Promise.all([
     isQuotable(pick.market)
-      ? sportyBetPrice(fixture, pick.market, tournamentId).catch(() => undefined)
+      ? sportyBetPrice(fixture, pick.market, { leagueCode: pick.leagueCode, matchId: pick.matchId }).catch(
+          () => undefined,
+        )
       : Promise.resolve(undefined),
     consensusQuote(pick.leagueCode, fixture, pick.market).catch(() => null),
   ]);
 
   const price = typeof local === "number" ? local : null;
+  const tournamentId = price !== null ? await sportyBetTournament(pick.leagueCode) : null;
+  const localAt = tournamentId ? sportyBetPricedAt(tournamentId) : null;
 
   // No blending. An average of a market median and a model estimate is a
   // number with no owner, and the point of keeping them apart is that the
@@ -144,6 +153,7 @@ async function priceOne(pick: QuoteRequest): Promise<SelectionPricing> {
     probability: pick.probability,
     breakEven: pick.fairOdds,
     local: price,
+    localAt,
     consensus: quote,
     priceVerdict,
     // Only where the market has nothing to say. Where it does, the model's

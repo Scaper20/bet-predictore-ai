@@ -29,6 +29,7 @@ import { Spinner } from "@/components/ui/primitives";
 import { BuildProgress, useBuildProgress } from "@/components/forge/build-progress";
 import { openSlipSheet } from "@/components/layout/nav-actions";
 import { RiskBadge } from "@/components/ui/risk-badge";
+import { BookCodeButton } from "@/components/slip/book-code-button";
 
 /* ------------------------------------------------------------------ state */
 
@@ -308,6 +309,7 @@ export function ForgeStudio() {
               onBack={() => setView("settings")}
               onAgain={() => void generate(true)}
               onAdd={addToSlip}
+              bookLegs={asSlipLegs(slip.legs)}
               onTrack={track}
               onShare={() => void share()}
               onLock={toggleLock}
@@ -681,6 +683,7 @@ function ResultPanel({
   onLock,
   onSwap,
   onRemove,
+  bookLegs,
 }: {
   slip: Slip;
   locked: Set<string>;
@@ -697,6 +700,8 @@ function ResultPanel({
   onLock: (id: string) => void;
   onSwap: (leg: ForgeLeg) => void;
   onRemove: (leg: ForgeLeg) => void;
+  /** The combo as slip legs, for booking it on SportyBet. */
+  bookLegs: SlipLeg[];
 }) {
   const t = useMemo(() => slipTotals(slip.legs, 1), [slip.legs]);
   const onSlip = new Set(slip.legs.map((l) => l.matchId));
@@ -751,6 +756,15 @@ function ResultPanel({
         </p>
         {error && <ForgeError error={error} compact />}
         {!!slip.proHeld && !error && <ProHeldNote count={slip.proHeld} />}
+        <div className="mt-4 border-t border-line pt-4">
+          <BookCodeButton
+            legs={bookLegs}
+            remove={(matchId) => {
+              const leg = slip.legs.find((l) => l.matchId === matchId);
+              if (leg) onRemove(leg);
+            }}
+          />
+        </div>
       </div>
 
       {/* legs */}

@@ -7,7 +7,7 @@ export default function Loading() {
   return (
     <>
       <PageHeader eyebrow="Trends" title="Streaks to know before kick-off" />
-      <div className={`${containerClass()} space-y-7 py-7 sm:py-10`}>
+      <div className={`${containerClass()} space-y-7 py-4 sm:py-10`}>
         <section className="grid gap-3 sm:grid-cols-3">
           {Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="card flex items-center gap-4 p-4">

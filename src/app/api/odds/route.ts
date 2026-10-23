@@ -113,6 +113,7 @@ export async function POST(request: Request) {
           key: keys[i],
           market: row.market,
           price: row.local,
+          pricedAt: row.localAt,
           rating: row.priceVerdict?.rating ?? null,
           reason: row.priceVerdict?.reason ?? row.modelVerdict?.reason ?? null,
           marketPrice: row.consensus ? 1 / row.consensus.fairProbability : null,

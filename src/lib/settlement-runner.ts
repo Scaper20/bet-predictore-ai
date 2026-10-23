@@ -5,6 +5,8 @@ import { getMatch } from "@/lib/providers";
 import { evaluatePick, evaluateStatPick, statKindOf, type PickResult } from "@/lib/settlement";
 import { espnDay, espnStatsComplete, findEspnGame, type EspnResult } from "@/lib/archive/espn-shots";
 import { leagueByCode } from "@/lib/leagues";
+import { priceInSnapshot } from "@/lib/odds/market-prob";
+import { lastSnapshotBefore } from "@/lib/odds/sportybet-links";
 import { looseKey, nameBook, nameScope } from "@/lib/teams/canonical";
 import type { Match } from "@/lib/types";
 
@@ -80,6 +82,7 @@ export async function runSettlementPass(
   if (error) throw error;
   if (!pending || pending.length === 0) {
     await settleShadowPicks(admin).catch(() => 0);
+    await settlePosts();
     return 0;
   }
 
@@ -129,6 +132,7 @@ export async function runSettlementPass(
       : evaluatePick(market, homeGoals, awayGoals);
     if (!result) continue;
 
+    const closing = await closingFor(matchId, row.kickoff as string, market);
     const { error: updateError } = await admin
       .from("predictions_log")
       .update({
@@ -136,12 +140,31 @@ export async function runSettlementPass(
         actual_home_goals: homeGoals,
         actual_away_goals: awayGoals,
         settled_at: new Date().toISOString(),
+        ...closing,
       })
       .eq("id", row.id as string);
     if (!updateError) settledCount++;
   }
   await settleShadowPicks(admin).catch(() => 0);
+  await settlePosts();
   return settledCount;
+}
+
+/** Community codes on the Code Hub, graded from the same results (code-hub-posts.ts). */
+async function settlePosts(): Promise<void> {
+  const { settleCommunityPosts } = await import("@/lib/code-hub-posts");
+  await settleCommunityPosts().catch(() => 0);
+}
+
+/**
+ * SportyBet's closing price for a pick: the last snapshot before kick-off
+ * (market-prob.ts). Empty when there is none, so the update leaves the
+ * columns null rather than failing.
+ */
+async function closingFor(matchId: string, kickoff: string, market: string) {
+  const snap = await lastSnapshotBefore(matchId, Date.parse(kickoff)).catch(() => null);
+  const price = snap ? priceInSnapshot(snap.prices, market) : null;
+  return price ? { closing_price: price.odds, closing_market_prob: price.fairProbability } : {};
 }
 
 /**
@@ -152,7 +175,7 @@ export async function runSettlementPass(
 export async function settleShadowPicks(admin: SupabaseClient): Promise<number> {
   const { data: rows } = await admin
     .from("shadow_picks")
-    .select("match_id, market")
+    .select("match_id, market, kickoff")
     .is("settled_at", null)
     .lt("kickoff", new Date().toISOString())
     .limit(500);
@@ -172,9 +195,10 @@ export async function settleShadowPicks(admin: SupabaseClient): Promise<number> 
     if (typeof s?.home_goals !== "number" || typeof s?.away_goals !== "number") continue;
     const result = evaluatePick(row.market as string, s.home_goals, s.away_goals);
     if (!result) continue;
+    const closing = await closingFor(row.match_id as string, row.kickoff as string, row.market as string);
     const { error } = await admin
       .from("shadow_picks")
-      .update({ result, actual_home_goals: s.home_goals, actual_away_goals: s.away_goals, settled_at: new Date().toISOString() })
+      .update({ result, actual_home_goals: s.home_goals, actual_away_goals: s.away_goals, settled_at: new Date().toISOString(), ...closing })
       .eq("match_id", row.match_id as string)
       .eq("market", row.market as string);
     if (!error) n++;

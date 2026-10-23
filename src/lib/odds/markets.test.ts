@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isQuotable, matchesSelection, readOdds, toSportyBet } from "./markets";
+import { builderCombo, fromSportyBet, isQuotable, matchesSelection, offeredOn, readOdds, toSportyBet, toSportyBetBuilder } from "./markets";
 
 describe("toSportyBet", () => {
   it("maps every market family the model publishes", () => {
@@ -102,5 +102,88 @@ describe("isQuotable", () => {
     expect(isQuotable("1x2:home")).toBe(true);
     expect(isQuotable("ou:over:2.5")).toBe(true);
     expect(isQuotable("cs:2-1")).toBe(false);
+  });
+});
+
+describe("same-game combos", () => {
+  it("maps each pair to SportyBet's ready-made combo market, whatever the order", () => {
+    expect(toSportyBet("combo:1x2:home+ou:over:2.5")).toEqual({ marketId: "37", outcomeId: "796", specifier: "total=2.5" });
+    expect(toSportyBet("combo:ou:under:1.5+1x2:away")).toEqual({ marketId: "37", outcomeId: "802", specifier: "total=1.5" });
+    expect(toSportyBet("combo:1x2:draw+btts:no")).toEqual({ marketId: "35", outcomeId: "84" });
+    expect(toSportyBet("combo:ou:over:2.5+btts:yes")).toEqual({ marketId: "36", outcomeId: "90", specifier: "total=2.5" });
+    expect(toSportyBet("combo:dc:home-draw+ou:over:1.5")).toEqual({ marketId: "547", outcomeId: "1727", specifier: "total=1.5" });
+    expect(toSportyBet("combo:dc:away-draw+ou:under:3.5")).toEqual({ marketId: "547", outcomeId: "1726", specifier: "total=3.5" });
+    expect(toSportyBet("combo:btts:yes+dc:home-away")).toEqual({ marketId: "546", outcomeId: "1720" });
+  });
+
+  it("refuses what has no ready-made market", () => {
+    // Three parts, a handicap part, a whole or out-of-range line, one family twice.
+    expect(toSportyBet("combo:1x2:home+ou:over:2.5+btts:yes")).toBeNull();
+    expect(toSportyBet("combo:ah:home:-1+ou:over:2.5")).toBeNull();
+    expect(toSportyBet("combo:1x2:home+ou:over:2")).toBeNull();
+    expect(toSportyBet("combo:1x2:home+ou:over:0.5")).toBeNull();
+    expect(toSportyBet("combo:1x2:home+1x2:draw")).toBeNull();
+    expect(toSportyBet("combo:1x2:home+dc:home-draw")).toBeNull();
+  });
+
+  it("checks the line is actually offered on the game", () => {
+    const sel = toSportyBet("combo:1x2:home+ou:over:2.5")!;
+    const markets = [
+      { market_id: "37", specifier: "total=1.5", outcomes: [{ id: "796" }] },
+      { market_id: "37", specifier: "total=2.5", outcomes: [{ id: "794" }, { id: "796" }] },
+    ];
+    expect(offeredOn(sel, markets)).toBe(true);
+    expect(offeredOn(sel, markets.slice(0, 1))).toBe(false);
+    expect(offeredOn(sel, [{ market_id: "37", specifier: "total=2.5", outcomes: [{ id: "794" }] }])).toBe(false);
+  });
+});
+
+describe("toSportyBetBuilder", () => {
+  it("splits a combo with no ready-made market into Bet Builder parts", () => {
+    expect(toSportyBetBuilder("combo:1x2:home+ou:over:2.5+btts:yes")).toEqual([
+      { marketId: "1", outcomeId: "1" },
+      { marketId: "18", outcomeId: "12", specifier: "total=2.5" },
+      { marketId: "29", outcomeId: "74" },
+    ]);
+    expect(toSportyBetBuilder("combo:1x2:home+ah:home:-1.5")).toEqual([
+      { marketId: "1", outcomeId: "1" },
+      { marketId: "16", outcomeId: "1714", specifier: "hcp=-1.5" },
+    ]);
+  });
+
+  it("leaves pairs with a ready-made market, whole lines and singles alone", () => {
+    expect(toSportyBetBuilder("combo:1x2:home+ou:over:2.5")).toBeNull();
+    expect(toSportyBetBuilder("combo:1x2:home+ou:over:2+btts:yes")).toBeNull();
+    expect(toSportyBetBuilder("combo:1x2:home+ah:home:-1")).toBeNull();
+    expect(toSportyBetBuilder("1x2:home")).toBeNull();
+  });
+});
+
+describe("fromSportyBet", () => {
+  it("reverses every market we map, ready-made combos included", () => {
+    const ours = [
+      "1x2:home", "1x2:draw", "1x2:away",
+      "dc:home-draw", "dc:home-away", "dc:away-draw",
+      "btts:yes", "btts:no",
+      "ou:over:2.5", "ou:under:1.5", "ou:over:3",
+      "ah:home:-1.5", "ah:away:1.5", "ah:home:0", "ah:away:-0.5",
+      "combo:1x2:home+ou:over:2.5", "combo:1x2:draw+btts:no", "combo:ou:under:2.5+btts:yes",
+      "combo:dc:away-draw+ou:over:3.5", "combo:dc:home-away+btts:yes",
+    ];
+    for (const m of ours) {
+      const sel = toSportyBet(m)!;
+      expect(fromSportyBet(sel), m).toBe(m);
+    }
+  });
+
+  it("returns null for markets we don't read", () => {
+    expect(fromSportyBet({ marketId: "45", outcomeId: "274" })).toBeNull();
+    expect(fromSportyBet({ marketId: "18", outcomeId: "12", specifier: "total=abc" })).toBeNull();
+    expect(fromSportyBet({ marketId: "1", outcomeId: "9" })).toBeNull();
+  });
+
+  it("joins a Bet Builder's parts into one combo id", () => {
+    expect(builderCombo(["1x2:home", "ou:over:2.5", "btts:yes"])).toBe("combo:1x2:home+ou:over:2.5+btts:yes");
+    expect(builderCombo(["1x2:home"])).toBeNull();
   });
 });

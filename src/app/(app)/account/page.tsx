@@ -88,7 +88,7 @@ export default async function AccountPage() {
     .filter((l): l is NonNullable<typeof l> => l !== undefined);
 
   return (
-    <Container width="shell" className="py-7 sm:py-10">
+    <Container width="shell" className="py-4 sm:py-10">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-3xl font-bold sm:text-4xl">

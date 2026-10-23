@@ -2,7 +2,7 @@ import { Hero } from "@/components/landing/hero";
 import { ProductIcon } from "@/components/icons/product-icon";
 import { Marquee } from "@/components/landing/marquee";
 import type { Metadata } from "next";
-import { Faq, FAQS, Features, FinalCta, HowItWorks, Leagues, Pricing } from "@/components/landing/sections";
+import { CodeHubSection, Faq, FAQS, Features, FinalCta, HowItWorks, Leagues, Pricing } from "@/components/landing/sections";
 import { JsonLd } from "@/components/seo/json-ld";
 import { BestBetOfDay } from "@/components/landing/best-bet-of-day";
 import { MatchCard } from "@/components/match/match-card";
@@ -115,6 +115,8 @@ export default async function HomePage() {
           "Real fixtures only",
           "Fitted on completed matches",
           "Top 3 picks on every match",
+          "Booking codes, one tap",
+          "Check any code",
           "Low · medium · high risk labels",
           "Match stats",
           "Live scores",
@@ -130,6 +132,7 @@ export default async function HomePage() {
         </Container>
       )}
       <TodaysPicks previews={previews} free={freeGrid} />
+      <CodeHubSection />
       <WhatsAppPromo />
       <Features />
       <HowItWorks />

@@ -51,8 +51,8 @@ const FEATURES = [
     icon: "scale",
     title: "Value, margin stripped out",
     body:
-      "Paste in the price you have been offered. We strip the margin, compare it against the " +
-      "price the selection has to beat, and tell you whether it is worth taking at all.",
+      "Bookmaker prices are read for you, with the time they were taken. We strip the margin, compare " +
+      "each one with the model's chance, and show whether the price is worth taking.",
   },
   {
     icon: "search",
@@ -91,6 +91,63 @@ export function Features() {
           ))}
         </div>
       </Reveal>
+    </section>
+  );
+}
+
+/* ---------------------------------------------------------------- Code Hub */
+
+const HUB_POINTS = [
+  {
+    title: "Ready-made combos, every day",
+    body: "Combos from 2 to 20 odds, built from the model's strongest reads. Each has a code you load in one tap.",
+  },
+  {
+    title: "Same-game combos, booked properly",
+    body: "Win and over 2.5 in one pick, or a Bet Builder. We book them as the bookmaker offers them, so the code loads as built.",
+  },
+  {
+    title: "Check any code",
+    body: "Paste a code from anywhere. We read every game and give the model's chance for each pick, strong to risky.",
+  },
+  {
+    title: "Make it safer, or hit your odds",
+    body: "Keep the games, change the picks: the safest version of the code, or one re-picked to land near the odds you want.",
+  },
+  {
+    title: "Post yours, see it ranked",
+    body: "Post your own code. The model ranks every posted code by its chance and its price, with each poster's record beside it.",
+  },
+];
+
+export function CodeHubSection() {
+  return (
+    <section className="border-y border-line bg-shell">
+      <Container className="py-12 sm:py-20 lg:py-24">
+        <Reveal>
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <SectionHeading
+              eyebrow="Code Hub"
+              title="Codes, built and checked by the model"
+              description="A code holds the picks, not the price: the bookmaker prices it again when you load it, so the odds you see there are the ones that count."
+            />
+            <ButtonLink href={sportPath("codeHub")} className="shrink-0">
+              Open the Code Hub →
+            </ButtonLink>
+          </div>
+          <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-5">
+            {HUB_POINTS.map((h) => (
+              <div key={h.title} className="card p-5">
+                <div className="grid size-10 place-items-center rounded-lg bg-surface-2 text-brand">
+                  <ProductIcon name="ticket" className="size-5" />
+                </div>
+                <h3 className="mt-4 text-sm font-semibold">{h.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-ink-muted">{h.body}</p>
+              </div>
+            ))}
+          </div>
+        </Reveal>
+      </Container>
     </section>
   );
 }
@@ -259,6 +316,14 @@ export const FAQS = [
   {
     q: "What do low, medium and high risk mean?",
     a: "They come from our own graded record, not a guess. Picks the model rates 65% or more have landed about 7 in 10 times, picks from 55% to 65% about 6 in 10, and picks under 55% about half the time. The label sits beside every pick so you can see at a glance how often picks like it come in.",
+  },
+  {
+    q: "How do codes work?",
+    a: "Every combo in the Code Hub comes with a booking code. Enter it on your bookmaker (or tap Open) and the same picks load on your slip. You can also paste any code into the Code Hub: we read each game, give the model's chance for every pick, and can re-pick it to be safer or to land near the odds you want.",
+  },
+  {
+    q: "Why are the bookmaker's odds different from the ones here?",
+    a: "A code holds the picks, not the prices. The bookmaker's prices move all the time, and it prices the code again when you load it. Every price we show carries the time it was read, so you can see how old it is.",
   },
   {
     q: "Is this legal where I live?",

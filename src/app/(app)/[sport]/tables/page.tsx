@@ -49,7 +49,7 @@ export default async function TablesPage({ searchParams }: { searchParams: Promi
         title={`${def.name} table`}
         description="Standings that move as goals go in."
       />
-      <div className={`${containerClass()} space-y-6 py-7 sm:py-10`}>
+      <div className={`${containerClass()} space-y-6 py-4 sm:py-10`}>
         <Suspense fallback={<div className="h-11" />}>
           <LeagueTabs leagues={TABLE_LEAGUES} active={code} />
         </Suspense>

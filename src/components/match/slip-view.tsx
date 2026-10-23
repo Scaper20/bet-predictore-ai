@@ -10,6 +10,7 @@ import { odds, percent } from "@/lib/format";
 import { LocalTime } from "@/components/ui/local-time";
 import { sportPath, matchPath } from "@/lib/routes";
 import { worstLeg } from "@/lib/value";
+import { BookCodeButton } from "@/components/slip/book-code-button";
 
 /** One selection's live prices, as /api/odds returns them. */
 interface LivePrice {
@@ -20,7 +21,16 @@ interface LivePrice {
   marketPrice: number | null;
   best: number | null;
   books: number | null;
+  /** When SportyBet's board behind `price` was read, epoch ms. */
+  pricedAt: number | null;
 }
+
+/**
+ * How often an open slip asks again. SportyBet's prices move constantly, and
+ * the server reads a board with a game inside two hours every ten minutes,
+ * so asking more often than this would mostly return the same numbers.
+ */
+const REFRESH_MS = 5 * 60_000;
 
 const RATINGS: Record<
   NonNullable<LivePrice["rating"]>,
@@ -68,6 +78,22 @@ function useLivePrices(legs: SlipLeg[], applyFetchedOdds: (prices: Map<string, n
   // rebuilt whenever a price is edited, and depending on it directly would
   // make each keystroke in the price field fire a request.
   const signature = legs.map(legKey).sort().join(",");
+
+  // Re-asks every few minutes while the slip is on screen, since the prices
+  // keep moving. A hidden tab does not tick; it catches up when shown.
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    if (signature === "") return;
+    const bump = () => {
+      if (document.visibilityState === "visible") setTick((t) => t + 1);
+    };
+    const timer = window.setInterval(bump, REFRESH_MS);
+    document.addEventListener("visibilitychange", bump);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", bump);
+    };
+  }, [signature]);
 
   useEffect(() => {
     // An empty slip renders its own empty state and never reads either value,
@@ -126,12 +152,17 @@ function useLivePrices(legs: SlipLeg[], applyFetchedOdds: (prices: Map<string, n
 
     return () => controller.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [signature]);
+  }, [signature, tick]);
 
   const current = result?.signature === signature ? result : null;
+  // The OLDEST board behind any shown price: the honest age of the set.
+  const stamps = [...(current?.prices.values() ?? [])]
+    .map((p) => (p.price !== null ? p.pricedAt : null))
+    .filter((t): t is number => typeof t === "number");
   return {
     prices: current?.prices ?? NO_PRICES,
     state: signature === "" ? "idle" : (current?.status ?? "loading"),
+    pricedAt: stamps.length ? Math.min(...stamps) : null,
   } as const;
 }
 
@@ -146,7 +177,7 @@ const sportyPrice = (l: SlipLeg) => (l.oddsSource === "sportybet" && (l.bookmake
 export function SlipView({ variant = "page" }: { variant?: "page" | "sheet" }) {
   const sheet = variant === "sheet";
   const { legs, remove, clear, applyFetchedOdds } = useSlip();
-  const { prices, state } = useLivePrices(legs, applyFetchedOdds);
+  const { prices, state, pricedAt } = useLivePrices(legs, applyFetchedOdds);
   const fetchedAny = useMemo(
     () => legs.some((l) => l.oddsSource === "sportybet"),
     [legs],
@@ -311,8 +342,21 @@ export function SlipView({ variant = "page" }: { variant?: "page" | "sheet" }) {
             )}
 
             {fetchedAny && (
-              <p className="text-[11px] leading-relaxed text-ink-dim">Market prices read just now.</p>
+              <p className="text-[11px] leading-relaxed text-ink-dim">
+                {pricedAt ? (
+                  <>
+                    SportyBet prices as of <LocalTime iso={new Date(pricedAt).toISOString()} />.{" "}
+                  </>
+                ) : (
+                  "SportyBet prices. "
+                )}
+                They move until kick-off, so this refreshes every few minutes.
+              </p>
             )}
+
+            <div className="border-t border-line pt-4">
+              <BookCodeButton legs={legs} remove={remove} />
+            </div>
           </div>
 
           {(state === "loading" && !usingRealOdds) || (usingRealOdds && worst?.verdict.rating === "no-bet") || correlated || legs.length >= 5 ? (

@@ -109,12 +109,13 @@ export function ProLeaguesBanner({
   held: number;
 }) {
   return (
-    <section className="card flex flex-col gap-4 border-violet/30 bg-violet/5 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+    <section className="card flex items-center justify-between gap-3 border-violet/30 bg-violet/5 p-3.5 sm:gap-4 sm:p-6">
       <div className="min-w-0">
-        <p className="flex items-center gap-2 text-sm font-semibold text-ink">
+        <p className="flex items-center gap-2 text-[13px] font-semibold text-ink sm:text-sm">
           <ProTag /> {league ? `${league.name} is a Pro league` : `${held} ${held === 1 ? "game" : "games"} here ${held === 1 ? "is" : "are"} in Pro leagues`}
         </p>
-        <p className="mt-2 text-sm text-ink-muted">
+        {/* On a phone the line and button say enough; the why shows from sm up. */}
+        <p className="mt-2 hidden text-sm text-ink-muted sm:block">
           {league
             ? `${proLeagueReason(league.code)} On Free its picks open at kick-off, apart from today's free pick.`
             : `Our ${PRO_LEAGUE_COUNT} strongest leagues and cups. On Free their picks open at kick-off; Pro gets them as soon as they're out.`}
@@ -122,9 +123,9 @@ export function ProLeaguesBanner({
       </div>
       <Link
         href={UPGRADE_HREF}
-        className="glow-brand inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg bg-brand px-5 py-2.5 text-sm font-bold text-brand-ink hover:bg-brand-strong"
+        className="glow-brand inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-xs font-bold text-brand-ink hover:bg-brand-strong sm:px-5 sm:py-2.5 sm:text-sm"
       >
-        Unlock every league <span aria-hidden>→</span>
+        Unlock<span className="hidden sm:inline"> every league</span> <span aria-hidden>→</span>
       </Link>
     </section>
   );

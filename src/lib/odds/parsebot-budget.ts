@@ -97,6 +97,20 @@ export function boardTtlMs(nextKickoff: number | null, now = Date.now()): number
   return 24 * HOUR;
 }
 
+/**
+ * The same idea for boards read straight from SportyBet (sportybet-direct.ts),
+ * which cost nothing but SportyBet's patience. Prices move most in the last
+ * hours, when team news lands and money comes in, so a board with a game
+ * inside two hours is read every ten minutes; within six hours every half
+ * hour; three hours otherwise.
+ */
+export function directBoardTtlMs(nextKickoff: number | null, now = Date.now()): number {
+  if (nextKickoff === null) return 6 * HOUR;
+  const until = nextKickoff - now;
+  if (until <= 2 * HOUR) return 10 * MINUTE;
+  return until <= 6 * HOUR ? 30 * MINUTE : 3 * HOUR;
+}
+
 /** The earliest kickoff still ahead of now, or null. */
 export function nextKickoff(events: readonly { kickoff: number }[], now = Date.now()): number | null {
   let best: number | null = null;
@@ -123,10 +137,11 @@ export function boardDecision(
   stored: { fetchedAt: number; events: readonly { kickoff: number }[] } | null,
   canFetch: boolean,
   now = Date.now(),
+  ttl: (nextKickoff: number | null, now: number) => number = boardTtlMs,
 ): BoardDecision {
   if (stored) {
     const age = now - stored.fetchedAt;
-    if (age < boardTtlMs(nextKickoff(stored.events, now), now)) return "use";
+    if (age < ttl(nextKickoff(stored.events, now), now)) return "use";
     if (canFetch) return "refresh";
     return age < MAX_STALE_MS ? "stale-ok" : "none";
   }

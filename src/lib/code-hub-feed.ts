@@ -5,11 +5,11 @@ import { cached } from "@/lib/providers/cache";
 import { predictBatch, upcomingFeed } from "@/lib/service";
 import { candidatesFor, type ForgeLeg } from "@/lib/forge";
 import { appDayBounds } from "@/lib/format";
-import { leagueByCode } from "@/lib/leagues";
 import { priceQuotes } from "@/lib/odds";
-import { bookingCodeFor } from "@/lib/odds/booking-code";
+import { bookingAvailable, bookingCodeFor } from "@/lib/odds/booking-code";
 import { findOnBoard } from "@/lib/odds/sportybet";
-import { parsebotLive } from "@/lib/odds/parsebot";
+import { offeredOn, toSportyBet } from "@/lib/odds/markets";
+import { allSportyBetTournaments, logBooking } from "@/lib/odds/sportybet-links";
 import type { BookingLeg } from "@/lib/odds/booking";
 import {
   CODE_RUN_MS,
@@ -123,13 +123,13 @@ async function buildToday(day: string): Promise<HubCodeRow[]> {
   const now = new Date();
   const soon = now.getTime() + LEAD_MS;
   const todayEnd = appDayBounds(now).end.getTime();
-  const { matches } = await upcomingFeed(2);
+  const [{ matches }, onSportyBet] = await Promise.all([upcomingFeed(2), allSportyBetTournaments()]);
   const inWindow = matches.filter((m) => {
     const t = Date.parse(m.kickoff);
     const code = m.league.code;
     // Only competitions SportyBet's board can be asked for by id: a leg on
     // any other game could never be turned into a code.
-    return m.status === "scheduled" && t > soon && t < todayEnd && Boolean(code && leagueByCode(code)?.ids.sportyBet);
+    return m.status === "scheduled" && t > soon && t < todayEnd && Boolean(code && onSportyBet.has(code));
   });
   const predictions = (await predictBatch(inWindow, 400)).filter((p) => p.sufficiency.publishable);
   const entry = (prediction: (typeof predictions)[number]) => ({
@@ -173,30 +173,47 @@ async function readDay(day: string): Promise<StoreRead> {
 
 /**
  * Books a code for every stored combo that has none, after the response has
- * gone out. Two credits each, through the metered client; a combo whose
- * games cannot all be found on SportyBet's board is left without a code
- * rather than booked short.
+ * gone out. Booked on SportyBet directly, or through parse.bot's metered
+ * client when that is off; a combo whose games cannot all be found on
+ * SportyBet's board is left without a code rather than booked short.
  */
 function bookMissing(rows: HubCodeRow[]) {
   const due = rows.filter((r) => !r.bookingCode && r.firstKickoff - Date.now() > LEAD_MS);
   if (due.length === 0) return;
   after(async () => {
-    if (!(await parsebotLive())) return;
+    if (!(await bookingAvailable())) return;
     for (const row of due) {
       const legs: BookingLeg[] = [];
       for (const leg of row.legs) {
-        const tournamentId = leg.leagueCode ? leagueByCode(leg.leagueCode)?.ids.sportyBet : undefined;
         const kickoff = Date.parse(leg.kickoff);
         const event = await findOnBoard(
           { homeName: leg.homeName, awayName: leg.awayName, kickoff },
-          tournamentId,
+          { leagueCode: leg.leagueCode, matchId: leg.matchId },
         ).catch(() => null);
         if (!event) break;
+        // A line SportyBet isn't offering on the day would get the whole code
+        // refused; leave the combo without a code instead, as for an unlisted game.
+        const selection = toSportyBet(leg.market);
+        if (!selection || (event.markets.length > 0 && !offeredOn(selection, event.markets))) break;
         legs.push({ market: leg.market, eventId: event.eventId, kickoff });
       }
-      if (legs.length !== row.legs.length) continue;
+      if (legs.length !== row.legs.length) {
+        await logBooking({ source: "code-hub", legs: row.legs.length, outcome: "problems", problems: { found: legs.length } });
+        continue;
+      }
 
+      const started = Date.now();
       const booked = await bookingCodeFor(legs);
+      await logBooking({
+        source: "code-hub",
+        legs: legs.length,
+        outcome: booked.ok ? (booked.cached ? "cached" : "booked") : booked.reason === "invalid" ? "problems" : "refused",
+        via: booked.ok && booked.via !== "cache" ? booked.via : null,
+        code: booked.ok ? booked.bookingCode : null,
+        readBack: booked.ok ? booked.readBack : null,
+        problems: booked.ok || booked.reason !== "invalid" ? null : booked.problems,
+        durationMs: Date.now() - started,
+      });
       if (!booked.ok) continue;
       try {
         const db = await admin();

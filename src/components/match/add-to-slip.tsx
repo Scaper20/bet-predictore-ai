@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import type { Prediction } from "@/lib/model/predict";
-import { useSlip } from "@/lib/slip";
+import { useSlip, type SlipLeg } from "@/lib/slip";
+import { BookCodeButton } from "@/components/slip/book-code-button";
 import { Button } from "@/components/ui/primitives";
 import { percent } from "@/lib/format";
 import { useMatchAccess } from "@/components/match/match-access";
@@ -47,6 +48,24 @@ export function AddToSlip({ prediction: shared }: { prediction: Prediction }) {
 
   const pick = options.find((p) => p.market === selected) ?? options[0];
 
+  const leg: SlipLeg | null = pick
+    ? {
+        matchId: match.id,
+        fixture: `${match.home.name} v ${match.away.name}`,
+        // Kept apart as well as joined: the slip needs the display string, and
+        // matching this fixture to a bookmaker's needs the two clubs without
+        // having to split it back apart.
+        homeName: match.home.name,
+        awayName: match.away.name,
+        league: match.league.name,
+        kickoff: match.kickoff,
+        market: pick.market,
+        label: pick.label,
+        probability: pick.probability,
+        fairOdds: pick.fairOdds,
+      }
+    : null;
+
   return (
     <section className="card p-5 sm:p-7">
       <div className="mb-4 flex items-baseline justify-between gap-3">
@@ -72,24 +91,7 @@ export function AddToSlip({ prediction: shared }: { prediction: Prediction }) {
       <div className="mt-4 flex gap-2">
         <Button
           className="flex-1 py-2.5"
-          onClick={() =>
-            pick &&
-            add({
-              matchId: match.id,
-              fixture: `${match.home.name} v ${match.away.name}`,
-              // Kept apart as well as joined: the slip needs the display
-              // string, and matching this fixture to a bookmaker's needs the
-              // two clubs without having to split it back apart.
-              homeName: match.home.name,
-              awayName: match.away.name,
-              league: match.league.name,
-              kickoff: match.kickoff,
-              market: pick.market,
-              label: pick.label,
-              probability: pick.probability,
-              fairOdds: pick.fairOdds,
-            })
-          }
+          onClick={() => leg && add(leg)}
         >
           {existing ? "Update selection" : "Add to selections"}
         </Button>
@@ -99,6 +101,14 @@ export function AddToSlip({ prediction: shared }: { prediction: Prediction }) {
           </Button>
         )}
       </div>
+
+      {/* One pick, booked on its own: for anyone who just wants this game on
+          SportyBet without building a combo first. */}
+      {leg && match.status === "scheduled" && (
+        <div className="mt-3 border-t border-line pt-3">
+          <BookCodeButton legs={[leg]} label="Get SportyBet code for this pick" />
+        </div>
+      )}
     </section>
   );
 }

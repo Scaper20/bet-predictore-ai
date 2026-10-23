@@ -12,7 +12,6 @@ import { SportSwitch } from "@/components/layout/sport-switch";
 import { NavSearch } from "@/components/layout/nav-search";
 import { NavBadge } from "@/components/layout/mega-nav";
 import { runNavAction } from "@/components/layout/nav-actions";
-import { useLiveCount } from "@/components/layout/use-live-count";
 import { drawerMenus, isActive, navFor, type NavLink, type NavMenu } from "@/lib/nav";
 import type { SportId } from "@/lib/sports";
 import type { Tier } from "@/lib/entitlements";
@@ -22,7 +21,8 @@ import { LogoLockup } from "@/components/brand/logo";
  * The full mobile menu, behind the bottom bar's "More" tab.
  *
  * Built from the same lib/nav.ts as the desktop menus, so the two never
- * drift. Four shortcuts up top (live, the two tools, pricing), then one
+ * drift. Four shortcuts up top (code community, the code editor, Ask KiqStat,
+ * pricing; live scores are on the bottom bar), then one
  * desktop menu at a time behind a row of tabs rather than four stacked
  * accordions: a phone shows one section with room to breathe, each row with
  * the line saying what it is. It opens on the section for the page you're
@@ -45,7 +45,6 @@ export function MobileDrawer({
 }) {
   const { containerRef, initialFocusRef } = useOverlay<HTMLDivElement, HTMLButtonElement>(open, onClose);
   const pathname = usePathname();
-  const live = useLiveCount();
   const { tabs, tools } = navFor(sport);
   const menus = drawerMenus(sport);
   const quick = tabs.flatMap((t) => (t.kind === "link" ? [t] : []));
@@ -81,9 +80,8 @@ export function MobileDrawer({
 
   if (!open) return null;
 
-  const liveLink = quick.find((q) => q.live);
   const pricing = quick.find((q) => q.id === "pricing");
-  const [forge, ask] = tools;
+  const [community, editor, ask] = tools;
   const current = menus.find((m) => m.id === section) ?? menus[0];
 
   return (
@@ -121,17 +119,10 @@ export function MobileDrawer({
 
         {/* Shortcuts: what most people open this menu for. */}
         <div className="grid grid-cols-2 gap-3 px-5 pt-6">
-          {liveLink && (
-            <Shortcut
-              href={liveLink.href}
-              tone="rose"
-              icon="live"
-              label={liveLink.label}
-              desc={live !== null && live > 0 ? `${live} ${live === 1 ? "game" : "games"} in play` : "Scores as they happen"}
-              onClose={onClose}
-            />
+          {community && (
+            <Shortcut href={community.href} tone="violet" icon="community" label={community.label} desc={community.desc} onClose={onClose} />
           )}
-          {forge && <Shortcut href={forge.href} tone="brand" icon="forge" label={forge.label} desc={forge.desc} onClose={onClose} />}
+          {editor && <Shortcut href={editor.href} tone="brand" icon="editor" label={editor.label} desc={editor.desc} onClose={onClose} />}
           {ask && (
             <Shortcut href={ask.href} action={ask.action} tone="brand" icon="ask" label={ask.label} desc={ask.desc} onClose={onClose} />
           )}
@@ -329,7 +320,7 @@ function Row({ link, current, onClose }: { link: NavLink; current: boolean; onCl
 /* ------------------------------------------------------------ shortcuts */
 
 type Tone = "rose" | "brand" | "violet" | "amber";
-type ShortcutIcon = "live" | "forge" | "ask" | "pricing";
+type ShortcutIcon = "community" | "editor" | "ask" | "pricing";
 
 const TONE: Record<Tone, { box: string; chip: string }> = {
   rose: { box: "border-rose/30 bg-rose/[0.06]", chip: "bg-rose/15 text-rose" },
@@ -390,9 +381,9 @@ function Shortcut({
 }
 
 function ShortcutGlyph({ name }: { name: ShortcutIcon }) {
-  if (name === "live") return <span className="live-dot size-2.5 rounded-full bg-signal" aria-hidden />;
   const p = { viewBox: "0 0 24 24", className: "size-5", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinejoin: "round" as const, strokeLinecap: "round" as const, "aria-hidden": true };
-  if (name === "forge") return <svg {...p}><path d="M13 3 5 14h6l-1 7 8-11h-6z" /></svg>;
+  if (name === "community") return <svg {...p}><circle cx="9" cy="8" r="3" /><path d="M3.5 19a5.5 5.5 0 0 1 11 0M16 5.5a3 3 0 0 1 0 5.5M17.5 14.5a5 5 0 0 1 3 4.5" /></svg>;
+  if (name === "editor") return <svg {...p}><path d="M4 7.5A1.5 1.5 0 0 1 5.5 6h13A1.5 1.5 0 0 1 20 7.5V10a2 2 0 0 0 0 4v2.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 16.5V14a2 2 0 0 0 0-4z" /><path d="m9.5 12 1.7 1.7 3.3-3.4" /></svg>;
   if (name === "ask") return <svg {...p}><path d="M4 5h16v11H9l-5 4z" /></svg>;
   return <svg {...p}><path d="M3 12V4h8l10 10-8 8z" /><circle cx="7.5" cy="8.5" r="1.3" /></svg>;
 }
