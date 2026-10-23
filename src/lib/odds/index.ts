@@ -5,7 +5,8 @@ import type { Pick } from "@/lib/model/predict";
 import { assessValue, type ValueVerdict } from "@/lib/value";
 import { priceGap, ratePrice, type MarketQuote, type PriceVerdict } from "./consensus";
 import { consensusQuote, hasConsensusCoverage } from "./the-odds-api";
-import { sportyBetPrice } from "./sportybet";
+import { sportyBetPrice, sportyBetPricedAt } from "./sportybet";
+import { leagueByCode } from "@/lib/leagues";
 import { isQuotable } from "./markets";
 import type { FixtureLike } from "./match-fixture";
 
@@ -42,8 +43,13 @@ export interface SelectionPricing {
   probability: number;
   /** The model's own break-even price. */
   breakEven: number;
-  /** SportyBet's live price, or null when it does not offer or list this. */
+  /** SportyBet's price, or null when it does not offer or list this. */
   local: number | null;
+  /**
+   * When SportyBet's board behind `local` was read (epoch ms). Prices move
+   * all the time, so a price is only ever shown with its age.
+   */
+  localAt: number | null;
   /** The market's de-vigged opinion, or null when it has none. */
   consensus: MarketQuote | null;
   /**
@@ -133,6 +139,8 @@ async function priceOne(pick: QuoteRequest): Promise<SelectionPricing> {
   ]);
 
   const price = typeof local === "number" ? local : null;
+  const tournamentId = pick.leagueCode ? leagueByCode(pick.leagueCode)?.ids.sportyBet : undefined;
+  const localAt = price !== null && tournamentId ? sportyBetPricedAt(tournamentId) : null;
 
   // No blending. An average of a market median and a model estimate is a
   // number with no owner, and the point of keeping them apart is that the
@@ -145,6 +153,7 @@ async function priceOne(pick: QuoteRequest): Promise<SelectionPricing> {
     probability: pick.probability,
     breakEven: pick.fairOdds,
     local: price,
+    localAt,
     consensus: quote,
     priceVerdict,
     // Only where the market has nothing to say. Where it does, the model's

@@ -99,12 +99,16 @@ export function boardTtlMs(nextKickoff: number | null, now = Date.now()): number
 
 /**
  * The same idea for boards read straight from SportyBet (sportybet-direct.ts),
- * which cost nothing but SportyBet's patience: half an hour close to kickoff,
- * when prices move, and three hours otherwise.
+ * which cost nothing but SportyBet's patience. Prices move most in the last
+ * hours, when team news lands and money comes in, so a board with a game
+ * inside two hours is read every ten minutes; within six hours every half
+ * hour; three hours otherwise.
  */
 export function directBoardTtlMs(nextKickoff: number | null, now = Date.now()): number {
   if (nextKickoff === null) return 6 * HOUR;
-  return nextKickoff - now <= 6 * HOUR ? 30 * MINUTE : 3 * HOUR;
+  const until = nextKickoff - now;
+  if (until <= 2 * HOUR) return 10 * MINUTE;
+  return until <= 6 * HOUR ? 30 * MINUTE : 3 * HOUR;
 }
 
 /** The earliest kickoff still ahead of now, or null. */

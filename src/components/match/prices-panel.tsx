@@ -1,3 +1,4 @@
+import { LocalTime } from "@/components/ui/local-time";
 import { Badge } from "@/components/ui/primitives";
 import { odds } from "@/lib/format";
 import { priceSelections, type SelectionPricing } from "@/lib/odds";
@@ -45,6 +46,10 @@ export async function PricesPanel({ prediction }: { prediction: Prediction }) {
   if (priced.length === 0) return null;
 
   const anyLocal = priced.some((r) => r.local !== null);
+  // The oldest SportyBet read behind the rows: prices move until kick-off, so
+  // the panel says how old they are rather than calling them live.
+  const stamps = priced.map((r) => r.localAt).filter((t): t is number => typeof t === "number");
+  const pricedAt = stamps.length ? new Date(Math.min(...stamps)).toISOString() : null;
 
   return (
     <section className="card p-5 sm:p-7">
@@ -56,7 +61,15 @@ export async function PricesPanel({ prediction }: { prediction: Prediction }) {
           {anyLocal ? "Local and global" : "Global only"}
         </span>
       </div>
-      <p className="mb-5 text-xs text-ink-dim">Live local market prices, rated against the model.</p>
+      <p className="mb-5 text-xs text-ink-dim">
+        {pricedAt ? (
+          <>
+            SportyBet prices as of <LocalTime iso={pricedAt} />, rated against the model. They move until kick-off.
+          </>
+        ) : (
+          "Market prices, rated against the model. They move until kick-off."
+        )}
+      </p>
 
       <div className="space-y-3">
         {priced.map((row) => (

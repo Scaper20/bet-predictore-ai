@@ -51,6 +51,18 @@ interface RawEvent {
   markets?: RawMarket[];
 }
 
+/**
+ * When each competition's board was read from SportyBet, as last served on
+ * this instance. Prices move constantly, so a price is only shown with its
+ * age: "as of 14:05", never "live".
+ */
+const boardReadAt = new Map<string, number>();
+
+/** When the board behind a competition's prices was read, or null if never. */
+export function sportyBetPricedAt(tournamentId: string): number | null {
+  return boardReadAt.get(tournamentId) ?? null;
+}
+
 export function sportyBetBoardKey(page: number, pageSize: number, tournamentId?: string): string {
   return `sportybet:upcoming:${tournamentId ?? "all"}:${page}:${pageSize}`;
 }
@@ -86,9 +98,13 @@ export async function sportyBetBoard(tournamentId: string, fromJob = false): Pro
         Date.now(),
         directBoardTtlMs,
       );
-      if (decision === "use") return stored!.payload;
+      if (decision === "use") {
+        boardReadAt.set(tournamentId, stored!.fetchedAt);
+        return stored!.payload;
+      }
       const fresh = await fetchTournamentEvents(tournamentId);
       if (fresh) {
+        boardReadAt.set(tournamentId, Date.now());
         // Stored even when empty, so a competition between rounds is not
         // asked again on every render.
         await writeBoard(key, "odds", fresh, { tournamentId, via: "direct" }).catch(() => {});
@@ -96,7 +112,10 @@ export async function sportyBetBoard(tournamentId: string, fromJob = false): Pro
       }
       // Refused or unreachable: an old direct board beats a metered call
       // while it is still fairly fresh.
-      if (stored && Date.now() - stored.fetchedAt < 6 * 3_600_000) return stored.payload;
+      if (stored && Date.now() - stored.fetchedAt < 6 * 3_600_000) {
+        boardReadAt.set(tournamentId, stored.fetchedAt);
+        return stored.payload;
+      }
     }
     return parsebotBoard(tournamentId, fromJob);
   });
@@ -107,13 +126,21 @@ async function parsebotBoard(tournamentId: string, fromJob: boolean): Promise<Sp
   const stored = await readBoard<SportyBetEvent[]>(key);
   const canFetch = (await parsebotLive()) && (fromJob || (await dataLayer()) !== "db");
   const decision = boardDecision(stored ? { fetchedAt: stored.fetchedAt, events: stored.payload } : null, canFetch);
-  if (decision === "use" || decision === "stale-ok") return stored!.payload;
+  if (decision === "use" || decision === "stale-ok") {
+    boardReadAt.set(tournamentId, stored!.fetchedAt);
+    return stored!.payload;
+  }
   if (decision === "none") return [];
 
   const fresh = await fetchParsebotPage(tournamentId);
   if (fresh === null) {
-    return stored && Date.now() - stored.fetchedAt < MAX_STALE_MS ? stored.payload : [];
+    if (stored && Date.now() - stored.fetchedAt < MAX_STALE_MS) {
+      boardReadAt.set(tournamentId, stored.fetchedAt);
+      return stored.payload;
+    }
+    return [];
   }
+  boardReadAt.set(tournamentId, Date.now());
   await writeBoard(key, "odds", fresh, { tournamentId, page: 1 }).catch(() => {});
   return fresh;
 }

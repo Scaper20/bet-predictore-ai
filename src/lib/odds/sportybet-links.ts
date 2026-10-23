@@ -276,3 +276,29 @@ export async function logBooking(entry: BookingLogEntry): Promise<void> {
     // The log is for the admin page; a lost row costs nothing else.
   }
 }
+
+/**
+ * The distinct codes a member was given since `since`, each with when it was
+ * first given: what their weekly allowance is counted from. Null when the log
+ * cannot be read, so the caller can refuse rather than hand out codes blind.
+ */
+export async function codesGivenTo(userId: string, since: number): Promise<Map<string, number> | null> {
+  try {
+    const { data, error } = await (await admin())
+      .from("sportybet_booking_log")
+      .select("code, at")
+      .eq("user_id", userId)
+      .in("outcome", ["booked", "cached"])
+      .not("code", "is", null)
+      .gte("at", new Date(since).toISOString());
+    if (error) return null;
+    const first = new Map<string, number>();
+    for (const r of (data ?? []) as { code: string; at: string }[]) {
+      const at = Date.parse(r.at);
+      if (!first.has(r.code) || at < first.get(r.code)!) first.set(r.code, at);
+    }
+    return first;
+  } catch {
+    return null;
+  }
+}

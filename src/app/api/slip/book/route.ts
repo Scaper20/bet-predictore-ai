@@ -1,12 +1,14 @@
 import { after, NextResponse } from "next/server";
 import { getEntitlement } from "@/lib/entitlements";
 import { leagueByProviderName } from "@/lib/leagues";
-import { bookingAvailable, bookingCodeFor } from "@/lib/odds/booking-code";
+import { checkAdmin } from "@/lib/admin";
+import { ALLOWANCE_WINDOW_MS, allowanceState, weeklyCodeAllowance } from "@/lib/code-hub-plans";
+import { bookingAvailable, bookingCodeFor, peekBookingCode } from "@/lib/odds/booking-code";
 import { KICKOFF_MARGIN_MS, MAX_LEGS, type BookingLeg, type BookingProblem } from "@/lib/odds/booking";
 import { toSportyBet } from "@/lib/odds/markets";
 import { findOnBoard } from "@/lib/odds/sportybet";
 import { shareLink } from "@/lib/odds/sportybet-api";
-import { logBooking, type BookingLogEntry } from "@/lib/odds/sportybet-links";
+import { codesGivenTo, logBooking, type BookingLogEntry } from "@/lib/odds/sportybet-links";
 
 /**
  * A SportyBet booking code for the user's combo.
@@ -17,9 +19,15 @@ import { logBooking, type BookingLogEntry } from "@/lib/odds/sportybet-links";
  * booked is reported back by name, never quietly dropped, and the user
  * decides whether to remove it and try again.
  *
+ * A member's own codes are a paid perk: Pro and VIP get a weekly allowance
+ * (code-hub-plans.ts), counted from the booking log; free and day-pass users
+ * are pointed to the plans. A code the member already holds for the same
+ * picks is handed back without using a slot. Admins are not limited, so the
+ * feature can be checked on any account.
+ *
  * Booking is free on the direct path and codes are cached by selection
- * (booking-code.ts), so the limit below is about fairness to SportyBet, not
- * about cost.
+ * (booking-code.ts), so the per-minute limit below is about fairness to
+ * SportyBet, not about cost.
  */
 
 export const dynamic = "force-dynamic";
@@ -40,7 +48,13 @@ function allowed(userId: string): boolean {
   return true;
 }
 
-type LegProblem = "unsupported-market" | "unsupported-competition" | "not-listed" | "starting" | "duplicate-game";
+type LegProblem =
+  | "unsupported-market"
+  | "same-game-combo"
+  | "unsupported-competition"
+  | "not-listed"
+  | "starting"
+  | "duplicate-game";
 
 interface IncomingLeg {
   matchId?: unknown;
@@ -77,6 +91,14 @@ export async function POST(request: Request) {
   }
   if (!allowed(entitlement.userId)) {
     return NextResponse.json({ error: "Too many tries. Wait a minute and try again." }, { status: 429, headers: NO_STORE });
+  }
+
+  const unlimited = (await checkAdmin()).ok;
+  if (!unlimited && weeklyCodeAllowance(entitlement.tier) === 0) {
+    return NextResponse.json(
+      { error: "SportyBet codes for your own combos come with Pro and VIP.", upgrade: true },
+      { status: 402, headers: NO_STORE },
+    );
   }
 
   const body = (await request.json().catch(() => null)) as { legs?: IncomingLeg[] } | null;
@@ -116,6 +138,12 @@ export async function POST(request: Request) {
         problems.push({ matchId, problem: "not-listed" });
         return;
       }
+      // Forge's same-game combos ("combo:a+b"): SportyBet will not put two
+      // selections from one game on a code, so say that rather than "unsupported".
+      if (market.startsWith("combo:")) {
+        problems.push({ matchId, problem: "same-game-combo" });
+        return;
+      }
       if (!toSportyBet(market)) {
         problems.push({ matchId, problem: "unsupported-market" });
         return;
@@ -147,8 +175,34 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, problems }, { headers: NO_STORE });
   }
 
+  // The allowance: checked once every pick is known to be bookable, so a combo
+  // that can't go on a code never costs a slot.
+  let remaining: number | null = null;
+  let given: Map<string, number> | null = null;
+  if (!unlimited) {
+    given = await codesGivenTo(userId, Date.now() - ALLOWANCE_WINDOW_MS);
+    if (!given) {
+      return NextResponse.json({ error: "Couldn't check your weekly codes just now. Try again shortly." }, { status: 503, headers: NO_STORE });
+    }
+    const state = allowanceState(entitlement.tier, [...given.values()]);
+    const held = await peekBookingCode(legs);
+    if (state.remaining === 0 && !(held && given.has(held))) {
+      return NextResponse.json(
+        {
+          error: `You've used your ${state.allowance} SportyBet codes for this week.`,
+          limit: true,
+          nextFreeAt: state.nextFreeAt,
+          upgrade: entitlement.tier !== "vip",
+        },
+        { status: 402, headers: NO_STORE },
+      );
+    }
+    remaining = state.remaining;
+  }
+
   const booked = await bookingCodeFor(legs);
   if (booked.ok) {
+    if (given && remaining !== null && !given.has(booked.bookingCode)) remaining = Math.max(0, remaining - 1);
     log({
       outcome: booked.cached ? "cached" : "booked",
       via: booked.via === "cache" ? null : booked.via,
@@ -162,6 +216,8 @@ export async function POST(request: Request) {
         url: shareLink(booked.bookingCode),
         deadline: booked.deadline,
         legs: booked.selectionsCount,
+        /** Codes left in the member's rolling week; null when unlimited. */
+        remaining,
       },
       { headers: NO_STORE },
     );

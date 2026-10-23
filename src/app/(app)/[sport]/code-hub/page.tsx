@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { sportPath } from "@/lib/routes";
 import { PageHeader } from "@/components/ui/page-header";
 import { Container } from "@/components/ui/container";
 import { Badge, EmptyState } from "@/components/ui/primitives";
@@ -167,15 +168,19 @@ function HowItem({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-/** The per-person generator, announced here until it launches with the new plans. */
+/** The per-person generator: where to find it, and each plan's weekly allowance. */
 function GeneratorPanel({ paid }: { paid: boolean }) {
   return (
-    <article className="card flex flex-col justify-between border-dashed p-5">
+    <article className="card flex flex-col justify-between p-5">
       <div>
-        <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-violet">Coming soon</p>
+        <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-violet">Pro and VIP</p>
         <h3 className="mt-2 font-display text-lg font-bold text-ink">Your own combo as a code</h3>
         <p className="mt-1.5 text-sm leading-relaxed text-ink-muted">
-          Build a combo in Forge or My combos and turn it into a SportyBet code in one tap.
+          Build a combo in{" "}
+          <Link href={sportPath("forge")} className="font-semibold text-brand hover:underline">
+            Forge
+          </Link>{" "}
+          or your combo, or open any match, and tap <span className="font-semibold text-ink">Get SportyBet code</span>.
         </p>
         <ul className="mt-4 space-y-2 text-sm">
           {GENERATOR_ALLOWANCE.map((a) => (

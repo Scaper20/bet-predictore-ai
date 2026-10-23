@@ -9,6 +9,7 @@ import { useOverlay } from "@/components/ui/use-overlay";
 import { Button, EmptyState } from "@/components/ui/primitives";
 import { Skeleton } from "@/components/ui/skeleton";
 import { openSlipSheet } from "@/components/layout/nav-actions";
+import { BookCodeButton } from "@/components/slip/book-code-button";
 
 const noop = () => () => {};
 /** False on the server and during hydration, so the empty state doesn't flash before localStorage is read. */
@@ -131,6 +132,13 @@ function SlipOverlay({ view, onClose, onRemove, onShare }: { view: SlipView; onC
           </button>
         </div>
         <TrackedSlipCard view={view} />
+        {/* Only before anything has started: a tracked combo is fixed, so
+            there is nothing to remove, and a game under way can't be booked. */}
+        {view.status === "pending" && view.legs.every(({ state }) => state.kind === "pending") && (
+          <div className="card mt-3 p-4">
+            <BookCodeButton legs={view.legs.map(({ leg }) => leg)} />
+          </div>
+        )}
         <div className="mt-4 flex justify-center">
           <Button
             type="button"

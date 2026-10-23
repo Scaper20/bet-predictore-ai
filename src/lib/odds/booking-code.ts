@@ -32,6 +32,26 @@ export type BookingResult =
 
 const inflight = new Map<string, Promise<BookingResult>>();
 
+/**
+ * The code already booked for exactly these picks, if one is still valid.
+ * Reads the cache only: never books.
+ */
+export async function peekBookingCode(legs: readonly BookingLeg[]): Promise<string | null> {
+  const plan = planBooking(legs);
+  if (!plan.ok) return null;
+  try {
+    const { data } = await (await admin())
+      .from("sportybet_booking_codes")
+      .select("booking_code")
+      .eq("signature", plan.signature)
+      .gt("deadline", new Date().toISOString())
+      .maybeSingle();
+    return data?.booking_code ?? null;
+  } catch {
+    return null;
+  }
+}
+
 /** Whether a booking could be made at all right now. */
 export async function bookingAvailable(): Promise<boolean> {
   return (await directEnabled()) || (await parsebotLive());

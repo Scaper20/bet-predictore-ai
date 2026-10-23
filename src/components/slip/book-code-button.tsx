@@ -1,15 +1,23 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { CodeBox } from "@/components/code-hub/code-box";
 import { Button, Spinner } from "@/components/ui/primitives";
 import { LocalTime } from "@/components/ui/local-time";
 import { legTeams, type SlipLeg } from "@/lib/slip";
 
-type LegProblem = "unsupported-market" | "unsupported-competition" | "not-listed" | "starting" | "duplicate-game";
+type LegProblem =
+  | "unsupported-market"
+  | "same-game-combo"
+  | "unsupported-competition"
+  | "not-listed"
+  | "starting"
+  | "duplicate-game";
 
 const WHY: Record<LegProblem, string> = {
   "unsupported-market": "SportyBet codes can't carry this pick type yet.",
+  "same-game-combo": "A same-game combo can't go on a SportyBet code.",
   "unsupported-competition": "This competition isn't linked to SportyBet yet.",
   "not-listed": "SportyBet isn't listing this game right now.",
   starting: "Kicks off too soon to load in time.",
@@ -17,9 +25,9 @@ const WHY: Record<LegProblem, string> = {
 };
 
 type Result =
-  | { kind: "code"; code: string; url: string; deadline: number }
+  | { kind: "code"; code: string; url: string; deadline: number; remaining: number | null }
   | { kind: "problems"; problems: { matchId: string; problem: LegProblem }[] }
-  | { kind: "error"; message: string };
+  | { kind: "error"; message: string; upgrade?: boolean; nextFreeAt?: number | null };
 
 /** The combo's selections, so a result is only shown for the combo it was made for. */
 const stampOf = (legs: SlipLeg[]) => legs.map((l) => `${l.matchId}|${l.market}`).join(",");
@@ -31,7 +39,16 @@ const stampOf = (legs: SlipLeg[]) => legs.map((l) => `${l.matchId}|${l.market}`)
  * pick it cannot book is named here with the reason, and the user removes it
  * and asks again. Nothing is dropped behind their back.
  */
-export function BookCodeButton({ legs, remove }: { legs: SlipLeg[]; remove: (matchId: string) => void }) {
+export function BookCodeButton({
+  legs,
+  remove,
+  label = "Get SportyBet code",
+}: {
+  legs: SlipLeg[];
+  /** Lets the user drop a pick that can't be booked. Omit where the picks are fixed. */
+  remove?: (matchId: string) => void;
+  label?: string;
+}) {
   const [pending, setPending] = useState(false);
   const [result, setResult] = useState<{ stamp: string; value: Result } | null>(null);
   const stamp = stampOf(legs);
@@ -54,15 +71,30 @@ export function BookCodeButton({ legs, remove }: { legs: SlipLeg[]; remove: (mat
         }),
       });
       const body = (await response.json().catch(() => null)) as
-        | { ok?: boolean; code?: string; url?: string; deadline?: number; problems?: { matchId: string; problem: LegProblem }[]; error?: string }
+        | {
+            ok?: boolean;
+            code?: string;
+            url?: string;
+            deadline?: number;
+            remaining?: number | null;
+            problems?: { matchId: string; problem: LegProblem }[];
+            error?: string;
+            upgrade?: boolean;
+            nextFreeAt?: number | null;
+          }
         | null;
       let value: Result;
       if (body?.ok && body.code && body.url && body.deadline) {
-        value = { kind: "code", code: body.code, url: body.url, deadline: body.deadline };
+        value = { kind: "code", code: body.code, url: body.url, deadline: body.deadline, remaining: body.remaining ?? null };
       } else if (body?.problems?.length) {
         value = { kind: "problems", problems: body.problems };
       } else {
-        value = { kind: "error", message: body?.error ?? "Couldn't get a code just now. Try again shortly." };
+        value = {
+          kind: "error",
+          message: body?.error ?? "Couldn't get a code just now. Try again shortly.",
+          upgrade: body?.upgrade,
+          nextFreeAt: body?.nextFreeAt,
+        };
       }
       setResult({ stamp, value });
     } catch {
@@ -76,6 +108,10 @@ export function BookCodeButton({ legs, remove }: { legs: SlipLeg[]; remove: (mat
     return (
       <div className="space-y-2">
         <CodeBox code={current.code} />
+        <p className="text-[11px] leading-relaxed text-ink-dim">
+          The code carries your picks, not prices: SportyBet shows its own odds at the moment you load it, and they move
+          until kick-off.
+        </p>
         <div className="flex items-center justify-between gap-3 text-[11px] text-ink-dim">
           <span>
             Loads until <LocalTime iso={new Date(current.deadline).toISOString()} kind="dayTime" />
@@ -84,6 +120,13 @@ export function BookCodeButton({ legs, remove }: { legs: SlipLeg[]; remove: (mat
             Open in SportyBet
           </a>
         </div>
+        {current.remaining !== null && (
+          <p className="text-[11px] text-ink-dim">
+            {current.remaining === 0
+              ? "That was your last code for this week."
+              : `${current.remaining} ${current.remaining === 1 ? "code" : "codes"} left this week.`}
+          </p>
+        )}
       </div>
     );
   }
@@ -92,10 +135,24 @@ export function BookCodeButton({ legs, remove }: { legs: SlipLeg[]; remove: (mat
     <div className="space-y-2">
       <Button onClick={book} disabled={pending || legs.length === 0} className="w-full py-2.5">
         {pending && <Spinner className="size-3.5" />}
-        {pending ? "Finding your picks on SportyBet…" : "Get SportyBet code"}
+        {pending ? "Finding your picks on SportyBet…" : label}
       </Button>
 
-      {current?.kind === "error" && <p className="text-[11px] text-rose">{current.message}</p>}
+      {current?.kind === "error" && (
+        <div className="space-y-1 text-[11px]">
+          <p className={current.upgrade || current.nextFreeAt ? "text-ink-muted" : "text-rose"}>{current.message}</p>
+          {current.nextFreeAt && (
+            <p className="text-ink-dim">
+              Your next one frees up <LocalTime iso={new Date(current.nextFreeAt).toISOString()} kind="dayTime" />.
+            </p>
+          )}
+          {current.upgrade && (
+            <Link href="/pricing" className="inline-block font-semibold text-brand hover:underline">
+              See plans →
+            </Link>
+          )}
+        </div>
+      )}
 
       {current?.kind === "problems" && (
         <div className="space-y-2 rounded-lg border border-amber/25 bg-amber/5 p-3">
@@ -111,7 +168,7 @@ export function BookCodeButton({ legs, remove }: { legs: SlipLeg[]; remove: (mat
                     <span className="block truncate font-semibold text-ink">{leg?.fixture ?? matchId}</span>
                     {WHY[problem] ?? WHY["not-listed"]}
                   </span>
-                  {leg && (
+                  {leg && remove && (
                     <button
                       type="button"
                       onClick={() => remove(leg.matchId)}
@@ -124,7 +181,7 @@ export function BookCodeButton({ legs, remove }: { legs: SlipLeg[]; remove: (mat
               );
             })}
           </ul>
-          <p className="text-[11px] text-ink-dim">Remove them and tap the button again.</p>
+          {remove && <p className="text-[11px] text-ink-dim">Remove them and tap the button again.</p>}
         </div>
       )}
     </div>
