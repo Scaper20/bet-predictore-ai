@@ -8,6 +8,9 @@ import { COUNTRY_COOKIE } from "@/lib/visitor";
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const anonKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
+/** A Supabase PKCE auth code: always a UUID. */
+const OAUTH_CODE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /**
  * Refreshes the Supabase auth session on every request so Server Components
  * (which can read cookies but not write them) always see a valid token.
@@ -21,6 +24,20 @@ const anonKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? process.env.
  */
 export async function proxy(request: NextRequest, event: NextFetchEvent) {
   if (!url || !anonKey) return NextResponse.next();
+
+  // An OAuth sign-in that came back to the home page instead of
+  // /auth/callback: Supabase falls back to its Site URL when the redirectTo
+  // is not on its allowlist, and the browser would then finish the sign-in
+  // itself, skipping onboarding and signup attribution. Hand the code to the
+  // callback, which exchanges it on the server (the PKCE verifier is in a
+  // cookie) and does both.
+  const oauthCode = request.nextUrl.searchParams.get("code");
+  if (request.nextUrl.pathname === "/" && oauthCode && OAUTH_CODE.test(oauthCode)) {
+    const callback = new URL("/auth/callback", request.nextUrl.origin);
+    callback.searchParams.set("code", oauthCode);
+    callback.searchParams.set("next", "/");
+    return NextResponse.redirect(callback);
+  }
 
   let response = NextResponse.next({ request });
 
