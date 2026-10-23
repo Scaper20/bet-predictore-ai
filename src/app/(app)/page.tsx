@@ -115,7 +115,7 @@ export default async function HomePage() {
           "Real fixtures only",
           "Fitted on completed matches",
           "Top 3 picks on every match",
-          "SportyBet codes, one tap",
+          "Booking codes, one tap",
           "Check any code",
           "Low · medium · high risk labels",
           "Match stats",

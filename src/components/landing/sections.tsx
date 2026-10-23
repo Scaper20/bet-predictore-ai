@@ -51,7 +51,7 @@ const FEATURES = [
     icon: "scale",
     title: "Value, margin stripped out",
     body:
-      "SportyBet's prices are read for you, with the time they were taken. We strip the margin, compare " +
+      "Bookmaker prices are read for you, with the time they were taken. We strip the margin, compare " +
       "each one with the model's chance, and show whether the price is worth taking.",
   },
   {
@@ -100,15 +100,15 @@ export function Features() {
 const HUB_POINTS = [
   {
     title: "Ready-made combos, every day",
-    body: "Combos from 2 to 20 odds, built from the model's strongest reads. Each has a SportyBet code you load in one tap.",
+    body: "Combos from 2 to 20 odds, built from the model's strongest reads. Each has a code you load in one tap.",
   },
   {
     title: "Same-game combos, booked properly",
-    body: "Win and over 2.5 in one pick, or a Bet Builder. We book them as SportyBet offers them, so the code loads as built.",
+    body: "Win and over 2.5 in one pick, or a Bet Builder. We book them as the bookmaker offers them, so the code loads as built.",
   },
   {
     title: "Check any code",
-    body: "Paste a SportyBet code from anywhere. We read every game and give the model's chance for each pick, strong to risky.",
+    body: "Paste a code from anywhere. We read every game and give the model's chance for each pick, strong to risky.",
   },
   {
     title: "Make it safer, or hit your odds",
@@ -128,8 +128,8 @@ export function CodeHubSection() {
           <div className="flex flex-wrap items-end justify-between gap-4">
             <SectionHeading
               eyebrow="Code Hub"
-              title="SportyBet codes, built and checked by the model"
-              description="A code holds the picks, not the price: SportyBet prices it again when you load it, so the odds you see there are the ones that count."
+              title="Codes, built and checked by the model"
+              description="A code holds the picks, not the price: the bookmaker prices it again when you load it, so the odds you see there are the ones that count."
             />
             <ButtonLink href={sportPath("codeHub")} className="shrink-0">
               Open the Code Hub →
@@ -318,12 +318,12 @@ export const FAQS = [
     a: "They come from our own graded record, not a guess. Picks the model rates 65% or more have landed about 7 in 10 times, picks from 55% to 65% about 6 in 10, and picks under 55% about half the time. The label sits beside every pick so you can see at a glance how often picks like it come in.",
   },
   {
-    q: "How do SportyBet codes work?",
-    a: "Every combo in the Code Hub comes with a SportyBet booking code. Enter it on SportyBet (or tap Open in SportyBet) and the same picks load on your slip. You can also paste any code into the Code Hub: we read each game, give the model's chance for every pick, and can re-pick it to be safer or to land near the odds you want.",
+    q: "How do codes work?",
+    a: "Every combo in the Code Hub comes with a booking code. Enter it on your bookmaker (or tap Open) and the same picks load on your slip. You can also paste any code into the Code Hub: we read each game, give the model's chance for every pick, and can re-pick it to be safer or to land near the odds you want.",
   },
   {
-    q: "Why are the odds on SportyBet different from the ones here?",
-    a: "A code holds the picks, not the prices. SportyBet's prices move all the time, and it prices the code again when you load it. Every price we show carries the time it was read, so you can see how old it is.",
+    q: "Why are the bookmaker's odds different from the ones here?",
+    a: "A code holds the picks, not the prices. The bookmaker's prices move all the time, and it prices the code again when you load it. Every price we show carries the time it was read, so you can see how old it is.",
   },
   {
     q: "Is this legal where I live?",
