@@ -7,6 +7,7 @@ import { LEAGUES, leagueByCode } from "@/lib/leagues";
 import { directHealth } from "@/lib/odds/sportybet-direct";
 import { TRUST_MIN_SHARE, TRUST_MIN_VOTES } from "@/lib/odds/sportybet-discover";
 import { allSportyBetTournaments, tournamentRows } from "@/lib/odds/sportybet-links";
+import { recentPostsForAdmin } from "@/lib/code-hub-posts";
 import type { Candidate } from "@/lib/odds/sportybet-match";
 import { shareLink } from "@/lib/odds/sportybet-api";
 import { matchPath } from "@/lib/routes";
@@ -179,7 +180,14 @@ async function proof() {
 const pct = (n: number, d: number) => (d > 0 ? `${Math.round((n / d) * 100)}%` : "–");
 
 export default async function AdminSportyBetPage() {
-  const [sw, data, rows, p, launch] = await Promise.all([switchesFresh(), load(), tournamentRows(), proof(), launchState()]);
+  const [sw, data, rows, p, launch, posts] = await Promise.all([
+    switchesFresh(),
+    load(),
+    tournamentRows(),
+    proof(),
+    launchState(),
+    recentPostsForAdmin().catch(() => []),
+  ]);
   const hardOff = process.env.SPORTYBET_DIRECT?.trim() === "off";
   const health = directHealth();
   const found = new Map(rows.map((r) => [r.league_code, r]));
@@ -477,6 +485,43 @@ export default async function AdminSportyBetPage() {
                 >
                   Reject
                 </SportyBetForm>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="card overflow-hidden">
+        <div className="border-b border-line px-5 py-3">
+          <h2 className="text-sm font-semibold">Community codes</h2>
+          <p className="mt-0.5 text-xs text-ink-dim">
+            Codes members posted on the Code Hub in the last two days. They are codes only, no text; Remove takes one down.
+          </p>
+        </div>
+        {posts.length === 0 ? (
+          <p className="px-5 py-4 text-sm text-ink-muted">Nothing posted yet.</p>
+        ) : (
+          <ul className="divide-y divide-line text-sm">
+            {posts.map((post) => (
+              <li key={post.id} className="flex flex-wrap items-center gap-3 px-5 py-2.5">
+                <span className="min-w-0 flex-1">
+                  <a href={shareLink(post.code)} className="font-mono font-semibold hover:underline" target="_blank" rel="noreferrer">
+                    {post.code}
+                  </a>
+                  <span className="block text-xs text-ink-muted">
+                    {post.authorName} · {post.games.length} games
+                    {post.odds !== null && ` · ${post.odds.toFixed(2)} odds`}
+                    {post.chance !== null && ` · ${(post.chance * 100).toFixed(1)}% chance`}
+                  </span>
+                </span>
+                <Badge tone={post.status === "removed" ? "rose" : post.result === "won" ? "brand" : "neutral"}>
+                  {post.status === "removed" ? "Removed" : (post.result ?? post.status)}
+                </Badge>
+                {post.status !== "removed" && (
+                  <SportyBetForm action="remove" variant="danger" fields={{ postId: String(post.id) }}>
+                    Remove
+                  </SportyBetForm>
+                )}
               </li>
             ))}
           </ul>

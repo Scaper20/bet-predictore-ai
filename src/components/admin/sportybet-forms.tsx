@@ -5,6 +5,7 @@ import {
   judgeLink,
   judgeTournament,
   linkFixture,
+  removePost,
   runDiscover,
   runSync,
   runVerify,
@@ -23,6 +24,7 @@ const ACTIONS = {
   unlink: unlinkFixture,
   discover: runDiscover,
   tournament: judgeTournament,
+  remove: removePost,
 } as const;
 
 /** One small form for one of the SportyBet matching actions, with its result inline. */

@@ -15,6 +15,8 @@ import { bookingAvailable } from "@/lib/odds/booking-code";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { WaitlistWall } from "@/components/code-hub/waitlist-wall";
 import { CodeEditor } from "@/components/code-hub/code-editor";
+import { CommunityCodes } from "@/components/code-hub/community-codes";
+import { communityPosts } from "@/lib/code-hub-posts";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/football/code-hub" },
@@ -48,7 +50,7 @@ export default async function CodeHubPage() {
     );
   }
 
-  const [today, running, live] = await Promise.all([todayHub(), runningHub(), bookingAvailable()]);
+  const [today, running, live, community] = await Promise.all([todayHub(), runningHub(), bookingAvailable(), communityPosts()]);
   const paid = meets(entitlement.tier, "pro");
   const now = today.now;
   // Today's codes, then earlier four-day codes whose games are still on.
@@ -117,6 +119,8 @@ export default async function CodeHubPage() {
         </section>
 
         <CodeEditor signedIn={entitlement.signedIn || preview} />
+
+        <CommunityCodes initial={community.open} recent={community.recent} signedIn={entitlement.signedIn} />
 
         <section className="grid gap-4 text-sm text-ink-muted sm:grid-cols-3">
           <HowItem title="Built by the model">

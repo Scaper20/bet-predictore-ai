@@ -82,6 +82,7 @@ export async function runSettlementPass(
   if (error) throw error;
   if (!pending || pending.length === 0) {
     await settleShadowPicks(admin).catch(() => 0);
+    await settlePosts();
     return 0;
   }
 
@@ -145,7 +146,14 @@ export async function runSettlementPass(
     if (!updateError) settledCount++;
   }
   await settleShadowPicks(admin).catch(() => 0);
+  await settlePosts();
   return settledCount;
+}
+
+/** Community codes on the Code Hub, graded from the same results (code-hub-posts.ts). */
+async function settlePosts(): Promise<void> {
+  const { settleCommunityPosts } = await import("@/lib/code-hub-posts");
+  await settleCommunityPosts().catch(() => 0);
 }
 
 /**

@@ -229,3 +229,16 @@ export async function judgeTournament(_prev: SportyBetActionState, formData: For
   revalidatePath(PATH);
   return { error: null, message: intent === "approve" ? "In use from the next sync." : "Rejected; it won't be proposed again." };
 }
+
+/** Takes a community code off the Code Hub (code_hub_posts). */
+export async function removePost(_prev: SportyBetActionState, formData: FormData): Promise<SportyBetActionState> {
+  const gate = await checkAdmin();
+  if (!gate.ok) return { error: gate.error, message: null };
+  const id = Number(formData.get("postId"));
+  if (!Number.isInteger(id)) return { error: "Unknown post.", message: null };
+  const { error } = await supabaseAdmin().from("code_hub_posts").update({ status: "removed" }).eq("id", id);
+  if (error) return { error: "Couldn't remove that. Try again.", message: null };
+  await logAdminAction(gate.identity, "code_hub.post.remove", String(id));
+  revalidatePath(PATH);
+  return { error: null, message: "Removed. It leaves the Code Hub within a minute." };
+}
