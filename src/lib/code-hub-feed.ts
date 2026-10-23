@@ -9,6 +9,7 @@ import { leagueByCode } from "@/lib/leagues";
 import { priceQuotes } from "@/lib/odds";
 import { bookingAvailable, bookingCodeFor } from "@/lib/odds/booking-code";
 import { findOnBoard } from "@/lib/odds/sportybet";
+import { logBooking } from "@/lib/odds/sportybet-links";
 import type { BookingLeg } from "@/lib/odds/booking";
 import {
   CODE_RUN_MS,
@@ -192,9 +193,23 @@ function bookMissing(rows: HubCodeRow[]) {
         if (!event) break;
         legs.push({ market: leg.market, eventId: event.eventId, kickoff });
       }
-      if (legs.length !== row.legs.length) continue;
+      if (legs.length !== row.legs.length) {
+        await logBooking({ source: "code-hub", legs: row.legs.length, outcome: "problems", problems: { found: legs.length } });
+        continue;
+      }
 
+      const started = Date.now();
       const booked = await bookingCodeFor(legs);
+      await logBooking({
+        source: "code-hub",
+        legs: legs.length,
+        outcome: booked.ok ? (booked.cached ? "cached" : "booked") : booked.reason === "invalid" ? "problems" : "refused",
+        via: booked.ok && booked.via !== "cache" ? booked.via : null,
+        code: booked.ok ? booked.bookingCode : null,
+        readBack: booked.ok ? booked.readBack : null,
+        problems: booked.ok || booked.reason !== "invalid" ? null : booked.problems,
+        durationMs: Date.now() - started,
+      });
       if (!booked.ok) continue;
       try {
         const db = await admin();

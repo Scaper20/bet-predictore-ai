@@ -6,6 +6,7 @@ import { LEAGUES } from "@/lib/leagues";
 import { normaliseKey } from "@/lib/model/fit";
 import type { Candidate } from "@/lib/odds/sportybet-match";
 import { syncSportyBet } from "@/lib/odds/sportybet-sync";
+import { verifyFinished } from "@/lib/odds/sportybet-verify";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 /**
@@ -40,9 +41,13 @@ export async function linkFixture(_prev: SportyBetActionState, formData: FormDat
       event_id: candidate.eventId,
       home_name: candidate.homeName,
       away_name: candidate.awayName,
+      home_id: candidate.homeId ?? null,
+      away_id: candidate.awayId ?? null,
       kickoff: new Date(candidate.kickoff).toISOString(),
       method: "manual",
       linked_at: new Date().toISOString(),
+      verdict: null,
+      verify_attempts: 0,
     },
     { onConflict: "match_id" },
   );
@@ -133,4 +138,53 @@ export async function runSync(_prev: SportyBetActionState, formData: FormData): 
     error: failed.length ? `Failed: ${failed.join(", ")}` : null,
     message: `Matched ${matched} of ${fixtures} upcoming fixtures across ${reports.length} competitions.`,
   };
+}
+
+/** Checks finished games' links against their results now, rather than at the next hourly run. */
+export async function runVerify(_prev: SportyBetActionState, _formData: FormData): Promise<SportyBetActionState> {
+  const gate = await checkAdmin();
+  if (!gate.ok) return { error: gate.error, message: null };
+  const report = await verifyFinished();
+  if (!report) return { error: "SportyBet direct is switched off.", message: null };
+  await logAdminAction(gate.identity, "sportybet.verify", undefined, { ...report });
+  revalidatePath(PATH);
+  if (report.checked === 0) return { error: null, message: "No finished games waiting to be checked." };
+  return {
+    error: null,
+    message:
+      `Checked ${report.checked}: ${report.confirmed} confirmed, ${report.mismatch} mismatched, ` +
+      `${report.noResult} with no result, ${report.waiting} not finished yet.`,
+  };
+}
+
+/**
+ * Removes a link that a result contradicted, and stops the matcher trusting
+ * the club ids it relied on, so the next sync learns them afresh.
+ */
+export async function unlinkFixture(_prev: SportyBetActionState, formData: FormData): Promise<SportyBetActionState> {
+  const gate = await checkAdmin();
+  if (!gate.ok) return { error: gate.error, message: null };
+  const matchId = String(formData.get("matchId") ?? "");
+  const db = supabaseAdmin();
+  const { data: link } = await db
+    .from("sportybet_event_links")
+    .select("league_code, event_id, home_id, away_id")
+    .eq("match_id", matchId)
+    .maybeSingle();
+  if (!link) return { error: "That link is already gone.", message: null };
+
+  const ids = [link.home_id, link.away_id].filter((id): id is string => typeof id === "string" && /^sr:competitor:\d+$/.test(id));
+  if (ids.length) {
+    await db
+      .from("sportybet_competitors")
+      .update({ status: "rejected", last_seen: new Date().toISOString() })
+      .eq("league_code", link.league_code)
+      .in("competitor_id", ids)
+      .neq("status", "rejected");
+  }
+  const { error } = await db.from("sportybet_event_links").delete().eq("match_id", matchId);
+  if (error) return { error: "Couldn't remove the link. Try again.", message: null };
+  await logAdminAction(gate.identity, "sportybet.unlink", matchId, { eventId: link.event_id, ids });
+  revalidatePath(PATH);
+  return { error: null, message: "Unlinked. Both clubs will be learned again." };
 }

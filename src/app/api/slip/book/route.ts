@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { getEntitlement } from "@/lib/entitlements";
 import { leagueByProviderName } from "@/lib/leagues";
 import { bookingAvailable, bookingCodeFor } from "@/lib/odds/booking-code";
@@ -6,6 +6,7 @@ import { KICKOFF_MARGIN_MS, MAX_LEGS, type BookingLeg, type BookingProblem } fro
 import { toSportyBet } from "@/lib/odds/markets";
 import { findOnBoard } from "@/lib/odds/sportybet";
 import { shareLink } from "@/lib/odds/sportybet-api";
+import { logBooking, type BookingLogEntry } from "@/lib/odds/sportybet-links";
 
 /**
  * A SportyBet booking code for the user's combo.
@@ -87,8 +88,18 @@ export async function POST(request: Request) {
     );
   }
   if (!(await bookingAvailable())) {
+    const userId = entitlement.userId;
+    after(() => logBooking({ source: "slip", userId, legs: incoming.length, outcome: "unavailable" }));
     return NextResponse.json({ error: "SportyBet codes are paused for now. Try again later." }, { status: 503, headers: NO_STORE });
   }
+
+  const started = Date.now();
+  const userId = entitlement.userId;
+  // Every attempt is logged for /admin/sportybet, after the response.
+  const log = (entry: Omit<BookingLogEntry, "source" | "userId" | "legs" | "durationMs">) =>
+    after(() =>
+      logBooking({ ...entry, source: "slip", userId, legs: incoming.length, durationMs: Date.now() - started }),
+    );
 
   const problems: { matchId: string; problem: LegProblem }[] = [];
   const legs: BookingLeg[] = [];
@@ -132,11 +143,18 @@ export async function POST(request: Request) {
   );
 
   if (problems.length > 0) {
+    log({ outcome: "problems", problems });
     return NextResponse.json({ ok: false, problems }, { headers: NO_STORE });
   }
 
   const booked = await bookingCodeFor(legs);
   if (booked.ok) {
+    log({
+      outcome: booked.cached ? "cached" : "booked",
+      via: booked.via === "cache" ? null : booked.via,
+      code: booked.bookingCode,
+      readBack: booked.readBack,
+    });
     return NextResponse.json(
       {
         ok: true,
@@ -149,17 +167,14 @@ export async function POST(request: Request) {
     );
   }
   if (booked.reason === "invalid") {
-    return NextResponse.json(
-      {
-        ok: false,
-        problems: booked.problems.flatMap((p) => {
-          const problem = fromPlan(p);
-          return problem && "index" in p ? [{ matchId: matchIds[p.index], problem }] : [];
-        }),
-      },
-      { headers: NO_STORE },
-    );
+    const planProblems = booked.problems.flatMap((p) => {
+      const problem = fromPlan(p);
+      return problem && "index" in p ? [{ matchId: matchIds[p.index], problem }] : [];
+    });
+    log({ outcome: "problems", problems: planProblems });
+    return NextResponse.json({ ok: false, problems: planProblems }, { headers: NO_STORE });
   }
+  log({ outcome: "refused" });
   return NextResponse.json(
     { error: "SportyBet didn't accept that combo just now. A market may have closed; try again shortly." },
     { status: 502, headers: NO_STORE },

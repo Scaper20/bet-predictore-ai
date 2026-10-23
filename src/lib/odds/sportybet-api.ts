@@ -208,3 +208,82 @@ export function parseShareResponse(body: unknown, sent?: number): BookedCode | n
 export function shareLink(code: string): string {
   return `https://www.sportybet.com/ng/?shareCode=${encodeURIComponent(code)}`;
 }
+
+/**
+ * SportyBet's statuses for a game that is over: 3 once it has ended, 4 once
+ * settled. Both read "Ended"; a game a day or two old can still be at 3.
+ */
+const ENDED = new Set([3, 4]);
+
+/** A finished (or called-off) game as SportyBet records it. */
+export interface EventResult {
+  eventId: string;
+  /** Final score as SportyBet shows it, "home:away". Null when called off. */
+  setScore: string | null;
+  /** Per-half scores, regulation first; anything after is extra time. */
+  halves: string[];
+  /** Cancelled, postponed or abandoned: there is no score to check. */
+  void: boolean;
+}
+
+function readResult(raw: Record<string, unknown>): EventResult | null {
+  const eventId = text(raw.eventId);
+  if (!eventId || !/^sr:match:\d+$/.test(eventId)) return null;
+  const status = text(raw.matchStatus) ?? "";
+  if (/cancel|postpon|abandon|interrupt/i.test(status)) {
+    return { eventId, setScore: null, halves: [], void: true };
+  }
+  if (!ENDED.has(raw.status as number) && !/^ended$/i.test(status)) return null;
+  const setScore = text(raw.setScore);
+  if (!setScore || !SCORE.test(setScore)) return null;
+  const halves = Array.isArray(raw.gameScore)
+    ? raw.gameScore.filter((s): s is string => typeof s === "string" && SCORE.test(s))
+    : [];
+  return { eventId, setScore, halves, void: false };
+}
+
+const SCORE = /^\d+:\d+$/;
+
+/** An eventResultList response: the ended (or called-off) games in it. */
+export function parseResults(body: unknown): EventResult[] {
+  const data = okData(body);
+  if (!data) return [];
+  const out: EventResult[] = [];
+  for (const t of (Array.isArray(data.tournaments) ? data.tournaments : []) as { events?: unknown[] }[]) {
+    for (const raw of t?.events ?? []) {
+      if (!raw || typeof raw !== "object") continue;
+      const result = readResult(raw as Record<string, unknown>);
+      if (result) out.push(result);
+    }
+  }
+  return out;
+}
+
+/** A single event's detail response, as a result once the game is over. */
+export function parseEventResult(body: unknown): EventResult | null {
+  const data = okData(body);
+  return data ? readResult(data) : null;
+}
+
+const goals = (score: string) => score.split(":").map(Number) as [number, number];
+
+/**
+ * Whether SportyBet's final score for the event agrees with ours.
+ *
+ * Compared with SportyBet's final score first, then with the two regulation
+ * halves summed: in a cup tie one side may record the score after extra time
+ * and the other the score at ninety minutes, and that is the same game.
+ */
+export function scoreVerdict(ours: { home: number; away: number }, theirs: EventResult): "confirmed" | "mismatch" {
+  const same = (s: string) => {
+    const [h, a] = goals(s);
+    return h === ours.home && a === ours.away;
+  };
+  if (theirs.setScore && same(theirs.setScore)) return "confirmed";
+  if (theirs.halves.length >= 2) {
+    const [h1, a1] = goals(theirs.halves[0]);
+    const [h2, a2] = goals(theirs.halves[1]);
+    if (same(`${h1 + h2}:${a1 + a2}`)) return "confirmed";
+  }
+  return "mismatch";
+}

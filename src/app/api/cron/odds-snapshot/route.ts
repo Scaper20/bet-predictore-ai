@@ -5,6 +5,7 @@ import { readBoard, writeBoard } from "@/lib/odds/boards";
 import { sportyBetBoard } from "@/lib/odds/sportybet";
 import { directEnabled } from "@/lib/odds/sportybet-direct";
 import { syncSportyBet } from "@/lib/odds/sportybet-sync";
+import { verifyFinished } from "@/lib/odds/sportybet-verify";
 import { parsebotLive } from "@/lib/odds/parsebot";
 import { fetchBoard, oddsApiBoardKey, oddsApiQuota, ODDS_API_BOARDS } from "@/lib/odds/the-odds-api";
 import { oddsApiBoardDue } from "@/lib/odds/snapshot-pacing";
@@ -25,7 +26,8 @@ export const maxDuration = 120;
  *   the next three days.
  * - SportyBet direct (free): every competition's board is refreshed when
  *   stale and its fixtures matched to SportyBet events (sportybet-sync.ts),
- *   while the sportybet_direct switch is on.
+ *   while the sportybet_direct switch is on; finished games' links are then
+ *   checked against their results (sportybet-verify.ts).
  * - SportyBet via parse.bot (metered): only when direct is off, and then OFF
  *   unless SPORTYBET_SNAPSHOTS=on AND the parse.bot switch is on
  *   (/admin/parsebot). Even then a board is only refetched once it is stale
@@ -66,6 +68,7 @@ export async function GET(request: Request) {
       report.sportybet.events += r.events;
       if (r.error) errors.push(`sportybet ${r.league}: ${r.error}`);
     }
+    await verifyFinished().catch((err) => errors.push(`sportybet verify: ${String(err)}`));
   } else if (process.env.SPORTYBET_SNAPSHOTS !== "on") {
     report.sportybet.skipped = "SPORTYBET_SNAPSHOTS is not on";
   } else if (!(await parsebotLive())) {

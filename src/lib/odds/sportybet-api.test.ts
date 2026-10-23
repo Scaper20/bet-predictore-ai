@@ -1,7 +1,16 @@
 import { describe, expect, it } from "vitest";
 import upcoming from "./__fixtures__/sportybet-upcoming.json";
 import share from "./__fixtures__/sportybet-share.json";
-import { parseShareResponse, parseTournamentList, parseUpcoming, shareRequest } from "./sportybet-api";
+import resultsFixture from "./__fixtures__/sportybet-results.json";
+import {
+  parseEventResult,
+  parseResults,
+  parseShareResponse,
+  parseTournamentList,
+  parseUpcoming,
+  scoreVerdict,
+  shareRequest,
+} from "./sportybet-api";
 import { matchesSelection, toSportyBet } from "./markets";
 
 describe("parseUpcoming", () => {
@@ -114,5 +123,42 @@ describe("parseTournamentList", () => {
         ],
       }),
     ).toEqual([{ id: "sr:tournament:841", name: "Ligue 1", category: "Algeria", eventSize: 7 }]);
+  });
+});
+
+describe("parseResults and scoreVerdict", () => {
+  it("reads ended games with their final and half-time scores", () => {
+    const results = parseResults(resultsFixture);
+    expect(results).toHaveLength(4);
+    expect(results[0]).toEqual({ eventId: "sr:match:74173018", setScore: "1:4", halves: ["1:1", "0:3"], void: false });
+  });
+
+  it("confirms the same score and flags a different one", () => {
+    const [omonia] = parseResults(resultsFixture);
+    expect(scoreVerdict({ home: 1, away: 4 }, omonia)).toBe("confirmed");
+    expect(scoreVerdict({ home: 4, away: 1 }, omonia)).toBe("mismatch");
+  });
+
+  it("accepts a ninety-minute score against a result after extra time", () => {
+    const aet = { eventId: "sr:match:1", setScore: "2:1", halves: ["1:0", "0:1", "1:0", "0:0"], void: false };
+    expect(scoreVerdict({ home: 1, away: 1 }, aet)).toBe("confirmed");
+    expect(scoreVerdict({ home: 2, away: 1 }, aet)).toBe("confirmed");
+    expect(scoreVerdict({ home: 0, away: 0 }, aet)).toBe("mismatch");
+  });
+
+  it("takes an ended game whether or not SportyBet has settled it yet", () => {
+    const ended = { bizCode: 10000, data: { eventId: "sr:match:3", status: 3, matchStatus: "Ended", setScore: "1:0", gameScore: ["1:0", "0:0"] } };
+    expect(parseEventResult(ended)?.setScore).toBe("1:0");
+  });
+
+  it("marks a called-off game void and skips one still running", () => {
+    expect(parseEventResult({ bizCode: 10000, data: { eventId: "sr:match:2", status: 0, matchStatus: "Postponed" } })).toEqual({
+      eventId: "sr:match:2",
+      setScore: null,
+      halves: [],
+      void: true,
+    });
+    expect(parseEventResult({ bizCode: 10000, data: { eventId: "sr:match:2", status: 1, setScore: "1:0", matchStatus: "H1" } })).toBeNull();
+    expect(parseResults({ bizCode: 19999, data: {} })).toEqual([]);
   });
 });

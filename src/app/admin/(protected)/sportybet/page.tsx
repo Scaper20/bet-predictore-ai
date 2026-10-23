@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Badge } from "@/components/ui/primitives";
 import { SportyBetForm } from "@/components/admin/sportybet-forms";
 import { SwitchForm } from "@/components/admin/switch-form";
@@ -6,6 +7,8 @@ import { LEAGUES, leagueByCode } from "@/lib/leagues";
 import { directHealth, fetchTournamentList } from "@/lib/odds/sportybet-direct";
 import type { Candidate } from "@/lib/odds/sportybet-match";
 import { nameSimilarity } from "@/lib/odds/sportybet-match";
+import { shareLink } from "@/lib/odds/sportybet-api";
+import { matchPath } from "@/lib/routes";
 import { switchesFresh } from "@/lib/switches";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
@@ -73,6 +76,95 @@ async function load() {
   };
 }
 
+const METHODS = ["id", "name", "anchor", "elimination", "manual"] as const;
+
+interface Mismatch {
+  match_id: string;
+  league_code: string;
+  home_name: string;
+  away_name: string;
+  kickoff: string;
+  our_score: string | null;
+  sportybet_score: string | null;
+}
+
+interface Booking {
+  at: string;
+  source: string;
+  legs: number;
+  outcome: string;
+  via: string | null;
+  code: string | null;
+  read_back: boolean | null;
+  duration_ms: number | null;
+}
+
+/** Ground truth: links checked against final scores, and every booking attempt. */
+async function proof() {
+  const db = supabaseAdmin();
+  const now = Date.now();
+  const [links, mismatches, bookings] = await Promise.all([
+    db
+      .from("sportybet_event_links")
+      .select("method, verdict")
+      .gte("kickoff", new Date(now - 30 * 86_400_000).toISOString())
+      .lt("kickoff", new Date(now).toISOString()),
+    db
+      .from("sportybet_event_links")
+      .select("match_id, league_code, home_name, away_name, kickoff, our_score, sportybet_score")
+      .eq("verdict", "mismatch")
+      .order("kickoff", { ascending: false })
+      .limit(20),
+    db
+      .from("sportybet_booking_log")
+      .select("at, source, legs, outcome, via, code, read_back, duration_ms")
+      .gte("at", new Date(now - 7 * 86_400_000).toISOString())
+      .order("at", { ascending: false })
+      .limit(500),
+  ]);
+
+  const byMethod = new Map<string, { confirmed: number; mismatch: number; noResult: number; pending: number }>();
+  for (const r of (links.data ?? []) as { method: string; verdict: string | null }[]) {
+    const m = byMethod.get(r.method) ?? { confirmed: 0, mismatch: 0, noResult: 0, pending: 0 };
+    if (r.verdict === "confirmed") m.confirmed++;
+    else if (r.verdict === "mismatch") m.mismatch++;
+    else if (r.verdict === "no-result") m.noResult++;
+    else m.pending++;
+    byMethod.set(r.method, m);
+  }
+  const totals = [...byMethod.values()].reduce(
+    (t, m) => ({ confirmed: t.confirmed + m.confirmed, mismatch: t.mismatch + m.mismatch, pending: t.pending + m.pending }),
+    { confirmed: 0, mismatch: 0, pending: 0 },
+  );
+
+  const rows = (bookings.data ?? []) as Booking[];
+  const booked = rows.filter((b) => b.outcome === "booked" || b.outcome === "cached");
+  const fresh = rows.filter((b) => b.outcome === "booked");
+  const durations = booked.map((b) => b.duration_ms).filter((d): d is number => typeof d === "number").sort((a, b) => a - b);
+  return {
+    missing: Boolean(links.error || bookings.error),
+    byMethod,
+    totals,
+    accuracy: totals.confirmed + totals.mismatch > 0 ? totals.confirmed / (totals.confirmed + totals.mismatch) : null,
+    mismatches: (mismatches.data ?? []) as Mismatch[],
+    bookings: {
+      attempts: rows.length,
+      booked: booked.length,
+      direct: fresh.filter((b) => b.via === "direct").length,
+      parsebot: fresh.filter((b) => b.via === "parsebot").length,
+      cached: rows.filter((b) => b.outcome === "cached").length,
+      problems: rows.filter((b) => b.outcome === "problems").length,
+      refused: rows.filter((b) => b.outcome === "refused" || b.outcome === "unavailable").length,
+      readBackOk: fresh.filter((b) => b.read_back === true).length,
+      readBackChecked: fresh.filter((b) => b.read_back !== null).length,
+      medianMs: durations.length ? durations[Math.floor(durations.length / 2)] : null,
+      recent: booked.filter((b) => b.code).slice(0, 10),
+    },
+  };
+}
+
+const pct = (n: number, d: number) => (d > 0 ? `${Math.round((n / d) * 100)}%` : "–");
+
 /** Likely SportyBet tournaments for competitions that have no id yet. Suggestions only. */
 async function suggestions() {
   const missing = LEAGUES.filter((l) => !l.ids.sportyBet);
@@ -95,7 +187,7 @@ async function suggestions() {
 }
 
 export default async function AdminSportyBetPage() {
-  const [sw, data, suggested] = await Promise.all([switchesFresh(), load(), suggestions()]);
+  const [sw, data, suggested, p] = await Promise.all([switchesFresh(), load(), suggestions(), proof()]);
   const hardOff = process.env.SPORTYBET_DIRECT?.trim() === "off";
   const health = directHealth();
   const linked = LEAGUES.filter((l) => l.ids.sportyBet);
@@ -110,6 +202,128 @@ export default async function AdminSportyBetPage() {
           by name again. What the matcher couldn&rsquo;t settle on its own is listed below.
         </p>
       </div>
+
+      <section className="card space-y-5 p-5 sm:p-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold text-ink">Proof: links checked against final scores</h2>
+            <p className="mt-1 text-xs text-ink-dim">
+              After full time, SportyBet&rsquo;s score for each linked event is compared with ours. A wrong link would
+              show a different score. Last 30 days.
+            </p>
+          </div>
+          {p.accuracy === null ? (
+            <Badge>Waiting for results</Badge>
+          ) : (
+            <Badge tone={p.totals.mismatch === 0 ? "brand" : "amber"}>
+              {(p.accuracy * 100).toFixed(1)}% confirmed ({p.totals.confirmed} of {p.totals.confirmed + p.totals.mismatch})
+            </Badge>
+          )}
+        </div>
+        {p.missing && <p className="text-xs text-amber">Migration 0067 hasn&rsquo;t been applied yet.</p>}
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="text-left text-[11px] uppercase tracking-wider text-ink-dim">
+              <tr>
+                <th className="py-1.5 pr-3 font-medium">Method</th>
+                <th className="py-1.5 pr-3 text-right font-medium">Confirmed</th>
+                <th className="py-1.5 pr-3 text-right font-medium">Mismatch</th>
+                <th className="py-1.5 pr-3 text-right font-medium">No result</th>
+                <th className="py-1.5 text-right font-medium">Not checked yet</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-line font-mono text-xs">
+              {METHODS.filter((m) => p.byMethod.has(m)).map((m) => {
+                const r = p.byMethod.get(m)!;
+                return (
+                  <tr key={m}>
+                    <td className="py-1.5 pr-3 font-sans">{m}</td>
+                    <td className="py-1.5 pr-3 text-right text-brand">{r.confirmed}</td>
+                    <td className={`py-1.5 pr-3 text-right ${r.mismatch ? "text-rose" : ""}`}>{r.mismatch}</td>
+                    <td className="py-1.5 pr-3 text-right">{r.noResult}</td>
+                    <td className="py-1.5 text-right text-ink-dim">{r.pending}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          {p.byMethod.size === 0 && <p className="py-2 text-xs text-ink-muted">No linked game has kicked off yet.</p>}
+        </div>
+        <SportyBetForm action="verify" fields={{}}>
+          Check finished games now
+        </SportyBetForm>
+
+        {p.mismatches.length > 0 && (
+          <div className="space-y-2 border-t border-line pt-4">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-rose">Mismatches</h3>
+            <ul className="divide-y divide-line text-sm">
+              {p.mismatches.map((m) => (
+                <li key={m.match_id} className="flex flex-wrap items-center gap-3 py-2">
+                  <span className="min-w-0 flex-1">
+                    <Link href={matchPath(m.match_id)} className="font-semibold hover:text-brand">
+                      Our {m.our_score ?? "?"}
+                    </Link>{" "}
+                    vs SportyBet&rsquo;s {m.home_name} {m.sportybet_score ?? "?"} {m.away_name}
+                    <span className="text-xs text-ink-dim">
+                      {" "}
+                      · {leagueByCode(m.league_code)?.name ?? m.league_code} · {when(m.kickoff)}
+                    </span>
+                  </span>
+                  <SportyBetForm action="unlink" variant="danger" fields={{ matchId: m.match_id }}>
+                    Unlink and re-learn
+                  </SportyBetForm>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </section>
+
+      <section className="card space-y-4 p-5 sm:p-6">
+        <div>
+          <h2 className="text-sm font-semibold text-ink">Proof: booking codes</h2>
+          <p className="mt-1 text-xs text-ink-dim">
+            Every attempt from the slip and the Code Hub, last 7 days. A direct code is read back from SportyBet before
+            it is shown, and refused if a pick went missing.
+          </p>
+        </div>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <Stat label="Attempts" value={String(p.bookings.attempts)} />
+          <Stat label="Codes given" value={`${p.bookings.booked} (${pct(p.bookings.booked, p.bookings.attempts)})`} />
+          <Stat
+            label="Read back OK"
+            value={`${p.bookings.readBackOk} of ${p.bookings.readBackChecked}`}
+          />
+          <Stat label="Median time" value={p.bookings.medianMs === null ? "–" : `${(p.bookings.medianMs / 1000).toFixed(1)} s`} />
+        </div>
+        <p className="text-xs text-ink-dim">
+          New codes: {p.bookings.direct} direct, {p.bookings.parsebot} via parse.bot · {p.bookings.cached} reused from
+          cache · {p.bookings.problems} stopped by a pick that couldn&rsquo;t be booked · {p.bookings.refused} refused or
+          unavailable
+        </p>
+        {p.bookings.recent.length > 0 && (
+          <ul className="divide-y divide-line text-sm">
+            {p.bookings.recent.map((b, i) => (
+              <li key={`${b.code}-${i}`} className="flex flex-wrap items-center gap-3 py-2">
+                <span className="w-36 shrink-0 font-mono text-xs text-ink-dim">{when(b.at)}</span>
+                <span className="font-mono font-semibold tracking-wider">{b.code}</span>
+                <span className="min-w-0 flex-1 text-xs text-ink-muted">
+                  {b.legs} picks · {b.source} · {b.outcome === "cached" ? "reused" : b.via}
+                  {b.read_back === true && " · read back ✓"}
+                </span>
+                <a
+                  href={shareLink(b.code!)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs font-semibold text-brand hover:underline"
+                >
+                  Open in SportyBet
+                </a>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <section className="card space-y-4 p-5 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -270,6 +484,15 @@ export default async function AdminSportyBetPage() {
           </ul>
         )}
       </section>
+    </div>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-line bg-surface-2/60 p-3">
+      <p className="text-[11px] font-medium uppercase tracking-wider text-ink-dim">{label}</p>
+      <p className="mt-1 font-mono text-base">{value}</p>
     </div>
   );
 }

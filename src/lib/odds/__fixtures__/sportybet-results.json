@@ -1,0 +1,81 @@
+{
+ "bizCode": 10000,
+ "message": "0#0",
+ "data": {
+  "totalNum": 4,
+  "tournaments": [
+   {
+    "id": "sr:tournament:679",
+    "name": "UEFA Europa League",
+    "events": [
+     {
+      "eventId": "sr:match:74173018",
+      "estimateStartTime": 1792695600000,
+      "status": 4,
+      "setScore": "1:4",
+      "gameScore": [
+       "1:1",
+       "0:3"
+      ],
+      "matchStatus": "Ended",
+      "homeTeamName": "AC Omonia Nicosia",
+      "awayTeamName": "Benfica",
+      "regularTimeScore": [
+       "1:1"
+      ]
+     },
+     {
+      "eventId": "sr:match:74173004",
+      "estimateStartTime": 1792695600000,
+      "status": 4,
+      "setScore": "2:2",
+      "gameScore": [
+       "1:0",
+       "1:2"
+      ],
+      "matchStatus": "Ended",
+      "homeTeamName": "Besiktas Istanbul",
+      "awayTeamName": "Crystal Palace",
+      "regularTimeScore": [
+       "1:0"
+      ]
+     },
+     {
+      "eventId": "sr:match:74173002",
+      "estimateStartTime": 1792695600000,
+      "status": 4,
+      "setScore": "3:0",
+      "gameScore": [
+       "2:0",
+       "1:0"
+      ],
+      "matchStatus": "Ended",
+      "homeTeamName": "Bournemouth",
+      "awayTeamName": "AC Milan",
+      "regularTimeScore": [
+       "2:0"
+      ]
+     },
+     {
+      "eventId": "sr:match:74173006",
+      "estimateStartTime": 1792695600000,
+      "status": 4,
+      "setScore": "1:2",
+      "gameScore": [
+       "0:0",
+       "1:2"
+      ],
+      "matchStatus": "Ended",
+      "homeTeamName": "Celtic",
+      "awayTeamName": "Celta",
+      "regularTimeScore": [
+       "0:0"
+      ]
+     }
+    ],
+    "categoryName": "International Clubs",
+    "categoryId": "sr:category:393"
+   }
+  ]
+ }
+}

@@ -19,7 +19,14 @@ import { createShareCode, directEnabled, readShareCode } from "./sportybet-direc
  */
 
 export type BookingResult =
-  | ({ ok: true; cached: boolean } & BookedCode)
+  | ({
+      ok: true;
+      cached: boolean;
+      /** How it was booked: SportyBet directly, parse.bot, or reused from the cache. */
+      via: "direct" | "parsebot" | "cache";
+      /** Whether the code read back with every selection; null when unchecked. */
+      readBack: boolean | null;
+    } & BookedCode)
   | { ok: false; reason: "invalid"; problems: BookingProblem[] }
   | { ok: false; reason: "unavailable" };
 
@@ -30,7 +37,7 @@ export async function bookingAvailable(): Promise<boolean> {
   return (await directEnabled()) || (await parsebotLive());
 }
 
-async function bookDirect(selections: readonly BookSelection[]): Promise<BookedCode | null> {
+async function bookDirect(selections: readonly BookSelection[]): Promise<(BookedCode & { readBack: boolean | null }) | null> {
   if (!(await directEnabled())) return null;
   const booked = await createShareCode(selections);
   if (!booked) return null;
@@ -38,7 +45,8 @@ async function bookDirect(selections: readonly BookSelection[]): Promise<BookedC
   // proof of a bad one (the booking itself already checked the count), so
   // only a code that reads back with the wrong number of selections is refused.
   const check = await readShareCode(booked.bookingCode);
-  return check && check.selectionsCount !== selections.length ? null : booked;
+  if (check && check.selectionsCount !== selections.length) return null;
+  return { ...booked, readBack: check ? true : null };
 }
 
 async function bookViaParsebot(selections: readonly BookSelection[]): Promise<BookedCode | null> {
@@ -81,6 +89,8 @@ export async function bookingCodeFor(legs: readonly BookingLeg[]): Promise<Booki
           shareUrl: hit.share_url,
           deadline: Date.parse(hit.deadline),
           selectionsCount: Array.isArray(hit.selections) ? hit.selections.length : plan.selections.length,
+          via: "cache",
+          readBack: null,
         };
       }
     } catch {
@@ -89,8 +99,9 @@ export async function bookingCodeFor(legs: readonly BookingLeg[]): Promise<Booki
       cacheReadable = false;
     }
 
-    const booked =
-      (await bookDirect(plan.selections)) ?? (cacheReadable ? await bookViaParsebot(plan.selections) : null);
+    const direct = await bookDirect(plan.selections);
+    const parsebot = direct || !cacheReadable ? null : await bookViaParsebot(plan.selections);
+    const booked = direct ?? parsebot;
     if (!booked) return { ok: false, reason: "unavailable" };
 
     try {
@@ -108,7 +119,16 @@ export async function bookingCodeFor(legs: readonly BookingLeg[]): Promise<Booki
     } catch {
       // The code is still good for this user; only the reuse is lost.
     }
-    return { ok: true, cached: false, ...booked };
+    return {
+      ok: true,
+      cached: false,
+      bookingCode: booked.bookingCode,
+      shareUrl: booked.shareUrl,
+      deadline: booked.deadline,
+      selectionsCount: booked.selectionsCount,
+      via: direct ? "direct" : "parsebot",
+      readBack: direct ? direct.readBack : null,
+    };
   })().finally(() => inflight.delete(plan.signature));
 
   inflight.set(plan.signature, task);

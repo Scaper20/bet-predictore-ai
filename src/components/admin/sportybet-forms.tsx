@@ -1,12 +1,19 @@
 "use client";
 
 import { useActionState, type ReactNode } from "react";
-import { judgeLink, linkFixture, runSync, type SportyBetActionState } from "@/app/actions/admin/sportybet";
+import {
+  judgeLink,
+  linkFixture,
+  runSync,
+  runVerify,
+  unlinkFixture,
+  type SportyBetActionState,
+} from "@/app/actions/admin/sportybet";
 import { Button, Spinner } from "@/components/ui/primitives";
 
 const initial: SportyBetActionState = { error: null, message: null };
 
-const ACTIONS = { link: linkFixture, judge: judgeLink, sync: runSync } as const;
+const ACTIONS = { link: linkFixture, judge: judgeLink, sync: runSync, verify: runVerify, unlink: unlinkFixture } as const;
 
 /** One small form for one of the SportyBet matching actions, with its result inline. */
 export function SportyBetForm({

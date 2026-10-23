@@ -4,10 +4,13 @@ import { RateGate } from "@/lib/providers/http";
 import { switchOn } from "@/lib/switches";
 import type { BookedCode, BookSelection } from "./booking";
 import {
+  parseEventResult,
+  parseResults,
   parseShareResponse,
   parseTournamentList,
   parseUpcoming,
   shareRequest,
+  type EventResult,
   type SportyBetEvent,
   type TournamentEntry,
 } from "./sportybet-api";
@@ -196,4 +199,43 @@ export async function readShareCode(code: string): Promise<BookedCode | null> {
   if (!/^[A-Z0-9]{4,12}$/i.test(code)) return null;
   const body = await call(`/orders/share/${encodeURIComponent(code)}`);
   return parseShareResponse(body);
+}
+
+/** The widest window eventResultList accepts. Measured: a day works, two days is an error. */
+const RESULT_WINDOW_MS = 86_400_000;
+
+/**
+ * Ended games in one competition between two times (epoch ms), or null when
+ * SportyBet could not be reached.
+ *
+ * Asked a day at a time, since SportyBet refuses a wider window. The ids go
+ * in with their colons as they are: this endpoint answers an encoded
+ * "sr%3Asport%3A1" with an error, unlike the upcoming list.
+ */
+export async function fetchResults(tournamentId: string, from: number, to: number): Promise<EventResult[] | null> {
+  if (!/^sr:tournament:\d+$/.test(tournamentId) || !(to > from)) return null;
+  const byId = new Map<string, EventResult>();
+  let answered = false;
+  for (let start = Math.floor(from); start < to && start < from + 14 * RESULT_WINDOW_MS; start += RESULT_WINDOW_MS) {
+    const end = Math.min(Math.floor(to), start + RESULT_WINDOW_MS);
+    for (let page = 1; page <= 5; page++) {
+      const body = await call(
+        `/factsCenter/eventResultList?sportId=sr:sport:1&tournamentId=${tournamentId}` +
+          `&startTime=${start}&endTime=${end}&pageNum=${page}&pageSize=100`,
+      );
+      if (body === null) break;
+      answered = true;
+      const results = parseResults(body);
+      for (const r of results) byId.set(r.eventId, r);
+      const total = Number((body as { data?: { totalNum?: unknown } }).data?.totalNum);
+      if (results.length === 0 || !Number.isFinite(total) || page * 100 >= total) break;
+    }
+  }
+  return answered ? [...byId.values()] : null;
+}
+
+/** One event's result once it is over; null while it is not, or unreachable. */
+export async function fetchEventResult(eventId: string): Promise<EventResult | null> {
+  if (!/^sr:match:\d+$/.test(eventId)) return null;
+  return parseEventResult(await call(`/factsCenter/event?eventId=${eventId}&productId=3`));
 }

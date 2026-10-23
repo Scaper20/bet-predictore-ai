@@ -190,9 +190,17 @@ export async function saveEventLinks(
         tournament_id: l.event.tournamentId ?? null,
         home_name: l.event.homeName,
         away_name: l.event.awayName,
+        home_id: l.event.homeId ?? null,
+        away_id: l.event.awayId ?? null,
         kickoff: new Date(l.event.kickoff).toISOString(),
         method: l.method,
         linked_at: new Date().toISOString(),
+        // A new or changed link has not been checked against a result yet.
+        verdict: null,
+        our_score: null,
+        sportybet_score: null,
+        verified_at: null,
+        verify_attempts: 0,
       })),
       { onConflict: "match_id" },
     );
@@ -235,5 +243,36 @@ export async function saveUnresolved(
     );
   } catch {
     // The admin list is a convenience.
+  }
+}
+
+export interface BookingLogEntry {
+  source: "slip" | "code-hub";
+  userId?: string | null;
+  legs: number;
+  outcome: "booked" | "cached" | "problems" | "refused" | "unavailable";
+  via?: "direct" | "parsebot" | null;
+  code?: string | null;
+  readBack?: boolean | null;
+  problems?: unknown;
+  durationMs?: number;
+}
+
+/** Records one booking attempt for /admin/sportybet. Best effort. */
+export async function logBooking(entry: BookingLogEntry): Promise<void> {
+  try {
+    await (await admin()).from("sportybet_booking_log").insert({
+      source: entry.source,
+      user_id: entry.userId ?? null,
+      legs: entry.legs,
+      outcome: entry.outcome,
+      via: entry.via ?? null,
+      code: entry.code ?? null,
+      read_back: entry.readBack ?? null,
+      problems: entry.problems ?? null,
+      duration_ms: entry.durationMs ?? null,
+    });
+  } catch {
+    // The log is for the admin page; a lost row costs nothing else.
   }
 }
