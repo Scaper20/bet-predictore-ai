@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Badge } from "@/components/ui/primitives";
 import { SwitchForm } from "@/components/admin/switch-form";
 import { switchesFresh } from "@/lib/switches";
@@ -55,8 +56,10 @@ export default async function AdminParsebotPage() {
       <div>
         <h1 className="font-display text-2xl font-bold">parse.bot and Code Hub</h1>
         <p className="mt-1 text-sm text-ink-muted">
-          SportyBet prices and booking codes come from parse.bot, paid per call. Nothing is spent while the switch
-          is off. With it on, every call is still held to the daily and 30-day caps below.
+          SportyBet prices and booking codes come straight from SportyBet (see{" "}
+          <Link href="/admin/sportybet" className="text-brand hover:underline">SportyBet matching</Link>). parse.bot, paid per
+          call, is only the fallback for when that is off or refused. Nothing is spent while this switch is off. With it
+          on, every call is still held to the daily and 30-day caps below.
         </p>
       </div>
 

@@ -23,6 +23,7 @@ const BASE_NAV = [
   { href: "/admin/team", label: "Team" },
   { href: "/admin/data-health", label: "Data health" },
   { href: "/admin/parsebot", label: "parse.bot & Code Hub" },
+  { href: "/admin/sportybet", label: "SportyBet matching" },
   { href: "/admin/maintenance", label: "Maintenance" },
 ];
 

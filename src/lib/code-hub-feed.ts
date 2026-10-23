@@ -7,9 +7,8 @@ import { candidatesFor, type ForgeLeg } from "@/lib/forge";
 import { appDayBounds } from "@/lib/format";
 import { leagueByCode } from "@/lib/leagues";
 import { priceQuotes } from "@/lib/odds";
-import { bookingCodeFor } from "@/lib/odds/booking-code";
+import { bookingAvailable, bookingCodeFor } from "@/lib/odds/booking-code";
 import { findOnBoard } from "@/lib/odds/sportybet";
-import { parsebotLive } from "@/lib/odds/parsebot";
 import type { BookingLeg } from "@/lib/odds/booking";
 import {
   CODE_RUN_MS,
@@ -173,23 +172,22 @@ async function readDay(day: string): Promise<StoreRead> {
 
 /**
  * Books a code for every stored combo that has none, after the response has
- * gone out. Two credits each, through the metered client; a combo whose
- * games cannot all be found on SportyBet's board is left without a code
- * rather than booked short.
+ * gone out. Booked on SportyBet directly, or through parse.bot's metered
+ * client when that is off; a combo whose games cannot all be found on
+ * SportyBet's board is left without a code rather than booked short.
  */
 function bookMissing(rows: HubCodeRow[]) {
   const due = rows.filter((r) => !r.bookingCode && r.firstKickoff - Date.now() > LEAD_MS);
   if (due.length === 0) return;
   after(async () => {
-    if (!(await parsebotLive())) return;
+    if (!(await bookingAvailable())) return;
     for (const row of due) {
       const legs: BookingLeg[] = [];
       for (const leg of row.legs) {
-        const tournamentId = leg.leagueCode ? leagueByCode(leg.leagueCode)?.ids.sportyBet : undefined;
         const kickoff = Date.parse(leg.kickoff);
         const event = await findOnBoard(
           { homeName: leg.homeName, awayName: leg.awayName, kickoff },
-          tournamentId,
+          { leagueCode: leg.leagueCode, matchId: leg.matchId },
         ).catch(() => null);
         if (!event) break;
         legs.push({ market: leg.market, eventId: event.eventId, kickoff });

@@ -7,7 +7,7 @@ import type { SwitchKey } from "@/lib/switches";
 
 export type SwitchActionState = { error: string | null; message: string | null };
 
-const KEYS: SwitchKey[] = ["parsebot_live", "code_hub_open"];
+const KEYS: SwitchKey[] = ["parsebot_live", "code_hub_open", "sportybet_direct"];
 
 const DONE: Record<SwitchKey, [string, string]> = {
   parsebot_live: [
@@ -15,6 +15,10 @@ const DONE: Record<SwitchKey, [string, string]> = {
     "parse.bot is off. No more credits will be spent.",
   ],
   code_hub_open: ["The Code Hub is open to everyone.", "The Code Hub is back behind its waitlist."],
+  sportybet_direct: [
+    "SportyBet direct is on. Boards and booking codes come straight from SportyBet within about 15 seconds.",
+    "SportyBet direct is off. Prices come from stored boards, or parse.bot if it is on.",
+  ],
 };
 
 /** Flips one operator switch (public.app_switches). Instances pick it up within SWITCH_TTL_MS. */
@@ -36,5 +40,6 @@ export async function setSwitch(_prev: SwitchActionState, formData: FormData): P
 
   await logAdminAction(gate.identity, `switch.${key}.${intent}`);
   revalidatePath("/admin/parsebot");
+  revalidatePath("/admin/sportybet");
   return { error: null, message: DONE[key][enabled ? 0 : 1] };
 }

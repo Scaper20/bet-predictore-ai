@@ -185,6 +185,20 @@ function sameClub(candidateName: string, targetName: string, targetKey: string):
   );
 }
 
+/**
+ * The loose rule on its own, for the SportyBet matcher (sportybet-match.ts).
+ * Only ever safe behind an ambiguity guard, exactly as in findFixture.
+ */
+export function namesCouldMatch(a: string, b: string): boolean {
+  const key = normaliseKey(b);
+  return key !== "" && sameClub(a, b, key);
+}
+
+/** clubTokens, exported for the matcher's similarity score. */
+export function clubNameTokens(raw: string): string[] {
+  return clubTokens(raw);
+}
+
 function closest<T extends FixtureLike>(target: FixtureLike, list: T[]): T {
   return list.reduce((best, c) =>
     Math.abs(c.kickoff - target.kickoff) < Math.abs(best.kickoff - target.kickoff) ? c : best,

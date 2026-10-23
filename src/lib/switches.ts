@@ -10,9 +10,14 @@ import { cached } from "@/lib/providers/cache";
  * and a flip reaches every instance within SWITCH_TTL_MS. A missing row, a
  * missing table or an unreachable database all read as off: both switches
  * guard something that should fail closed (spending credits, opening a page).
+ *
+ * The exception is sportybet_direct, which reads as ON when it has no row:
+ * calling SportyBet directly costs nothing, and "off" there means no prices
+ * and no booking codes at all. It is a brake for when SportyBet objects, not
+ * a guard on spending.
  */
 
-export type SwitchKey = "parsebot_live" | "code_hub_open";
+export type SwitchKey = "parsebot_live" | "code_hub_open" | "sportybet_direct";
 
 export const SWITCH_TTL_MS = 15_000;
 
@@ -25,6 +30,7 @@ async function readAll(): Promise<Record<SwitchKey, SwitchState>> {
   const off: Record<SwitchKey, SwitchState> = {
     parsebot_live: { enabled: false, updatedAt: null },
     code_hub_open: { enabled: false, updatedAt: null },
+    sportybet_direct: { enabled: true, updatedAt: null },
   };
   try {
     const { supabaseAdmin } = await import("@/lib/supabase/admin");

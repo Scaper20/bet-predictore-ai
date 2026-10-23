@@ -86,7 +86,8 @@ python -m pytest -q
 | `FOOTBALL_DATA_API_KEY` | GitHub secret, Vercel | football-data.org fixtures and tables (optional) |
 | `INGEST_SECRET` | Supabase function secret + Vault `betrix_ingest_secret` | lets pg_cron call the live-scores function |
 | `CRON_SECRET` | Vercel (already set) + Vault `betrix_cron_secret` | lets pg_cron call `/api/cron/odds-snapshot` |
-| `SPORTYBET_SNAPSHOTS` | Vercel, set to `on` | Hourly refresh of stale SportyBet boards. **Off by default**, and does nothing unless `PARSEBOT_LIVE=on`. Every call is capped by the credit ledger (`PARSEBOT_DAILY_CREDITS`, default 30). |
+| `SPORTYBET_DIRECT` | Vercel, leave empty | SportyBet boards and booking codes straight from SportyBet (free). On by default via `/admin/sportybet`; `off` here is a hard stop. The hourly odds snapshot then refreshes boards and matches fixtures (`src/lib/odds/sportybet-sync.ts`). |
+| `SPORTYBET_SNAPSHOTS` | Vercel, set to `on` | Only while SportyBet direct is off: hourly refresh of stale SportyBet boards through parse.bot. **Off by default**, and does nothing unless `PARSEBOT_LIVE=on`. Every call is capped by the credit ledger (`PARSEBOT_DAILY_CREDITS`, default 30). |
 | `DATA_LAYER` | Vercel (optional) | overrides the admin switch (`live`, `db_fallback`, `db`) |
 | `SOCCERDATA_DIR`, `OPENFOOTBALL_DIR` | set by the workflow | local caches |
 | `INGEST_DRY_RUN=1` | local | same as `--dry-run` |
@@ -202,4 +203,5 @@ rebuilt both club cups.
 | TheSportsDB (paid) | 100 requests/min | ~15 per fixtures run, 3 per results run, ~25 per weekly job | ✅ |
 | football-data.org | 10 requests/min | 24 per fixtures run, spaced 7 s | ✅ |
 | The Odds API | 500 credits/month | paced to ≤ 460 (reserve 40) | ✅ |
-| parse.bot (SportyBet) | metered, ~$0.03/credit | **off** until `PARSEBOT_LIVE=on`; then on demand, capped at 30 credits/day and 1000 per 30 days by `public.parsebot_calls` | ⚠️ your call |
+| SportyBet (direct) | free | boards refreshed when stale (30 min near kickoff, 3 h otherwise), ~30 requests/min per instance | ✅ |
+| parse.bot (SportyBet) | metered, ~$0.03/credit, fallback only | **off** until `PARSEBOT_LIVE=on`; then on demand, capped at 30 credits/day and 1000 per 30 days by `public.parsebot_calls` | ⚠️ your call |

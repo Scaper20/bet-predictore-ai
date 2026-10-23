@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { LEAGUES } from "@/lib/leagues";
 import { readBoard, writeBoard } from "@/lib/odds/boards";
-import { PAGE_SIZE, sportyBetBoard } from "@/lib/odds/sportybet";
+import { sportyBetBoard } from "@/lib/odds/sportybet";
+import { directEnabled } from "@/lib/odds/sportybet-direct";
+import { syncSportyBet } from "@/lib/odds/sportybet-sync";
 import { parsebotLive } from "@/lib/odds/parsebot";
 import { fetchBoard, oddsApiBoardKey, oddsApiQuota, ODDS_API_BOARDS } from "@/lib/odds/the-odds-api";
 import { oddsApiBoardDue } from "@/lib/odds/snapshot-pacing";
@@ -21,12 +23,14 @@ export const maxDuration = 120;
  * - The Odds API (free, 500 credits a month): paced by oddsApiBoardDue so the
  *   month's credits last the month, and only for competitions with games in
  *   the next three days.
- * - SportyBet via parse.bot (metered): OFF unless SPORTYBET_SNAPSHOTS=on AND
- *   the parse.bot switch is on (/admin/parsebot). Even then a board is only refetched once it is stale for
- *   how close its next game is (src/lib/odds/parsebot-budget.ts), and every
- *   call is charged against the credit ledger's caps. Without it, boards are
- *   refreshed on demand by the pages that need them, which on the
- *   1,000-credit plan is the cheaper choice.
+ * - SportyBet direct (free): every competition's board is refreshed when
+ *   stale and its fixtures matched to SportyBet events (sportybet-sync.ts),
+ *   while the sportybet_direct switch is on.
+ * - SportyBet via parse.bot (metered): only when direct is off, and then OFF
+ *   unless SPORTYBET_SNAPSHOTS=on AND the parse.bot switch is on
+ *   (/admin/parsebot). Even then a board is only refetched once it is stale
+ *   for how close its next game is (src/lib/odds/parsebot-budget.ts), and
+ *   every call is charged against the credit ledger's caps.
  */
 export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET;
@@ -55,17 +59,24 @@ export async function GET(request: Request) {
   const active = new Set((upcoming ?? []).map((r) => r.league_code as string));
   const hasUpcoming = (code: string) => !anyMatches || active.has(code);
 
-  if (process.env.SPORTYBET_SNAPSHOTS !== "on") {
+  if (await directEnabled()) {
+    const synced = await syncSportyBet(LEAGUES.filter((l) => hasUpcoming(l.code)).map((l) => l.code));
+    for (const r of synced ?? []) {
+      report.sportybet.boards++;
+      report.sportybet.events += r.events;
+      if (r.error) errors.push(`sportybet ${r.league}: ${r.error}`);
+    }
+  } else if (process.env.SPORTYBET_SNAPSHOTS !== "on") {
     report.sportybet.skipped = "SPORTYBET_SNAPSHOTS is not on";
   } else if (!(await parsebotLive())) {
-    report.sportybet.skipped = "parse.bot switch is off";
+    report.sportybet.skipped = "SportyBet direct and parse.bot are both off";
   } else {
     for (const league of LEAGUES) {
       const tid = league.ids.sportyBet;
       if (!tid || !hasUpcoming(league.code)) continue;
       try {
         // Fresh boards are answered from storage at no cost; only stale ones call out.
-        const events = await sportyBetBoard(1, PAGE_SIZE, tid, true);
+        const events = await sportyBetBoard(tid, true);
         report.sportybet.boards++;
         report.sportybet.events += events.length;
       } catch (err) {

@@ -1,15 +1,21 @@
 import "server-only";
 
-import { planBooking, readBooking, type BookedCode, type BookingLeg, type BookingProblem } from "./booking";
-import { parsebotCall } from "./parsebot";
+import { planBooking, readBooking, type BookedCode, type BookingLeg, type BookingProblem, type BookSelection } from "./booking";
+import { parsebotCall, parsebotLive } from "./parsebot";
+import { createShareCode, directEnabled, readShareCode } from "./sportybet-direct";
 
 /**
  * A SportyBet booking code for a set of legs: from the cache when the same
- * selections were booked before and the code is still valid, otherwise one
- * book_bet call (two credits) through the metered client.
+ * selections were booked before and the code is still valid, otherwise
+ * booked on SportyBet directly (free), and only if that is off or refused,
+ * one book_bet call (two credits) through parse.bot's metered client.
  *
- * Used by the Code Hub. While the parse.bot switch is off the call is never
- * made and this answers { ok: false, reason: "unavailable" }.
+ * A direct code is read back before it is handed out: the code SportyBet
+ * loads must carry exactly the selections sent, or it is not the slip the
+ * user built.
+ *
+ * Used by the Code Hub and the slip. With both paths off this answers
+ * { ok: false, reason: "unavailable" } without calling anything.
  */
 
 export type BookingResult =
@@ -18,6 +24,30 @@ export type BookingResult =
   | { ok: false; reason: "unavailable" };
 
 const inflight = new Map<string, Promise<BookingResult>>();
+
+/** Whether a booking could be made at all right now. */
+export async function bookingAvailable(): Promise<boolean> {
+  return (await directEnabled()) || (await parsebotLive());
+}
+
+async function bookDirect(selections: readonly BookSelection[]): Promise<BookedCode | null> {
+  if (!(await directEnabled())) return null;
+  const booked = await createShareCode(selections);
+  if (!booked) return null;
+  // Read back as the user's app will load it. An unreadable code is not
+  // proof of a bad one (the booking itself already checked the count), so
+  // only a code that reads back with the wrong number of selections is refused.
+  const check = await readShareCode(booked.bookingCode);
+  return check && check.selectionsCount !== selections.length ? null : booked;
+}
+
+async function bookViaParsebot(selections: readonly BookSelection[]): Promise<BookedCode | null> {
+  const raw = await parsebotCall<unknown>("book_bet", {
+    body: { selections: JSON.stringify(selections) },
+    note: `${selections.length} legs`,
+  });
+  return readBooking(raw, selections.length);
+}
 
 async function admin() {
   const { supabaseAdmin } = await import("@/lib/supabase/admin");
@@ -34,6 +64,7 @@ export async function bookingCodeFor(legs: readonly BookingLeg[]): Promise<Booki
   if (pending) return pending;
 
   const task = (async (): Promise<BookingResult> => {
+    let cacheReadable = true;
     try {
       const db = await admin();
       const { data: hit } = await db
@@ -53,15 +84,13 @@ export async function bookingCodeFor(legs: readonly BookingLeg[]): Promise<Booki
         };
       }
     } catch {
-      // No cache, no call: the cache is what keeps a repeat from costing again.
-      return { ok: false, reason: "unavailable" };
+      // No cache: a direct booking is free, so it still goes ahead, but not
+      // a metered one -- the cache is what keeps a repeat from costing again.
+      cacheReadable = false;
     }
 
-    const raw = await parsebotCall<unknown>("book_bet", {
-      body: { selections: JSON.stringify(plan.selections) },
-      note: `${plan.selections.length} legs`,
-    });
-    const booked = readBooking(raw, plan.selections.length);
+    const booked =
+      (await bookDirect(plan.selections)) ?? (cacheReadable ? await bookViaParsebot(plan.selections) : null);
     if (!booked) return { ok: false, reason: "unavailable" };
 
     try {

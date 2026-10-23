@@ -10,6 +10,7 @@ import { odds, percent } from "@/lib/format";
 import { LocalTime } from "@/components/ui/local-time";
 import { sportPath, matchPath } from "@/lib/routes";
 import { worstLeg } from "@/lib/value";
+import { BookCodeButton } from "@/components/slip/book-code-button";
 
 /** One selection's live prices, as /api/odds returns them. */
 interface LivePrice {
@@ -313,6 +314,10 @@ export function SlipView({ variant = "page" }: { variant?: "page" | "sheet" }) {
             {fetchedAny && (
               <p className="text-[11px] leading-relaxed text-ink-dim">Market prices read just now.</p>
             )}
+
+            <div className="border-t border-line pt-4">
+              <BookCodeButton legs={legs} remove={remove} />
+            </div>
           </div>
 
           {(state === "loading" && !usingRealOdds) || (usingRealOdds && worst?.verdict.rating === "no-bet") || correlated || legs.length >= 5 ? (
