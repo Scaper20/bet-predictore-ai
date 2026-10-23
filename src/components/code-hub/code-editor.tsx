@@ -112,14 +112,16 @@ export function CodeEditor({ signedIn }: { signedIn: boolean }) {
               Make it safer
             </Button>
             <div className="flex gap-2">
-              <Input
-                value={target}
-                onChange={(e) => setTarget(e.target.value.replace(/[^0-9.]/g, "").slice(0, 6))}
-                placeholder="Odds, e.g. 10"
-                aria-label="Target odds"
-                inputMode="decimal"
-                className="w-28 shrink-0"
-              />
+              {/* The width sits on a wrapper: Input is always w-full, which a w-28 on it cannot beat. */}
+              <div className="w-28 shrink-0">
+                <Input
+                  value={target}
+                  onChange={(e) => setTarget(e.target.value.replace(/[^0-9.]/g, "").slice(0, 6))}
+                  placeholder="Odds, e.g. 10"
+                  aria-label="Target odds"
+                  inputMode="decimal"
+                />
+              </div>
               <Button
                 variant="secondary"
                 onClick={() => run("target")}
@@ -169,7 +171,7 @@ function ScanCard({ scan }: { scan: ScanView }) {
         {scan.games.map((g) => (
           <li key={`${g.eventId}-${g.market}`} className="flex items-start justify-between gap-3 text-sm">
             <span className="min-w-0 flex-1">
-              <span className="block truncate font-semibold">{g.label}</span>
+              <span className="block break-words font-semibold">{g.label}</span>
               <span className="block truncate text-xs text-ink-dim">
                 {g.homeName} v {g.awayName}
                 {g.kickoff && (
@@ -211,11 +213,11 @@ function EditedCard({ result, before, mode }: { result: EditResult; before: Scan
         {result.games.map((g) => (
           <li key={g.matchId} className="flex items-start justify-between gap-3 text-sm">
             <span className="min-w-0 flex-1">
-              <span className="block truncate font-semibold">{g.label}</span>
+              <span className="block break-words font-semibold">{g.label}</span>
               <span className="block truncate text-xs text-ink-dim">
                 {g.homeName} v {g.awayName}
-                {g.from && <span className="text-amber"> · was {g.from.label}</span>}
               </span>
+              {g.from && <span className="block break-words text-xs text-amber">was {g.from.label}</span>}
             </span>
             <span className="shrink-0 font-mono text-xs text-ink-muted">{percent(g.probability)}</span>
           </li>
