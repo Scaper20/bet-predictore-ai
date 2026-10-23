@@ -6,6 +6,7 @@ import { cached } from "@/lib/providers/cache";
 import type { LearnedLink, MatchInput, MatchMethod, UnresolvedFixture } from "./sportybet-match";
 import type { SportyBetEvent } from "./sportybet-api";
 import type { Discovery } from "./sportybet-discover";
+import type { CompactPrices, Snapshot } from "./market-prob";
 
 /**
  * What the SportyBet matcher remembers, in the tables from migration 0066.
@@ -417,4 +418,75 @@ export async function saveDiscovery(leagueCode: string, fixtures: number, found:
   } catch {
     return "none";
   }
+}
+
+export interface PriceSnapshotRow {
+  match_id: string;
+  event_id: string;
+  captured_at: string;
+  kickoff: string;
+  prices: CompactPrices;
+}
+
+/**
+ * Stores price snapshots. Keyed by the board's own read time, so the hourly
+ * sync re-reading an unchanged stored board writes nothing new.
+ */
+export async function savePriceSnapshots(rows: readonly PriceSnapshotRow[]): Promise<void> {
+  if (rows.length === 0) return;
+  try {
+    const db = await admin();
+    await db.from("sportybet_price_history").upsert(rows as PriceSnapshotRow[], { onConflict: "match_id,captured_at", ignoreDuplicates: true });
+  } catch {
+    // A lost snapshot is a gap in the record, nothing worse.
+  }
+}
+
+/** Every snapshot for these fixtures, oldest first, grouped by match id. */
+export async function priceSnapshots(matchIds: readonly string[]): Promise<Map<string, Snapshot[]>> {
+  const out = new Map<string, Snapshot[]>();
+  if (matchIds.length === 0) return out;
+  try {
+    const { data } = await (await admin())
+      .from("sportybet_price_history")
+      .select("match_id, captured_at, prices")
+      .in("match_id", [...new Set(matchIds)])
+      .order("captured_at", { ascending: true })
+      .limit(5000);
+    for (const r of (data ?? []) as { match_id: string; captured_at: string; prices: CompactPrices }[]) {
+      const list = out.get(r.match_id) ?? [];
+      list.push({ capturedAt: Date.parse(r.captured_at), prices: r.prices });
+      out.set(r.match_id, list);
+    }
+  } catch {
+    // No history: picks are logged without prices, as before.
+  }
+  return out;
+}
+
+/** The last snapshot taken before `before` (kick-off for a closing price, now for a live one). */
+export async function lastSnapshotBefore(matchId: string, before: number): Promise<Snapshot | null> {
+  try {
+    const { data } = await (await admin())
+      .from("sportybet_price_history")
+      .select("captured_at, prices")
+      .eq("match_id", matchId)
+      .lt("captured_at", new Date(before).toISOString())
+      .order("captured_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    return data ? { capturedAt: Date.parse(data.captured_at), prices: data.prices as CompactPrices } : null;
+  } catch {
+    return null;
+  }
+}
+
+/** The latest snapshot for each of these fixtures. */
+export async function latestSnapshots(matchIds: readonly string[]): Promise<Map<string, Snapshot>> {
+  const out = new Map<string, Snapshot>();
+  for (const [id, list] of await priceSnapshots(matchIds)) {
+    const last = list[list.length - 1];
+    if (last) out.set(id, last);
+  }
+  return out;
 }

@@ -2,7 +2,8 @@ import "server-only";
 
 import { LEAGUES, type LeagueDef } from "@/lib/leagues";
 import { dbUpcoming } from "@/lib/providers/db-source";
-import { sportyBetBoard } from "./sportybet";
+import { sportyBetBoard, sportyBetPricedAt } from "./sportybet";
+import { compactPrices } from "./market-prob";
 import { directEnabled, fetchFullBoard } from "./sportybet-direct";
 import { voteTournaments, type Discovery } from "./sportybet-discover";
 import {
@@ -10,8 +11,10 @@ import {
   saveDiscovery,
   saveEventLinks,
   saveLearned,
+  savePriceSnapshots,
   saveUnresolved,
   sportyBetTournament,
+  type PriceSnapshotRow,
   storedEventLinks,
 } from "./sportybet-links";
 import { matchRound, type MatchMethod, type OurFixture } from "./sportybet-match";
@@ -40,6 +43,8 @@ export interface LeagueSyncReport {
   byMethod: Partial<Record<MatchMethod | "stored", number>>;
   learned: number;
   unresolved: number;
+  /** Price snapshots stored this run (market-prob.ts). */
+  snapshots?: number;
   error?: string;
 }
 
@@ -105,6 +110,30 @@ export async function syncLeague(league: LeagueDef): Promise<LeagueSyncReport> {
       out.unresolved.filter((u) => u.candidates.length > 0),
     );
 
+    // The price record: one snapshot per linked fixture within 48 hours,
+    // stamped with when the board itself was read (market-prob.ts).
+    const readAt = sportyBetPricedAt(tournamentId) ?? Date.now();
+    const eventById = new Map(events.map((e) => [e.eventId, e]));
+    const linkedEvent = new Map<string, string>();
+    for (const [matchId, l] of links) if (settled.has(matchId)) linkedEvent.set(matchId, l.eventId);
+    for (const m of out.matched) linkedEvent.set(m.matchId, m.eventId);
+    const snapshots: PriceSnapshotRow[] = [];
+    for (const [matchId, eventId] of linkedEvent) {
+      const e = eventById.get(eventId);
+      if (!e || e.kickoff - readAt > 48 * 3_600_000 || e.kickoff < readAt) continue;
+      const prices = compactPrices(e.markets);
+      if (Object.keys(prices).length === 0) continue;
+      snapshots.push({
+        match_id: matchId,
+        event_id: eventId,
+        captured_at: new Date(readAt).toISOString(),
+        kickoff: new Date(e.kickoff).toISOString(),
+        prices,
+      });
+    }
+    await savePriceSnapshots(snapshots);
+    report.snapshots = snapshots.length;
+
     for (const m of out.matched) report.byMethod[m.method] = (report.byMethod[m.method] ?? 0) + 1;
     report.matched = settled.size + out.matched.length;
     report.learned = out.learned.length;
@@ -127,7 +156,17 @@ export async function syncSportyBet(only?: readonly string[]): Promise<LeagueSyn
     if (!(await sportyBetTournament(league.code))) continue;
     reports.push(await syncLeague(league));
   }
+  await prunePriceHistory();
   return reports;
+}
+
+async function prunePriceHistory(): Promise<void> {
+  try {
+    const { supabaseAdmin } = await import("@/lib/supabase/admin");
+    await supabaseAdmin().rpc("prune_price_history");
+  } catch {
+    // Pruned next run.
+  }
 }
 
 export interface DiscoveryReport {
