@@ -54,6 +54,46 @@ export const ESPN_CORNER_LEAGUES: Record<string, string> = {
   "serie-b": "ita.2",
 };
 
+/**
+ * Competitions whose goal times come from ESPN: every competition ESPN
+ * carries that the archive holds, the big eight included (football-data.co.uk
+ * keeps no goal times for anyone). They back the goal-timing estimate
+ * (lead-process.ts) and give a half-time score (0078_goal_timelines.sql).
+ */
+export const ESPN_GOAL_LEAGUES: Record<string, string> = {
+  ...ESPN_CORNER_LEAGUES,
+  "premier-league": "eng.1",
+  championship: "eng.2",
+  "la-liga": "esp.1",
+  "serie-a": "ita.1",
+  bundesliga: "ger.1",
+  "ligue-1": "fra.1",
+  eredivisie: "ned.1",
+  "primeira-liga": "por.1",
+};
+
+/** One goal: its minute, added time (45+6 is 45, 6), and the side it counts for. */
+export type Goal = [minute: number, added: number, side: "h" | "a"];
+
+export interface GoalUpdate {
+  id: string;
+  goals: Goal[];
+  htHome: number;
+  htAway: number;
+}
+
+/** The half-time score from a timeline: every goal up to the 45th minute and its added time. */
+export function halfTimeOf(goals: readonly Goal[]): { home: number; away: number } {
+  let home = 0;
+  let away = 0;
+  for (const [minute, , side] of goals) {
+    if (minute > 45) continue;
+    if (side === "h") home++;
+    else away++;
+  }
+  return { home, away };
+}
+
 export interface CornerUpdate {
   id: string;
   hc: number;
@@ -76,6 +116,8 @@ export interface EspnResult {
   /** Corners won. */
   hc?: number;
   ac?: number;
+  /** Every goal in order, when ESPN's list adds up to the score on both sides. */
+  goals?: Goal[];
 }
 
 export interface ArchiveRow {
@@ -128,6 +170,14 @@ export function matchShots(espn: EspnResult[], rows: ArchiveRow[]): ShotUpdate[]
   return matchEspn(espn, rows, hasShots).map(({ g, r }) => ({ id: r.id, hsot: g.hsot!, asot: g.asot!, hs: g.hs ?? null, as: g.as ?? null }));
 }
 
+/** Archive rows to give ESPN's goal timeline, matched the same way as shots. */
+export function matchGoals(espn: EspnResult[], rows: ArchiveRow[]): GoalUpdate[] {
+  return matchEspn(espn, rows, (g) => g.goals !== undefined).map(({ g, r }) => {
+    const ht = halfTimeOf(g.goals!);
+    return { id: r.id, goals: g.goals!, htHome: ht.home, htAway: ht.away };
+  });
+}
+
 /** Archive rows to fill with ESPN's corners, matched the same way as shots. */
 export function matchCorners(espn: EspnResult[], rows: ArchiveRow[]): CornerUpdate[] {
   return matchEspn(espn, rows, hasCorners).map(({ g, r }) => ({ id: r.id, hc: g.hc!, ac: g.ac! }));
@@ -170,6 +220,44 @@ function matchEspn(espn: EspnResult[], rows: ArchiveRow[], has: (g: EspnResult) 
   return out;
 }
 
+export interface EspnDetail {
+  scoringPlay?: boolean;
+  ownGoal?: boolean;
+  clock?: { displayValue?: string };
+  team?: { id?: string };
+}
+
+/**
+ * The goals in ESPN's play list, or nothing when they don't add up to the
+ * final score: a list that misses a goal would misstate who led when. ESPN
+ * files an own goal under one side or the other; both readings are tried.
+ */
+export function goalsOf(details: readonly EspnDetail[] | undefined, homeId: string | undefined, awayId: string | undefined, hg: number, ag: number): Goal[] | null {
+  if (!details || !homeId || !awayId) return null;
+  const plays: { minute: number; added: number; team: "h" | "a"; own: boolean }[] = [];
+  for (const d of details) {
+    if (!d.scoringPlay) continue;
+    const m = d.clock?.displayValue?.match(/^(\d+)'(?:\+(\d+)')?$/);
+    const team = d.team?.id === homeId ? "h" : d.team?.id === awayId ? "a" : null;
+    if (!m || !team) return null;
+    plays.push({ minute: Number(m[1]), added: Number(m[2] ?? 0), team, own: d.ownGoal === true });
+  }
+  const flip = (t: "h" | "a"): "h" | "a" => (t === "h" ? "a" : "h");
+  for (const ownFor of ["team", "other"] as const) {
+    const goals: Goal[] = plays.map((p) => [p.minute, p.added, p.own && ownFor === "other" ? flip(p.team) : p.team]);
+    if (goals.filter((g) => g[2] === "h").length === hg && goals.filter((g) => g[2] === "a").length === ag) {
+      return goals.sort((x, y) => x[0] - y[0] || x[1] - y[1]);
+    }
+    if (!plays.some((p) => p.own)) break;
+  }
+  return null;
+}
+
+function withGoals(details: readonly EspnDetail[] | undefined, homeId: string | undefined, awayId: string | undefined, hg: number, ag: number) {
+  const goals = goalsOf(details, homeId, awayId, hg, ag);
+  return goals ? { goals } : {};
+}
+
 /** One day of a competition's finished games from ESPN, with shots where listed (and games in play, when asked). */
 export async function espnDay(slug: string, day: Date, opts: { live?: boolean } = {}): Promise<EspnResult[]> {
   const ymd = day.toISOString().slice(0, 10).replace(/-/g, "");
@@ -182,7 +270,8 @@ export async function espnDay(slug: string, day: Date, opts: { live?: boolean } 
       date: string;
       competitions?: {
         status?: { type?: { completed?: boolean; state?: string } };
-        competitors: { homeAway: string; score?: string; team: { displayName: string }; statistics?: { name: string; displayValue?: string }[] }[];
+        competitors: { homeAway: string; score?: string; team: { id?: string; displayName: string }; statistics?: { name: string; displayValue?: string }[] }[];
+        details?: EspnDetail[];
       }[];
     }[];
   };
@@ -214,6 +303,7 @@ export async function espnDay(slug: string, day: Date, opts: { live?: boolean } 
       as: stat(a, "totalShots"),
       hc: stat(h, "wonCorners"),
       ac: stat(a, "wonCorners"),
+      ...(done ? withGoals(c.details, h.team.id, a.team.id, hg, ag) : {}),
     });
   }
   return out;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { matchCorners, matchShots, nameWords, findEspnGame, espnStatsComplete } from "./espn-shots";
+import { matchCorners, matchGoals, matchShots, nameWords, findEspnGame, espnStatsComplete, goalsOf, halfTimeOf, type ArchiveRow, type EspnDetail, type EspnResult } from "./espn-shots";
 
 const t = Date.parse("2026-10-12T01:00:00Z");
 
@@ -97,5 +97,39 @@ describe("matchCorners", () => {
       { date: t, home: "Gremio", away: "Santos", hg: 0, ag: 0, hc: 0, ac: 0 },
     ];
     expect(matchCorners(espn, rows)).toEqual([]);
+  });
+});
+
+describe("goalsOf", () => {
+  const d = (clock: string, team: string, extra: Partial<EspnDetail> = {}): EspnDetail => ({ scoringPlay: true, clock: { displayValue: clock }, team: { id: team }, ...extra });
+
+  it("reads each goal's minute, added time and side, as ESPN listed Bournemouth 2-0 Sunderland", () => {
+    const details = [d("6'", "349"), { scoringPlay: false, clock: { displayValue: "17'" }, team: { id: "366" } }, d("48'", "349")];
+    expect(goalsOf(details, "349", "366", 2, 0)).toEqual([[6, 0, "h"], [48, 0, "h"]]);
+    expect(halfTimeOf(goalsOf(details, "349", "366", 2, 0)!)).toEqual({ home: 1, away: 0 });
+  });
+
+  it("keeps first-half added time in the first half", () => {
+    const goals = goalsOf([d("45'+6'", "2"), d("90'+3'", "1")], "1", "2", 1, 1)!;
+    expect(goals).toEqual([[45, 6, "a"], [90, 3, "h"]]);
+    expect(halfTimeOf(goals)).toEqual({ home: 0, away: 1 });
+  });
+
+  it("reads an own goal for whichever side makes the score add up", () => {
+    expect(goalsOf([d("10'", "2", { ownGoal: true })], "1", "2", 1, 0)).toEqual([[10, 0, "h"]]);
+    expect(goalsOf([d("10'", "1", { ownGoal: true })], "1", "2", 1, 0)).toEqual([[10, 0, "h"]]);
+  });
+
+  it("gives nothing when the list doesn't add up to the score", () => {
+    expect(goalsOf([d("10'", "1")], "1", "2", 2, 0)).toBeNull();
+    expect(goalsOf([d("10'", "9")], "1", "2", 1, 0)).toBeNull();
+  });
+});
+
+describe("matchGoals", () => {
+  it("gives an archive row its timeline and half-time score", () => {
+    const espn: EspnResult[] = [{ date: Date.parse("2026-10-18T14:00:00Z"), home: "AFC Bournemouth", away: "Sunderland", hg: 2, ag: 0, goals: [[6, 0, "h"], [48, 0, "h"]] }];
+    const rows: ArchiveRow[] = [{ id: "r1", kickoff: Date.parse("2026-10-18T14:00:00Z"), home: "Bournemouth", away: "Sunderland", hg: 2, ag: 0 }];
+    expect(matchGoals(espn, rows)).toEqual([{ id: "r1", goals: [[6, 0, "h"], [48, 0, "h"]], htHome: 1, htAway: 0 }]);
   });
 });
