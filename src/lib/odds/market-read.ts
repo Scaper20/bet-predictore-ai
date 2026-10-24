@@ -16,8 +16,12 @@ import type { RawMarket } from "./sportybet-api";
  * fetchEventMarkets).
  */
 
-/** Where a pick's chance came from: our model, SportyBet's own probability, or its price alone. */
-export type ReadSource = "model" | "market" | "odds";
+/**
+ * Where a pick's chance came from: our model, our goal-timing estimate
+ * (lead-process.ts: 1UP and the like, not yet checked against results),
+ * SportyBet's own probability, or its price alone.
+ */
+export type ReadSource = "model" | "estimate" | "market" | "odds";
 
 /** The margin taken off a bare price: about SportyBet's on a two-way market. */
 export const ODDS_ONLY_MARGIN = 1.06;

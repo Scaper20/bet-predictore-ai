@@ -90,12 +90,12 @@ export type Verdict = "strong" | "fair" | "risky" | "unreadable" | "locked";
 
 /**
  * Our read of one pick. Strong from 65%, risky under 45%: the site's own risk
- * bands. A chance from a bare price is never called strong: the margin taken
- * off it is a guess.
+ * bands. A chance from a bare price, or from our unchecked goal-timing
+ * estimate, is never called strong: neither has a record behind it.
  */
 export function verdictFor(probability: number | null, source: ReadSource = "model"): Verdict {
   if (probability === null) return "unreadable";
-  if (probability >= 0.65) return source === "odds" ? "fair" : "strong";
+  if (probability >= 0.65) return source === "odds" || source === "estimate" ? "fair" : "strong";
   if (probability < 0.45) return "risky";
   return "fair";
 }
@@ -155,7 +155,7 @@ export function lockGames<T extends { probability: number | null; verdict: Verdi
   locked: (game: T) => boolean,
 ): T[] {
   return games.map((g) =>
-    g.probability !== null && (g.source ?? "model") === "model" && locked(g)
+    g.probability !== null && g.source !== "market" && g.source !== "odds" && locked(g)
       ? { ...g, probability: null, verdict: "locked" as const, reason: "Pro league: our read opens at kick-off, or with Pro." }
       : g,
   );

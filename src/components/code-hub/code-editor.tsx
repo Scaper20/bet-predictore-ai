@@ -26,6 +26,7 @@ const VERDICT: Record<Verdict, { tone: "brand" | "neutral" | "amber" | "rose"; l
 
 /** Where a chance came from, when it isn't our model's. */
 const SOURCE: Partial<Record<NonNullable<ScoredGame["source"]>, string>> = {
+  estimate: "Our estimate from when goals tend to come: not yet checked against results.",
   market: "SportyBet's own chance: we don't model this pick yet.",
   odds: "From SportyBet's price alone, margin taken off.",
 };

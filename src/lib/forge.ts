@@ -11,7 +11,7 @@ import type { Pick as ModelPick, Prediction } from "@/lib/model/predict";
 import { isPausedPick } from "@/lib/model/paused";
 import { isStatMarket, SWEET_SPOT_FILLERS, SWEET_SPOT_MAX, SWEET_SPOTS, sweetSpotLabel } from "@/lib/model/sweet-spots";
 import { scoreMatrix } from "@/lib/model/poisson";
-import { halfGrids, SITE_FIRST_HALF_SHARE, SITE_HALF_TILT, SITE_SECOND_HALF_TILT } from "@/lib/model/halves";
+import { halfGrids, halfRates, SITE_FIRST_HALF_SHARE, SITE_HALF_TILT, SITE_SECOND_HALF_TILT } from "@/lib/model/halves";
 import { COMBO_PREFIX, gradeMarket } from "@/lib/slip-tracker";
 import type { KickoffWindow } from "@/lib/time-windows";
 
@@ -247,10 +247,16 @@ export function gridFor(p: Prediction): number[][] {
   return scoreMatrix(p.markets.expectedGoals.home, p.markets.expectedGoals.away, p.model.rho);
 }
 
+const SITE_SHARE = { home: SITE_FIRST_HALF_SHARE, away: SITE_FIRST_HALF_SHARE };
+
 /** The two halves' own score grids, split the way the match page splits them (halves.ts). */
 export function halvesFor(p: Prediction): { first: number[][]; second: number[][] } {
-  const share = { home: SITE_FIRST_HALF_SHARE, away: SITE_FIRST_HALF_SHARE };
-  return halfGrids(p.markets.expectedGoals.home, p.markets.expectedGoals.away, share, SITE_HALF_TILT, SITE_SECOND_HALF_TILT);
+  return halfGrids(p.markets.expectedGoals.home, p.markets.expectedGoals.away, SITE_SHARE, SITE_HALF_TILT, SITE_SECOND_HALF_TILT);
+}
+
+/** Each side's expected goals in each half, the same split: the goal-timing estimate's input (lead-process.ts). */
+export function halfRatesFor(p: Prediction) {
+  return halfRates(p.markets.expectedGoals.home, p.markets.expectedGoals.away, SITE_SHARE, SITE_HALF_TILT, SITE_SECOND_HALF_TILT);
 }
 
 /** The corners and shots rules Forge may use: the tested sweet-spot lines, at the chance each held from. */

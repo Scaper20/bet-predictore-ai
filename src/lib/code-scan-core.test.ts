@@ -67,6 +67,7 @@ describe("scoreCode", () => {
   it("never calls a chance from a bare price strong", () => {
     expect(verdictFor(0.8, "market")).toBe("strong");
     expect(verdictFor(0.8, "odds")).toBe("fair");
+    expect(verdictFor(0.8, "estimate")).toBe("fair");
     expect(verdictFor(0.3, "odds")).toBe("risky");
   });
 });
@@ -87,5 +88,10 @@ describe("lockGames", () => {
   it("leaves SportyBet's own read open: it isn't ours to hold back", () => {
     const out = lockGames([{ ...g("pro", 0.6), source: "market" as const }], () => true);
     expect(out[0]).toMatchObject({ probability: 0.6, verdict: "fair" });
+  });
+
+  it("locks our own goal-timing estimate like any read of ours", () => {
+    const out = lockGames([{ ...g("pro", 0.6), source: "estimate" as const }], () => true);
+    expect(out[0]).toMatchObject({ probability: null, verdict: "locked" });
   });
 });

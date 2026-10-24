@@ -1,6 +1,7 @@
 import "server-only";
 
-import { candidatesFor, friendlyLabel, gridFor, halvesFor, type ForgeMarket } from "@/lib/forge";
+import { candidatesFor, friendlyLabel, gridFor, halfRatesFor, halvesFor, type ForgeMarket } from "@/lib/forge";
+import { leadChance } from "@/lib/model/lead-process";
 import { priceLeg, refundShare, statFamilyOf, type StatFamily } from "@/lib/leg-pricing";
 import { statChances, statGridsFor } from "@/lib/stat-markets-service";
 import { keepOnBoard } from "@/lib/board-candidates";
@@ -102,6 +103,9 @@ const STAT_REASON: Record<StatFamily, string> = {
   bookings: "No bookings history for this competition yet.",
 };
 
+/** The goal-timing estimate (lead-process.ts) is on unless LEAD_MODEL_ENABLED is "off". */
+const leadModelOn = () => process.env.LEAD_MODEL_ENABLED?.trim() !== "off";
+
 /** "corners" for a raw corners market we price off the count grid (ranges, odd/even). */
 function cornersRaw(market: string): StatFamily | null {
   const sel = fromRaw(market);
@@ -157,6 +161,13 @@ export async function scanCode(code: string): Promise<CodeScan | null> {
           if (priced) {
             const { probability, refund } = priced;
             return { ...base, probability, ...(refund > 0.005 ? { refund } : {}), verdict: verdictFor(probability), source: "model" };
+          }
+          // 1UP, lead by N, first goal...: settled on when goals come, which only our estimate reads.
+          const sel = g.market && leadModelOn() ? fromRaw(g.market) : null;
+          const estimate = sel ? leadChance(sel, halfRatesFor(p)) : null;
+          if (estimate !== null) {
+            const probability = round4(estimate);
+            return { ...base, probability, verdict: verdictFor(probability, "estimate"), source: "estimate" };
           }
           reason = family ? `${STAT_REASON[family]} SportyBet no longer lists the pick either.` : "SportyBet no longer lists this pick.";
         }
