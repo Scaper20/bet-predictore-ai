@@ -76,7 +76,7 @@ function goalWins(x: number, y: number): Uint8Array {
   return Uint8Array.from(w.map(Number));
 }
 
-const STAT_PREFIX: Record<StatKind, string> = { corners: "corners", shots: "shots", shotsOnTarget: "sot", cards: "cards" };
+const STAT_PREFIX: Record<StatKind, string> = { corners: "corners", shots: "shots", shotsOnTarget: "sot", cards: "cards", bookings: "bookings" };
 const statKeyCache = new Map<StatKind, string[]>();
 
 export function statKeys(kind: StatKind): string[] {

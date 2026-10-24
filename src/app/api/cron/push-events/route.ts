@@ -4,6 +4,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { strongKickoffPayload, strongResultPayload, type PushPayload, type StrongPickEvent } from "@/lib/push/messages";
 import { pushConfigured, sendPushBatch, summarise } from "@/lib/push/send";
 import { loadSubscriptions, recordOutcome } from "@/lib/push/store";
+import { dispatchCommunity, dispatchHubCodes, dispatchSlips } from "@/lib/push/events";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -14,16 +15,20 @@ const KICKOFF_LEAD_MS = 20 * 60_000;
 const RESULT_WINDOW_MS = 3 * 3_600_000;
 
 /**
- * Match-time notifications for Strong picks: one shortly before kickoff and
- * one when it is graded, won or lost.
+ * Everything that should reach a phone within a minute or two of happening:
+ * Strong pick alerts (one shortly before kickoff, one when graded), today's
+ * Code Hub codes, community codes, and the results of tracked slips.
  *
- * Called every five minutes by pg_cron (0042_push_events.sql), which only
- * makes the call when a Strong pick is about to start or was just graded —
- * Vercel's Hobby crons run once a day, too seldom for this. Each event is
- * sent once: push_events_sent holds its key.
+ * Called every minute by pg_cron (0074_push_events_every_minute.sql), which
+ * only makes the call when its checks find something waiting: Vercel's Hobby
+ * crons run once a day, far too seldom for this. Each event is sent once:
+ * push_events_sent holds its key, and a slip is claimed by an update that
+ * only one run can win. The Code Hub codes and community posts are also sent
+ * the moment they are made (code-hub-feed.ts, code-hub-posts.ts); this run
+ * catches whatever that missed.
  *
- * A Pro feature: only devices signed in to a paid account hear these
- * (lib/pricing.ts). The morning push stays for everyone.
+ * The Strong pick alerts are a Pro feature: only devices signed in to a paid
+ * account hear them (lib/pricing.ts). The rest are for everyone.
  */
 export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET;
@@ -33,6 +38,18 @@ export async function GET(request: Request) {
   }
   if (!pushConfigured) return NextResponse.json({ skipped: "VAPID keys are not configured" });
 
+  // Independent of each other: one failing never holds back the rest.
+  const [strong, codes, community, slips] = await Promise.allSettled([
+    strongPickAlerts(),
+    dispatchHubCodes(),
+    dispatchCommunity(),
+    dispatchSlips(),
+  ]);
+  const out = (r: PromiseSettledResult<unknown>) => (r.status === "fulfilled" ? r.value : { error: String(r.reason).slice(0, 200) });
+  return NextResponse.json({ strong: out(strong), codes: out(codes), community: out(community), slips: out(slips) });
+}
+
+async function strongPickAlerts() {
   const admin = supabaseAdmin();
   const now = Date.now();
   const cols = "match_id, league_code, home_name, away_name, label, probability, kickoff, result, actual_home_goals, actual_away_goals, settled_at";
@@ -71,7 +88,7 @@ export async function GET(request: Request) {
     const payload = strongResultPayload(e);
     if (payload) events.push({ key: `result:${r.match_id}`, topic: "results", event: e, payload });
   }
-  if (events.length === 0) return NextResponse.json({ events: 0 });
+  if (events.length === 0) return { events: 0 };
 
   // Claim the keys first: a second run five minutes later, or an overlapping
   // one, skips anything already claimed instead of sending it twice.
@@ -81,7 +98,7 @@ export async function GET(request: Request) {
     .select("key");
   const fresh = new Set((claimed ?? []).map((r) => r.key as string));
   const todo = events.filter((e) => fresh.has(e.key));
-  if (todo.length === 0) return NextResponse.json({ events: events.length, sent: 0, note: "already sent" });
+  if (todo.length === 0) return { events: events.length, sent: 0, note: "already sent" };
 
   const [devices, paidUsers] = await Promise.all([loadSubscriptions(admin), paidUserIds(admin)]);
 
@@ -96,5 +113,5 @@ export async function GET(request: Request) {
   const result = await sendPushBatch(items, { ttl: 3600, urgency: "high" });
   await recordOutcome(admin, result);
 
-  return NextResponse.json({ events: todo.length, devices: devices.length, ...summarise(result) });
+  return { events: todo.length, devices: devices.length, ...summarise(result) };
 }

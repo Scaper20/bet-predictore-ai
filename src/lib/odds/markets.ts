@@ -8,9 +8,12 @@
  * to say what a price is worth.
  *
  * SportyBet uses Betradar's market catalogue, so the ids below are the
- * standard ones (1 = 1X2, 10 = double chance, 16 = Asian handicap, 18 =
- * totals, 29 = both teams to score, 45 = correct score, and the two-part
- * combos 35, 36, 37, 546 and 547) with Betradar outcome ids underneath.
+ * standard ones (1 = 1X2, 10 = double chance, 11 = draw no bet, 14 = three-way
+ * handicap, 16 = Asian handicap, 18 = totals, 19/20 = team goals, 29 = both
+ * teams to score, 45 = correct score, the two-part combos 35, 36, 37, 546 and
+ * 547, and the corners, shots, shots-on-target and bookings markets in
+ * STAT_CATALOGUE) with Betradar outcome ids underneath. Every id and outcome
+ * below was read off a live SportyBet event (Chelsea v Tottenham, 24 Oct 2026).
  *
  * Everything keys on the NUMERIC id, never the display name, and that is
  * load-bearing rather than stylistic. A single fixture carries 821 markets,
@@ -45,11 +48,61 @@ const TOTALS: Record<string, string> = { over: "12", under: "13" };
 /**
  * Asian handicap: Betradar market 16, outcome 1714 for the home side and 1715
  * for the away side, the line always written from the home side
- * ("hcp=-0.5" is home -0.5, away +0.5). Taken from Betradar's catalogue, which
- * SportyBet uses; not yet seen on a stored SportyBet board, so the first live
- * booking with a handicap leg should be checked on SportyBet.
+ * ("hcp=-0.5" is home -0.5, away +0.5). SportyBet lists every line from about
+ * -5 to +5 a game warrants, half and whole ("hcp=-2", settles void on the line).
  */
 const HANDICAP: Record<string, string> = { home: "1714", away: "1715" };
+
+/** Draw no bet (11), ours "dnb:home|away": settles as a 0 handicap (bookable.ts pairs the two). */
+const DRAW_NO_BET: Record<string, string> = { home: "4", away: "5" };
+
+/**
+ * Three-way handicap (14), "Handicap 0:2" on SportyBet: goals given to each
+ * side before the match, home first. "hcp=0:2" is home -2, "hcp=1:0" home +1.
+ * Ours is "eh:home|draw|away:<home line>" ("eh:draw:-2" is the home side
+ * winning by exactly two).
+ */
+const EURO_HANDICAP: Record<string, string> = { home: "1711", draw: "1712", away: "1713" };
+
+/** Team goals over/under: market 19 for the home side, 20 for the away side. */
+const TEAM_GOALS: Record<string, string> = { home: "19", away: "20" };
+
+/**
+ * Count markets, keyed by our prefix ("corners:over:9.5", "sot:home:under:4.5",
+ * "shots:most:level", "corners:hcp:away:+1.5"). Team totals use outcomes 30/31
+ * on corners and bookings but the plain 12/13 on shots, as SportyBet sends
+ * them. Shots and shots on target have no handicap market on SportyBet.
+ * Bookings count a yellow as 1 and a red as 2 (SportyBet's rule).
+ */
+interface StatCatalogue {
+  total: string;
+  team: { home: string; away: string; over: string; under: string };
+  result: string;
+  handicap?: { marketId: string; home: string; away: string };
+}
+export const STAT_CATALOGUE: Record<"corners" | "shots" | "sot" | "bookings", StatCatalogue> = {
+  corners: { total: "166", team: { home: "900300", away: "900301", over: "30", under: "31" }, result: "162", handicap: { marketId: "165", home: "1714", away: "1715" } },
+  shots: { total: "900394", team: { home: "900552", away: "900553", over: "12", under: "13" }, result: "900320" },
+  sot: { total: "900393", team: { home: "900546", away: "900547", over: "12", under: "13" }, result: "900318" },
+  bookings: { total: "139", team: { home: "900304", away: "900305", over: "30", under: "31" }, result: "136", handicap: { marketId: "900312", home: "1", away: "3" } },
+};
+type StatPrefix = keyof typeof STAT_CATALOGUE;
+const isStatPrefix = (x: string): x is StatPrefix => x in STAT_CATALOGUE;
+
+/** Who had more, three ways: the stat 1X2 markets. */
+const STAT_RESULT: Record<string, string> = { home: "1", level: "2", away: "3" };
+
+/** Every market id the catalogue reads, for the board fetch (sportybet-direct.ts). */
+export const CATALOGUE_MARKET_IDS: readonly string[] = [
+  "1", "10", "11", "14", "16", "18", "19", "20", "29", "35", "36", "37", "546", "547",
+  ...Object.values(STAT_CATALOGUE).flatMap((c) => [c.total, c.team.home, c.team.away, c.result, ...(c.handicap ? [c.handicap.marketId] : [])]),
+];
+
+const LINE = /^[+-]?\d+(\.\d+)?$/;
+/** A line as SportyBet writes it: no plus sign, no "-0". */
+const plain = (x: number) => String(x === 0 ? 0 : x);
+/** A stat handicap line as our selections write it ("+1.5", "-0.5"). */
+const signed = (x: number) => (x > 0 ? `+${x}` : plain(x));
 
 /**
  * The SportyBet address for a KiqStat market id, or null when the market has no
@@ -99,6 +152,48 @@ export function toSportyBet(market: string): SportyBetSelection | null {
     return { marketId: "16", outcomeId, specifier: `hcp=${homeLine === 0 ? 0 : homeLine}` };
   }
 
+  if (family === "dnb") {
+    const outcomeId = DRAW_NO_BET[rest[0]];
+    return outcomeId && rest.length === 1 ? { marketId: "11", outcomeId } : null;
+  }
+
+  if (family === "eh") {
+    const outcomeId = EURO_HANDICAP[rest[0]];
+    if (!outcomeId || rest[1] === undefined || !/^[+-]?\d+$/.test(rest[1])) return null;
+    const home = Number(rest[1]);
+    if (home === 0) return null;
+    return { marketId: "14", outcomeId, specifier: home < 0 ? `hcp=0:${-home}` : `hcp=${home}:0` };
+  }
+
+  if (family === "tg") {
+    const marketId = TEAM_GOALS[rest[0]];
+    const outcomeId = TOTALS[rest[1]];
+    if (!marketId || !outcomeId || !rest[2] || !/^\d+(\.\d+)?$/.test(rest[2])) return null;
+    return { marketId, outcomeId, specifier: `total=${rest[2]}` };
+  }
+
+  if (isStatPrefix(family)) return toStatSelection(STAT_CATALOGUE[family], rest);
+
+  return null;
+}
+
+/** A corners / shots / shots-on-target / bookings pick as a SportyBet selection. */
+function toStatSelection(c: StatCatalogue, rest: string[]): SportyBetSelection | null {
+  const [a, b, d] = rest;
+  if ((a === "over" || a === "under") && b && /^\d+(\.\d+)?$/.test(b)) {
+    return { marketId: c.total, outcomeId: TOTALS[a], specifier: `total=${b}` };
+  }
+  if ((a === "home" || a === "away") && (b === "over" || b === "under") && d && /^\d+(\.\d+)?$/.test(d)) {
+    return { marketId: c.team[a], outcomeId: c.team[b], specifier: `total=${d}` };
+  }
+  if (a === "most") {
+    const outcomeId = STAT_RESULT[b];
+    return outcomeId ? { marketId: c.result, outcomeId } : null;
+  }
+  if (a === "hcp" && c.handicap && (b === "home" || b === "away") && d && LINE.test(d)) {
+    const own = Number(d);
+    return { marketId: c.handicap.marketId, outcomeId: c.handicap[b], specifier: `hcp=${plain(b === "home" ? own : -own)}` };
+  }
   return null;
 }
 
@@ -234,6 +329,15 @@ export function offeredOn(
   return Boolean(entry?.outcomes?.some((o) => String(o.id) === selection.outcomeId));
 }
 
+/** SportyBet's price for a selection on an event's listed markets, if quoted. */
+export function priceOn(
+  selection: SportyBetSelection,
+  markets: readonly { market_id?: string | number; specifier?: string | null; outcomes?: { id?: string | number; odds?: unknown }[] }[],
+): number | undefined {
+  const entry = markets.find((m) => matchesSelection(m, selection));
+  return readOdds(entry?.outcomes?.find((o) => String(o.id) === selection.outcomeId)?.odds);
+}
+
 /** True when a market has a SportyBet equivalent worth quoting. */
 export function isQuotable(market: string): boolean {
   return toSportyBet(market) !== null;
@@ -279,6 +383,31 @@ const FROM_DC = invert(DOUBLE_CHANCE);
 const FROM_BTTS = invert(BTTS);
 const FROM_TOTALS = invert(TOTALS);
 const FROM_HANDICAP = invert(HANDICAP);
+const FROM_DNB = invert(DRAW_NO_BET);
+const FROM_EURO = invert(EURO_HANDICAP);
+const FROM_TEAM_GOALS = invert(TEAM_GOALS);
+const FROM_STAT_RESULT = invert(STAT_RESULT);
+
+/** Our id for a corners / shots / shots-on-target / bookings selection, or null. */
+function fromStatSelection(marketId: string, outcomeId: string, specifier: string | undefined): string | null {
+  const total = specifier?.match(/^total=(\d+(?:\.\d+)?)$/)?.[1];
+  for (const [prefix, c] of Object.entries(STAT_CATALOGUE)) {
+    if (marketId === c.total) return total && FROM_TOTALS[outcomeId] ? `${prefix}:${FROM_TOTALS[outcomeId]}:${total}` : null;
+    if (marketId === c.team.home || marketId === c.team.away) {
+      const dir = outcomeId === c.team.over ? "over" : outcomeId === c.team.under ? "under" : null;
+      return total && dir ? `${prefix}:${marketId === c.team.home ? "home" : "away"}:${dir}:${total}` : null;
+    }
+    if (marketId === c.result) return FROM_STAT_RESULT[outcomeId] ? `${prefix}:most:${FROM_STAT_RESULT[outcomeId]}` : null;
+    if (c.handicap && marketId === c.handicap.marketId) {
+      const raw = specifier?.match(/^hcp=([+-]?\d+(?:\.\d+)?)$/)?.[1];
+      const side = outcomeId === c.handicap.home ? "home" : outcomeId === c.handicap.away ? "away" : null;
+      if (raw === undefined || !side) return null;
+      const home = Number(raw);
+      return `${prefix}:hcp:${side}:${signed(side === "home" ? home : -home)}`;
+    }
+  }
+  return null;
+}
 
 /** One part of a combo outcome key ("home", "under", "yes", ...) back to our market id. */
 function comboPart(family: string, value: string, line: string | undefined): string | null {
@@ -291,7 +420,7 @@ function comboPart(family: string, value: string, line: string | undefined): str
 
 /**
  * Our market id for a SportyBet selection, or null for anything we do not
- * map (correct score, corners, players, ...). The exact reverse of
+ * map (correct score, players, ranges, ...). The exact reverse of
  * toSportyBet, ready-made combo markets included, so a code read back from
  * SportyBet (code-scan.ts) speaks the same language as our picks.
  */
@@ -312,6 +441,20 @@ export function fromSportyBet(sel: SportyBetSelection): string | null {
     const line = side === "home" ? home : -home;
     return `ah:${side}:${line === 0 ? 0 : line}`;
   }
+  if (marketId === "11") return FROM_DNB[outcomeId] ? `dnb:${FROM_DNB[outcomeId]}` : null;
+  if (marketId === "14") {
+    const [, a, b] = specifier?.match(/^hcp=(\d+):(\d+)$/) ?? [];
+    const side = FROM_EURO[outcomeId];
+    if (a === undefined || !side) return null;
+    const home = Number(a) - Number(b);
+    return home === 0 ? null : `eh:${side}:${home}`;
+  }
+  if (FROM_TEAM_GOALS[marketId]) {
+    const line = specifier?.match(/^total=(\d+(?:\.\d+)?)$/)?.[1];
+    return line && FROM_TOTALS[outcomeId] ? `tg:${FROM_TEAM_GOALS[marketId]}:${FROM_TOTALS[outcomeId]}:${line}` : null;
+  }
+  const stat = fromStatSelection(marketId, outcomeId, specifier);
+  if (stat) return stat;
   for (const [families, combo] of Object.entries(COMBO_MARKETS)) {
     if (combo.marketId !== marketId) continue;
     const key = Object.entries(combo.outcomes).find(([, id]) => id === outcomeId)?.[0];

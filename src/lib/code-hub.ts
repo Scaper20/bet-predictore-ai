@@ -13,6 +13,7 @@
 
 import { forge, toLeg, type ForgeLeg, type ForgeMarket, type ForgeRisk, type ForgeSettings, type PoolEntry } from "@/lib/forge";
 import { isQuotable } from "@/lib/odds/markets";
+import { twinsOf } from "@/lib/odds/bookable";
 import { isPausedPick } from "@/lib/model/paused";
 import { COMBO_PREFIX, gradeMarket } from "@/lib/slip-tracker";
 
@@ -161,6 +162,9 @@ export const HUB_FORGE_MARKETS: ForgeMarket[] = ["result", "double_chance", "goa
 export function hubMarketAllowed(market: string): boolean {
   const [family, side, line] = market.split(":");
   if (family === "1x2" || family === "dc") return true;
+  // The three-way handicap SportyBet lists in place of a big Asian line wins
+  // on exactly the same results (odds/bookable.ts), so it follows that line.
+  if (family === "eh") return twinsOf(market).some((t) => t.market.startsWith("ah:") && hubMarketAllowed(t.market));
   // Only +-0.5 while the goal-or-more lines are paused (model/paused.ts).
   if (family === "ah") return Math.abs((Number(line) * 2) % 2) === 1 && !isPausedPick(market);
   return family === "ou" && side === "over" && line === "1.5";

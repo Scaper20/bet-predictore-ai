@@ -20,6 +20,8 @@ export interface CodeGame {
   tournamentId: string | null;
   /** SportyBet's label, for showing a pick we can't read. */
   desc: string | null;
+  /** SportyBet's market name ("Home Team Total Corners"), so an unread pick says what it is. */
+  marketDesc?: string | null;
   /** SportyBet's current price; null for a Bet Builder, which SportyBet prices as a whole. */
   price: number | null;
   builder: boolean;
@@ -44,6 +46,7 @@ export function gamesFromTicket(legs: readonly TicketLeg[]): CodeGame[] {
       kickoff: leg.kickoff,
       tournamentId: leg.tournamentId,
       desc: leg.desc,
+      marketDesc: leg.marketDesc,
       price: leg.odds,
       builder: false,
     });
@@ -79,8 +82,10 @@ export function verdictFor(probability: number | null): Verdict {
 export interface ScoredGame extends CodeGame {
   matchId: string | null;
   leagueCode: string | null;
-  /** The model's chance of this pick (or same-game combo) landing. */
+  /** The model's chance of this pick (or same-game combo) not losing: a refund keeps a code alive. */
   probability: number | null;
+  /** Of that, the chance of a refund or half settlement on a whole or quarter line. */
+  refund?: number;
   label: string;
   verdict: Verdict;
   /** Why a game could not be read, in plain words. */

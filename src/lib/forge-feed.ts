@@ -7,10 +7,18 @@ import { priceSelections } from "@/lib/odds";
 import { windowFor } from "@/lib/time-windows";
 import { proLeagueLocked, type Viewer } from "@/lib/access";
 import { COMBO_PREFIX } from "@/lib/slip-tracker";
-import { statChances } from "@/lib/stat-markets-service";
+import { statChances, statGridsFor } from "@/lib/stat-markets-service";
+import { keepOnBoard } from "@/lib/board-candidates";
+import { LEG_MARKET_GAP } from "@/lib/market-check";
+import { priceLeg } from "@/lib/leg-pricing";
+import type { BoardMarket } from "@/lib/odds/bookable";
+import { priceOn, toSportyBet } from "@/lib/odds/markets";
+import { listingsFor } from "@/lib/odds/sportybet";
 import {
   candidatesFor,
   forgeBest,
+  gridFor,
+  legFloorFor,
   type ForgeLeg,
   type ForgeRequestState,
   type ForgeResult,
@@ -28,6 +36,20 @@ export async function predictionsFor(when: ForgeWhen): Promise<Prediction[]> {
       return m.status === "scheduled" && Boolean(m.league.code) && t >= from && t < to;
     });
     return predictBatch(inWindow, 80);
+  });
+}
+
+/**
+ * What SportyBet lists on each fixture in a window, by match id, read off the
+ * stored boards once and shared for five minutes like the pool. A fixture
+ * missing here isn't on SportyBet's board (or the board has no markets).
+ */
+async function forgeListings(when: ForgeWhen, predictions: readonly Prediction[]): Promise<Map<string, BoardMarket[]>> {
+  return cached(`forge:boards:${when}`, 5 * 60_000, async () => {
+    const out = new Map<string, BoardMarket[]>();
+    const events = await listingsFor(predictions.map((p) => p.match), 8_000);
+    for (const [id, event] of events) if (event.markets.length) out.set(id, event.markets);
+    return out;
   });
 }
 
@@ -58,16 +80,36 @@ export async function buildForgeSlip(
 
   // Corners and shots chances only when asked for: one count-model fit per competition, shared.
   const wantsStats = settings.markets.includes("corners") || settings.markets.includes("shots");
-  const stats = wantsStats ? await Promise.all(predictions.map((p) => statChances(p.match).catch(() => undefined))) : [];
+  const [stats, grids, listings] = await Promise.all([
+    wantsStats ? Promise.all(predictions.map((p) => statChances(p.match).catch(() => undefined))) : [],
+    wantsStats ? Promise.all(predictions.map((p) => statGridsFor(p.match).catch(() => ({})))) : [],
+    forgeListings(settings.when, await predictionsFor(settings.when)).catch(() => new Map<string, BoardMarket[]>()),
+  ]);
 
-  const pool = predictions.map((prediction, i) => ({
-    prediction,
-    candidates: candidatesFor(
+  // Board first: on a game SportyBet lists, a leg it doesn't carry becomes its
+  // same-chance twin or the nearest listed line that still clears the build's
+  // floor (board-candidates.ts), so a built combo can be booked as shown.
+  const legFloor = legFloorFor(settings.targetOdds);
+  const pool = predictions.map((prediction, i) => {
+    const candidates = candidatesFor(
       prediction,
       { markets: settings.markets, picksPerGame: settings.picksPerGame, allowHandicap: opts.allowHandicap },
       stats[i],
-    ),
-  }));
+    );
+    const markets = listings.get(prediction.match.id);
+    if (!markets) return { prediction, candidates };
+    const ctx = { goals: gridFor(prediction), stats: grids[i] ?? {} };
+    return {
+      prediction,
+      candidates: keepOnBoard(candidates, markets, {
+        home: prediction.match.home.name,
+        away: prediction.match.away.name,
+        price: (m) => priceLeg(m, ctx)?.survive ?? null,
+        floor: (c) => Math.max(legFloor, c.probability - 0.05),
+        marketGap: LEG_MARKET_GAP,
+      }),
+    };
+  });
 
   // Best first: the strongest reads on the card until the price is reached (lib/forge.ts).
   const result = forgeBest(pool, settings, state);
@@ -84,6 +126,11 @@ export async function buildForgeSlip(
   });
   const price = async (leg: ForgeLeg): Promise<ForgeLeg> => {
     if (leg.market.startsWith(COMBO_PREFIX)) return leg;
+    // Listed: the price is on the board already read, swapped lines included.
+    const sel = toSportyBet(leg.market);
+    const listed = sel && listings.get(leg.matchId);
+    const onBoard = listed ? priceOn(sel, listed) : undefined;
+    if (onBoard !== undefined) return { ...leg, price: onBoard };
     const p = byId.get(leg.matchId);
     const pick = p?.picks.find((pk) => pk.market === leg.market);
     if (!p || !pick) return leg;

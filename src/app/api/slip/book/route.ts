@@ -6,6 +6,8 @@ import { ALLOWANCE_WINDOW_MS, allowanceState, weeklyCodeAllowance } from "@/lib/
 import { bookingAvailable, bookingCodeFor, peekBookingCode } from "@/lib/odds/booking-code";
 import { KICKOFF_MARGIN_MS, MAX_LEGS, type BookingLeg, type BookingProblem } from "@/lib/odds/booking";
 import { offeredOn, toSportyBet, toSportyBetBuilder } from "@/lib/odds/markets";
+import { bookableOn } from "@/lib/odds/bookable";
+import { friendlyLabel } from "@/lib/forge";
 import { findOnBoard } from "@/lib/odds/sportybet";
 import { shareLink } from "@/lib/odds/sportybet-api";
 import { codesGivenTo, logBooking, sportyBetTournament, type BookingLogEntry } from "@/lib/odds/sportybet-links";
@@ -130,6 +132,8 @@ export async function POST(request: Request) {
     );
 
   const problems: { matchId: string; problem: LegProblem }[] = [];
+  /** Picks booked as a same-chance twin because SportyBet lists the line that way on the game. */
+  const swapped: { matchId: string; from: string; market: string; label: string }[] = [];
   const legs: BookingLeg[] = [];
   const matchIds: string[] = [];
 
@@ -171,14 +175,26 @@ export async function POST(request: Request) {
         problems.push({ matchId, problem: "not-listed" });
         return;
       }
-      // Lines differ by game: refuse a selection SportyBet isn't offering on
-      // this one now, rather than have the whole code refused. A board with
-      // no markets at all (an old parse.bot copy) can't say, so it is let through.
-      if (event.markets.length > 0 && !wanted.every((w) => offeredOn(w, event.markets))) {
-        problems.push({ matchId, problem: "not-offered" });
-        return;
+      // Lines differ by game: a pick SportyBet lists another way (Home +0.5 as
+      // Home or Draw) goes on as that twin, which wins on exactly the same
+      // results; one it isn't offering at all is refused here, rather than have
+      // the whole code refused. Never a different line: the pick stays the
+      // user's. A board with no markets at all (an old parse.bot copy) can't
+      // say, so it is let through.
+      let booked = market;
+      if (event.markets.length > 0) {
+        const b = selection ? bookableOn(market, event.markets) : null;
+        const ok = b ? b.kind === "exact" || b.kind === "twin" : wanted.every((w) => offeredOn(w, event.markets));
+        if (!ok) {
+          problems.push({ matchId, problem: "not-offered" });
+          return;
+        }
+        if (b?.kind === "twin") {
+          booked = b.market;
+          swapped.push({ matchId, from: market, market: b.market, label: friendlyLabel(b.market, homeName, awayName, b.market) });
+        }
       }
-      legs[index] = { market, eventId: event.eventId, kickoff: event.kickoff, markets: event.markets };
+      legs[index] = { market: booked, eventId: event.eventId, kickoff: event.kickoff, markets: event.markets };
       matchIds[index] = matchId;
     }),
   );
@@ -231,6 +247,7 @@ export async function POST(request: Request) {
         legs: booked.selectionsCount,
         /** Codes left in the member's rolling week; null when unlimited. */
         remaining,
+        swapped,
       },
       { headers: NO_STORE },
     );

@@ -2,6 +2,7 @@ import "server-only";
 
 import { RateGate } from "@/lib/providers/http";
 import { switchOn } from "@/lib/switches";
+import { CATALOGUE_MARKET_IDS } from "./markets";
 import type { BookedCode, BookSelection, BuilderGroup } from "./booking";
 import {
   builderRequest,
@@ -50,11 +51,12 @@ const HEADERS = {
 const TIMEOUT_MS = 8_000;
 
 /**
- * The markets our catalogue maps (markets.ts): 1X2, totals, double chance,
- * BTTS, handicap, and the ready-made same-game combos 35, 36, 37, 546, 547,
- * so a combo has a price and its line can be checked before booking.
+ * Every market our catalogue maps (markets.ts): the goals markets, the
+ * ready-made same-game combos, and corners, shots, shots on target and
+ * bookings, so each pick's line can be checked and priced before booking.
+ * Measured on the Premier League: about 70 KB a game with all of them.
  */
-const MARKET_IDS = "1,18,10,29,16,35,36,37,546,547";
+const MARKET_IDS = CATALOGUE_MARKET_IDS.join(",");
 
 /**
  * Filtered by tournament, SportyBet pages ten events at a time whatever

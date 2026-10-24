@@ -91,6 +91,27 @@ export async function refreshEspnShots(now = new Date(), days = 7): Promise<{ ch
 }
 
 /** football-data.co.uk's season label, e.g. "2627"; their season flips in August. */
+/**
+ * The past seasons a run should reload because the archive is missing a
+ * column added since they were stored: red cards on their own (0072), which
+ * the bookings model needs. Empty once (nearly) every carded row has its
+ * reds, so this costs one count query a night after the first backfill.
+ */
+export async function seasonsMissingReds(now = new Date()): Promise<string[]> {
+  const admin = supabaseAdmin();
+  const since = new Date(now.getTime() - 1000 * 86_400_000).toISOString();
+  const { count, error } = await admin
+    .from("historical_results")
+    .select("id", { count: "exact", head: true })
+    .not("home_cards", "is", null)
+    .is("home_reds", null)
+    .gte("kickoff", since);
+  // A few rows another source stored under other names never get reds; don't reload nightly for them.
+  if (error || !count || count < 200) return [];
+  const start = Number(currentSeasonCode(now).slice(0, 2));
+  return [1, 2, 3].map((back) => `${String(start - back).padStart(2, "0")}${String(start - back + 1).padStart(2, "0")}`);
+}
+
 export function currentSeasonCode(now: Date): string {
   const start = now.getUTCMonth() >= 7 ? now.getUTCFullYear() : now.getUTCFullYear() - 1;
   return `${String(start).slice(2)}${String(start + 1).slice(2)}`;

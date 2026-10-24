@@ -31,6 +31,7 @@ import { matchJsonLd } from "@/lib/seo/match-jsonld";
 import { fixtureStatMarkets, teamStatAverages, type FixtureStatMarkets } from "@/lib/stat-markets-service";
 import { espnCountsFor } from "@/lib/stat-results";
 import { GoalExtrasPanel, StatPanel } from "@/components/match/stat-panels";
+import { SportyBetLinesPanel, SportyBetLinesSkeleton } from "@/components/match/sportybet-lines";
 import { matchDetail } from "@/lib/service";
 import { getViewer } from "@/lib/viewer";
 import { isProLeague } from "@/lib/pro-leagues";
@@ -298,12 +299,17 @@ function Overview({
             {prediction.sufficiency.level === "limited" && (
               <p className="mt-2 text-xs text-amber">Thin data · treat as a guide</p>
             )}
+            {prediction.marketCheck && <MarketCheckNote check={prediction.marketCheck} />}
             {proLeagueOpened && <ProLeagueAfterKickoff />}
           </section>
         ) : (
           <section className="card p-5">
             <p className="text-sm font-semibold text-amber">No pick for this game</p>
-            <p className="mt-1 text-xs text-ink-dim">Not enough history to publish one yet.</p>
+            {prediction.marketCheck && prediction.sufficiency.publishable ? (
+              <MarketCheckNote check={prediction.marketCheck} />
+            ) : (
+              <p className="mt-1 text-xs text-ink-dim">Not enough history to publish one yet.</p>
+            )}
           </section>
         )}
 
@@ -344,6 +350,16 @@ function Overview({
         </p>
       </aside>
     </div>
+  );
+}
+
+/** Why the pick isn't the model's own first choice: SportyBet rated that one well below us. */
+function MarketCheckNote({ check }: { check: NonNullable<ViewedPrediction["marketCheck"]> }) {
+  return (
+    <p className="mt-2 text-xs leading-relaxed text-ink-dim">
+      Our first lean was {check.setAside.label} at {percent(check.setAside.probability)}, but SportyBet rates it{" "}
+      {percent(check.marketChance)}. Picks the market rates that much lower have landed far less often, so we set it aside.
+    </p>
   );
 }
 
@@ -417,6 +433,12 @@ function Markets({
             return m ? <StatPanel key={kind} kind={kind} markets={m} match={prediction.match} referee={extra.referee} /> : null;
           })}
         {statsLocked && <ProStatsLock />}
+        {/* Pro: every extra line SportyBet lists, priced by the model (handicaps, team goals, corners, shots, bookings). */}
+        {!statsLocked && (
+          <Suspense fallback={<SportyBetLinesSkeleton />}>
+            <SportyBetLinesPanel prediction={prediction} />
+          </Suspense>
+        )}
       </DepthGate>
       {/* Pro: half-time markets and Asian handicap, fetched after the plan check. */}
       <ProMarkets />

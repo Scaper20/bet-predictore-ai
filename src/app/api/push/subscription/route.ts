@@ -46,11 +46,22 @@ export async function POST(request: Request) {
       p_results: topics.results ?? null,
       p_value_alerts: topics.valueAlerts ?? null,
       p_user_agent: request.headers.get("user-agent"),
+      p_codes: topics.codes ?? null,
+      p_community: topics.community ?? null,
+      p_slips: topics.slips ?? null,
     })
-    .single<{ picks: boolean; results: boolean; value_alerts: boolean }>();
+    .single<{ picks: boolean; results: boolean; value_alerts: boolean; codes?: boolean; community?: boolean; slips?: boolean }>();
   if (error || !data) return NextResponse.json({ error: "Could not save" }, { status: 500 });
 
-  const saved: PushTopics = { picks: data.picks, results: data.results, valueAlerts: data.value_alerts };
+  // Before 0073 the function returns the first three only.
+  const saved: PushTopics = {
+    picks: data.picks,
+    results: data.results,
+    valueAlerts: data.value_alerts,
+    codes: data.codes ?? true,
+    community: data.community ?? true,
+    slips: data.slips ?? true,
+  };
   return NextResponse.json({ topics: saved });
 }
 

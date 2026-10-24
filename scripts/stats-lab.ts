@@ -37,6 +37,8 @@ function arg(name: string): string | undefined {
 const EXTRACT: Record<StatKind, (r: Row) => [number, number]> = {
   corners: (r) => r.stats!.corners,
   cards: (r) => [r.stats!.yellows[0] + r.stats!.reds[0], r.stats!.yellows[1] + r.stats!.reds[1]],
+  // SportyBet's count: a yellow is 1 booking, a red 2.
+  bookings: (r) => [r.stats!.yellows[0] + 2 * r.stats!.reds[0], r.stats!.yellows[1] + 2 * r.stats!.reds[1]],
   shots: (r) => r.stats!.shots,
   shotsOnTarget: (r) => r.stats!.shotsOnTarget,
 };

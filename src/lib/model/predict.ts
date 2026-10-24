@@ -88,6 +88,8 @@ export interface Prediction {
   topPick: Pick | null;
   /** True when topPick came from a sweet spot (sweet-spots.ts) rather than the usual ranking. */
   sweetSpot?: boolean;
+  /** The model's own top pick, set aside because SportyBet rated it well below the model (market-check.ts). */
+  marketCheck?: { setAside: Pick; marketChance: number };
   /** What in the data the model is reacting to; see insights.ts. */
   insights: Insight[];
   /** Whether there is enough real history to stand behind this prediction. */
@@ -225,6 +227,8 @@ export interface ModelOptions {
   resultCalibration?: ResultCalibration | null;
   /** Scales both expected goal rates after the totals shrink (1 = off). Lab knob. */
   goalScale?: number;
+  /** Widens the gap between the sides (log of home/away rate times this), total kept (1 = off). Lab knob. */
+  strengthStretch?: number;
 }
 
 export function buildPrediction(
@@ -250,8 +254,9 @@ export function buildPrediction(
   const { homeRating, awayRating } = rates;
   const shrunk = calibrateTotals(rates.lambda, rates.mu, fit, options.totalsShrink ?? TOTALS_SHRINK);
   const goalScale = options.goalScale ?? 1;
-  const lambda = shrunk.lambda * goalScale;
-  const mu = shrunk.mu * goalScale;
+  const stretched = stretchStrength(shrunk.lambda, shrunk.mu, options.strengthStretch ?? 1);
+  const lambda = stretched.lambda * goalScale;
+  const mu = stretched.mu * goalScale;
 
   const raw = inflateDraws(scoreMatrix(lambda, mu, fit.rho), options.drawInflation ?? 1);
   const grid = options.resultCalibration ? calibrateResult(raw, options.resultCalibration) : raw;
@@ -344,6 +349,14 @@ function calibrateTotals(lambda: number, mu: number, fit: LeagueFit, shrink: num
   const target = mean + shrink * (total - mean);
   const scale = target / total;
   return { lambda: lambda * scale, mu: mu * scale };
+}
+
+/** The same total goals, split with the log of the home/away ratio multiplied by `k`. */
+function stretchStrength(lambda: number, mu: number, k: number): { lambda: number; mu: number } {
+  if (k === 1 || !(lambda > 0) || !(mu > 0)) return { lambda, mu };
+  const total = lambda + mu;
+  const share = 1 / (1 + Math.exp(-k * Math.log(lambda / mu)));
+  return { lambda: total * share, mu: total * (1 - share) };
 }
 
 /** Multiplies the drawn scorelines by `factor` and renormalises the grid. */

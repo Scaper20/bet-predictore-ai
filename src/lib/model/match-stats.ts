@@ -26,7 +26,7 @@
  * Pure: the walk-forward lab (scripts/stats-lab.ts) and the site share it.
  */
 
-export type StatKind = "corners" | "cards" | "shots" | "shotsOnTarget";
+export type StatKind = "corners" | "cards" | "bookings" | "shots" | "shotsOnTarget";
 
 export interface StatSample {
   date: number;
@@ -60,6 +60,8 @@ export interface StatFitOptions {
 export const STAT_OPTIONS: Record<StatKind, StatFitOptions> = {
   corners: { halfLifeDays: 180, prior: 8, refereePrior: 0, iterations: 20, totalShrink: 0.5 },
   cards: { halfLifeDays: 270, prior: 6, refereePrior: 20, iterations: 20, totalShrink: 0.6 },
+  // SportyBet's count (yellow 1, red 2): the cards fit's settings, on cards + reds.
+  bookings: { halfLifeDays: 270, prior: 6, refereePrior: 20, iterations: 20, totalShrink: 0.6 },
   shots: { halfLifeDays: 270, prior: 6, refereePrior: 0, iterations: 20, totalShrink: 0.6 },
   shotsOnTarget: { halfLifeDays: 270, prior: 8, refereePrior: 0, iterations: 20, totalShrink: 0.6 },
 };
@@ -313,6 +315,7 @@ export interface StatLines {
 export const STAT_LINES: Record<StatKind, StatLines> = {
   corners: { total: [7.5, 8.5, 9.5, 10.5, 11.5, 12.5], team: [2.5, 3.5, 4.5, 5.5, 6.5], handicap: [-3.5, -2.5, -1.5, -0.5, 0, 0.5, 1.5, 2.5, 3.5], max: 34 },
   cards: { total: [2.5, 3.5, 4.5, 5.5, 6.5], team: [0.5, 1.5, 2.5, 3.5], handicap: [-1.5, -0.5, 0, 0.5, 1.5], max: 18 },
+  bookings: { total: [2.5, 3.5, 4.5, 5.5, 6.5, 7.5], team: [0.5, 1.5, 2.5, 3.5, 4.5], handicap: [-2.5, -1.5, -0.5, 0.5, 1.5, 2.5], max: 24 },
   shots: { total: [19.5, 21.5, 23.5, 25.5, 27.5, 29.5], team: [8.5, 10.5, 12.5, 14.5, 16.5], handicap: [-6.5, -4.5, -2.5, -0.5, 0.5, 2.5, 4.5, 6.5], max: 70 },
   shotsOnTarget: { total: [6.5, 7.5, 8.5, 9.5, 10.5, 11.5], team: [2.5, 3.5, 4.5, 5.5, 6.5], handicap: [-3.5, -2.5, -1.5, -0.5, 0.5, 1.5, 2.5, 3.5], max: 34 },
 };
@@ -366,7 +369,7 @@ export function statMarkets(grid: number[][], lines: StatLines): StatMarkets {
 /* --------------------------------------------------------------- selections */
 
 /** The market prefix a statistic's selections carry in predictions_log ("corners:under:12.5"). */
-export const STAT_MARKET_PREFIX: Record<StatKind, string> = { corners: "corners", cards: "cards", shots: "shots", shotsOnTarget: "sot" };
+export const STAT_MARKET_PREFIX: Record<StatKind, string> = { corners: "corners", cards: "cards", bookings: "bookings", shots: "shots", shotsOnTarget: "sot" };
 
 const signed = (x: number) => (x > 0 ? `+${x}` : String(x));
 

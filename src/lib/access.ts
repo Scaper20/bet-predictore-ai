@@ -141,6 +141,8 @@ function proLeagueView(p: Prediction): ViewedPrediction {
     asianHandicap: [],
     picks: [],
     topPick: p.topPick ? lockPick(p.topPick, p.match.league.code) : null,
+    // The pick set aside names a selection too.
+    marketCheck: undefined,
     locked: { pick: true, markets: true, proLeague: true },
   };
 }
@@ -172,6 +174,7 @@ export function toolView(p: Prediction, viewer: Viewer, now = Date.now()): Viewe
     asianHandicap: [],
     picks: p.picks.filter((x) => isFreeMarket(x.market) || (freePick && x.market === p.topPick?.market)),
     topPick: p.topPick ? (pickOpen ? p.topPick : lockPick(p.topPick, p.match.league.code)) : null,
+    ...(pickOpen ? {} : { marketCheck: undefined }),
     locked: { pick: !pickOpen, markets: true },
   };
 }

@@ -94,6 +94,30 @@ model explains about 1% of the match-to-match variation, and adding shot
 ratings as a second input added about 0.1% more. Which side wins the corners
 is far more predictable than how many there are.
 
+## Bookings, SportyBet's count (added October 2026)
+
+SportyBet settles "bookings" as yellow = 1 and red = 2, and does not count
+the second yellow behind a red. The cards column above counts both one each,
+so bookings got their own fit: a `bookings` statistic of yellows + 2 x reds,
+with reds now stored on `historical_results` (`home_reds`, `away_reds`,
+migration 0072) and back-filled by the nightly archive refresh
+(`seasonsMissingReds`). Walk-forward over 2022-27 (12,296 matches):
+
+| Market | Skill | Calibration error |
+|---|---|---|
+| Total over/under | 1.5-2.1% | 1-2pt |
+| Team total, most, handicap | 1.3-2.0% | 1-2pt |
+
+| Pick rule | Claimed → landed |
+|---|---|
+| Totals at 75%+ and 10pt over base rate | 83.1 → 83.3% |
+| Most bookings at 65%+ | 67.9 → 64.1% |
+
+Honest enough to read a code and price a line (the code reader and the
+match page's "On SportyBet" panel use it), not sharp enough to pick: no
+builder picks bookings, and settlement of tracked slips still leaves them
+out until a live source carries reds on the morning after.
+
 ## Goal markets, held out 2022-27 (12,207 matches)
 
 | Market | Skill | ECE |

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getEntitlement } from "@/lib/entitlements";
 import { viewerForTier } from "@/lib/viewer";
-import { editorGames, scanCode, scanForViewer } from "@/lib/code-scan";
+import { editorContext, editorGames, scanCode, scanForViewer } from "@/lib/code-scan";
 import { saferCode, targetCode } from "@/lib/code-editor";
 
 /**
@@ -51,7 +51,10 @@ export async function POST(request: Request) {
   if (!scan) {
     return NextResponse.json({ error: "SportyBet doesn't recognise that code, or it has expired." }, { status: 404, headers: NO_STORE });
   }
-  const games = editorGames(scan).filter((g) => g.kickoff > Date.now() + 10 * 60_000);
+  // Re-picks only from what SportyBet lists on each game today, so the edited code books as shown.
+  const games = editorGames(scan, await editorContext(scan).catch(() => undefined)).filter(
+    (g) => g.kickoff > Date.now() + 10 * 60_000,
+  );
   const { predictions: _predictions, ...shown } = scan;
   return NextResponse.json(
     {

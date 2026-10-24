@@ -1,4 +1,5 @@
-import { toSportyBet } from "./markets";
+import { matchesSelection, toSportyBet } from "./markets";
+import { twinsOf } from "./bookable";
 import type { RawMarket } from "./sportybet-api";
 
 /**
@@ -69,6 +70,34 @@ export function priceInSnapshot(prices: CompactPrices, market: string): MarketPr
   const overround = all.reduce((s, [odds]) => s + 1 / odds, 0) / (sel.marketId === "10" ? 2 : 1);
   if (!(overround > 0.9 && overround < 1.4)) return null;
   return { odds: mine[0], fairProbability: Math.round((1 / mine[0] / overround) * 10_000) / 10_000 };
+}
+
+/**
+ * SportyBet's fair chance for one of our selections on an event's listed
+ * markets: 1/odds with the margin stripped across that market, read through a
+ * same-bet twin when the selection itself isn't listed (Home -0.5 as Home
+ * win). Null when it isn't listed, a market is missing an outcome, or the
+ * line can refund (a whole or quarter line's price is for a win given no
+ * refund, which a survive chance can't be compared with).
+ */
+export function fairChanceOn(market: string, markets: readonly RawMarket[]): number | null {
+  const line = Number(market.split(":").pop());
+  const lined = /^(ah|ou|tg|corners|shots|sot|bookings):/.test(market) && !market.includes(":most:");
+  if (lined && Number.isFinite(line) && Math.abs((line * 2) % 2) !== 1) return null;
+  for (const m of [market, ...twinsOf(market).map((t) => t.market)]) {
+    const sel = toSportyBet(m);
+    const entry = sel && markets.find((e) => matchesSelection(e, sel));
+    if (!sel || !entry) continue;
+    const odds = (entry.outcomes ?? []).map((o) => ({ id: String(o.id), odds: Number(o.odds) }));
+    const mine = odds.find((o) => o.id === sel.outcomeId);
+    const expected = ["1", "10", "14", "136", "162", "900318", "900320"].includes(sel.marketId) ? 3 : 2;
+    if (!mine || odds.length < expected || odds.some((o) => !(o.odds > 1))) continue;
+    // Double chance outcomes overlap (each result is in two of them), so they sum to about 2.
+    const overround = odds.reduce((s, o) => s + 1 / o.odds, 0) / (sel.marketId === "10" ? 2 : 1);
+    if (!(overround > 0.9 && overround < 1.4)) continue;
+    return 1 / mine.odds / overround;
+  }
+  return null;
 }
 
 export interface Snapshot {

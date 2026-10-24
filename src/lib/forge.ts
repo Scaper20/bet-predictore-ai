@@ -114,14 +114,41 @@ export interface ForgeLeg {
 
 /* ------------------------------------------------------------- labelling */
 
+const STAT_NOUN: Record<string, string> = { corners: "corners", shots: "shots", sot: "shots on target", bookings: "bookings" };
+
 /** "Arsenal to win" rather than "Home Win": the slip should read like a betslip. */
 export function friendlyLabel(market: string, home: string, away: string, fallback: string): string {
+  const team = (side: string) => (side === "home" ? home : away);
+  const signedLine = (x: number) => `${x > 0 ? "+" : ""}${x}`;
   const ou = market.match(/^ou:(over|under):(\d+(?:\.\d+)?)$/);
   if (ou) return `${ou[1] === "over" ? "Over" : "Under"} ${ou[2]} goals`;
   const ah = market.match(/^ah:(home|away):(-?\d+(?:\.\d+)?)$/);
   if (ah) {
     const line = Number(ah[2]);
-    return `${ah[1] === "home" ? home : away} ${line > 0 ? "+" : ""}${line}`;
+    return line === 0 ? `${team(ah[1])} (draw no bet)` : `${team(ah[1])} ${signedLine(line)}`;
+  }
+  const dnb = market.match(/^dnb:(home|away)$/);
+  if (dnb) return `${team(dnb[1])} (draw no bet)`;
+  // Three-way handicap: the line is the home side's head start ("eh:away:-2" is the away side +2).
+  const eh = market.match(/^eh:(home|draw|away):([+-]?\d+)$/);
+  if (eh) {
+    const homeLine = Number(eh[2]);
+    if (eh[1] === "draw") return `Draw with ${home} ${signedLine(homeLine)} (3-way)`;
+    return `${team(eh[1])} ${signedLine(eh[1] === "home" ? homeLine : -homeLine)} (3-way)`;
+  }
+  const tg = market.match(/^tg:(home|away):(over|under):(\d+(?:\.\d+)?)$/);
+  if (tg) return `${team(tg[1])} ${tg[2]} ${tg[3]} goals`;
+  const [family, a, b, c] = market.split(":");
+  const noun = STAT_NOUN[family];
+  if (noun) {
+    if ((a === "over" || a === "under") && b) return `${a === "over" ? "Over" : "Under"} ${b} ${noun}`;
+    if ((a === "home" || a === "away") && (b === "over" || b === "under") && c) return `${team(a)} ${b} ${c} ${noun}`;
+    if (a === "most") {
+      if (b === "level") return `Level on ${noun}`;
+      if (b?.endsWith("-or-level")) return `${team(b.split("-")[0])} level or more ${noun}`;
+      if (b === "home" || b === "away") return `${team(b)} more ${noun}`;
+    }
+    if (a === "hcp" && (b === "home" || b === "away") && c) return `${team(b)} ${c} ${noun} handicap`;
   }
   switch (market) {
     case "1x2:home":

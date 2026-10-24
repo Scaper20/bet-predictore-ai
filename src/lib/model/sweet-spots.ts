@@ -98,7 +98,7 @@ export interface SweetSpotPick {
   probability: number;
 }
 
-const STAT_NAMES: Record<string, string> = { corners: "corners", shots: "shots", sot: "shots on target" };
+const STAT_NAMES: Record<string, string> = { corners: "corners", shots: "shots", sot: "shots on target", bookings: "bookings" };
 
 /** "Under 12.5 corners", "Home -1.5 shots on target handicap", "Away draw no bet". */
 export function sweetSpotLabel(market: string): string {
@@ -108,7 +108,10 @@ export function sweetSpotLabel(market: string): string {
   const what = STAT_NAMES[family];
   if (!what) return market;
   if (a === "over" || a === "under") return `${a === "over" ? "Over" : "Under"} ${b} ${what}`;
-  if (a === "most") return b.endsWith("-or-level") ? `${side(b.split("-")[0])} level or more ${what}` : `${side(b)} more ${what}`;
+  if (a === "most") {
+    if (b === "level") return `Level on ${what}`;
+    return b.endsWith("-or-level") ? `${side(b.split("-")[0])} level or more ${what}` : `${side(b)} more ${what}`;
+  }
   if (a === "hcp") return `${side(b)} ${c} ${what} handicap`;
   return `${side(a)} ${b} ${c} ${what}`;
 }

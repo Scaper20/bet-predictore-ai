@@ -38,6 +38,7 @@ function Note({ children }: { children: React.ReactNode }) {
 const STAT_COPY: Record<StatKind, { title: string; noun: string; weakTotals: boolean; teamLine: string; hcp: string[] }> = {
   corners: { title: "Corners", noun: "corners", weakTotals: true, teamLine: "4.5", hcp: ["-1.5", "+1.5"] },
   cards: { title: "Cards", noun: "cards", weakTotals: false, teamLine: "1.5", hcp: ["-0.5", "+0.5"] },
+  bookings: { title: "Bookings", noun: "bookings", weakTotals: false, teamLine: "1.5", hcp: ["-0.5", "+0.5"] },
   shots: { title: "Shots", noun: "shots", weakTotals: false, teamLine: "12.5", hcp: ["-2.5", "+2.5"] },
   shotsOnTarget: { title: "Shots on target", noun: "shots on target", weakTotals: false, teamLine: "4.5", hcp: ["-1.5", "+1.5"] },
 };
