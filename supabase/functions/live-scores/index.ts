@@ -15,6 +15,7 @@
 // SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided by the platform.
 
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { unchanged, type StoredScore } from "./unchanged.ts";
 
 type LiveEvent = {
   idEvent: string;
@@ -23,6 +24,8 @@ type LiveEvent = {
   intHomeScore?: string | null;
   intAwayScore?: string | null;
 };
+
+type KnownMatch = StoredScore & { id: string; source_ids: Record<string, string>; kickoff: string };
 
 const STATUS: Record<string, string> = {
   FT: "finished", AET: "finished", PEN: "finished", "MATCH FINISHED": "finished",
@@ -103,8 +106,10 @@ Deno.serve(async (req) => {
 
     const ids = events.map((e) => String(e.idEvent));
     const { data: known } = ids.length
-      ? await db.from("matches").select("id, source_ids, status, kickoff").in("source_ids->>thesportsdb", ids)
-      : { data: [] as { id: string; source_ids: Record<string, string>; status: string; kickoff: string }[] };
+      ? await db.from("matches")
+          .select("id, source_ids, status, kickoff, minute, home_goals, away_goals, score_source")
+          .in("source_ids->>thesportsdb", ids)
+      : { data: [] as KnownMatch[] };
     const byEvent = new Map((known ?? []).map((m) => [m.source_ids.thesportsdb, m]));
 
     let written = 0;
@@ -117,14 +122,16 @@ Deno.serve(async (req) => {
       // score. Same cutoff as src/lib/match-status.ts.
       const status = staleInPlay(reported, match.kickoff) ? "finished" : reported;
       const live = status === "live";
-      const { error } = await db.from("matches").update({
+      const next: StoredScore = {
         status,
         minute: live ? num(e.strProgress) : null,
         home_goals: num(e.intHomeScore),
         away_goals: num(e.intAwayScore),
         score_source: "thesportsdb",
-        updated_at: new Date().toISOString(),
-      }).eq("id", match.id);
+      };
+      // A finished game stays in the feed for a while; leave it be until something changes.
+      if (unchanged(match, next)) continue;
+      const { error } = await db.from("matches").update({ ...next, updated_at: new Date().toISOString() }).eq("id", match.id);
       if (!error) written++;
     }
 
