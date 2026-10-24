@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { matchShots, nameWords, findEspnGame, espnStatsComplete } from "./espn-shots";
+import { matchCorners, matchShots, nameWords, findEspnGame, espnStatsComplete } from "./espn-shots";
 
 const t = Date.parse("2026-10-12T01:00:00Z");
 
@@ -77,5 +77,25 @@ describe("findEspnGame", () => {
     expect(espnStatsComplete(games[0])).toBe(true);
     expect(espnStatsComplete(games[2])).toBe(false);
     expect(espnStatsComplete({ ...games[0], hc: undefined })).toBe(false);
+  });
+});
+
+describe("matchCorners", () => {
+  const rows = [
+    { id: "a", kickoff: t, home: "Flamengo", away: "Palmeiras", hg: 2, ag: 1 },
+    { id: "b", kickoff: t, home: "Gremio", away: "Santos", hg: 0, ag: 0 },
+  ];
+
+  it("fills corners on the same match rules as shots", () => {
+    const espn = [{ date: t, home: "Flamengo", away: "Palmeiras", hg: 2, ag: 1, hc: 6, ac: 3 }];
+    expect(matchCorners(espn, rows)).toEqual([{ id: "a", hc: 6, ac: 3 }]);
+  });
+
+  it("skips a game listed without corners, or with nil for both sides", () => {
+    const espn = [
+      { date: t, home: "Flamengo", away: "Palmeiras", hg: 2, ag: 1 },
+      { date: t, home: "Gremio", away: "Santos", hg: 0, ag: 0, hc: 0, ac: 0 },
+    ];
+    expect(matchCorners(espn, rows)).toEqual([]);
   });
 });

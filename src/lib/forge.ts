@@ -77,8 +77,8 @@ export interface ForgeSettings {
 export const DEFAULT_SETTINGS: ForgeSettings = {
   risk: "balanced",
   targetOdds: 5,
-  // Best-first builds use as few games as reach the price; this is the most they may take.
-  games: 10,
+  // Exactly this many games (forge-solve.ts): the Balanced preset's count.
+  games: 4,
   picksPerGame: 2,
   markets: ["result", "double_chance", "goals", "btts"],
   when: "today",
@@ -211,6 +211,14 @@ export interface CandidateOptions {
   markets: ForgeMarket[];
   picksPerGame: 1 | 2 | 3;
   allowHandicap: boolean;
+  /**
+   * Which corners and shots lines to offer: "tested" (the sweet-spot lines at
+   * the chance each held from, the hub's and editor's rule) or "all" (every
+   * line the count model prices with an honest chance, inside a realism band
+   * around the game's expected count: Forge, so a corners combo has corners
+   * on every game that has the data).
+   */
+  statLines?: "tested" | "all";
 }
 
 export interface Candidate {
@@ -219,6 +227,8 @@ export interface Candidate {
   label: string;
   probability: number;
   fairOdds: number;
+  /** SportyBet's price where the game's board lists this exact selection. */
+  price?: number | null;
 }
 
 /** P(every pick wins) from the fixture's own scoreline grid — exact, not a product of marginals. */
@@ -254,6 +264,59 @@ function statCandidates(stats: Readonly<Record<string, number>> | undefined, all
     const label = sweetSpotLabel(rule.market);
     return [{ picks: [{ market: rule.market, label }], market: rule.market, label, probability: p, fairOdds: 1 / p }];
   });
+}
+
+/** Chances outside this range make poor legs: a coin flip, or a price too short to matter. */
+const ALL_LINES_MIN = 0.55;
+const ALL_LINES_MAX = 0.92;
+/** How far from a game's middle line an over or under may sit, in units of the count. */
+const STAT_LINE_REACH: Record<string, number> = { corners: 2, shots: 4, sot: 2 };
+
+/**
+ * The line a count is as likely to go over as under, for one family and
+ * scope ("corners" totals, "corners:home" team totals): the realism anchor.
+ * An under far above it, or an over far below it, is a near-certainty only
+ * because it is far from the game's own count, and reads as a silly pick.
+ */
+function middleLines(stats: Readonly<Record<string, number>>): Map<string, number> {
+  const best = new Map<string, { line: number; gap: number }>();
+  for (const [market, p] of Object.entries(stats)) {
+    const m = market.match(/^(corners|shots|sot):(?:(home|away):)?over:(\d+(?:\.\d+)?)$/);
+    if (!m) continue;
+    const scope = m[2] ? `${m[1]}:${m[2]}` : m[1];
+    const gap = Math.abs(p - 0.5);
+    const cur = best.get(scope);
+    if (!cur || gap < cur.gap) best.set(scope, { line: Number(m[3]), gap });
+  }
+  return new Map([...best].map(([k, v]) => [k, v.line]));
+}
+
+/**
+ * Every corners, shots and shots-on-target selection the count model prices
+ * for one fixture with a usable chance: totals, team totals, who has more and
+ * handicaps. Overs and unders must sit within reach of the game's middle line
+ * (an "Under 12.5 corners" on a game expected to have nine is a fact about
+ * football, not a read of the game).
+ */
+export function allStatCandidates(stats: Readonly<Record<string, number>> | undefined, allowed: Set<ForgeMarket>, home: string, away: string): Candidate[] {
+  if (!stats) return [];
+  const middle = middleLines(stats);
+  const out: Candidate[] = [];
+  for (const [market, p] of Object.entries(stats)) {
+    const family = market.split(":")[0];
+    const kind: ForgeMarket = family === "corners" ? "corners" : "shots";
+    if (!allowed.has(kind) || !(p >= ALL_LINES_MIN && p <= ALL_LINES_MAX)) continue;
+    const ou = market.match(/^(corners|shots|sot):(?:(home|away):)?(over|under):(\d+(?:\.\d+)?)$/);
+    if (ou) {
+      const mid = middle.get(ou[2] ? `${ou[1]}:${ou[2]}` : ou[1]);
+      const line = Number(ou[4]);
+      const reach = STAT_LINE_REACH[ou[1]] ?? 2;
+      if (mid !== undefined && Math.abs(line - mid) > reach) continue;
+    }
+    const label = friendlyLabel(market, home, away, sweetSpotLabel(market));
+    out.push({ picks: [{ market, label }], market, label, probability: p, fairOdds: 1 / p });
+  }
+  return out;
 }
 
 /** Every selection Forge may consider for one fixture, singles and combos. */
@@ -322,7 +385,8 @@ export function candidatesFor(p: Prediction, opts: CandidateOptions, stats?: Rea
       });
     }
   }
-  return [...out, ...statCandidates(stats, allowed)];
+  const statLegs = opts.statLines === "all" ? allStatCandidates(stats, allowed, home, away) : statCandidates(stats, allowed);
+  return [...out, ...statLegs];
 }
 
 /* -------------------------------------------------------------- selection */
@@ -359,7 +423,7 @@ export function toLeg(entry: PoolEntry, c: Candidate): ForgeLeg {
     label: c.label,
     probability: c.probability,
     fairOdds: c.fairOdds,
-    price: null,
+    price: c.price ?? null,
     reason: p.insights[0]?.text ?? null,
     dataQuality: Math.round(p.model.dataQuality),
   };
@@ -381,6 +445,8 @@ export interface ForgeResult {
   bench: ForgeLeg[];
   /** Kept legs that couldn't be kept (kicked off, or no longer offered). */
   dropped: string[];
+  /** Why the slip falls short of what was asked for, in plain words (forge-solve.ts). */
+  notes?: string[];
 }
 
 export function forge(pool: PoolEntry[], settings: ForgeSettings, state: ForgeRequestState): ForgeResult {

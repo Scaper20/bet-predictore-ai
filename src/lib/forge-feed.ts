@@ -25,6 +25,7 @@ import {
   type ForgeSettings,
   type ForgeWhen,
 } from "@/lib/forge";
+import { balancedByLeague, forgeSolve } from "@/lib/forge-solve";
 
 /** Every modelled fixture kicking off in a window, predicted once and shared for five minutes. */
 export async function predictionsFor(when: ForgeWhen): Promise<Prediction[]> {
@@ -35,9 +36,12 @@ export async function predictionsFor(when: ForgeWhen): Promise<Prediction[]> {
       const t = Date.parse(m.kickoff);
       return m.status === "scheduled" && Boolean(m.league.code) && t >= from && t < to;
     });
-    return predictBatch(inWindow, 80);
+    return predictBatch(balancedByLeague(inWindow, POOL_SIZE), POOL_SIZE);
   });
 }
+
+/** How many fixtures one window's pool predicts. */
+const POOL_SIZE = 160;
 
 /**
  * What SportyBet lists on each fixture in a window, by match id, read off the
@@ -93,26 +97,35 @@ export async function buildForgeSlip(
   const pool = predictions.map((prediction, i) => {
     const candidates = candidatesFor(
       prediction,
-      { markets: settings.markets, picksPerGame: settings.picksPerGame, allowHandicap: opts.allowHandicap },
+      { markets: settings.markets, picksPerGame: settings.picksPerGame, allowHandicap: opts.allowHandicap, statLines: "all" },
       stats[i],
     );
     const markets = listings.get(prediction.match.id);
     if (!markets) return { prediction, candidates };
     const ctx = { goals: gridFor(prediction), stats: grids[i] ?? {} };
+    const onBoard = keepOnBoard(candidates, markets, {
+      home: prediction.match.home.name,
+      away: prediction.match.away.name,
+      price: (m) => priceLeg(m, ctx)?.survive ?? null,
+      floor: (c) => Math.max(legFloor, c.probability - 0.05),
+      marketGap: LEG_MARKET_GAP,
+    });
+    // The board's own price on each single, so the solver aims at the total
+    // the slip will show rather than at the model's fair prices.
     return {
       prediction,
-      candidates: keepOnBoard(candidates, markets, {
-        home: prediction.match.home.name,
-        away: prediction.match.away.name,
-        price: (m) => priceLeg(m, ctx)?.survive ?? null,
-        floor: (c) => Math.max(legFloor, c.probability - 0.05),
-        marketGap: LEG_MARKET_GAP,
+      candidates: onBoard.map((c) => {
+        if (c.market.startsWith(COMBO_PREFIX)) return c;
+        const sel = toSportyBet(c.market);
+        const listed = sel ? priceOn(sel, markets) : undefined;
+        return listed !== undefined ? { ...c, price: listed } : c;
       }),
     };
   });
 
-  // Best first: the strongest reads on the card until the price is reached (lib/forge.ts).
-  const result = forgeBest(pool, settings, state);
+  // Exactly the games asked for, on the price asked for (lib/forge-solve.ts);
+  // FORGE_SOLVER=legacy brings back best-first for one release.
+  const result = process.env.FORGE_SOLVER === "legacy" ? forgeBest(pool, settings, state) : forgeSolve(pool, settings, state);
   const byId = new Map(predictions.map((p) => [p.match.id, p]));
 
   // SportyBet prices for single picks. Combos stay at the model's fair odds:
@@ -143,5 +156,13 @@ export async function buildForgeSlip(
 
   const [legs, bench] = await Promise.all([Promise.all(result.legs.map(price)), Promise.all(result.bench.map(price))]);
   clearTimeout(timer);
-  return { legs, bench, dropped: result.dropped, scanned: pool.length, proHeld, pricedAt: new Date().toISOString() };
+  return {
+    legs,
+    bench,
+    dropped: result.dropped,
+    notes: result.notes ?? [],
+    scanned: pool.length,
+    proHeld,
+    pricedAt: new Date().toISOString(),
+  };
 }

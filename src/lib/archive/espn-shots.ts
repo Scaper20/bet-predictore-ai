@@ -33,6 +33,36 @@ export const ESPN_SHOT_LEAGUES: Record<string, string> = {
   "conference-league": "uefa.europa.conf",
 };
 
+/**
+ * Competitions whose corners come from ESPN. Wider than ESPN_SHOT_LEAGUES:
+ * shots feed the goal model's fit, so they are added only where they were
+ * shown to help it; corners feed only the corners model, which needs 200
+ * games of history per competition before it prices anything, and
+ * football-data.co.uk carries corners for eight leagues only.
+ */
+export const ESPN_CORNER_LEAGUES: Record<string, string> = {
+  ...ESPN_SHOT_LEAGUES,
+  brasileirao: "bra.1",
+  "scottish-premiership": "sco.1",
+  "super-lig": "tur.1",
+  "belgian-pro-league": "bel.1",
+  "greek-super-league": "gre.1",
+  "league-one": "eng.3",
+  "la-liga-2": "esp.2",
+  "ligue-2": "fra.2",
+  "bundesliga-2": "ger.2",
+  "serie-b": "ita.2",
+};
+
+export interface CornerUpdate {
+  id: string;
+  hc: number;
+  ac: number;
+}
+
+/** ESPN lists a game it has no statistics for as nil for both sides; a real 0-0 on corners is too rare to be worth the risk. */
+export const hasCorners = (g: EspnResult) => g.hc !== undefined && g.ac !== undefined && g.hc + g.ac > 0;
+
 export interface EspnResult {
   date: number;
   home: string;
@@ -95,6 +125,15 @@ export const hasShots = (g: EspnResult) =>
  * game fills every copy that matches it as well as its best.
  */
 export function matchShots(espn: EspnResult[], rows: ArchiveRow[]): ShotUpdate[] {
+  return matchEspn(espn, rows, hasShots).map(({ g, r }) => ({ id: r.id, hsot: g.hsot!, asot: g.asot!, hs: g.hs ?? null, as: g.as ?? null }));
+}
+
+/** Archive rows to fill with ESPN's corners, matched the same way as shots. */
+export function matchCorners(espn: EspnResult[], rows: ArchiveRow[]): CornerUpdate[] {
+  return matchEspn(espn, rows, hasCorners).map(({ g, r }) => ({ id: r.id, hc: g.hc!, ac: g.ac! }));
+}
+
+function matchEspn(espn: EspnResult[], rows: ArchiveRow[], has: (g: EspnResult) => boolean): { g: EspnResult; r: ArchiveRow }[] {
   // A word names a club only if no other club in the competition carries it:
   // "Central" is Rosario, Barracas and Central Córdoba; "Juniors" is Boca and
   // Argentinos.
@@ -110,7 +149,7 @@ export function matchShots(espn: EspnResult[], rows: ArchiveRow[]): ShotUpdate[]
 
   const pairs: { g: EspnResult; r: ArchiveRow; score: number }[] = [];
   for (const g of espn) {
-    if (!hasShots(g)) continue;
+    if (!has(g)) continue;
     for (const r of rows) {
       if (Math.abs(r.kickoff - g.date) > WINDOW_MS || r.hg !== g.hg || r.ag !== g.ag) continue;
       const score = (shares(r.home, g.home) ? 1 : 0) + (shares(r.away, g.away) ? 1 : 0);
@@ -119,14 +158,14 @@ export function matchShots(espn: EspnResult[], rows: ArchiveRow[]): ShotUpdate[]
   }
   pairs.sort((a, b) => b.score - a.score);
 
-  const out: ShotUpdate[] = [];
+  const out: { g: EspnResult; r: ArchiveRow }[] = [];
   const used = new Set<string>();
   const best = new Map<EspnResult, number>();
   for (const { g, r, score } of pairs) {
     if (used.has(r.id) || score < (best.get(g) ?? 0)) continue;
     used.add(r.id);
     best.set(g, score);
-    out.push({ id: r.id, hsot: g.hsot!, asot: g.asot!, hs: g.hs ?? null, as: g.as ?? null });
+    out.push({ g, r });
   }
   return out;
 }
