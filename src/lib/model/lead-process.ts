@@ -99,13 +99,6 @@ function runOf(s: State, scorer: "h" | "a"): number {
   return f | (now + 4);
 }
 
-/** Turns a yes-chance into the chance of the outcome asked for. */
-function yesNoChance(outcome: string, p: number): number | null {
-  if (outcome === "74" || outcome === "39") return p;
-  if (outcome === "76" || outcome === "40") return 1 - p;
-  return null;
-}
-
 /** The minute bounds of SportyBet's first-goal intervals (100: 15 min, 101: 10 min). */
 const INTERVALS: Record<string, Record<string, [number, number]>> = {
   "100": { "584": [1, 15], "586": [16, 30], "588": [31, 45], "590": [46, 60], "592": [61, 75], "594": [76, 90] },
@@ -115,40 +108,50 @@ const INTERVALS: Record<string, Record<string, [number, number]>> = {
   },
 };
 
+type Memory = (s: State, scorer: "h" | "a", minute: number) => number;
+
+/** A market as the process reads it: what it remembers, when it lands, and over how many minutes. */
+interface Spec {
+  memory: Memory;
+  lands: (s: State) => boolean;
+  minutes?: number;
+}
+
+/** "No" lands exactly when "yes" doesn't. */
+const yesNo = (outcome: string, spec: Spec): Spec | null =>
+  outcome === "74" || outcome === "39" ? spec : outcome === "76" || outcome === "40" ? { ...spec, lands: (s) => !spec.lands(s) } : null;
+
 /**
- * The process's chance for one SportyBet selection, or null for one it
- * doesn't price. Never Down and early goals are left to SportyBet's own
- * read: their rules don't match any reading we could confirm.
+ * How the process reads one SportyBet selection, or null for one it doesn't
+ * price. Never Down and early goals are left to SportyBet's own read: their
+ * rules don't match any reading we could confirm against its prices.
  */
-export function leadChance(sel: SportyBetSelection, rates: HalfRates): number | null {
+function specFor(sel: SportyBetSelection): Spec | null {
   const { marketId: id, outcomeId: o, specifier: spec } = sel;
   const side = (k: string) => (k === "1" ? 1 : k === "3" ? 2 : 0);
   switch (id) {
     case "60200": // 1UP: a win the moment the side goes a goal up; otherwise the full-time result.
     case "60100": { // 2UP: the same at two goals up.
       const k = id === "60200" ? 1 : 2;
-      if (o === "2") return play(rates, keep, (s) => s.h === s.a);
+      if (o === "2") return { memory: keep, lands: (s) => s.h === s.a };
       const bit = side(o);
       if (!bit) return null;
-      return play(rates, ledBy(k), (s) => (s.x & bit) !== 0 || (bit === 1 ? s.h > s.a : s.a > s.h));
+      return { memory: ledBy(k), lands: (s) => (s.x & bit) !== 0 || (bit === 1 ? s.h > s.a : s.a > s.h) };
     }
     case "60110": { // Double chance 1UP: the side's half of the pair wins once it goes a goal up.
-      if (o === "10") return play(rates, keep, (s) => s.h !== s.a);
-      if (o === "9") return play(rates, ledBy(1), (s) => (s.x & 1) !== 0 || s.h >= s.a);
-      if (o === "11") return play(rates, ledBy(1), (s) => (s.x & 2) !== 0 || s.a >= s.h);
+      if (o === "10") return { memory: keep, lands: (s) => s.h !== s.a };
+      if (o === "9") return { memory: ledBy(1), lands: (s) => (s.x & 1) !== 0 || s.h >= s.a };
+      if (o === "11") return { memory: ledBy(1), lands: (s) => (s.x & 2) !== 0 || s.a >= s.h };
       return null;
     }
     case "60300": case "60301": case "60302": case "60303": case "60304": case "60305": case "60306": case "60307": case "60308": {
       const n = Number(id) - 60300;
-      const k = (n % 3) + 1;
       const bits = n < 3 ? 3 : n < 6 ? 1 : 2;
-      const p = play(rates, ledBy(k), (s) => (s.x & bits) !== 0);
-      return yesNoChance(o, p);
+      return yesNo(o, { memory: ledBy((n % 3) + 1), lands: (s) => (s.x & bits) !== 0 });
     }
     case "900383": case "900384": { // Win from behind: behind at some point, winner at the end.
       const home = id === "900383";
-      const p = play(rates, trailed, (s) => (home ? (s.x & 1) !== 0 && s.h > s.a : (s.x & 2) !== 0 && s.a > s.h));
-      return yesNoChance(o, p);
+      return yesNo(o, { memory: trailed, lands: (s) => (home ? (s.x & 1) !== 0 && s.h > s.a : (s.x & 2) !== 0 && s.a > s.h) });
     }
     case "60010": case "60011": case "60012": case "60020": case "60021": case "60022": {
       const three = id.startsWith("6002");
@@ -156,8 +159,7 @@ export function leadChance(sel: SportyBetSelection, rates: HalfRates): number | 
       const homeBit = three ? 0x200 : 0x100;
       const awayBit = three ? 0x800 : 0x400;
       const want = who === "any" ? homeBit | awayBit : who === "home" ? homeBit : awayBit;
-      const p = play(rates, (s, scorer) => runOf({ ...s, x: s.x || 4 }, scorer), (s) => (s.x & want) !== 0);
-      return yesNoChance(o, p);
+      return yesNo(o, { memory: (s, scorer) => runOf({ ...s, x: s.x || 4 }, scorer), lands: (s) => (s.x & want) !== 0 });
     }
     case "8": case "9": case "62": case "84": { // First goal, last goal, and each half's first goal: 6 home, 7 none, 8 away.
       const code = { "6": 1, "7": 0, "8": 2 }[o];
@@ -165,33 +167,54 @@ export function leadChance(sel: SportyBetSelection, rates: HalfRates): number | 
       if (code === undefined || (id !== "9" && spec !== "goalnr=1")) return null;
       const [from, to] = id === "62" ? [1, 45] : id === "84" ? [46, 90] : [1, 90];
       const first = id !== "9";
-      const p = play(
-        rates,
-        (s, scorer, minute) => (minute < from || minute > to || (first && s.x) ? s.x : scorer === "h" ? 1 : 2),
-        (s) => s.x === code,
-      );
-      return p;
+      return {
+        memory: (s, scorer, minute) => (minute < from || minute > to || (first && s.x) ? s.x : scorer === "h" ? 1 : 2),
+        lands: (s) => s.x === code,
+      };
     }
     case "100": case "101": { // The minute of the first goal; "None" for a goalless game.
       if (spec !== "goalnr=1") return null;
-      if (o === "596" || o === "616") return play(rates, keep, (s) => s.h + s.a === 0);
+      if (o === "596" || o === "616") return { memory: keep, lands: (s) => s.h + s.a === 0 };
       const range = INTERVALS[id][o];
       if (!range) return null;
-      return play(rates, (s, _scorer, minute) => s.x || minute, (s) => s.x >= range[0] && s.x <= range[1]);
+      return { memory: (s, _scorer, minute) => s.x || minute, lands: (s) => s.x >= range[0] && s.x <= range[1] };
     }
     case "900069": case "105": { // Result at minute N (900069 "minute=N", 105 "from=1|to=N").
       const n = Number(spec?.match(/(?:minute|to)=(\d+)$/)?.[1]);
       if (id === "105" && !spec?.startsWith("from=1|")) return null;
       if (!(n > 0 && n < 90) || !["1", "2", "3"].includes(o)) return null;
-      return play(rates, keep, (s) => (s.h > s.a ? "1" : s.h === s.a ? "2" : "3") === o, n);
+      return { memory: keep, lands: (s) => (s.h > s.a ? "1" : s.h === s.a ? "2" : "3") === o, minutes: n };
     }
     case "900313": { // Total goals in the first N minutes.
       const m = spec?.match(/^minute=(\d+)\|total=(\d+\.5)$/);
       if (!m || (o !== "30" && o !== "31")) return null;
       const line = Number(m[2]);
-      const over = play(rates, keep, (s) => s.h + s.a > line, Number(m[1]));
-      return o === "30" ? over : 1 - over;
+      return { memory: keep, lands: (s) => s.h + s.a > line === (o === "30"), minutes: Number(m[1]) };
     }
   }
   return null;
+}
+
+/** The process's chance for one SportyBet selection, or null for one it doesn't price. */
+export function leadChance(sel: SportyBetSelection, rates: HalfRates): number | null {
+  const spec = specFor(sel);
+  return spec ? play(rates, spec.memory, spec.lands, spec.minutes) : null;
+}
+
+/**
+ * Whether a selection landed on a game's goal timeline ([minute, added
+ * time, side] in order, archive/espn-shots.ts), by the same rules the
+ * estimate prices it with; null for one the process doesn't read. Added
+ * time counts as the minute it was added to (45+6 is the 45th).
+ */
+export function landedOn(sel: SportyBetSelection, goals: readonly (readonly [number, number, "h" | "a"])[]): boolean | null {
+  const spec = specFor(sel);
+  if (!spec) return null;
+  let s: State = { h: 0, a: 0, x: 0 };
+  for (const [minute, , side] of goals) {
+    if (minute > (spec.minutes ?? Infinity)) break;
+    const t = side === "h" ? { h: s.h + 1, a: s.a, x: s.x } : { h: s.h, a: s.a + 1, x: s.x };
+    s = { ...t, x: spec.memory(t, side, Math.max(1, Math.min(minute, 90))) };
+  }
+  return spec.lands(s);
 }

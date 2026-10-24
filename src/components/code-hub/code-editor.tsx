@@ -45,6 +45,7 @@ function withoutGames(r: EditResult, removed: ReadonlySet<string>): EditResult {
 const toLegs = (r: EditResult): SlipLeg[] =>
   r.games.map((g) => ({
     matchId: g.matchId,
+    ...(g.eventId ? { eventId: g.eventId } : {}),
     fixture: `${g.homeName} v ${g.awayName}`,
     homeName: g.homeName,
     awayName: g.awayName,
@@ -223,9 +224,13 @@ function EditedCard({ result: full, before, mode }: { result: EditResult; before
   const [removed, setRemoved] = useState<ReadonlySet<string>>(new Set());
   const result = removed.size ? withoutGames(full, removed) : full;
   const changed = result.games.filter((g) => g.from).length;
-  const kept = new Set(result.games.map((g) => g.matchId));
-  const left = before.games.filter((g) => !g.matchId || !kept.has(g.matchId));
-  const dropped = left.length;
+  // A game outside our coverage goes by SportyBet's event id.
+  const kept = new Set(result.games.flatMap((g) => [g.matchId, g.eventId ?? ""]));
+  const taken = new Set((result.removed ?? []).map((g) => g.matchId));
+  const left = before.games.filter(
+    (g) => !(g.matchId && (kept.has(g.matchId) || taken.has(g.matchId))) && !kept.has(g.eventId) && !taken.has(g.eventId),
+  );
+  const dropped = left.length + taken.size;
   return (
     <div className="min-w-0 rounded-xl border border-brand/30 bg-brand/5 p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
@@ -244,11 +249,27 @@ function EditedCard({ result: full, before, mode }: { result: EditResult; before
                 {g.homeName} v {g.awayName}
               </span>
               {g.from && <span className="block break-words text-xs text-amber">was {g.from.label}</span>}
+              {g.why && g.action !== "kept" && <span className="block break-words text-xs text-ink-dim">{g.why}</span>}
+              {g.source && SOURCE[g.source] && <span className="block break-words text-xs text-ink-dim">{SOURCE[g.source]}</span>}
             </span>
             <span className="shrink-0 font-mono text-xs text-ink-muted">{percent(g.probability)}</span>
           </li>
         ))}
       </ul>
+      {result.notes?.map((n) => (
+        <p key={n} className="mt-3 text-xs text-amber">
+          {n}
+        </p>
+      ))}
+      {result.removed && result.removed.length > 0 && (
+        <ul className="mt-3 space-y-1 text-xs text-ink-dim">
+          {result.removed.map((g) => (
+            <li key={g.matchId} className="break-words">
+              <span className="font-semibold text-rose">Taken off:</span> {g.label} ({g.homeName} v {g.awayName}). {g.why}
+            </li>
+          ))}
+        </ul>
+      )}
       {left.length > 0 && (
         <p className="mt-3 text-xs text-ink-dim">
           Left off:{" "}

@@ -100,7 +100,11 @@ export interface Solution {
  * Dynamic programming over log-price buckets: games × options × buckets, a
  * few hundred thousand steps for a full slip.
  */
-export function solveOptions(games: SolveGame[], target: number, already = 1): Solution | null {
+export function solveOptions(
+  games: readonly { opts: readonly { lo: number; q: number }[] }[],
+  target: number,
+  already = 1,
+): Solution | null {
   if (games.length === 0) return null;
   const goal = Math.log(target / already);
   const [bandLo, bandHi] = priceBand(target);

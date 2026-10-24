@@ -8,8 +8,8 @@ const pick = (market: string, probability: number): EditorPick => ({
   fairOdds: Math.round((1 / probability) * 100) / 100,
 });
 
-function game(id: string, current: EditorPick | null, candidates: EditorPick[]): EditorGame {
-  return { matchId: id, homeName: `${id}H`, awayName: `${id}A`, kickoff: 1, league: "Premier League", current, candidates };
+function game(id: string, current: EditorPick | null, candidates: EditorPick[], ladder: EditorPick[] = []): EditorGame {
+  return { matchId: id, homeName: `${id}H`, awayName: `${id}A`, kickoff: 1, league: "Premier League", current, candidates, ladder };
 }
 
 const a = game("a", pick("1x2:away", 0.3), [pick("dc:home-draw", 0.7), pick("ou:over:1.5", 0.78), pick("1x2:home", 0.45), pick("ou:over:0.5", 0.95)]);
@@ -37,6 +37,32 @@ describe("saferCode", () => {
   });
 });
 
+describe("saferCode policy", () => {
+  it("makes the user's own bet safer before changing it", () => {
+    const g = game("o", pick("ou:over:2.5", 0.48), [pick("dc:home-draw", 0.8)], [pick("ou:over:1.5", 0.74)]);
+    const out = saferCode([g]).games[0];
+    expect(out).toMatchObject({ market: "ou:over:1.5", action: "line" });
+    expect(out.why).toMatch(/safer line: 48% to 74%/);
+  });
+
+  it("keeps a solid pick even when a safer one exists", () => {
+    const g = game("s", pick("btts:yes", 0.62), [pick("dc:home-draw", 0.85)]);
+    expect(saferCode([g]).games[0]).toMatchObject({ market: "btts:yes", action: "kept", from: null });
+  });
+
+  it("takes off a long shot nothing on the game rescues, and says why", () => {
+    const g = game("x", pick("raw:45::288", 0.09), [pick("1x2:home", 0.4)]);
+    const out = saferCode([g]);
+    expect(out.games).toHaveLength(0);
+    expect(out.removed?.[0].why).toMatch(/too long a shot/);
+  });
+
+  it("keeps a shaky pick when nothing safer is on offer", () => {
+    const g = game("k", pick("btts:yes", 0.52), []);
+    expect(saferCode([g]).games[0]).toMatchObject({ market: "btts:yes", action: "kept" });
+  });
+});
+
 describe("targetCode", () => {
   it("climbs from the safest version toward the asked price", () => {
     const safe = saferCode([a, b, c]);
@@ -47,9 +73,21 @@ describe("targetCode", () => {
     expect(out.chance).toBeLessThan(safe.chance);
   });
 
-  it("stays at the safest version when the target is already met", () => {
+  it("takes the least likely games off when even the safest picks pay more than asked", () => {
     const out = targetCode([a, b, c], 2);
-    expect(out.games.map((g) => g.market)).toEqual(saferCode([a, b, c]).games.map((g) => g.market));
+    expect(out.fairOdds).toBeGreaterThanOrEqual(1.9);
+    expect(out.fairOdds).toBeLessThanOrEqual(2.1);
+    expect(out.removed?.length).toBeGreaterThan(0);
+  });
+
+  it("lands inside Forge's band when the games allow it", () => {
+    const wide = [0, 1, 2, 3].map((i) =>
+      game(`w${i}`, pick("ou:over:2.5", 0.5), [pick("dc:home-draw", 0.8), pick("1x2:home", 0.55)], [pick("ou:over:1.5", 0.75), pick("ou:over:0.5", 0.9)]),
+    );
+    const out = targetCode(wide, 5);
+    expect(out.fairOdds).toBeGreaterThanOrEqual(4.75);
+    expect(out.fairOdds).toBeLessThanOrEqual(5.25);
+    expect(out.notes).toBeUndefined();
   });
 
   it("gets as close as the games allow when the target is out of reach", () => {

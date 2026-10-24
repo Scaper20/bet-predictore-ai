@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import event from "@/lib/odds/__fixtures__/sportybet-event-markets.json";
 import { parseEventMarkets } from "@/lib/odds/sportybet-api";
 import { halfRates } from "./halves";
-import { leadChance } from "./lead-process";
+import { landedOn, leadChance } from "./lead-process";
 
 /* Milan v Bologna as SportyBet priced it (59% / 23% / 18%), and the model's split of a 1.75 v 0.85 game. */
 const markets = parseEventMarkets(event)!;
@@ -37,5 +37,30 @@ describe("leadChance", () => {
   it("leaves Never Down and early goals to SportyBet's read", () => {
     expect(leadChance({ marketId: "60210", outcomeId: "1" }, rates)).toBeNull();
     expect(leadChance({ marketId: "60180", outcomeId: "12", specifier: "minsnr=10|total=1.5" }, rates)).toBeNull();
+  });
+});
+
+describe("landedOn", () => {
+  // Home scores first, away turns it round, home levels late: 1-0, 1-1, 1-2, 2-2.
+  const goals = [[10, 0, "h"], [30, 0, "a"], [45, 2, "a"], [88, 0, "h"]] as const;
+  const on = (marketId: string, outcomeId: string, specifier?: string) => landedOn({ marketId, outcomeId, ...(specifier ? { specifier } : {}) }, goals);
+
+  it("settles 1UP and 2UP the way SportyBet does", () => {
+    expect(on("60200", "1")).toBe(true); // home went 1 up
+    expect(on("60200", "3")).toBe(true); // so did away
+    expect(on("60200", "2")).toBe(true); // and it ended level
+    expect(on("60100", "3")).toBe(false); // nobody got 2 up, and away didn't win
+    expect(on("60110", "11")).toBe(true);
+  });
+
+  it("follows leads, runs, the first goal and the score at a minute", () => {
+    expect(on("60303", "74")).toBe(true);
+    expect(on("60301", "74")).toBe(false);
+    expect(on("60012", "74")).toBe(true); // away scored two in a row
+    expect(on("8", "6", "goalnr=1")).toBe(true);
+    expect(on("100", "584", "goalnr=1")).toBe(true); // first goal in 1-15
+    expect(on("900069", "3", "minute=50")).toBe(true); // 1-2 at 50 minutes
+    expect(on("900313", "30", "minute=25|total=0.5")).toBe(true);
+    expect(on("900383", "74")).toBe(false); // home came from behind but didn't win
   });
 });
