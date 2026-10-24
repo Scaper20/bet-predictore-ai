@@ -6,6 +6,7 @@
  * share one definition of what "on track", "won" and "lost" mean.
  */
 
+import { gradeLegFull } from "@/lib/leg-pricing";
 import { evaluatePick, evaluateStatPick, statKindOf, type PickResult } from "@/lib/settlement";
 import type { MatchStatus } from "@/lib/types";
 
@@ -78,6 +79,11 @@ export function gradeMarket(market: string, home: number, away: number): PickRes
     if (grades.some((g) => g === null)) return null;
     if (grades.includes("lose")) return "lose";
     return grades.includes("win") ? "win" : "push";
+  }
+  if (market.startsWith("raw:")) {
+    // A SportyBet market we keep as SportyBet addresses it: whole-match ones grade off the score.
+    const g = gradeLegFull(market, { home, away });
+    return g === "win" || g === "lose" || g === "push" ? g : null;
   }
   return evaluatePick(market, home, away);
 }

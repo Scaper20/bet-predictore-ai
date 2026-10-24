@@ -190,7 +190,7 @@ export async function settleCommunityPosts(): Promise<number> {
     .limit(300);
   if (!data || data.length === 0) return 0;
   const ids = [...new Set(data.flatMap((r) => (r.games as PostGame[]).map((g) => g.matchId).filter((m): m is string => !!m)))];
-  const scores = new Map<string, { home: number; away: number }>();
+  const scores = new Map<string, { home: number; away: number; ht?: { home: number; away: number } | null }>();
   if (ids.length > 0) {
     const { data: results } = await db
       .from("match_results")
@@ -200,6 +200,15 @@ export async function settleCommunityPosts(): Promise<number> {
     for (const r of results ?? []) {
       if (typeof r.home_goals === "number" && typeof r.away_goals === "number") {
         scores.set(r.match_id as string, { home: r.home_goals, away: r.away_goals });
+      }
+    }
+    // Half-time scores, for picks settled on the halves (half-time/full-time, 2nd-half lines).
+    const uuids = [...scores.keys()].filter((id) => /^[0-9a-f-]{36}$/i.test(id));
+    if (uuids.length > 0) {
+      const { data: halves } = await db.from("matches").select("id, ht_home, ht_away").in("id", uuids);
+      for (const m of halves ?? []) {
+        const s = scores.get(m.id as string);
+        if (s && typeof m.ht_home === "number" && typeof m.ht_away === "number") s.ht = { home: m.ht_home, away: m.ht_away };
       }
     }
   }

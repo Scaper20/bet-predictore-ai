@@ -4,7 +4,7 @@ import { builderParts, marketRead, oddsOnly } from "./market-read";
 import { fromRaw, rawMarket, toSportyBet, toSportyBetBuilder } from "./markets";
 import { parseEventMarkets } from "./sportybet-api";
 
-/* Milan v Bologna, Serie A, read from SportyBet's event endpoint on 24 Oct 2026. */
+/* Milan v Bologna, Serie A: all 311 markets from SportyBet's event endpoint, 24 Oct 2026. */
 const markets = parseEventMarkets(event)!;
 
 describe("raw markets", () => {
@@ -65,8 +65,8 @@ describe("builderParts", () => {
   it("prices each part for SportyBet's builder call, or none when a part is missing", () => {
     const parts = builderParts("sr:match:71945352", [{ marketId: "1", outcomeId: "1" }, { marketId: "60200", outcomeId: "1" }], markets);
     expect(parts).toEqual([
-      { selection: { eventId: "sr:match:71945352", marketId: "1", outcomeId: "1" }, odds: "1.65", probability: "0.5922200000" },
-      { selection: { eventId: "sr:match:71945352", marketId: "60200", outcomeId: "1" }, odds: "1.33", probability: "0.7162635408" },
+      { selection: { eventId: "sr:match:71945352", marketId: "1", outcomeId: "1" }, odds: "1.65", probability: "0.592220" },
+      { selection: { eventId: "sr:match:71945352", marketId: "60200", outcomeId: "1" }, odds: "1.33", probability: "0.716263" },
     ]);
     expect(builderParts("sr:match:1", [{ marketId: "999", outcomeId: "1" }], markets)).toBeNull();
   });

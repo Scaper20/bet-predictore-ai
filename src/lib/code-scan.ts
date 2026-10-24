@@ -1,6 +1,6 @@
 import "server-only";
 
-import { candidatesFor, friendlyLabel, gridFor, type ForgeMarket } from "@/lib/forge";
+import { candidatesFor, friendlyLabel, gridFor, halvesFor, type ForgeMarket } from "@/lib/forge";
 import { priceLeg, refundShare, statFamilyOf, type StatFamily } from "@/lib/leg-pricing";
 import { statChances, statGridsFor } from "@/lib/stat-markets-service";
 import { keepOnBoard } from "@/lib/board-candidates";
@@ -8,7 +8,8 @@ import { LEG_MARKET_GAP } from "@/lib/market-check";
 import type { BoardMarket } from "@/lib/odds/bookable";
 import { findOnBoard } from "@/lib/odds/sportybet";
 import type { EditorGame } from "@/lib/code-editor";
-import { isRawMarket, toSportyBet, toSportyBetBuilder } from "@/lib/odds/markets";
+import { fromRaw, isRawMarket, toSportyBet, toSportyBetBuilder } from "@/lib/odds/markets";
+import { rawGrader } from "@/lib/odds/raw-grades";
 import { builderParts, marketRead, oddsOnly, type ReadSource } from "@/lib/odds/market-read";
 import { dbUpcoming } from "@/lib/providers/db-source";
 import { matchPrediction } from "@/lib/service";
@@ -89,7 +90,7 @@ export function chanceOf(
   market: string,
   stats: Partial<Record<StatFamily, number[][]>> = {},
 ): { probability: number; refund: number } | null {
-  const price = priceLeg(market, { goals: gridFor(p), stats });
+  const price = priceLeg(market, { goals: gridFor(p), halves: halvesFor(p), stats });
   if (!price) return null;
   return { probability: round4(price.survive), refund: round4(refundShare(price)) };
 }
@@ -100,6 +101,12 @@ const STAT_REASON: Record<StatFamily, string> = {
   sot: "No shots-on-target history for this competition yet.",
   bookings: "No bookings history for this competition yet.",
 };
+
+/** "corners" for a raw corners market we price off the count grid (ranges, odd/even). */
+function cornersRaw(market: string): StatFamily | null {
+  const sel = fromRaw(market);
+  return sel && rawGrader(sel)?.scope === "corners" ? "corners" : null;
+}
 
 /**
  * SportyBet's own chance for a game's pick, for one we have no model read of:
@@ -144,9 +151,9 @@ export async function scanCode(code: string): Promise<CodeScan | null> {
         if (p && p.sufficiency.publishable) {
           // Kept even for a pick we read from SportyBet, so the editor can still re-pick the game.
           predictions.set(found.matchId, p);
-          const family = raw ? null : statFamilyOf(g.market!);
+          const family = g.market ? statFamilyOf(g.market) ?? cornersRaw(g.market) : null;
           const stats = family ? await statGridsFor(p.match).catch(() => ({})) : {};
-          const priced = raw ? null : chanceOf(p, g.market!, stats);
+          const priced = g.market ? chanceOf(p, g.market, stats) : null;
           if (priced) {
             const { probability, refund } = priced;
             return { ...base, probability, ...(refund > 0.005 ? { refund } : {}), verdict: verdictFor(probability), source: "model" };
@@ -229,7 +236,7 @@ export function editorGames(scan: CodeScan, ctx?: EditorContext): EditorGame[] {
     if (!p || !g.matchId) return [];
     const all = candidatesFor(p, { markets: EDITOR_MARKETS, picksPerGame: 2, allowHandicap: true }, ctx?.stats.get(g.matchId));
     const listing = ctx?.listings.get(g.matchId);
-    const pricing = { goals: gridFor(p), stats: ctx?.grids.get(g.matchId) ?? {} };
+    const pricing = { goals: gridFor(p), halves: halvesFor(p), stats: ctx?.grids.get(g.matchId) ?? {} };
     const bookable = listing
       ? keepOnBoard(all, listing, {
           home: p.match.home.name,

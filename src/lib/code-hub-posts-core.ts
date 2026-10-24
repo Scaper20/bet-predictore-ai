@@ -4,6 +4,8 @@
  * writing.
  */
 import { evaluatePick, type PickResult } from "@/lib/settlement";
+import { gradeLegFull } from "@/lib/leg-pricing";
+import { isRawMarket } from "@/lib/odds/markets";
 import { proLeagueLocked, type Viewer } from "@/lib/access";
 import type { ScoredGame } from "@/lib/code-scan-core";
 
@@ -35,8 +37,16 @@ export function byRank<T extends RankedPost>(a: T, b: T): number {
   return b.score - a.score || (b.chance ?? 0) - (a.chance ?? 0) || a.postedAt.localeCompare(b.postedAt);
 }
 
-/** One game's pick, or same-game combo, against the final score. */
-export function gradeGame(market: string, home: number, away: number): PickResult | null {
+/**
+ * One game's pick, or same-game combo, against the final score; a market
+ * kept as SportyBet addresses it ("raw:", markets.ts) as SportyBet settles
+ * it, with the half-time score when it is settled on the halves.
+ */
+export function gradeGame(market: string, home: number, away: number, ht?: { home: number; away: number } | null): PickResult | null {
+  if (isRawMarket(market)) {
+    const g = gradeLegFull(market, { home, away }, ht);
+    return g === "win" || g === "lose" || g === "push" ? g : null;
+  }
   if (!market.startsWith("combo:")) return evaluatePick(market, home, away);
   const parts = market.slice("combo:".length).split("+").map((m) => evaluatePick(m, home, away));
   if (parts.some((p) => p === null)) return null;
@@ -56,10 +66,13 @@ export interface PostedGame {
  * when a game can't be graded by us (it then never settles here and the
  * post simply stays without a result).
  */
-export function gradeCode(games: readonly PostedGame[], scores: ReadonlyMap<string, { home: number; away: number }>): "won" | "lost" | "void" | null {
+export function gradeCode(
+  games: readonly PostedGame[],
+  scores: ReadonlyMap<string, { home: number; away: number; ht?: { home: number; away: number } | null }>,
+): "won" | "lost" | "void" | null {
   const results: (PickResult | null)[] = games.map((g) => {
     const s = g.matchId ? scores.get(g.matchId) : undefined;
-    return s && g.market ? gradeGame(g.market, s.home, s.away) : null;
+    return s && g.market ? gradeGame(g.market, s.home, s.away, s.ht) : null;
   });
   if (results.includes("lose")) return "lost";
   if (results.some((r) => r === null)) return null;
