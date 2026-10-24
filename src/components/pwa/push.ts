@@ -47,6 +47,19 @@ async function registration(): Promise<ServiceWorkerRegistration> {
   return navigator.serviceWorker.ready;
 }
 
+/** Fired when this device turns notifications on or off, so things that depend on it (the tracked-slip sync) re-check. */
+export const PUSH_CHANGED_EVENT = "kiqstat:push-changed";
+
+const announce = () => {
+  if (typeof window !== "undefined") window.dispatchEvent(new Event(PUSH_CHANGED_EVENT));
+};
+
+/** This device's push endpoint, or null when notifications are off. */
+export async function pushEndpoint(): Promise<string | null> {
+  if (!apiSupported() || Notification.permission !== "granted") return null;
+  return (await currentSubscription())?.endpoint ?? null;
+}
+
 async function currentSubscription(): Promise<PushSubscription | null> {
   if (!apiSupported()) return null;
   const reg = await navigator.serviceWorker.getRegistration("/");
@@ -86,7 +99,9 @@ export async function enablePush(): Promise<{ state: PushState; topics?: PushTop
     (await reg.pushManager.getSubscription()) ??
     (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: base64UrlToBytes(VAPID_PUBLIC_KEY) }));
   try {
-    return { state: "on", topics: await save(subscription) };
+    const topics = await save(subscription);
+    announce();
+    return { state: "on", topics };
   } catch (err) {
     // The server never heard about it, so nothing would ever arrive; undo it
     // rather than show "on".
@@ -104,6 +119,7 @@ export async function disablePush(): Promise<void> {
     body: JSON.stringify({ endpoint: subscription.endpoint }),
   }).catch(() => {});
   await subscription.unsubscribe();
+  announce();
 }
 
 /** This device's topics, refreshing the server's copy on the way. */

@@ -1,12 +1,7 @@
 import { NextResponse, after } from "next/server";
-import { getLive, getMatch } from "@/lib/providers";
-import { cached } from "@/lib/providers/cache";
-import { supabasePublic } from "@/lib/supabase/public";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { captureMatchResults } from "@/lib/settlement-runner";
-import type { Match } from "@/lib/types";
-import type { LegScore } from "@/lib/slip-tracker";
-import { espnCountsFor } from "@/lib/stat-results";
+import { legScoresFor } from "@/lib/slip-scores";
 
 export const dynamic = "force-dynamic";
 
@@ -41,56 +36,7 @@ export async function POST(request: Request) {
   }
   if (ids.length === 0) return NextResponse.json({ matches: {} });
 
-  const out: Record<string, LegScore> = {};
-
-  const db = supabasePublic();
-  if (db) {
-    const { data } = await db
-      .from("match_results")
-      .select("match_id, status, home_goals, away_goals")
-      .in("match_id", ids)
-      .eq("status", "finished");
-    for (const row of data ?? []) {
-      out[row.match_id as string] = {
-        status: "finished",
-        home: row.home_goals as number | null,
-        away: row.away_goals as number | null,
-      };
-    }
-  }
-
-  let remaining = ids.filter((id) => !out[id]);
-  if (remaining.length > 0) {
-    const live = await cached("slip-status:live", 20_000, getLive).catch(() => [] as Match[]);
-    const byId = new Map(live.map((m) => [m.id, m]));
-    for (const id of remaining) {
-      const m = byId.get(id);
-      if (m) out[id] = toScore(m);
-    }
-    remaining = remaining.filter((id) => !out[id]);
-  }
-
-  const finished: Match[] = [];
-  const looked = await Promise.all(
-    remaining.map((id) => cached(`slip-status:match:${id}`, 60_000, () => getMatch(id)).catch(() => null)),
-  );
-  for (const [i, m] of looked.entries()) {
-    if (!m) continue;
-    out[remaining[i]] = toScore(m);
-    if (m.status === "finished") finished.push(m);
-  }
-
-  // Corners and shots counts for finished matches that need them (ESPN, shared per competition-day).
-  const wantStats = [...statIds].filter((id) => out[id]?.status === "finished");
-  if (wantStats.length > 0) {
-    await Promise.all(
-      wantStats.map(async (id) => {
-        const m = await cached(`slip-status:match:${id}`, 60_000, () => getMatch(id)).catch(() => null);
-        const counts = m ? await espnCountsFor(m).catch(() => null) : null;
-        if (counts) out[id] = { ...out[id], stats: counts };
-      }),
-    );
-  }
+  const { scores, finished } = await legScoresFor(ids, statIds);
 
   // Remember finished games so the next device asking is answered from step 1.
   // Same category of write as /api/live's opportunistic capture: system-owned
@@ -105,9 +51,5 @@ export async function POST(request: Request) {
     });
   }
 
-  return NextResponse.json({ matches: out }, { headers: { "Cache-Control": "no-store" } });
-}
-
-function toScore(m: Match): LegScore {
-  return { status: m.status, minute: m.minute ?? null, home: m.score.home, away: m.score.away };
+  return NextResponse.json({ matches: scores }, { headers: { "Cache-Control": "no-store" } });
 }

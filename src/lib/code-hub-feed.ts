@@ -6,6 +6,7 @@ import { predictBatch, upcomingFeed } from "@/lib/service";
 import { candidatesFor, friendlyLabel, gridFor, type ForgeLeg } from "@/lib/forge";
 import { bookLeg, keepOnBoard } from "@/lib/board-candidates";
 import { LEG_MARKET_GAP } from "@/lib/market-check";
+import { dispatchHubCodes } from "@/lib/push/events";
 import { priceLeg } from "@/lib/leg-pricing";
 import { appDayBounds } from "@/lib/format";
 import { priceQuotes } from "@/lib/odds";
@@ -210,6 +211,7 @@ function bookMissing(rows: HubCodeRow[]) {
   if (due.length === 0) return;
   after(async () => {
     if (!(await bookingAvailable())) return;
+    let bookedAny = false;
     for (const row of due) {
       const legs: BookingLeg[] = [];
       let failed: { match: string; market: string; reason: string } | null = null;
@@ -267,10 +269,14 @@ function bookMissing(rows: HubCodeRow[]) {
           .eq("day", row.day)
           .eq("tier", row.tier)
           .is("booking_code", null);
+        bookedAny = true;
       } catch {
         // Retried on the next request: the row still has no code.
       }
     }
+    // The codes just got their SportyBet codes: tell the devices that want
+    // them now, all together (push/events.ts; the minute cron is the backstop).
+    if (bookedAny) await dispatchHubCodes({ settled: true }).catch(() => {});
   });
 }
 

@@ -11,9 +11,15 @@ export interface PushTopics {
   results: boolean;
   /** VIP value-shift alerts. Stored for everyone, only ever sent to VIPs. */
   valueAlerts: boolean;
+  /** Today's Code Hub codes, as each is ready. */
+  codes: boolean;
+  /** A member posted a code (grouped: at most one notification every few minutes). */
+  community: boolean;
+  /** The legs and result of slips this device is tracking. */
+  slips: boolean;
 }
 
-export const DEFAULT_TOPICS: PushTopics = { picks: true, results: true, valueAlerts: true };
+export const DEFAULT_TOPICS: PushTopics = { picks: true, results: true, valueAlerts: true, codes: true, community: true, slips: true };
 
 /** The parts of a browser PushSubscription (its toJSON()) the server keeps. */
 export interface PushSubscriptionInput {
@@ -68,7 +74,7 @@ export function parseTopics(value: unknown): Partial<PushTopics> {
   if (!value || typeof value !== "object") return {};
   const v = value as Record<string, unknown>;
   const out: Partial<PushTopics> = {};
-  for (const key of ["picks", "results", "valueAlerts"] as const) {
+  for (const key of ["picks", "results", "valueAlerts", "codes", "community", "slips"] as const) {
     if (typeof v[key] === "boolean") out[key] = v[key] as boolean;
   }
   return out;

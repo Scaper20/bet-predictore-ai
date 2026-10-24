@@ -18,9 +18,31 @@ export interface StoredSubscription extends PushTarget {
   picks: boolean;
   results: boolean;
   valueAlerts: boolean;
+  codes: boolean;
+  community: boolean;
+  slips: boolean;
 }
 
-const COLUMNS = "id, endpoint, p256dh, auth, user_id, picks, results, value_alerts";
+const COLUMNS = "id, endpoint, p256dh, auth, user_id, picks, results, value_alerts, codes, community, slips";
+
+type Row = {
+  id: string; endpoint: string; p256dh: string; auth: string; user_id: string | null;
+  picks: boolean; results: boolean; value_alerts: boolean; codes: boolean; community: boolean; slips: boolean;
+};
+
+const fromRow = (r: Row): StoredSubscription => ({
+  id: r.id,
+  endpoint: r.endpoint,
+  p256dh: r.p256dh,
+  auth: r.auth,
+  userId: r.user_id,
+  picks: r.picks,
+  results: r.results,
+  valueAlerts: r.value_alerts,
+  codes: r.codes,
+  community: r.community,
+  slips: r.slips,
+});
 /** PostgREST returns at most this many rows a request by default. */
 const PAGE = 1000;
 /** Ids per update/delete: they travel in the URL. */
@@ -36,18 +58,26 @@ export async function loadSubscriptions(admin: SupabaseClient): Promise<StoredSu
     const query = admin.from("push_subscriptions").select(COLUMNS).or("picks.eq.true,results.eq.true");
     const { data, error } = await query.order("id").range(from, from + PAGE - 1);
     if (error) throw error;
-    for (const r of data ?? []) {
-      out.push({
-        id: r.id,
-        endpoint: r.endpoint,
-        p256dh: r.p256dh,
-        auth: r.auth,
-        userId: r.user_id,
-        picks: r.picks,
-        results: r.results,
-        valueAlerts: r.value_alerts,
-      });
-    }
+    for (const r of (data ?? []) as Row[]) out.push(fromRow(r));
+    if (!data || data.length < PAGE) return out;
+  }
+}
+
+/** The topics a real-time event can belong to (the morning send has its own loader above). */
+export type EventTopic = "codes" | "community" | "slips";
+
+/** Every device that has this topic on, a page at a time. */
+export async function loadDevices(admin: SupabaseClient, topic: EventTopic): Promise<StoredSubscription[]> {
+  const out: StoredSubscription[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await admin
+      .from("push_subscriptions")
+      .select(COLUMNS)
+      .eq(topic, true)
+      .order("id")
+      .range(from, from + PAGE - 1);
+    if (error) throw error;
+    for (const r of (data ?? []) as Row[]) out.push(fromRow(r));
     if (!data || data.length < PAGE) return out;
   }
 }

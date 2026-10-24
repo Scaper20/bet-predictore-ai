@@ -2,6 +2,7 @@ import type { PersonalizedPick } from "@/lib/for-you";
 import { quotedPrice } from "@/lib/whatsapp-digest";
 import { odds, percent } from "@/lib/format";
 import { sportPath } from "@/lib/routes";
+import type { LegResult, TrackedLeg } from "@/lib/slip-tracker";
 
 /**
  * What the notifications say. Pure — the crons do the fetching and sending —
@@ -84,7 +85,7 @@ export function dailyPayload(opts: {
 
 export const TEST_PAYLOAD: PushPayload = {
   title: "Notifications are on",
-  body: "This is how KiqStat will reach you: today's picks each morning and how yesterday's did. Pro members also get Strong pick alerts at kick-off and full time.",
+  body: "This is how KiqStat will reach you: today's codes the moment they're ready, community codes, your tracked slips as each game finishes, and the morning picks. Pro members also get Strong pick alerts.",
   url: sportPath("predictions"),
   tag: "test",
 };
@@ -124,5 +125,142 @@ export function strongResultPayload(e: StrongPickEvent): PushPayload | null {
     body: `${e.home}${score}${e.away}\n${e.label}`,
     url: sportPath("trackRecord"),
     tag: `result-${e.matchId}`,
+  };
+}
+
+/* --------------------------------------------------------------- codes */
+
+/** A daily Code Hub code that has just become available, as the notification names it. */
+export interface HubCodeNote {
+  /** The tier's id ("2", "3", "5"…). */
+  tier: string;
+  /** "Steady 2", "Solid 3"… */
+  name: string;
+}
+
+/**
+ * Today's codes are ready. A free device is told about the one code free
+ * accounts get in full (and how many more Pro has); a code only Pro opens
+ * is not announced to it again and again. Null when this device has nothing
+ * to hear. `proMore` is how many other live codes today are Pro-only.
+ */
+export function hubCodesPayload(opts: { codes: HubCodeNote[]; paid: boolean; freeTier: string; proMore: number }): PushPayload | null {
+  const url = sportPath("codeHub");
+  if (opts.paid) {
+    const n = opts.codes.length;
+    if (n === 0) return null;
+    return {
+      title: n === 1 ? `New code: ${opts.codes[0].name}` : `Today's ${n} codes are ready`,
+      body: `${opts.codes.map((c) => c.name).join(" · ")}\nTap to load ${n === 1 ? "it" : "them"} on SportyBet.`,
+      url,
+      tag: "hub-codes",
+    };
+  }
+  const free = opts.codes.find((c) => c.tier === opts.freeTier);
+  if (!free) return null;
+  return {
+    title: "Today's free code is ready",
+    body: `${free.name}\nTap to load it on SportyBet.${opts.proMore > 0 ? `\n🔒 ${opts.proMore} more for Pro members.` : ""}`,
+    url,
+    tag: "hub-codes",
+  };
+}
+
+/* ------------------------------------------------------------ community */
+
+/** A community post, as far as a notification may say. */
+export interface CommunityNote {
+  author: string;
+  games: number;
+  /** The code's price on SportyBet, when we could read it. */
+  odds: number | null;
+}
+
+/** A member posted a code, or several did in the same few minutes. */
+export function communityPayload(posts: CommunityNote[]): PushPayload | null {
+  const url = sportPath("codeHub");
+  if (posts.length === 0) return null;
+  if (posts.length === 1) {
+    const p = posts[0];
+    return {
+      title: "New community code",
+      body: `${p.author} posted a ${p.games}-game code${p.odds ? ` at ${odds(p.odds)} odds` : ""}.\nSee how we rate it.`,
+      url,
+      tag: "community",
+    };
+  }
+  const authors = [...new Set(posts.map((p) => p.author))];
+  const named = authors.slice(0, 2).join(", ");
+  return {
+    title: `${posts.length} new community codes`,
+    body: `From ${named}${authors.length > 2 ? ` and ${authors.length - 2} more` : ""}.\nSee them ranked by our read.`,
+    url,
+    tag: "community",
+  };
+}
+
+/* ---------------------------------------------------------------- slips */
+
+/** What changed on a tracked slip since the device was last told. */
+export interface SlipNote {
+  slipId: string;
+  legs: TrackedLeg[];
+  /** Every settled leg so far, by match id (includes the fresh ones). */
+  results: Record<string, LegResult>;
+  /** The legs that settled since the last notification. */
+  fresh: string[];
+}
+
+function legLine(leg: TrackedLeg, r: LegResult): string {
+  const verb = r.grade === "win" ? "won" : r.grade === "lose" ? "lost" : r.abandoned ? "was called off" : "was refunded";
+  const score = r.abandoned ? " v " : ` ${r.home}–${r.away} `;
+  return `${leg.homeName}${score}${leg.awayName}: ${leg.label} ${verb}`;
+}
+
+/**
+ * The notification for a tracked slip after one or more of its games
+ * finished. A lost leg ends the slip on the spot, whatever is still to play;
+ * the last game in tells a landed slip; anything between is progress. All
+ * the same tag, so a phone shows one notification per slip that updates in
+ * place. Null when nothing fresh settled.
+ */
+export function slipPayload(note: SlipNote): PushPayload | null {
+  const fresh = note.legs.filter((l) => note.fresh.includes(l.matchId) && note.results[l.matchId]);
+  if (fresh.length === 0) return null;
+  const total = note.legs.length;
+  const settled = note.legs.filter((l) => note.results[l.matchId]);
+  const won = settled.filter((l) => note.results[l.matchId].grade === "win").length;
+  const voided = settled.filter((l) => note.results[l.matchId].grade === "void").length;
+  const lostLeg = fresh.find((l) => note.results[l.matchId].grade === "lose");
+  const base = { url: sportPath("trackedSlips"), tag: `slip-${note.slipId}` };
+  const slip = total === 1 ? "Your slip" : `Your ${total}-leg slip`;
+
+  if (lostLeg) {
+    const left = total - settled.length;
+    return {
+      ...base,
+      title: "❌ Slip out",
+      body: `${legLine(lostLeg, note.results[lostLeg.matchId])}\n${slip} is out${won > 0 ? ` after ${won} ${won === 1 ? "win" : "wins"}` : ""}.${left > 0 ? ` ${left === 1 ? "1 game" : `${left} games`} still to play can't change that.` : ""}`,
+    };
+  }
+
+  if (settled.length === total) {
+    if (won === 0) {
+      return { ...base, title: "↩️ Slip void", body: `Every game on ${slip.toLowerCase()} was called off or refunded. Nothing to settle.` };
+    }
+    return {
+      ...base,
+      title: "🎉 Slip landed",
+      body: `${legLine(fresh[fresh.length - 1], note.results[fresh[fresh.length - 1].matchId])}\n${slip} landed: all ${total} legs${voided > 0 ? ` (${voided} refunded)` : " won"}.`,
+    };
+  }
+
+  const left = total - settled.length;
+  const lines = fresh.slice(0, 2).map((l) => legLine(l, note.results[l.matchId]));
+  if (fresh.length > 2) lines.push(`+${fresh.length - 2} more in`);
+  return {
+    ...base,
+    title: `✅ ${settled.length} of ${total} in`,
+    body: `${lines.join("\n")}\n${left} ${left === 1 ? "game" : "games"} to play.`,
   };
 }

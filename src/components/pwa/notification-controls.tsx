@@ -8,6 +8,17 @@ import { OPEN_INSTALL_EVENT } from "./install";
 import { disablePush, enablePush, loadTopics, pushState, sendTestPush, updateTopics, type PushState } from "./push";
 
 const TOPIC_ROWS: { key: keyof PushTopics; label: string; description: string }[] = [
+  { key: "codes", label: "Daily codes", description: "The moment today's Code Hub codes are ready to load on SportyBet." },
+  {
+    key: "slips",
+    label: "Tracked slip results",
+    description: "Each game on a slip you track as it finishes, and when the slip lands or goes out.",
+  },
+  {
+    key: "community",
+    label: "Community codes",
+    description: "When a member posts a code. Grouped, so at most one every few minutes.",
+  },
   { key: "picks", label: "Today's picks", description: "Each morning around 8am, with the best of the day." },
   { key: "results", label: "Yesterday's results", description: "How the picks did, good day or bad." },
 ];
@@ -138,7 +149,8 @@ export function NotificationControls({ onEnabled }: { onEnabled?: () => void }) 
     return (
       <div className="space-y-3">
         <p className="text-sm leading-relaxed text-ink-muted">
-          One notification each morning: today&apos;s picks and how yesterday&apos;s went. Switch them off any time.
+          Today&apos;s codes the moment they&apos;re ready, your tracked slips as each game finishes, community codes, and
+          the morning picks. Switch any of them off, any time.
         </p>
         <Button type="button" onClick={() => void turnOn()} disabled={busy} className="px-4 py-2.5">
           {busy ? "Switching on…" : "Turn on notifications"}

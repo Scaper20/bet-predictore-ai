@@ -1,7 +1,8 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { getEntitlement } from "@/lib/entitlements";
 import { communityPosts, postCode, posterName, postForViewer } from "@/lib/code-hub-posts";
 import { getViewer, viewerForTier } from "@/lib/viewer";
+import { dispatchCommunity } from "@/lib/push/events";
 
 /**
  * Community codes (src/lib/code-hub-posts.ts). GET lists them; POST posts a
@@ -51,5 +52,7 @@ export async function POST(request: Request) {
   const out = await postCode(entitlement.userId, posterName(entitlement.displayName, entitlement.userId), code).catch(() => null);
   if (!out) return NextResponse.json({ error: "Couldn't post that just now. Try again." }, { status: 500, headers: NO_STORE });
   if (!out.ok) return NextResponse.json({ error: out.error }, { status: out.status, headers: NO_STORE });
+  // Tell the devices that want community codes, once the response is out (push/events.ts groups them).
+  after(() => dispatchCommunity().then(() => undefined, () => undefined));
   return NextResponse.json({ post: postForViewer(out.post, await viewerForTier(entitlement.tier)) }, { headers: NO_STORE });
 }

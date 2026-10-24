@@ -6,6 +6,7 @@ import { SITE_URL as SITE } from "@/lib/site-url";
 import { JsonLd } from "@/components/seo/json-ld";
 import { COMPANY } from "@/lib/company";
 import { ServiceWorkerRegister } from "@/components/pwa/service-worker-register";
+import { TrackedSlipsPushSync } from "@/components/pwa/tracked-slips-push-sync";
 import { MaintenanceWatcher } from "@/components/layout/maintenance-watcher";
 import { INSTALL_CAPTURE_SCRIPT } from "@/lib/pwa";
 import "./globals.css";
@@ -158,6 +159,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <AppSplash />
         {children}
         <ServiceWorkerRegister />
+        <TrackedSlipsPushSync />
         <MaintenanceWatcher />
         <Analytics />
         <SpeedInsights />
