@@ -31,6 +31,7 @@ import { matchJsonLd } from "@/lib/seo/match-jsonld";
 import { fixtureStatMarkets, teamStatAverages, type FixtureStatMarkets } from "@/lib/stat-markets-service";
 import { espnCountsFor } from "@/lib/stat-results";
 import { GoalExtrasPanel, StatPanel } from "@/components/match/stat-panels";
+import { SportyBetLinesPanel, SportyBetLinesSkeleton } from "@/components/match/sportybet-lines";
 import { matchDetail } from "@/lib/service";
 import { getViewer } from "@/lib/viewer";
 import { isProLeague } from "@/lib/pro-leagues";
@@ -417,6 +418,12 @@ function Markets({
             return m ? <StatPanel key={kind} kind={kind} markets={m} match={prediction.match} referee={extra.referee} /> : null;
           })}
         {statsLocked && <ProStatsLock />}
+        {/* Pro: every extra line SportyBet lists, priced by the model (handicaps, team goals, corners, shots, bookings). */}
+        {!statsLocked && (
+          <Suspense fallback={<SportyBetLinesSkeleton />}>
+            <SportyBetLinesPanel prediction={prediction} />
+          </Suspense>
+        )}
       </DepthGate>
       {/* Pro: half-time markets and Asian handicap, fetched after the plan check. */}
       <ProMarkets />

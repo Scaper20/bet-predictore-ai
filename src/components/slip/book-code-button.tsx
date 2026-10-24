@@ -28,8 +28,14 @@ const WHY: Record<LegProblem, string> = {
   "duplicate-game": "Two picks on the same game can't share a code.",
 };
 
+/** A pick booked as the same bet under SportyBet's name for it on that game. */
+interface Swap {
+  matchId: string;
+  label: string;
+}
+
 type Result =
-  | { kind: "code"; code: string; url: string; deadline: number; remaining: number | null }
+  | { kind: "code"; code: string; url: string; deadline: number; remaining: number | null; swapped: Swap[] }
   | { kind: "problems"; problems: { matchId: string; problem: LegProblem }[] }
   | { kind: "error"; message: string; upgrade?: boolean; nextFreeAt?: number | null };
 
@@ -81,6 +87,7 @@ export function BookCodeButton({
             url?: string;
             deadline?: number;
             remaining?: number | null;
+            swapped?: Swap[];
             problems?: { matchId: string; problem: LegProblem }[];
             error?: string;
             upgrade?: boolean;
@@ -89,7 +96,14 @@ export function BookCodeButton({
         | null;
       let value: Result;
       if (body?.ok && body.code && body.url && body.deadline) {
-        value = { kind: "code", code: body.code, url: body.url, deadline: body.deadline, remaining: body.remaining ?? null };
+        value = {
+          kind: "code",
+          code: body.code,
+          url: body.url,
+          deadline: body.deadline,
+          remaining: body.remaining ?? null,
+          swapped: body.swapped ?? [],
+        };
       } else if (body?.problems?.length) {
         value = { kind: "problems", problems: body.problems };
       } else {
@@ -112,6 +126,12 @@ export function BookCodeButton({
     return (
       <div className="space-y-2">
         <CodeBox code={current.code} />
+        {current.swapped.map((s) => (
+          <p key={s.matchId} className="text-[11px] leading-relaxed text-ink-muted">
+            <span className="font-semibold text-ink">{legs.find((l) => l.matchId === s.matchId)?.fixture ?? "One pick"}</span>{" "}
+            went on as {s.label}, SportyBet&rsquo;s name for the same bet on this game (same chance).
+          </p>
+        ))}
         <p className="text-[11px] leading-relaxed text-ink-dim">
           The code carries your picks, not prices: SportyBet shows its own odds at the moment you load it, and they move
           until kick-off.

@@ -3,17 +3,20 @@ import "server-only";
 import { after } from "next/server";
 import { cached } from "@/lib/providers/cache";
 import { predictBatch, upcomingFeed } from "@/lib/service";
-import { candidatesFor, type ForgeLeg } from "@/lib/forge";
+import { candidatesFor, friendlyLabel, gridFor, type ForgeLeg } from "@/lib/forge";
+import { bookLeg, keepOnBoard } from "@/lib/board-candidates";
+import { priceLeg } from "@/lib/leg-pricing";
 import { appDayBounds } from "@/lib/format";
 import { priceQuotes } from "@/lib/odds";
 import { bookingAvailable, bookingCodeFor } from "@/lib/odds/booking-code";
 import { findOnBoard } from "@/lib/odds/sportybet";
-import { offeredOn, toSportyBet } from "@/lib/odds/markets";
 import { allSportyBetTournaments, logBooking } from "@/lib/odds/sportybet-links";
 import type { BookingLeg } from "@/lib/odds/booking";
 import {
   CODE_RUN_MS,
   HUB_FORGE_MARKETS,
+  HUB_LEG_MIN_PROBABILITY,
+  hubMarketAllowed,
   buildHub,
   codeRunning,
   hubDay,
@@ -132,11 +135,34 @@ async function buildToday(day: string): Promise<HubCodeRow[]> {
     return m.status === "scheduled" && t > soon && t < todayEnd && Boolean(code && onSportyBet.has(code));
   });
   const predictions = (await predictBatch(inWindow, 400)).filter((p) => p.sufficiency.publishable);
-  const entry = (prediction: (typeof predictions)[number]) => ({
-    prediction,
-    candidates: candidatesFor(prediction, { markets: HUB_FORGE_MARKETS, picksPerGame: 1, allowHandicap: true }),
+  // Board first: only lines SportyBet lists on each game today go into a
+  // combo, swapped to a same-chance twin or a nearby line where ours isn't
+  // listed (board-candidates.ts), so no code goes out short of a leg. When
+  // SportyBet can't be read at all, build as before and let booking check.
+  const events = await Promise.all(
+    predictions.map((p) =>
+      findOnBoard(
+        { homeName: p.match.home.name, awayName: p.match.away.name, kickoff: Date.parse(p.match.kickoff) },
+        { leagueCode: p.match.league.code, matchId: p.match.id },
+      ).catch(() => null),
+    ),
+  );
+  const boardRead = events.some((e) => (e?.markets.length ?? 0) > 0);
+  const today = predictions.flatMap((prediction, i) => {
+    const candidates = candidatesFor(prediction, { markets: HUB_FORGE_MARKETS, picksPerGame: 1, allowHandicap: true });
+    if (!boardRead) return [{ prediction, candidates }];
+    const markets = events[i]?.markets ?? [];
+    if (markets.length === 0) return [];
+    const goals = gridFor(prediction);
+    const kept = keepOnBoard(candidates, markets, {
+      home: prediction.match.home.name,
+      away: prediction.match.away.name,
+      // Re-line only to lines the hub may carry, so a swap isn't dropped later.
+      price: (m) => (hubMarketAllowed(m) ? (priceLeg(m, { goals })?.survive ?? null) : null),
+      floor: () => HUB_LEG_MIN_PROBABILITY,
+    });
+    return kept.length ? [{ prediction, candidates: kept }] : [];
   });
-  const today = predictions.map(entry);
 
   const built = buildHub(today, day);
   return Promise.all(
@@ -184,21 +210,26 @@ function bookMissing(rows: HubCodeRow[]) {
     if (!(await bookingAvailable())) return;
     for (const row of due) {
       const legs: BookingLeg[] = [];
-      for (const leg of row.legs) {
+      let failed: { match: string; market: string; reason: string } | null = null;
+      // A leg whose line was pulled since the build goes on as its same-chance
+      // twin (Home +0.5 as Home or Draw); the stored combo is relabelled to match.
+      const swapped = new Map<number, string>();
+      for (const [i, leg] of row.legs.entries()) {
         const kickoff = Date.parse(leg.kickoff);
         const event = await findOnBoard(
           { homeName: leg.homeName, awayName: leg.awayName, kickoff },
           { leagueCode: leg.leagueCode, matchId: leg.matchId },
         ).catch(() => null);
-        if (!event) break;
-        // A line SportyBet isn't offering on the day would get the whole code
-        // refused; leave the combo without a code instead, as for an unlisted game.
-        const selection = toSportyBet(leg.market);
-        if (!selection || (event.markets.length > 0 && !offeredOn(selection, event.markets))) break;
-        legs.push({ market: leg.market, eventId: event.eventId, kickoff });
+        const b = bookLeg(leg.market, event);
+        if (!b.ok || !event) {
+          failed = { match: `${leg.homeName} v ${leg.awayName}`, market: leg.market, reason: b.ok ? "not-listed" : b.reason };
+          break;
+        }
+        if (b.twin) swapped.set(i, b.market);
+        legs.push({ market: b.market, eventId: event.eventId, kickoff });
       }
-      if (legs.length !== row.legs.length) {
-        await logBooking({ source: "code-hub", legs: row.legs.length, outcome: "problems", problems: { found: legs.length } });
+      if (failed || legs.length !== row.legs.length) {
+        await logBooking({ source: "code-hub", legs: row.legs.length, outcome: "problems", problems: { found: legs.length, failed } });
         continue;
       }
 
@@ -217,12 +248,19 @@ function bookMissing(rows: HubCodeRow[]) {
       if (!booked.ok) continue;
       try {
         const db = await admin();
+        const relabelled = swapped.size
+          ? row.legs.map((l, i) => {
+              const market = swapped.get(i);
+              return market ? { ...l, market, label: friendlyLabel(market, l.homeName, l.awayName, l.label) } : l;
+            })
+          : null;
         await db
           .from("code_hub_codes")
           .update({
             booking_code: booked.bookingCode,
             booking_deadline: new Date(booked.deadline).toISOString(),
             booked_at: new Date().toISOString(),
+            ...(relabelled ? { legs: relabelled } : {}),
           })
           .eq("day", row.day)
           .eq("tier", row.tier)

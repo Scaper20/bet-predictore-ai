@@ -31,6 +31,11 @@ export function evaluatePick(
       return homeGoals > 0 && awayGoals > 0 ? "win" : "lose";
     case "btts:no":
       return homeGoals > 0 && awayGoals > 0 ? "lose" : "win";
+    // Draw no bet: the stake back on a draw.
+    case "dnb:home":
+      return homeGoals > awayGoals ? "win" : homeGoals === awayGoals ? "push" : "lose";
+    case "dnb:away":
+      return awayGoals > homeGoals ? "win" : homeGoals === awayGoals ? "push" : "lose";
   }
 
   const over = market.match(/^ou:over:(\d+(?:\.\d+)?)$/);
@@ -51,6 +56,23 @@ export function evaluatePick(
 
   const ah = market.match(/^ah:(home|away):([+-]?\d+(?:\.\d+)?)$/);
   if (ah) return gradeHandicap(ah[1] as "home" | "away", Number(ah[2]), homeGoals, awayGoals);
+
+  // Three-way handicap: the home line added to the home side's goals, then a
+  // plain result; "eh:draw:-1" wins when the home side wins by exactly one.
+  const eh = market.match(/^eh:(home|draw|away):([+-]?\d+)$/);
+  if (eh) {
+    const margin = homeGoals - awayGoals + Number(eh[2]);
+    const side = margin > 0 ? "home" : margin < 0 ? "away" : "draw";
+    return side === eh[1] ? "win" : "lose";
+  }
+
+  const teamGoals = market.match(/^tg:(home|away):(over|under):(\d+(?:\.\d+)?)$/);
+  if (teamGoals) {
+    const goals = teamGoals[1] === "home" ? homeGoals : awayGoals;
+    const line = Number(teamGoals[3]);
+    if (goals === line) return "push";
+    return (goals > line) === (teamGoals[2] === "over") ? "win" : "lose";
+  }
 
   const correctScore = market.match(/^cs:(\d+)-(\d+)$/);
   if (correctScore) {
@@ -81,14 +103,18 @@ export function statKindOf(market: string): "corners" | "shots" | "shotsOnTarget
   return family === "corners" ? "corners" : family === "shots" ? "shots" : family === "sot" ? "shotsOnTarget" : null;
 }
 
+/** The count families a pick can carry; bookings are priced and read, not yet graded from results. */
+const STAT_FAMILIES = new Set(["corners", "shots", "sot", "bookings"]);
+
 /**
- * Grades a corners, shots or shots-on-target pick against the match's counts
- * (home, away). Markets as stat sweet spots name them: totals
- * ("corners:under:12.5"), team totals ("sot:home:over:3.5"), who had more
- * ("sot:most:home-or-level") and handicaps ("sot:hcp:away:+3.5").
+ * Grades a corners, shots, shots-on-target or bookings pick against the
+ * match's counts (home, away). Markets as stat sweet spots and SportyBet name
+ * them: totals ("corners:under:12.5"), team totals ("sot:home:over:3.5"), who
+ * had more ("sot:most:home-or-level", "corners:most:level") and handicaps
+ * ("sot:hcp:away:+3.5").
  */
 export function evaluateStatPick(market: string, home: number, away: number): PickResult | null {
-  if (!statKindOf(market)) return null;
+  if (!STAT_FAMILIES.has(market.split(":")[0])) return null;
   const [, a, b, c] = market.split(":");
   const vs = (x: number, line: number, over: boolean): PickResult => (x === line ? "push" : (x > line) === over ? "win" : "lose");
   if (a === "over" || a === "under") return vs(home + away, Number(b), a === "over");
@@ -98,6 +124,7 @@ export function evaluateStatPick(market: string, home: number, away: number): Pi
     if (b === "away") return away > home ? "win" : "lose";
     if (b === "home-or-level") return home >= away ? "win" : "lose";
     if (b === "away-or-level") return away >= home ? "win" : "lose";
+    if (b === "level") return home === away ? "win" : "lose";
     return null;
   }
   if (a === "hcp" && (b === "home" || b === "away")) return gradeHandicap(b, Number(c), home, away);

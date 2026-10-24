@@ -14,6 +14,7 @@ import { goalMarkets, type GoalMarkets } from "@/lib/model/goal-markets";
 import { scoreMatrix } from "@/lib/model/poisson";
 import { halfGrids, SITE_FIRST_HALF_SHARE, SITE_HALF_TILT, SITE_SECOND_HALF_TILT } from "@/lib/model/halves";
 import type { Prediction } from "@/lib/model/predict";
+import type { StatFamily } from "@/lib/leg-pricing";
 
 /**
  * Corners, cards, shots and shots on target for a fixture, plus the extra
@@ -29,6 +30,9 @@ export interface FixtureStatMarkets {
   goals: GoalMarkets;
 }
 
+/** Fitted per competition; bookings only where the archive stores red cards apart (0072). */
+const FIT_KINDS: StatKind[] = ["corners", "cards", "bookings", "shots", "shotsOnTarget"];
+/** Shown on the match page's Markets tab. */
 const KINDS: StatKind[] = ["corners", "cards", "shots", "shotsOnTarget"];
 /** Fewer matches of a statistic than this and it is not modelled. */
 const MIN_MATCHES = 200;
@@ -54,7 +58,7 @@ async function leagueFits(code: string): Promise<{ fits: Partial<Record<StatKind
     const rows = await archivedStatRows(code);
     const now = Date.now();
     const out: Partial<Record<StatKind, StatFit>> = {};
-    for (const kind of KINDS) {
+    for (const kind of FIT_KINDS) {
       const s = samples(rows, kind, canon);
       if (s.length >= MIN_MATCHES) out[kind] = fitStat(s, now, STAT_OPTIONS[kind]);
     }
@@ -105,6 +109,32 @@ export async function statChances(match: Match): Promise<Record<string, number> 
     return Object.keys(out).length ? out : undefined;
   } catch {
     return undefined;
+  }
+}
+
+/** Our count families, keyed the way their markets are ("sot:over:9.5"). */
+const GRID_KINDS: Record<StatFamily, StatKind> = { corners: "corners", shots: "shots", sot: "shotsOnTarget", bookings: "bookings" };
+
+/**
+ * The fixture's joint count grids for corners, shots, shots on target and
+ * bookings, for pricing any line SportyBet lists (leg-pricing.ts). A family
+ * is missing where the competition has too little history for it.
+ */
+export async function statGridsFor(match: Match): Promise<Partial<Record<StatFamily, number[][]>>> {
+  const code = match.league.code;
+  if (!code) return {};
+  try {
+    const [{ fits, canon }, referee] = await Promise.all([leagueFits(code), refereeFor(match).catch(() => null)]);
+    const out: Partial<Record<StatFamily, number[][]>> = {};
+    for (const [family, kind] of Object.entries(GRID_KINDS) as [StatFamily, StatKind][]) {
+      const fit = fits[kind];
+      if (!fit) continue;
+      const withReferee = kind === "bookings" ? referee ?? undefined : undefined;
+      out[family] = statGrid(expectStat(fit, canon(match.home.name), canon(match.away.name), withReferee), fit, STAT_LINES[kind].max);
+    }
+    return out;
+  } catch {
+    return {};
   }
 }
 

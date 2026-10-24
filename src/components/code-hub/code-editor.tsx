@@ -24,6 +24,16 @@ const VERDICT: Record<Verdict, { tone: "brand" | "neutral" | "amber" | "rose"; l
   locked: { tone: "neutral", label: "Pro" },
 };
 
+/** The edited code without some games, its chance and fair odds recounted. */
+function withoutGames(r: EditResult, removed: ReadonlySet<string>): EditResult {
+  const games = r.games.filter((g) => !removed.has(g.matchId));
+  return {
+    games,
+    chance: Math.round(games.reduce((p, g) => p * g.probability, 1) * 10_000) / 10_000,
+    fairOdds: Math.round(games.reduce((o, g) => o * g.fairOdds, 1) * 100) / 100,
+  };
+}
+
 /** The edited code as slip legs, which the booking route already understands. */
 const toLegs = (r: EditResult): SlipLeg[] =>
   r.games.map((g) => ({
@@ -185,7 +195,12 @@ function ScanCard({ scan }: { scan: ScanView }) {
               {g.reason && <span className="mt-0.5 block text-xs text-amber">{g.reason}</span>}
             </span>
             <span className="flex shrink-0 items-center gap-2">
-              {g.probability !== null && <span className="font-mono text-xs text-ink-muted">{percent(g.probability)}</span>}
+              {g.probability !== null && (
+                <span className="font-mono text-xs text-ink-muted">
+                  {percent(g.probability)}
+                  {g.refund ? <span className="text-ink-dim"> · {percent(g.refund)} refund</span> : null}
+                </span>
+              )}
               <Badge tone={VERDICT[g.verdict].tone}>{VERDICT[g.verdict].label}</Badge>
             </span>
           </li>
@@ -195,7 +210,10 @@ function ScanCard({ scan }: { scan: ScanView }) {
   );
 }
 
-function EditedCard({ result, before, mode }: { result: EditResult; before: ScanView; mode: "safer" | "target" }) {
+function EditedCard({ result: full, before, mode }: { result: EditResult; before: ScanView; mode: "safer" | "target" }) {
+  // A pick SportyBet won't take can be dropped here and the rest booked (BookCodeButton).
+  const [removed, setRemoved] = useState<ReadonlySet<string>>(new Set());
+  const result = removed.size ? withoutGames(full, removed) : full;
   const changed = result.games.filter((g) => g.from).length;
   const kept = new Set(result.games.map((g) => g.matchId));
   const left = before.games.filter((g) => !g.matchId || !kept.has(g.matchId));
@@ -231,7 +249,11 @@ function EditedCard({ result, before, mode }: { result: EditResult; before: Scan
         </p>
       )}
       <div className="mt-4 border-t border-line pt-4">
-        <BookCodeButton legs={toLegs(result)} label="Get the new SportyBet code" />
+        <BookCodeButton
+          legs={toLegs(result)}
+          remove={(matchId) => setRemoved((r) => new Set([...r, matchId]))}
+          label="Get the new SportyBet code"
+        />
       </div>
     </div>
   );

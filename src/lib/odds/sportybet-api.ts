@@ -347,6 +347,8 @@ export interface TicketLeg {
   tournamentId: string | null;
   /** SportyBet's own label for the pick, e.g. "Home & Over 2.5". */
   desc: string | null;
+  /** SportyBet's name for the market, e.g. "Home Team Total Corners". */
+  marketDesc: string | null;
   /** The price SportyBet quotes now (codes hold picks, not prices). */
   odds: number | null;
 }
@@ -407,6 +409,7 @@ export function parseShareTicket(body: unknown): Ticket | null {
       kickoff: Number.isFinite(kickoff) && kickoff > 0 ? kickoff : null,
       tournamentId: text(event?.sport?.category?.tournament?.id),
       desc: text((outcome as { desc?: unknown } | undefined)?.desc),
+      marketDesc: text(market?.desc),
       odds: Number.isFinite(odds) && odds > 1 ? odds : null,
     });
   }

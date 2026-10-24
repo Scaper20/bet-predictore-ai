@@ -39,6 +39,9 @@ export interface ArchiveRow {
   awayCorners?: number;
   homeCards?: number;
   awayCards?: number;
+  /** Red cards alone (also counted in cards): SportyBet's bookings count a red as 2. */
+  homeReds?: number;
+  awayReds?: number;
   homeShots?: number;
   awayShots?: number;
   /** Named in the English divisions' files. */
@@ -135,6 +138,8 @@ export function parseDivisionCsv(body: string, leagueCode: string): ArchiveRow[]
     if (hy !== undefined && ay !== undefined && hr !== undefined && ar !== undefined) {
       row.homeCards = hy + hr;
       row.awayCards = ay + ar;
+      row.homeReds = hr;
+      row.awayReds = ar;
     }
     const hs = stat(f, iHs), as = stat(f, iAs);
     if (hs !== undefined && as !== undefined) {

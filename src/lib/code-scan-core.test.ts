@@ -17,7 +17,7 @@ describe("gamesFromTicket", () => {
 
   it("marks a pick we don't read as unreadable rather than guessing", () => {
     const games = gamesFromTicket([
-      { eventId: "sr:match:1", marketId: "45", outcomeId: "276", homeName: "A", awayName: "B", kickoff: 1, tournamentId: null, desc: "1:0", odds: 7 },
+      { eventId: "sr:match:1", marketId: "45", outcomeId: "276", homeName: "A", awayName: "B", kickoff: 1, tournamentId: null, desc: "1:0", marketDesc: "Correct Score", odds: 7 },
     ]);
     expect(games[0].market).toBeNull();
   });

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { refreshArchive, refreshEspnShots } from "@/lib/archive/refresh";
+import { refreshArchive, refreshEspnShots, seasonsMissingReds } from "@/lib/archive/refresh";
 import { refreshReferees } from "@/lib/archive/referees";
 
 export const runtime = "nodejs";
@@ -19,11 +19,13 @@ export async function GET(request: Request) {
   if (request.headers.get("authorization") !== `Bearer ${secret}`) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
-  // ?seasons=2425,2526 reloads past seasons too, to backfill new columns.
-  const backfill = (new URL(request.url).searchParams.get("seasons") ?? "")
+  // ?seasons=2425,2526 reloads past seasons too, to backfill new columns;
+  // without it, past seasons still missing red cards (0072) reload on their own.
+  const asked = (new URL(request.url).searchParams.get("seasons") ?? "")
     .split(",")
     .filter((s) => /^\d{4}$/.test(s))
     .slice(0, 4);
+  const backfill = asked.length ? asked : await seasonsMissingReds().catch(() => []);
   const [[archive, shots], referees] = await Promise.all([
     (async () => {
       const a = await refreshArchive(new Date(), backfill).catch((err) => ({ error: String(err) }));

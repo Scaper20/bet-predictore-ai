@@ -176,8 +176,53 @@ describe("fromSportyBet", () => {
     }
   });
 
+  it("reverses the extra handicaps, team goals and every count market", () => {
+    const ours = [
+      "eh:home:-2", "eh:draw:-1", "eh:away:3", "eh:home:1", "dnb:home", "dnb:away",
+      "tg:home:over:1.5", "tg:away:under:0.5",
+      "ah:home:-3", "ah:away:4", "ah:home:-2.5",
+      "corners:over:9.5", "corners:under:12.5", "corners:home:over:4.5", "corners:away:under:3.5",
+      "corners:most:home", "corners:most:level", "corners:most:away",
+      "corners:hcp:home:-1.5", "corners:hcp:away:+2.5",
+      "shots:over:24.5", "shots:home:under:12.5", "shots:most:level",
+      "sot:under:9.5", "sot:away:over:3.5", "sot:most:home",
+      "bookings:over:4.5", "bookings:home:under:1.5", "bookings:most:away", "bookings:hcp:home:-0.5", "bookings:hcp:away:+1.5",
+    ];
+    for (const m of ours) {
+      const sel = toSportyBet(m);
+      expect(sel, m).not.toBeNull();
+      expect(fromSportyBet(sel!), m).toBe(m);
+    }
+  });
+
+  it("reads SportyBet's own selections as listed on a live event", () => {
+    // Ids, specifiers and outcomes from Chelsea v Tottenham, 24 Oct 2026.
+    expect(fromSportyBet({ marketId: "14", outcomeId: "1711", specifier: "hcp=0:2" })).toBe("eh:home:-2");
+    expect(fromSportyBet({ marketId: "14", outcomeId: "1713", specifier: "hcp=3:0" })).toBe("eh:away:3");
+    expect(fromSportyBet({ marketId: "16", outcomeId: "1715", specifier: "hcp=-2" })).toBe("ah:away:2");
+    expect(fromSportyBet({ marketId: "11", outcomeId: "4" })).toBe("dnb:home");
+    expect(fromSportyBet({ marketId: "19", outcomeId: "12", specifier: "total=1.5" })).toBe("tg:home:over:1.5");
+    expect(fromSportyBet({ marketId: "166", outcomeId: "13", specifier: "total=10.5" })).toBe("corners:under:10.5");
+    expect(fromSportyBet({ marketId: "900300", outcomeId: "30", specifier: "total=4.5" })).toBe("corners:home:over:4.5");
+    expect(fromSportyBet({ marketId: "900301", outcomeId: "31", specifier: "total=3.5" })).toBe("corners:away:under:3.5");
+    expect(fromSportyBet({ marketId: "162", outcomeId: "2" })).toBe("corners:most:level");
+    expect(fromSportyBet({ marketId: "165", outcomeId: "1715", specifier: "hcp=-2.5" })).toBe("corners:hcp:away:+2.5");
+    expect(fromSportyBet({ marketId: "900318", outcomeId: "1" })).toBe("sot:most:home");
+    expect(fromSportyBet({ marketId: "900546", outcomeId: "13", specifier: "total=5.5" })).toBe("sot:home:under:5.5");
+    expect(fromSportyBet({ marketId: "139", outcomeId: "12", specifier: "total=4.5" })).toBe("bookings:over:4.5");
+    expect(fromSportyBet({ marketId: "900312", outcomeId: "3", specifier: "hcp=-1.5" })).toBe("bookings:hcp:away:+1.5");
+  });
+
+  it("has no ready-made address for picks SportyBet can't take", () => {
+    expect(toSportyBet("sot:hcp:home:-1.5")).toBeNull(); // no shots handicap market
+    expect(toSportyBet("corners:most:home-or-level")).toBeNull(); // no double chance on corners
+    expect(toSportyBet("eh:home:0")).toBeNull();
+    expect(toSportyBet("eh:home:-1.5")).toBeNull();
+  });
+
   it("returns null for markets we don't read", () => {
     expect(fromSportyBet({ marketId: "45", outcomeId: "274" })).toBeNull();
+    expect(fromSportyBet({ marketId: "169", outcomeId: "1141" })).toBeNull();
     expect(fromSportyBet({ marketId: "18", outcomeId: "12", specifier: "total=abc" })).toBeNull();
     expect(fromSportyBet({ marketId: "1", outcomeId: "9" })).toBeNull();
   });

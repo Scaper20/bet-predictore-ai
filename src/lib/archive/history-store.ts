@@ -108,6 +108,8 @@ export async function storeResults(rows: ArchiveRow[], source: string): Promise<
     away_corners: r.awayCorners ?? null,
     home_cards: r.homeCards ?? null,
     away_cards: r.awayCards ?? null,
+    home_reds: r.homeReds ?? null,
+    away_reds: r.awayReds ?? null,
     home_shots: r.homeShots ?? null,
     away_shots: r.awayShots ?? null,
     referee: r.referee ?? null,
@@ -130,6 +132,8 @@ export interface StatRow {
   awayName: string;
   corners?: [number, number];
   cards?: [number, number];
+  /** SportyBet's bookings: yellow 1, red 2, i.e. cards + reds; only where reds are stored. */
+  bookings?: [number, number];
   shots?: [number, number];
   shotsOnTarget?: [number, number];
   referee?: string;
@@ -147,7 +151,7 @@ export async function archivedStatRows(leagueCode: string): Promise<StatRow[]> {
     const { data, error } = await supabase
       .from("historical_results")
       .select(
-        "kickoff, home_name, away_name, home_corners, away_corners, home_cards, away_cards, home_shots, away_shots, home_shots_on_target, away_shots_on_target, referee",
+        "kickoff, home_name, away_name, home_corners, away_corners, home_cards, away_cards, home_reds, away_reds, home_shots, away_shots, home_shots_on_target, away_shots_on_target, referee",
       )
       .eq("league_code", leagueCode)
       .gte("kickoff", since)
@@ -163,6 +167,10 @@ export async function archivedStatRows(leagueCode: string): Promise<StatRow[]> {
       awayName: r.away_name as string,
       corners: pair(r.home_corners, r.away_corners),
       cards: pair(r.home_cards, r.away_cards),
+      bookings:
+        typeof r.home_cards === "number" && typeof r.away_cards === "number" && typeof r.home_reds === "number" && typeof r.away_reds === "number"
+          ? [r.home_cards + r.home_reds, r.away_cards + r.away_reds]
+          : undefined,
       shots: pair(r.home_shots, r.away_shots),
       shotsOnTarget: pair(r.home_shots_on_target, r.away_shots_on_target),
       referee: (r.referee as string | null) ?? undefined,

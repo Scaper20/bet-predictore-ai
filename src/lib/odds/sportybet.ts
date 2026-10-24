@@ -4,7 +4,7 @@ import { leagueByCode } from "@/lib/leagues";
 import { cached } from "@/lib/providers/cache";
 import { dataLayer } from "@/lib/providers/data-layer";
 import { readBoard, writeBoard } from "./boards";
-import { matchesSelection, readOdds, toSportyBet } from "./markets";
+import { priceOn, toSportyBet } from "./markets";
 import { type FixtureLike } from "./match-fixture";
 import { parsebotCall, parsebotLive } from "./parsebot";
 import { boardDecision, directBoardTtlMs, MAX_STALE_MS } from "./parsebot-budget";
@@ -236,9 +236,5 @@ export async function sportyBetPrice(
   const event = await findOnBoard(fixture, lookup).catch(() => null);
   if (!event) return undefined;
 
-  const entry = event.markets.find((m) => matchesSelection(m, selection));
-  if (!entry) return undefined;
-
-  const outcome = entry.outcomes?.find((o) => String(o.id) === selection.outcomeId);
-  return readOdds(outcome?.odds);
+  return priceOn(selection, event.markets);
 }
