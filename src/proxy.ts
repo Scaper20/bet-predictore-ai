@@ -4,6 +4,7 @@ import { FIRST_TOUCH_COOKIE, type FirstTouch, trimFirstTouchValue } from "@/lib/
 import { PARTNER_REF_COOKIE, PARTNER_REF_DAYS, cleanRefParam, encodePartnerRef } from "@/lib/partner-ref";
 import { MAINTENANCE_BYPASS_COOKIE, isMaintenanceExempt, maintenanceHtml } from "@/lib/maintenance";
 import { COUNTRY_COOKIE } from "@/lib/visitor";
+import { shouldRecordSeen } from "@/lib/last-seen";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const anonKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -64,12 +65,12 @@ export async function proxy(request: NextRequest, event: NextFetchEvent) {
   } = await supabase.auth.getUser();
 
   // "Active users" signal for the admin dashboard (profiles.last_seen_at).
-  // Throttled: the WHERE-equivalent .or() below means most requests execute
-  // a fast no-op update (0 rows match), so the row only actually changes
-  // roughly once per user per 10 minutes — but every request still makes
-  // the call, this just keeps each call's DB work cheap, not skipped
-  // outright. Backgrounded via waitUntil so it adds no latency to the
-  // response. Uses this same RLS-scoped client, not the service-role one —
+  // Throttled twice: shouldRecordSeen (lib/last-seen.ts) skips the call
+  // altogether when this instance has just recorded the user (it was about
+  // 19,000 no-op database requests a day), and the WHERE-equivalent .or()
+  // below makes any call that does go out a cheap no-op unless the row is
+  // really ten minutes stale. Backgrounded via waitUntil so it adds no
+  // latency to the response. Uses this same RLS-scoped client, not the service-role one —
   // this runs in the user's own request context, writing their own row,
   // exactly what profiles_update_own already permits (see admin.ts's doc
   // comment for why the service-role client is never used for this).
@@ -164,7 +165,7 @@ export async function proxy(request: NextRequest, event: NextFetchEvent) {
     }
   }
 
-  if (user) {
+  if (user && shouldRecordSeen(user.id)) {
     const cutoff = new Date(Date.now() - 10 * 60 * 1000).toISOString();
     event.waitUntil(
       Promise.resolve(
@@ -186,17 +187,18 @@ type MaintenanceState = { enabled: boolean; message: string | null };
 /*
  * Maintenance mode (lib/maintenance.ts), read from site_settings.
  *
- * Remembered for a few seconds per server instance so a burst of requests
+ * Remembered for a minute per server instance so a burst of requests
  * costs one read, not one each — the proxy already makes a round trip to
  * Supabase per request for getUser(), and this shouldn't double it. The
  * trade-off is that flipping the switch takes up to MAINTENANCE_TTL_MS to
- * reach every instance. Module state is only ever a cache here: losing it
+ * reach every instance (it was ten seconds; a read of one row per instance
+ * every ten seconds added up to thousands a day). Module state is only ever a cache here: losing it
  * just means the next request reads again.
  *
  * A failed read keeps the last known value, or "off" if there is none — a
  * database blip must never lock every visitor out of a site that's up.
  */
-const MAINTENANCE_TTL_MS = 10_000;
+const MAINTENANCE_TTL_MS = 60_000;
 let maintenanceCache: (MaintenanceState & { expires: number }) | null = null;
 
 async function readMaintenance(supabase: SupabaseClient): Promise<MaintenanceState> {
