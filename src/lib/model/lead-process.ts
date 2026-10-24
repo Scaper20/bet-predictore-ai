@@ -172,6 +172,18 @@ function specFor(sel: SportyBetSelection): Spec | null {
         lands: (s) => s.x === code,
       };
     }
+    case "184": { // First goal & result: 814-818 home scored first and home/draw/away won, 820-824 away first, 826 no goal.
+      if (spec !== "goalnr=1") return null;
+      if (o === "826") return { memory: keep, lands: (s) => s.h + s.a === 0 };
+      const k = (Number(o) - 814) / 2;
+      if (!(k >= 0 && k <= 5 && Number.isInteger(k))) return null;
+      const first = k < 3 ? 1 : 2;
+      const result = ["1", "2", "3"][k % 3];
+      return {
+        memory: (s, scorer) => s.x || (scorer === "h" ? 1 : 2),
+        lands: (s) => s.x === first && (s.h > s.a ? "1" : s.h === s.a ? "2" : "3") === result,
+      };
+    }
     case "100": case "101": { // The minute of the first goal; "None" for a goalless game.
       if (spec !== "goalnr=1") return null;
       if (o === "596" || o === "616") return { memory: keep, lands: (s) => s.h + s.a === 0 };

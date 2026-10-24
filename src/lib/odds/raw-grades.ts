@@ -304,6 +304,7 @@ function fullTime(id: string, outcome: string, spec: string | undefined): Two | 
     case "450005": return excluded(outcome, 3, homeCount);
     case "450006": return excluded(outcome, 3, awayCount);
     case "900041": return yesNo(outcome, true) ? (x, y) => yesNo(outcome, x !== y && x > 0 && y > 0)! : null;
+    case "60000": return yesNo(outcome, true) ? (x, y) => yesNo(outcome, x >= 2 && y >= 2)! : null; // GG/NG 2+
   }
   // "X or Y" (854-865): either side of the "or" landing wins.
   const either = EITHER[id];
@@ -367,6 +368,7 @@ function bothHalves(id: string, outcome: string, spec: string | undefined): Four
       return line === 1.5 ? yn((h1, a1, h2, a2) => h1 + a1 < 1.5 && h2 + a2 < 1.5) : null;
     }
     case "900984": return yn((h1, a1, h2, a2) => h1 + a1 > 0 && h2 + a2 > 0);
+    case "900027": return yn((h1, a1, h2, a2) => h1 > 0 && a1 > 0 && h2 > 0 && a2 > 0);
     case "52":
     case "53":
     case "54": {

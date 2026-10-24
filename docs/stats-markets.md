@@ -94,6 +94,38 @@ model explains about 1% of the match-to-match variation, and adding shot
 ratings as a second input added about 0.1% more. Which side wins the corners
 is far more predictable than how many there are.
 
+## Are the corners chances honest game by game? (scripts/corner-realism.ts, October 2026)
+
+Prompted by "Under 12.5 corners" on Arsenal's games: a side that wins and
+concedes plenty of corners, and both published picks lost. Walk-forward
+over 13,072 games in 17 divisions from July 2024 (scripts/niche-lab.ts
+--stage=predict, then scripts/corner-realism.ts), each chance computed as
+the site computes it:
+
+| under | said | landed |
+| --- | ---: | ---: |
+| 7.5 | 25.1% | 26.7% |
+| 9.5 | 48.6% | 49.7% |
+| 11.5 | 71.1% | 71.4% |
+| 12.5 | 79.9% | 80.0% |
+| 13.5 | 86.7% | 86.4% |
+
+- The published rule, under 12.5 at 82-85%: 2,666 games, said 83.5%,
+  landed 84.8%. Inside the +-3 point rule set before the test, so it stays.
+- Arsenal: their games come in 0.76 corners *below* the model's
+  expectation (+-0.81), and under 12.5 said 78.0%, landed 79.3% over 82
+  games. Arsenal win a lot of corners and concede few, so their games'
+  totals are ordinary; the two losses were the 1-in-5 the chance allows.
+- 19 of 318 teams sit outside their 95% interval, about the 16 chance
+  alone would put there. No team watchlist: it would be fitting noise.
+  (Barcelona, Wolfsburg and Rayo run hottest: under 12.5 landed 67-69%
+  against about 79% said; worth re-checking after another season.)
+- Team corner lines are within about two points (home over 3.5 said
+  73.3%, landed 71.2%), so they can be offered beside the totals.
+- The match page's extra corners pick now keeps to lines within three
+  corners of the projected total (top-picks.ts CORNER_REACH): a line far
+  from the game's count is likely but says nothing about the game.
+
 ## Bookings, SportyBet's count (added October 2026)
 
 SportyBet settles "bookings" as yellow = 1 and red = 2, and does not count

@@ -74,6 +74,19 @@ describe("top picks", () => {
     expect(c?.variations.map((v) => v.label)).toEqual(["Villarreal over 3.5 corners", "Elche over 3.5 corners"]);
   });
 
+  it("keeps the corners line near the game's projected count", () => {
+    const corners = {
+      expected: { home: 4.8, away: 4.2, total: 9 },
+      over: { "7.5": 0.7, "8.5": 0.55, "12.5": 0.17 },
+      homeOver: {},
+      awayOver: {},
+    } as unknown as StatMarkets;
+    const onlyResult = [picks[0], pk("1x2:home", 0.5, "Match Result")];
+    const t = buildTopPicks({ prediction: pred({ picks: onlyResult }), corners });
+    // Under 12.5 at 83% is likely but 3.5 corners above a 9-corner game: no pick rather than that.
+    expect(t.some((x) => x.market === "corners:under:12.5")).toBe(false);
+  });
+
   it("marks the result once the game is over", () => {
     const t = buildTopPicks({ prediction: pred({ picks }, "finished") });
     expect(t[0].outcome).toBe("win");
