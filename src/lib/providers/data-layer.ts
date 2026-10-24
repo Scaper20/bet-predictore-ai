@@ -21,7 +21,10 @@ const isMode = (v: unknown): v is DataLayer => typeof v === "string" && (MODES a
 export function dataLayer(): Promise<DataLayer> {
   const env = process.env.DATA_LAYER?.trim();
   if (isMode(env)) return Promise.resolve(env);
-  return cached("data-layer", 30_000, async () => {
+  // A minute: the admin flips this rarely, and every provider read asks first,
+  // so thirty seconds across many server instances was about 24,000 reads of
+  // one row a day.
+  return cached("data-layer", 60_000, async () => {
     try {
       const { supabasePublic } = await import("@/lib/supabase/public");
       const c = supabasePublic();

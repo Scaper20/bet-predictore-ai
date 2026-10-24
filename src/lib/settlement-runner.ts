@@ -28,10 +28,23 @@ import type { Match } from "@/lib/types";
 /** Bulk-upserts whatever matches were already fetched for another reason (a
  * live feed poll, an upcoming-fixtures read) into the match_results archive.
  * No extra provider calls — this only ever writes data already in hand. */
+/**
+ * What each match was last written as, per server instance. The live board
+ * and the tracked-slip poll call captureMatchResults every twenty to thirty
+ * seconds with mostly the same games, and an upsert of an unchanged row still
+ * writes a new row version (about 22,000 a day). Only a game whose status or
+ * score differs from what this instance last wrote goes out. Module state is
+ * only a cache: losing it means one extra write.
+ */
+const captured = new Map<string, string>();
+const CAPTURED_MAX = 3_000;
+const stamp = (m: Match) => `${m.status}|${m.score.home}|${m.score.away}`;
+
 export async function captureMatchResults(
   admin: SupabaseClient,
-  matches: Match[],
+  all: Match[],
 ): Promise<void> {
+  const matches = all.filter((m) => captured.get(m.id) !== stamp(m));
   if (matches.length === 0) return;
   const rows = matches.map((m) => ({
     match_id: m.id,
@@ -47,7 +60,19 @@ export async function captureMatchResults(
     status: m.status,
     captured_at: new Date().toISOString(),
   }));
-  await admin.from("match_results").upsert(rows, { onConflict: "match_id" });
+  const { error } = await admin.from("match_results").upsert(rows, { onConflict: "match_id" });
+  if (error) return;
+  for (const m of matches) {
+    // Re-inserting moves it to the newest end, so the oldest are the ones dropped.
+    captured.delete(m.id);
+    captured.set(m.id, stamp(m));
+  }
+  while (captured.size > CAPTURED_MAX) captured.delete(captured.keys().next().value as string);
+}
+
+/** For tests. */
+export function resetCapturedMatches() {
+  captured.clear();
 }
 
 /**
