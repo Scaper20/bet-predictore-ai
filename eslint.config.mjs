@@ -17,6 +17,7 @@ const eslintConfig = defineConfig([
     "ingestion/**",
     // Launch-video projects (HyperFrames) with vendored, minified libraries.
     "brag-output*/**",
+    "video/**",
   ]),
 
   /*
