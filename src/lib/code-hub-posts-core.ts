@@ -90,6 +90,8 @@ export interface PostGame {
   kickoff: number | null;
   probability: number | null;
   verdict: ScoredGame["verdict"];
+  /** Where the chance came from, when it isn't our model's (absent on older posts). */
+  source?: ScoredGame["source"];
 }
 
 export interface CommunityPost {

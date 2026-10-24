@@ -147,6 +147,7 @@ export async function postCode(userId: string, authorName: string, code: string)
     kickoff: g.kickoff,
     probability: g.probability,
     verdict: g.verdict,
+    ...(g.source && g.source !== "model" ? { source: g.source } : {}),
   }));
   const { data, error } = await db
     .from("code_hub_posts")

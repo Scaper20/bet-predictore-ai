@@ -8,12 +8,13 @@ import { LEG_MARKET_GAP } from "@/lib/market-check";
 import type { BoardMarket } from "@/lib/odds/bookable";
 import { findOnBoard } from "@/lib/odds/sportybet";
 import type { EditorGame } from "@/lib/code-editor";
-import { toSportyBet, toSportyBetBuilder } from "@/lib/odds/markets";
+import { isRawMarket, toSportyBet, toSportyBetBuilder } from "@/lib/odds/markets";
+import { builderParts, marketRead, oddsOnly, type ReadSource } from "@/lib/odds/market-read";
 import { dbUpcoming } from "@/lib/providers/db-source";
 import { matchPrediction } from "@/lib/service";
 import type { Prediction } from "@/lib/model/predict";
 import { findFixture } from "@/lib/odds/match-fixture";
-import { readShareTicket } from "@/lib/odds/sportybet-direct";
+import { fetchEventMarkets, priceBetBuilder, readShareTicket } from "@/lib/odds/sportybet-direct";
 import { allSportyBetTournaments } from "@/lib/odds/sportybet-links";
 import { proLeagueLocked, type Viewer } from "@/lib/access";
 import { gamesFromTicket, lockGames, scoreCode, verdictFor, type CodeGame, type CodeScore, type ScoredGame } from "./code-scan-core";
@@ -25,9 +26,11 @@ import { gamesFromTicket, lockGames, scoreCode, verdictFor, type CodeGame, type 
  * selection turned into our market language (code-scan-core.ts), each game
  * found among our fixtures -- by the link the sync already made, else by
  * teams and kickoff within the same competition -- and each pick given the
- * model's own chance from that game's scoreline grid. A pick or game we can't
- * read is shown as such, never guessed: the editor and the community ranking
- * both rely on these numbers being real.
+ * model's own chance from that game's scoreline grid. A pick the model has
+ * no read of (a market we don't model, a game outside our coverage) gets
+ * SportyBet's own chance instead, marked as such (market-read.ts), so a code
+ * is never refused for the markets people actually play. Nothing is guessed:
+ * a pick neither we nor SportyBet can put a number on is shown as unread.
  */
 
 export interface CodeScan extends CodeScore {
@@ -98,6 +101,25 @@ const STAT_REASON: Record<StatFamily, string> = {
   bookings: "No bookings history for this competition yet.",
 };
 
+/**
+ * SportyBet's own chance for a game's pick, for one we have no model read of:
+ * the probability it quotes on the event (market-read.ts), a Bet Builder's
+ * from its pricing call, else from the price on the code alone.
+ */
+async function readFromSportyBet(g: CodeGame): Promise<{ probability: number; source: ReadSource; price: number | null } | null> {
+  if (g.kickoff !== null && g.kickoff <= Date.now()) return null;
+  const markets = await fetchEventMarkets(g.eventId).catch(() => null);
+  if (g.selections.length === 1) {
+    const read = (markets && marketRead(g.selections[0], markets)) ?? (g.price ? oddsOnly(g.price) : null);
+    return read ? { ...read, price: g.price } : null;
+  }
+  const parts = markets && builderParts(g.eventId, g.selections, markets);
+  const quote = parts ? await priceBetBuilder({ index: 0, eventId: g.eventId, parts }).catch(() => null) : null;
+  if (!quote?.valid) return null;
+  const read = quote.probability ? { probability: round4(quote.probability), source: "market" as const } : oddsOnly(quote.odds);
+  return read ? { ...read, price: quote.odds } : null;
+}
+
 export async function scanCode(code: string): Promise<CodeScan | null> {
   const ticket = await readShareTicket(code);
   if (!ticket) return null;
@@ -108,25 +130,38 @@ export async function scanCode(code: string): Promise<CodeScan | null> {
 
   const scored = await Promise.all(
     games.map(async (g): Promise<ScoredGame> => {
-      const unread = g.marketDesc && g.desc ? `${g.marketDesc}: ${g.desc}` : g.desc ?? "Pick";
-      const base = { ...g, matchId: null, leagueCode: null, probability: null, label: unread };
-      if (!g.market) return { ...base, verdict: "unreadable", reason: "We don't read this market yet." };
+      const theirs = g.marketDesc && g.desc ? `${g.marketDesc}: ${g.desc}` : g.desc ?? "Pick";
+      const raw = !g.market || isRawMarket(g.market);
+      let base: ScoredGame = { ...g, matchId: null, leagueCode: null, probability: null, label: theirs, verdict: "unreadable" };
+      let reason = "This game isn't in our coverage, and SportyBet no longer lists the pick.";
+
       const found = links.get(g.eventId) ?? (await findByNames(g, leagueByTournament));
-      if (!found) return { ...base, verdict: "unreadable", reason: "This game isn't in our coverage." };
-      const p = await matchPrediction(found.matchId).catch(() => null);
-      const label = friendlyLabel(g.market, g.homeName ?? "Home", g.awayName ?? "Away", g.desc ?? g.market);
-      if (!p || !p.sufficiency.publishable) {
-        return { ...base, ...found, label, verdict: "unreadable", reason: "Not enough history on this game for a fair read." };
+      if (found) {
+        const p = await matchPrediction(found.matchId).catch(() => null);
+        const label = raw ? theirs : friendlyLabel(g.market!, g.homeName ?? "Home", g.awayName ?? "Away", g.desc ?? g.market!);
+        base = { ...base, ...found, label };
+        reason = "Not enough history on this game for a fair read, and SportyBet no longer lists the pick.";
+        if (p && p.sufficiency.publishable) {
+          // Kept even for a pick we read from SportyBet, so the editor can still re-pick the game.
+          predictions.set(found.matchId, p);
+          const family = raw ? null : statFamilyOf(g.market!);
+          const stats = family ? await statGridsFor(p.match).catch(() => ({})) : {};
+          const priced = raw ? null : chanceOf(p, g.market!, stats);
+          if (priced) {
+            const { probability, refund } = priced;
+            return { ...base, probability, ...(refund > 0.005 ? { refund } : {}), verdict: verdictFor(probability), source: "model" };
+          }
+          reason = family ? `${STAT_REASON[family]} SportyBet no longer lists the pick either.` : "SportyBet no longer lists this pick.";
+        }
       }
-      predictions.set(found.matchId, p);
-      const family = statFamilyOf(g.market);
-      const stats = family ? await statGridsFor(p.match).catch(() => ({})) : {};
-      const priced = chanceOf(p, g.market, stats);
-      if (!priced) {
-        return { ...base, ...found, label, verdict: "unreadable", reason: family ? STAT_REASON[family] : "We don't read this market yet." };
+
+      // No read of ours: SportyBet's own chance, said as such.
+      const read = await readFromSportyBet(g);
+      if (read) {
+        return { ...base, probability: read.probability, price: read.price, verdict: verdictFor(read.probability, read.source), source: read.source };
       }
-      const { probability, refund } = priced;
-      return { ...base, ...found, label, probability, ...(refund > 0.005 ? { refund } : {}), verdict: verdictFor(probability) };
+      if (g.kickoff !== null && g.kickoff <= Date.now()) reason = "This game has started.";
+      return { ...base, reason };
     }),
   );
   return { code: ticket.code, deadline: ticket.deadline, games: scored, predictions, ...scoreCode(scored) };

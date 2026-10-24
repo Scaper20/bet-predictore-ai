@@ -187,7 +187,7 @@ describe("Bet Builder pricing", () => {
     // Shapes as SportyBet answered on 23 Oct (Coventry v Fulham, Home + Over 2.5 + GG).
     expect(
       parseBuilderQuote({ bizCode: 10000, data: { odds: "5.65", probability: "0.17", marketId: "261023165047bb54301940", outcomeId: "1", valid: true } }),
-    ).toEqual({ valid: true, parentMarketId: "261023165047bb54301940", odds: 5.65 });
+    ).toEqual({ valid: true, parentMarketId: "261023165047bb54301940", odds: 5.65, probability: 0.17 });
     expect(parseBuilderQuote({ bizCode: 10000, data: { odds: "0.00", marketId: "261023165138bb54311142", valid: false } })).toEqual({ valid: false });
     expect(parseBuilderQuote({ http: 500 })).toBeNull();
   });

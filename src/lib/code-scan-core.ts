@@ -1,4 +1,5 @@
-import { builderCombo, fromSportyBet } from "@/lib/odds/markets";
+import { builderCombo, fromSportyBet, rawMarket, type SportyBetSelection } from "@/lib/odds/markets";
+import type { ReadSource } from "@/lib/odds/market-read";
 import type { TicketLeg } from "@/lib/odds/sportybet-api";
 
 /**
@@ -12,8 +13,14 @@ import type { TicketLeg } from "@/lib/odds/sportybet-api";
 /** One game on a code, as our market id, before the model has looked at it. */
 export interface CodeGame {
   eventId: string;
-  /** Our market id, a same-game combo for a Bet Builder; null when we do not read it. */
+  /**
+   * Our market id, a same-game combo for a Bet Builder. A SportyBet market we
+   * have no id for is kept as SportyBet addresses it ("raw:...", markets.ts
+   * rawMarket); null only for an empty builder.
+   */
   market: string | null;
+  /** The selections as SportyBet addresses them: one, or a Bet Builder's parts. */
+  selections: SportyBetSelection[];
   homeName: string | null;
   awayName: string | null;
   kickoff: number | null;
@@ -26,6 +33,15 @@ export interface CodeGame {
   price: number | null;
   builder: boolean;
 }
+
+const selectionOf = (leg: TicketLeg): SportyBetSelection => ({
+  marketId: leg.marketId,
+  outcomeId: leg.outcomeId,
+  ...(leg.specifier ? { specifier: leg.specifier } : {}),
+});
+
+/** Our market id for a selection, or SportyBet's own address for one we have none for. */
+const marketOf = (leg: TicketLeg) => fromSportyBet(leg) ?? rawMarket(selectionOf(leg));
 
 /** Selections grouped into games: a Bet Builder's parts (one shared parent) are one game. */
 export function gamesFromTicket(legs: readonly TicketLeg[]): CodeGame[] {
@@ -40,7 +56,8 @@ export function gamesFromTicket(legs: readonly TicketLeg[]): CodeGame[] {
     }
     out.push({
       eventId: leg.eventId,
-      market: fromSportyBet(leg),
+      market: marketOf(leg),
+      selections: [selectionOf(leg)],
       homeName: leg.homeName,
       awayName: leg.awayName,
       kickoff: leg.kickoff,
@@ -52,11 +69,11 @@ export function gamesFromTicket(legs: readonly TicketLeg[]): CodeGame[] {
     });
   }
   for (const parts of builders.values()) {
-    const markets = parts.map((p) => fromSportyBet(p));
     const first = parts[0];
     out.push({
       eventId: first.eventId,
-      market: markets.every((m): m is string => m !== null) ? builderCombo(markets) : null,
+      market: parts.length === 1 ? marketOf(first) : builderCombo(parts.map(marketOf)),
+      selections: parts.map(selectionOf),
       homeName: first.homeName,
       awayName: first.awayName,
       kickoff: first.kickoff,
@@ -71,10 +88,14 @@ export function gamesFromTicket(legs: readonly TicketLeg[]): CodeGame[] {
 
 export type Verdict = "strong" | "fair" | "risky" | "unreadable" | "locked";
 
-/** Our read of one pick. Strong from 65%, risky under 45%: the site's own risk bands. */
-export function verdictFor(probability: number | null): Verdict {
+/**
+ * Our read of one pick. Strong from 65%, risky under 45%: the site's own risk
+ * bands. A chance from a bare price is never called strong: the margin taken
+ * off it is a guess.
+ */
+export function verdictFor(probability: number | null, source: ReadSource = "model"): Verdict {
   if (probability === null) return "unreadable";
-  if (probability >= 0.65) return "strong";
+  if (probability >= 0.65) return source === "odds" ? "fair" : "strong";
   if (probability < 0.45) return "risky";
   return "fair";
 }
@@ -88,6 +109,8 @@ export interface ScoredGame extends CodeGame {
   refund?: number;
   label: string;
   verdict: Verdict;
+  /** Where the chance came from: the model, SportyBet's own probability, or its price alone. */
+  source?: ReadSource;
   /** Why a game could not be read, in plain words. */
   reason?: string;
 }
@@ -124,14 +147,15 @@ export function scoreCode(games: readonly ScoredGame[]): CodeScore {
  * proLeagueLocked: a Pro league before kick-off) keeps its game and pick but
  * loses the model's chance, so pasting a code never opens what the
  * predictions pages hold back. The code's own chance goes with it, since it
- * would give the hidden one away.
+ * would give the hidden one away. A read from SportyBet's own numbers stays:
+ * it is SportyBet's, not ours.
  */
-export function lockGames<T extends { probability: number | null; verdict: Verdict; reason?: string }>(
+export function lockGames<T extends { probability: number | null; verdict: Verdict; reason?: string; source?: ReadSource }>(
   games: readonly T[],
   locked: (game: T) => boolean,
 ): T[] {
   return games.map((g) =>
-    g.probability !== null && locked(g)
+    g.probability !== null && (g.source ?? "model") === "model" && locked(g)
       ? { ...g, probability: null, verdict: "locked" as const, reason: "Pro league: our read opens at kick-off, or with Pro." }
       : g,
   );

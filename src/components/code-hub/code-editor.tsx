@@ -24,6 +24,12 @@ const VERDICT: Record<Verdict, { tone: "brand" | "neutral" | "amber" | "rose"; l
   locked: { tone: "neutral", label: "Pro" },
 };
 
+/** Where a chance came from, when it isn't our model's. */
+const SOURCE: Partial<Record<NonNullable<ScoredGame["source"]>, string>> = {
+  market: "SportyBet's own chance: we don't model this pick yet.",
+  odds: "From SportyBet's price alone, margin taken off.",
+};
+
 /** The edited code without some games, its chance and fair odds recounted. */
 function withoutGames(r: EditResult, removed: ReadonlySet<string>): EditResult {
   const games = r.games.filter((g) => !removed.has(g.matchId));
@@ -193,6 +199,7 @@ function ScanCard({ scan }: { scan: ScanView }) {
               </span>
               {/* Why a game wasn't read: worth reading in full, so it wraps rather than being cut off. */}
               {g.reason && <span className="mt-0.5 block text-xs text-amber">{g.reason}</span>}
+              {g.source && SOURCE[g.source] && <span className="mt-0.5 block text-xs text-ink-dim">{SOURCE[g.source]}</span>}
             </span>
             <span className="flex shrink-0 items-center gap-2">
               {g.probability !== null && (

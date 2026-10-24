@@ -96,6 +96,17 @@ function readMarkets(markets: ApiMarket[] | undefined): RawMarket[] {
   return out;
 }
 
+/**
+ * Every market listed on one event (GET /factsCenter/event), with SportyBet's
+ * own probability on each outcome, or null when the answer is not one.
+ * Measured: about 300 markets on a big game, against the 30-odd a board keeps.
+ */
+export function parseEventMarkets(body: unknown): RawMarket[] | null {
+  const data = okData(body) as ApiEvent | null;
+  if (!data || !Array.isArray(data.markets)) return null;
+  return readMarkets(data.markets);
+}
+
 /** One event, or null when it is missing anything the matcher relies on. */
 export function readEvent(raw: ApiEvent, tournamentId?: string, tournamentName?: string): SportyBetEvent | null {
   const eventId = text(raw.eventId);
@@ -231,7 +242,15 @@ export function builderRequest(eventId: string, parts: readonly { selection: Boo
   };
 }
 
-export type BuilderQuote = { valid: true; parentMarketId: string; odds: number } | { valid: false };
+export type BuilderQuote =
+  | {
+      valid: true;
+      parentMarketId: string;
+      odds: number;
+      /** SportyBet's own chance of the parts landing together, when it says. */
+      probability?: number;
+    }
+  | { valid: false };
 
 /**
  * SportyBet's answer to a Bet Builder pricing call: the combined price and
@@ -246,7 +265,8 @@ export function parseBuilderQuote(body: unknown): BuilderQuote | null {
   const parentMarketId = text(data.marketId);
   const odds = Number(data.odds);
   if (!parentMarketId || !Number.isFinite(odds) || odds <= 1) return { valid: false };
-  return { valid: true, parentMarketId, odds };
+  const probability = Number(data.probability);
+  return { valid: true, parentMarketId, odds, ...(probability > 0 && probability < 1 ? { probability } : {}) };
 }
 
 /** The link that opens a code on SportyBet Nigeria. */

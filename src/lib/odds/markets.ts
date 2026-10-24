@@ -115,6 +115,7 @@ const signed = (x: number) => (x > 0 ? `+${x}` : plain(x));
  * does not render, which is the behaviour for any unpriced market.
  */
 export function toSportyBet(market: string): SportyBetSelection | null {
+  if (market.startsWith(RAW)) return fromRaw(market);
   if (market.startsWith(COMBO)) return toSportyBetCombo(market.slice(COMBO.length).split("+"));
   const [family, ...rest] = market.split(":");
 
@@ -309,7 +310,8 @@ export function toSportyBetBuilder(market: string): SportyBetSelection[] | null 
   for (const part of parts) {
     if (part.startsWith(COMBO)) return null;
     const sel = toSportyBet(part);
-    if (!sel || !BUILDER_MARKETS.has(sel.marketId)) return null;
+    // A raw part came off a user's own builder, so SportyBet has combined it before.
+    if (!sel || (!part.startsWith(RAW) && !BUILDER_MARKETS.has(sel.marketId))) return null;
     if (sel.specifier && WHOLE_LINE.test(sel.specifier)) return null;
     out.push(sel);
   }
@@ -417,6 +419,34 @@ function comboPart(family: string, value: string, line: string | undefined): str
   if (family === "ou") return line ? `ou:${value}:${line}` : null;
   return null;
 }
+
+const RAW = "raw:";
+
+/**
+ * A SportyBet selection we have no market of our own for (1UP, goal bounds,
+ * a goalscorer...), kept as SportyBet addresses it: "raw:<market id>:
+ * <specifier>:<outcome id>", the last two URI-encoded since both can hold
+ * colons ("variant=sr:exact_goals:3+"). It can be booked and priced from
+ * SportyBet's own board (market-read.ts), never graded by us.
+ */
+export function rawMarket(sel: SportyBetSelection): string {
+  return `${RAW}${sel.marketId}:${encodeURIComponent(sel.specifier ?? "")}:${encodeURIComponent(sel.outcomeId)}`;
+}
+
+/** The selection inside a raw market id, or null when it isn't one. */
+export function fromRaw(market: string): SportyBetSelection | null {
+  if (!market.startsWith(RAW)) return null;
+  const [marketId, spec, outcome, ...rest] = market.slice(RAW.length).split(":");
+  if (!/^\d+$/.test(marketId) || !outcome || rest.length) return null;
+  try {
+    const specifier = decodeURIComponent(spec);
+    return { marketId, outcomeId: decodeURIComponent(outcome), ...(specifier ? { specifier } : {}) };
+  } catch {
+    return null;
+  }
+}
+
+export const isRawMarket = (market: string) => market.startsWith(RAW) || market.includes(`+${RAW}`) || market.startsWith(`combo:${RAW}`);
 
 /**
  * Our market id for a SportyBet selection, or null for anything we do not

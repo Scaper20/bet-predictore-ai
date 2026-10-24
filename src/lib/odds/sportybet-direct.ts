@@ -7,6 +7,7 @@ import type { BookedCode, BookSelection, BuilderGroup } from "./booking";
 import {
   builderRequest,
   parseBuilderQuote,
+  parseEventMarkets,
   parseEventResult,
   parseResults,
   parseShareResponse,
@@ -16,6 +17,7 @@ import {
   shareRequest,
   type BuilderQuote,
   type EventResult,
+  type RawMarket,
   type SportyBetEvent,
   type Ticket,
   type TournamentEntry,
@@ -293,4 +295,25 @@ export async function readShareTicket(code: string): Promise<Ticket | null> {
   const clean = code.trim().toUpperCase();
   if (!/^[A-Z0-9]{4,12}$/.test(clean)) return null;
   return parseShareTicket(await call(`/orders/share/${encodeURIComponent(clean)}`));
+}
+
+/** Event markets read in the last minute, so a code scanned twice asks once. */
+const eventMarkets = new Map<string, { at: number; markets: RawMarket[] }>();
+const EVENT_MARKETS_TTL_MS = 60_000;
+
+/**
+ * Every market SportyBet lists on one event, each outcome with SportyBet's
+ * own probability: what a pick we have no model for is read from
+ * (market-read.ts). Null when unreachable or the event is gone.
+ */
+export async function fetchEventMarkets(eventId: string): Promise<RawMarket[] | null> {
+  if (!/^sr:match:\d+$/.test(eventId)) return null;
+  const hit = eventMarkets.get(eventId);
+  if (hit && Date.now() - hit.at < EVENT_MARKETS_TTL_MS) return hit.markets;
+  const markets = parseEventMarkets(await call(`/factsCenter/event?eventId=${eventId}&productId=3`));
+  if (markets) {
+    if (eventMarkets.size > 500) eventMarkets.clear();
+    eventMarkets.set(eventId, { at: Date.now(), markets });
+  }
+  return markets;
 }
