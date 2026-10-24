@@ -9,7 +9,7 @@ import { runSettlementPass } from "@/lib/settlement-runner";
 import { modelIdForMarket } from "@/lib/model/router";
 import { pickTier } from "@/lib/model/tiers";
 import { leagueByCode } from "@/lib/leagues";
-import { shadowPicks } from "@/lib/model/shadow";
+import { newMarketShadow, shadowPicks } from "@/lib/model/shadow";
 import { marketTotalPicks } from "@/lib/model/market-total";
 
 // Runs the football providers and Supabase's service-role client — both
@@ -168,6 +168,30 @@ async function logUpcomingPicks(admin: ReturnType<typeof supabaseAdmin>): Promis
   }
   if (shadow.length > 0) {
     await admin.from("shadow_picks").upsert(shadow, { onConflict: "match_id,market" }).then(
+      () => undefined,
+      () => undefined,
+    );
+  }
+  // The new goal markets (halves, goal bounds), on their own call: before 0079
+  // allows their reason, the rows are refused without touching the ones above.
+  const newMarkets = predictions
+    .filter((p) => p.sufficiency.publishable)
+    .flatMap((p) =>
+      newMarketShadow(p).map((s) => ({
+        match_id: p.match.id,
+        market: s.market,
+        label: s.label,
+        probability: s.probability,
+        reason: s.reason,
+        league_code: p.match.league.code ?? null,
+        home_name: p.match.home.name,
+        away_name: p.match.away.name,
+        kickoff: p.match.kickoff,
+        logged_at: new Date().toISOString(),
+      })),
+    );
+  if (newMarkets.length > 0) {
+    await admin.from("shadow_picks").upsert(newMarkets, { onConflict: "match_id,market" }).then(
       () => undefined,
       () => undefined,
     );

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { shadowPicks } from "./shadow";
+import { newMarketShadow, shadowPicks } from "./shadow";
 
 const pick = (market: string, probability: number) =>
   ({ market, label: market, group: "Goals" as const, probability, fairOdds: 1 / probability, confidence: 60 });
@@ -28,5 +28,22 @@ describe("shadowPicks", () => {
   it("logs no handicap outside the tested divisions", () => {
     const out = shadowPicks({ match: match("mls"), asianHandicap: [], picks: [pick("ah:away:1.5", 0.8)] });
     expect(out).toEqual([]);
+  });
+});
+
+describe("newMarketShadow", () => {
+  const p = (home: number, away: number) => ({ markets: { expectedGoals: { home, away } }, model: { rho: -0.05 } }) as Parameters<typeof newMarketShadow>[0];
+
+  it("logs the new goal markets the model has at 60% or more, as new-market", () => {
+    const out = newMarketShadow(p(1.6, 1.2));
+    expect(out.length).toBeGreaterThan(0);
+    expect(out.every((s) => s.reason === "new-market" && s.probability >= 0.6 && s.market.startsWith("raw:"))).toBe(true);
+    expect(out.map((s) => s.label)).toContain("2nd half over 0.5");
+  });
+
+  it("logs fewer of the goal-hungry ones on a tight game", () => {
+    const tight = newMarketShadow(p(0.8, 0.6)).map((s) => s.label);
+    expect(tight).not.toContain("Both halves over 0.5");
+    expect(tight).toContain("Goal bounds 0-3");
   });
 });
