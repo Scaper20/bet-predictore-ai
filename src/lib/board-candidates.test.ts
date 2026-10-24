@@ -83,3 +83,19 @@ describe("bookLeg", () => {
     expect(bookLeg("cs:2-1", { markets: [] })).toEqual({ ok: false, reason: "unmapped" });
   });
 });
+
+describe("marketGap on legs", () => {
+  const priced = [
+    { market_id: "1", specifier: null, outcomes: [{ id: "1", odds: "1.90" }, { id: "2", odds: "3.40" }, { id: "3", odds: "4.30" }] },
+    { market_id: "10", specifier: null, outcomes: [{ id: "9", odds: "1.25" }, { id: "10", odds: "1.33" }, { id: "11", odds: "1.80" }] },
+  ];
+  it("drops a leg SportyBet rates that far below the model, keeps one it agrees with", () => {
+    const strict = { ...opts, marketGap: 0.05 };
+    // SportyBet has away or draw at about 49%.
+    expect(onBoard(pick("dc:away-draw", 0.6), priced, strict)).toBeNull();
+    expect(onBoard(pick("dc:away-draw", 0.52), priced, strict)).not.toBeNull();
+    // Swapped to its twin first, then checked at the twin's price.
+    expect(onBoard(pick("ah:away:0.5", 0.6), priced, strict)).toBeNull();
+    expect(onBoard(pick("dc:away-draw", 0.6), priced, opts)).not.toBeNull();
+  });
+});

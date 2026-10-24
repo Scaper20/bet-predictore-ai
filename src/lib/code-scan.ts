@@ -4,6 +4,7 @@ import { candidatesFor, friendlyLabel, gridFor, type ForgeMarket } from "@/lib/f
 import { priceLeg, refundShare, statFamilyOf, type StatFamily } from "@/lib/leg-pricing";
 import { statChances, statGridsFor } from "@/lib/stat-markets-service";
 import { keepOnBoard } from "@/lib/board-candidates";
+import { LEG_MARKET_GAP } from "@/lib/market-check";
 import type { BoardMarket } from "@/lib/odds/bookable";
 import { findOnBoard } from "@/lib/odds/sportybet";
 import type { EditorGame } from "@/lib/code-editor";
@@ -200,6 +201,7 @@ export function editorGames(scan: CodeScan, ctx?: EditorContext): EditorGame[] {
           away: p.match.away.name,
           price: (m) => priceLeg(m, pricing)?.survive ?? null,
           floor: (c) => c.probability - 0.05,
+          marketGap: LEG_MARKET_GAP,
         })
       : all.filter((c) => toSportyBet(c.market) || toSportyBetBuilder(c.market));
     const candidates = bookable.map((c) => ({ market: c.market, label: c.label, probability: c.probability, fairOdds: c.fairOdds }));

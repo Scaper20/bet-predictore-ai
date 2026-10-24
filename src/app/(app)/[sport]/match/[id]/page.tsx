@@ -299,12 +299,17 @@ function Overview({
             {prediction.sufficiency.level === "limited" && (
               <p className="mt-2 text-xs text-amber">Thin data · treat as a guide</p>
             )}
+            {prediction.marketCheck && <MarketCheckNote check={prediction.marketCheck} />}
             {proLeagueOpened && <ProLeagueAfterKickoff />}
           </section>
         ) : (
           <section className="card p-5">
             <p className="text-sm font-semibold text-amber">No pick for this game</p>
-            <p className="mt-1 text-xs text-ink-dim">Not enough history to publish one yet.</p>
+            {prediction.marketCheck && prediction.sufficiency.publishable ? (
+              <MarketCheckNote check={prediction.marketCheck} />
+            ) : (
+              <p className="mt-1 text-xs text-ink-dim">Not enough history to publish one yet.</p>
+            )}
           </section>
         )}
 
@@ -345,6 +350,16 @@ function Overview({
         </p>
       </aside>
     </div>
+  );
+}
+
+/** Why the pick isn't the model's own first choice: SportyBet rated that one well below us. */
+function MarketCheckNote({ check }: { check: NonNullable<ViewedPrediction["marketCheck"]> }) {
+  return (
+    <p className="mt-2 text-xs leading-relaxed text-ink-dim">
+      Our first lean was {check.setAside.label} at {percent(check.setAside.probability)}, but SportyBet rates it{" "}
+      {percent(check.marketChance)}. Picks the market rates that much lower have landed far less often, so we set it aside.
+    </p>
   );
 }
 

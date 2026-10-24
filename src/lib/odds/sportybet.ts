@@ -10,7 +10,7 @@ import { parsebotCall, parsebotLive } from "./parsebot";
 import { boardDecision, directBoardTtlMs, MAX_STALE_MS } from "./parsebot-budget";
 import type { RawMarket, SportyBetEvent } from "./sportybet-api";
 import { directEnabled, fetchTournamentEvents } from "./sportybet-direct";
-import { memoryFor, saveEventLinks, saveLearned, sportyBetTournament, storedEventLink } from "./sportybet-links";
+import { memoryFor, saveEventLinks, saveLearned, sportyBetTournament, storedEventLink, storedEventLinks } from "./sportybet-links";
 import { matchOne } from "./sportybet-match";
 
 export type { SportyBetEvent } from "./sportybet-api";
@@ -216,6 +216,64 @@ export async function findOnBoard(fixture: FixtureLike, lookup: BoardLookup): Pr
     ]);
   }
   return found.event;
+}
+
+/** What listingsFor needs of a fixture. */
+export interface ListedFixture {
+  id: string;
+  kickoff: string;
+  home: { name: string };
+  away: { name: string };
+  league: { code?: string | null };
+}
+
+/**
+ * Each fixture's SportyBet event for a whole slate at once, by match id: one
+ * board per competition (shared, cached), one read of the stored links, and
+ * the matcher with what it has learned for the rest. Read-only: findOnBoard
+ * is the path that learns and stores links. A fixture SportyBet isn't listing
+ * is simply missing, and so is a competition whose board takes longer than
+ * `waitMs` to come back (the read carries on and is cached for next time), so
+ * a page never waits long on SportyBet.
+ */
+export async function listingsFor(fixtures: readonly ListedFixture[], waitMs = 3_000): Promise<Map<string, SportyBetEvent>> {
+  const out = new Map<string, SportyBetEvent>();
+  const byLeague = new Map<string, ListedFixture[]>();
+  for (const f of fixtures) {
+    const code = f.league.code;
+    if (!code) continue;
+    const list = byLeague.get(code);
+    if (list) list.push(f);
+    else byLeague.set(code, [f]);
+  }
+  if (byLeague.size === 0) return out;
+  const links = await storedEventLinks(fixtures.map((f) => f.id));
+  await Promise.all(
+    [...byLeague].map(async ([code, group]) => {
+      const tournamentId = leagueByCode(code) ? await sportyBetTournament(code).catch(() => null) : null;
+      if (!tournamentId) return;
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const late = new Promise<SportyBetEvent[]>((resolve) => {
+        timer = setTimeout(() => resolve([]), waitMs);
+      });
+      const events = await Promise.race([sportyBetBoard(tournamentId).catch(() => [] as SportyBetEvent[]), late]);
+      clearTimeout(timer);
+      if (events.length === 0) return;
+      const byId = new Map(events.map((e) => [e.eventId, e]));
+      const unlinked = group.filter((f) => {
+        const hit = byId.get(links.get(f.id)?.eventId ?? "");
+        if (hit) out.set(f.id, hit);
+        return !hit;
+      });
+      if (unlinked.length === 0) return;
+      const memory = await memoryFor(code, unlinked.flatMap((f) => [f.home.name, f.away.name])).catch(() => ({}));
+      for (const f of unlinked) {
+        const found = matchOne({ homeName: f.home.name, awayName: f.away.name, kickoff: Date.parse(f.kickoff) }, events, memory);
+        if (found) out.set(f.id, found.event);
+      }
+    }),
+  );
+  return out;
 }
 
 /**

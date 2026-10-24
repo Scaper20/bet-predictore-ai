@@ -19,6 +19,10 @@
  *   6. digest        variants of the digest's pick rule and combo lengths.
  *
  * --round=1 also prints sections 1-3 (calibration, over/under, the old digest).
+ * --round=check prints only the market check (section 8): the published pick
+ * and the hub's codes with picks the closing market rates well below the
+ * model skipped or replaced. --stretch=1.2 replays with the strength stretch
+ * (ModelOptions.strengthStretch); --halflife=120 with a shorter memory.
  *
  * Codes are graded at the model's fair odds: the source has no SportyBet
  * prices, and at fair odds a calibrated combo lands about 1 in its odds
@@ -38,7 +42,8 @@ import { candidatesFor, forge, type ForgeRisk, type PoolEntry } from "../src/lib
 import { buildHub, daySeed, hubMarketAllowed, hubTier, HUB_FORGE_MARKETS, HUB_TIERS, withoutHandicap, type HubBuildOptions } from "../src/lib/code-hub";
 import { isQuotable } from "../src/lib/odds/markets";
 import { digestPick } from "../src/lib/whatsapp-digest";
-import { csv, parse, toMatch, toResultRow, type Row } from "./lib/football-data-uk";
+import { twinsOf } from "../src/lib/odds/bookable";
+import { csv, parse, priceFor, toMatch, toResultRow, type Row } from "./lib/football-data-uk";
 
 const DAY = 86_400_000;
 const TRAIN_CAP = 1200;
@@ -97,11 +102,15 @@ function walk(d: (typeof DIVS)[number], rows: Row[], days: number): Graded[] {
     const prior = rows.slice(Math.max(0, i - TRAIN_CAP), i).map(toResultRow);
     let fit = fits.get(day);
     if (!fit) {
-      fit = fitLeague(prior);
+      fit = fitLeague(prior, arg("halflife") ? { halfLifeDays: Number(arg("halflife")) } : undefined);
       fits.set(day, fit);
     }
     // --cal=1: the straight-win correction production applies to these divisions.
-    const p = buildPrediction(toMatch(row, league), prior, [], { prefit: fit, ...(arg("cal") === "1" ? { resultCalibration: resultCalibrationFor(d.code) } : {}) });
+    const p = buildPrediction(toMatch(row, league), prior, [], {
+      prefit: fit,
+      ...(arg("cal") === "1" ? { resultCalibration: resultCalibrationFor(d.code) } : {}),
+      ...(arg("stretch") ? { strengthStretch: Number(arg("stretch")) } : {}),
+    });
     if (!p.sufficiency.publishable) continue;
     out.push({ day, div: d.div, row, p });
   }
@@ -429,6 +438,8 @@ interface HubVariant {
   options?: HubBuildOptions;
   /** Legs only from each game's sweet-spot pick (model/sweet-spots.ts). */
   sweetOnly?: boolean;
+  /** Drop a leg the closing market rates this far or more below the model. */
+  check?: number;
 }
 
 const HUB_VARIANTS: HubVariant[] = [
@@ -447,7 +458,28 @@ const HUB_VARIANTS: HubVariant[] = [
   { name: "best legs first, leg floor scaled to the code (Forge's rule)", allow: hubMarketAllowed, options: { strategy: "best", scaled: true } },
   { name: "best legs first, scaled to 8 legs", allow: hubMarketAllowed, options: { strategy: "best", scaled: true, maxLegs: 8 } },
   { name: "best legs first, scaled to 10 legs", allow: hubMarketAllowed, options: { strategy: "best", scaled: true, maxLegs: 10 } },
+  { name: "as shipped, legs the market rates 3pt+ lower dropped", allow: hubMarketAllowed, check: 0.03 },
+  { name: "as shipped, legs the market rates 5pt+ lower dropped", allow: hubMarketAllowed, check: 0.05 },
 ];
+
+/**
+ * The closing market's chance for a selection: 1X2, double chance and over/under
+ * 2.5 as the source prices them, and the half-goal handicaps that are the same
+ * bet as one of those (Home -0.5 is Home win; odds/bookable.ts twinsOf).
+ */
+function closingChance(market: string, r: Row): number | null {
+  for (const m of [market, ...twinsOf(market).map((t) => t.market)]) {
+    const p = priceFor(m, r).marketProbability;
+    if (p !== undefined && p > 0) return p;
+  }
+  return null;
+}
+
+/** The market rates the pick `gap` or more below the model; null when it doesn't price it. */
+function dissents(market: string, probability: number, r: Row, gap: number): boolean | null {
+  const m = closingChance(market, r);
+  return m === null ? null : m <= probability - gap;
+}
 
 function resultDcHandicap(market: string): boolean {
   const [family, , line] = market.split(":");
@@ -520,7 +552,8 @@ function hub(all: Graded[]): { day: number; tier: string; odds: number; chance: 
       const toPool = (gs: Graded[]): PoolEntry[] => gs.map((g) => ({
         prediction: g.p,
         candidates: candidatesFor(g.p, { markets: HUB_FORGE_MARKETS, picksPerGame: 1, allowHandicap: true })
-          .filter((c) => !v.sweetOnly || (g.p.sweetSpot && c.market === g.p.topPick?.market)),
+          .filter((c) => !v.sweetOnly || (g.p.sweetSpot && c.market === g.p.topPick?.market))
+          .filter((c) => v.check === undefined || !dissents(c.market, c.probability, g.row, v.check)),
       }));
       const today = toPool(byDay.get(day)!);
       const ahead = toPool(days.filter((d) => d >= day && d < day + 4 * DAY).flatMap((d) => byDay.get(d)!));
@@ -606,6 +639,78 @@ function printExamples(examples: { day: number; tier: string; odds: number; chan
   }
 }
 
+/** Section 8: the published pick with a market check, skipping or replacing what the market rates well below us. */
+function marketCheck(all: Graded[]) {
+  console.log("\n8. MARKET CHECK ON THE PUBLISHED PICK (closing market as the stand-in for SportyBet at publish)");
+  const asPublished = new Tally();
+  let priced = 0;
+  for (const g of all) {
+    const pk = g.p.topPick;
+    if (!pk) continue;
+    const w = grade(pk, g.row);
+    if (w === null) continue;
+    asPublished.add(w, pk.probability);
+    if (closingChance(pk.market, g.row) !== null) priced++;
+  }
+  console.log("  " + asPublished.line("as published") + `  market prices ${((100 * priced) / Math.max(1, asPublished.n)).toFixed(0)}% of them`);
+  for (const gap of [0.02, 0.03, 0.04, 0.05, 0.08]) {
+    const kept = new Tally(), dropped = new Tally(), replaced = new Tally(), swapIn = new Tally();
+    for (const g of all) {
+      const pk = g.p.topPick;
+      if (!pk) continue;
+      const w = grade(pk, g.row);
+      if (w === null) continue;
+      if (!dissents(pk.market, pk.probability, g.row, gap)) {
+        kept.add(w, pk.probability);
+        replaced.add(w, pk.probability);
+        continue;
+      }
+      dropped.add(w, pk.probability);
+      // Next headline pick the market doesn't rate lower (or doesn't price), at 60%+.
+      const alt = g.p.picks.find(
+        (x) => x !== pk && headlineEligible(x) && x.probability >= 0.6 && !dissents(x.market, x.probability, g.row, gap),
+      );
+      const aw = alt ? grade(alt, g.row) : null;
+      if (alt && aw !== null) {
+        replaced.add(aw, alt.probability);
+        swapIn.add(aw, alt.probability);
+      }
+    }
+    // Swap only when the new pick is at least as likely as the market makes
+    // the old one (each judged by the lower of the model's and the market's
+    // chance); otherwise keep the old pick, or publish none below 60%.
+    const smart = new Tally(), smartKeep = new Tally(), smartSwap = new Tally();
+    let smartNone = 0;
+    const cautious = (x: Pick, r: Row) => Math.min(x.probability, closingChance(x.market, r) ?? x.probability);
+    for (const g of all) {
+      const pk = g.p.topPick;
+      if (!pk) continue;
+      const w = grade(pk, g.row);
+      if (w === null) continue;
+      const m = closingChance(pk.market, g.row);
+      if (m === null || m > pk.probability - gap) { smart.add(w, pk.probability); continue; }
+      const alt = g.p.picks.find(
+        (x) => x !== pk && headlineEligible(x) && x.probability >= 0.6 && !dissents(x.market, x.probability, g.row, gap) && cautious(x, g.row) >= m,
+      );
+      if (alt) {
+        const aw = grade(alt, g.row);
+        if (aw !== null) { smart.add(aw, alt.probability); smartSwap.add(aw, alt.probability); }
+      } else if (m >= 0.6) {
+        smart.add(w, pk.probability);
+        smartKeep.add(w, pk.probability);
+      } else smartNone++;
+    }
+    console.log(`\n  market ${Math.round(gap * 100)}pt+ below the model`);
+    console.log("    " + smart.line("swap only for a likelier pick", 32) + `  no pick ${smartNone}`);
+    console.log("    " + smartSwap.line("  the swapped-in picks", 32));
+    console.log("    " + smartKeep.line("  kept (market still 60%+)", 32));
+    console.log("    " + kept.line("skip: kept", 32) + `  share ${((100 * kept.n) / asPublished.n).toFixed(0)}%`);
+    console.log("    " + dropped.line("skip: dropped", 32));
+    console.log("    " + replaced.line("replace: all picks", 32));
+    console.log("    " + swapIn.line("replace: the swapped-in picks", 32));
+  }
+}
+
 async function main() {
   const days = Number(arg("days") ?? 365);
   const only = arg("only")?.split(",");
@@ -616,6 +721,10 @@ async function main() {
     all.push(...walk(d, await load(d.div), days));
   }
   process.stderr.write(`\n${all.length} publishable fixtures\n`);
+  if (round === "check") {
+    marketCheck(all);
+    return;
+  }
   if (round === "1") {
     calibration(all);
     overUnder(all);

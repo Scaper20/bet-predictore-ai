@@ -5,6 +5,7 @@ import { cached } from "@/lib/providers/cache";
 import { predictBatch, upcomingFeed } from "@/lib/service";
 import { candidatesFor, friendlyLabel, gridFor, type ForgeLeg } from "@/lib/forge";
 import { bookLeg, keepOnBoard } from "@/lib/board-candidates";
+import { LEG_MARKET_GAP } from "@/lib/market-check";
 import { priceLeg } from "@/lib/leg-pricing";
 import { appDayBounds } from "@/lib/format";
 import { priceQuotes } from "@/lib/odds";
@@ -160,6 +161,7 @@ async function buildToday(day: string): Promise<HubCodeRow[]> {
       // Re-line only to lines the hub may carry, so a swap isn't dropped later.
       price: (m) => (hubMarketAllowed(m) ? (priceLeg(m, { goals })?.survive ?? null) : null),
       floor: () => HUB_LEG_MIN_PROBABILITY,
+      marketGap: LEG_MARKET_GAP,
     });
     return kept.length ? [{ prediction, candidates: kept }] : [];
   });

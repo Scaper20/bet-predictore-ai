@@ -14,6 +14,8 @@ import {
   providerHealth, hasFullCoverage,
 } from "@/lib/providers";
 import { cached } from "@/lib/providers/cache";
+import { checkPicks } from "@/lib/market-check";
+import { listingsFor, type SportyBetEvent } from "@/lib/odds/sportybet";
 import { buildPrediction, HEADLINE_EXCLUDED, type ModelOptions, type Prediction } from "@/lib/model/predict";
 import { clubKeys, hostGuard, TOP_FIVE_LEAGUES, UEFA_CUP_CODES } from "@/lib/cup-guard";
 import { after } from "next/server";
@@ -304,8 +306,23 @@ export async function matchPrediction(id: string): Promise<Prediction | null> {
     const match = await getMatch(id);
     if (!match) return null;
     const [training, h2h, stats] = await Promise.all([trainingRows(match), getH2H(match), sweetSpotStats(match)]);
-    return buildPrediction(match, training.rows, h2h, modelOptions(match, training, stats));
+    const options = modelOptions(match, training, stats);
+    const [checked] = await marketChecked([{ prediction: buildPrediction(match, training.rows, h2h, options), options }]);
+    return checked;
   });
+}
+
+/**
+ * Each headline pick checked against SportyBet's price for it (market-check.ts):
+ * one the market rates well below the model gives way to the game's next pick.
+ * Where SportyBet can't be read, the picks stand as the model made them.
+ */
+async function marketChecked(built: { prediction: Prediction; options: ModelOptions }[]): Promise<Prediction[]> {
+  const toCheck = built.filter((b) => b.prediction.topPick).map((b) => b.prediction.match);
+  const listings = toCheck.length ? await listingsFor(toCheck).catch(() => new Map<string, SportyBetEvent>()) : new Map<string, SportyBetEvent>();
+  return built.map(({ prediction, options }) =>
+    checkPicks(prediction, listings.get(prediction.match.id)?.markets, options.excludeHeadline ?? HEADLINE_EXCLUDED),
+  );
 }
 
 export interface LiveProbability {
@@ -396,14 +413,18 @@ async function predictSlice(slice: Match[]): Promise<Prediction[]> {
     else byLeague.set(key, [m]);
   }
 
-  const out: Prediction[] = [];
+  const built: { prediction: Prediction; options: ModelOptions }[] = [];
   await Promise.all(
     [...byLeague.values()].map(async (group) => {
       // One training fetch and one fit per competition, reused across its fixtures.
       const [training, stats] = await Promise.all([trainingRows(group[0]), Promise.all(group.map(sweetSpotStats))]);
-      group.forEach((m, i) => out.push(buildPrediction(m, training.rows, [], modelOptions(m, training, stats[i]))));
+      group.forEach((m, i) => {
+        const options = modelOptions(m, training, stats[i]);
+        built.push({ prediction: buildPrediction(m, training.rows, [], options), options });
+      });
     }),
   );
+  const out = await marketChecked(built);
 
   // Preserve the incoming ordering, which is already sorted for this audience.
   const order = new Map(slice.map((m, i) => [m.id, i]));

@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
-import { priceInSnapshot } from "@/lib/odds/market-prob";
+import { fairChanceOn, priceInSnapshot } from "@/lib/odds/market-prob";
+import { priceOn, toSportyBet } from "@/lib/odds/markets";
+import { listingsFor } from "@/lib/odds/sportybet";
 import { latestSnapshots } from "@/lib/odds/sportybet-links";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { upcomingFeed, predictBatch } from "@/lib/service";
@@ -92,11 +94,24 @@ async function logUpcomingPicks(admin: ReturnType<typeof supabaseAdmin>): Promis
   // SportyBet's price beside each pick, as it stood at this (last pre-kickoff)
   // log run, with the market's fair probability. Closing prices are stamped
   // at settlement; the pair is what closing line value is measured from.
-  const latest = await latestSnapshots(predictions.map((p) => p.match.id));
+  // Where no snapshot was taken, the competition's stored board carries the
+  // same prices (and every market, so handicaps and stat legs too).
+  const [latest, listings] = await Promise.all([
+    latestSnapshots(predictions.map((p) => p.match.id)),
+    listingsFor(predictions.map((p) => p.match), 10_000).catch(() => new Map()),
+  ]);
   const priced = (matchId: string, market: string) => {
     const snap = latest.get(matchId);
     const price = snap ? priceInSnapshot(snap.prices, market) : null;
-    return { price_at_publish: price?.odds ?? null, market_prob_at_publish: price?.fairProbability ?? null };
+    if (price) return { price_at_publish: price.odds, market_prob_at_publish: price.fairProbability };
+    const listed = listings.get(matchId)?.markets;
+    const sel = toSportyBet(market);
+    const fair = listed ? fairChanceOn(market, listed) : null;
+    const odds = listed && sel ? priceOn(sel, listed) : undefined;
+    return {
+      price_at_publish: fair !== null ? (odds ?? null) : null,
+      market_prob_at_publish: fair !== null ? Math.round(fair * 10_000) / 10_000 : null,
+    };
   };
   for (const row of rows) Object.assign(row, priced(row.match_id, row.market));
 

@@ -9,10 +9,11 @@ import { proLeagueLocked, type Viewer } from "@/lib/access";
 import { COMBO_PREFIX } from "@/lib/slip-tracker";
 import { statChances, statGridsFor } from "@/lib/stat-markets-service";
 import { keepOnBoard } from "@/lib/board-candidates";
+import { LEG_MARKET_GAP } from "@/lib/market-check";
 import { priceLeg } from "@/lib/leg-pricing";
 import type { BoardMarket } from "@/lib/odds/bookable";
 import { priceOn, toSportyBet } from "@/lib/odds/markets";
-import { findOnBoard } from "@/lib/odds/sportybet";
+import { listingsFor } from "@/lib/odds/sportybet";
 import {
   candidatesFor,
   forgeBest,
@@ -43,18 +44,11 @@ export async function predictionsFor(when: ForgeWhen): Promise<Prediction[]> {
  * stored boards once and shared for five minutes like the pool. A fixture
  * missing here isn't on SportyBet's board (or the board has no markets).
  */
-async function listingsFor(when: ForgeWhen, predictions: readonly Prediction[]): Promise<Map<string, BoardMarket[]>> {
+async function forgeListings(when: ForgeWhen, predictions: readonly Prediction[]): Promise<Map<string, BoardMarket[]>> {
   return cached(`forge:boards:${when}`, 5 * 60_000, async () => {
     const out = new Map<string, BoardMarket[]>();
-    await Promise.all(
-      predictions.map(async (p) => {
-        const event = await findOnBoard(
-          { homeName: p.match.home.name, awayName: p.match.away.name, kickoff: Date.parse(p.match.kickoff) },
-          { leagueCode: p.match.league.code, matchId: p.match.id },
-        ).catch(() => null);
-        if (event?.markets.length) out.set(p.match.id, event.markets);
-      }),
-    );
+    const events = await listingsFor(predictions.map((p) => p.match), 8_000);
+    for (const [id, event] of events) if (event.markets.length) out.set(id, event.markets);
     return out;
   });
 }
@@ -89,7 +83,7 @@ export async function buildForgeSlip(
   const [stats, grids, listings] = await Promise.all([
     wantsStats ? Promise.all(predictions.map((p) => statChances(p.match).catch(() => undefined))) : [],
     wantsStats ? Promise.all(predictions.map((p) => statGridsFor(p.match).catch(() => ({})))) : [],
-    listingsFor(settings.when, await predictionsFor(settings.when)).catch(() => new Map<string, BoardMarket[]>()),
+    forgeListings(settings.when, await predictionsFor(settings.when)).catch(() => new Map<string, BoardMarket[]>()),
   ]);
 
   // Board first: on a game SportyBet lists, a leg it doesn't carry becomes its
@@ -112,6 +106,7 @@ export async function buildForgeSlip(
         away: prediction.match.away.name,
         price: (m) => priceLeg(m, ctx)?.survive ?? null,
         floor: (c) => Math.max(legFloor, c.probability - 0.05),
+        marketGap: LEG_MARKET_GAP,
       }),
     };
   });
