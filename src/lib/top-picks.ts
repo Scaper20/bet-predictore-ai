@@ -206,10 +206,20 @@ function variationsFor(p: Pick, pr: Prediction, corners: StatMarkets | null | un
   return out.slice(0, MAX_VARIATIONS);
 }
 
-/** The best count-market line: likely enough to lead with, not a near-certainty. */
+/**
+ * How far from the projected total a corners line may sit. A line far from
+ * the game's own count ("Under 12.5" on a 9-corner game) is likely, but it
+ * reads as no opinion at all; walk-forward over 13,000 games
+ * (scripts/corner-realism.ts) every line is calibrated within about two
+ * points, so the nearer lines lose no honesty.
+ */
+const CORNER_REACH = 3;
+
+/** The best count-market line: likely enough to lead with, not a near-certainty, and near the game's projected count. */
 function cornersPick(c: StatMarkets): Pick | null {
   let best: { market: string; label: string; p: number } | null = null;
   for (const [l, over] of Object.entries(c.over)) {
+    if (Math.abs(Number(l) - c.expected.total) > CORNER_REACH) continue;
     for (const [side, p] of [["over", over], ["under", 1 - over]] as const) {
       if (p < 0.72 || p > MAX_EXTRA) continue;
       if (!best || Math.abs(p - 0.78) < Math.abs(best.p - 0.78)) {

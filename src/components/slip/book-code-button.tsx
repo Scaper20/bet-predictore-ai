@@ -77,6 +77,7 @@ export function BookCodeButton({
             kickoff: l.kickoff,
             league: l.league,
             market: l.market,
+            ...(l.eventId ? { eventId: l.eventId } : {}),
           })),
         }),
       });

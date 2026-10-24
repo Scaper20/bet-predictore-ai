@@ -22,7 +22,9 @@ export interface RawMarket {
   market_id?: string | number;
   specifier?: string | null;
   /** probability: SportyBet's own, which its Bet Builder pricing needs. */
-  outcomes?: { id?: string | number; odds?: unknown; probability?: unknown }[];
+  outcomes?: { id?: string | number; odds?: unknown; probability?: unknown; desc?: string }[];
+  /** SportyBet's names ("Goal Bounds", "1-3"): kept on a single event's read only, never on stored boards. */
+  desc?: string;
 }
 
 /** A fixture on SportyBet: the board shape, plus the ids the matcher learns from. */
@@ -39,6 +41,7 @@ export interface SportyBetEvent extends FixtureLike {
 }
 
 interface ApiOutcome {
+  desc?: unknown;
   id?: unknown;
   odds?: unknown;
   probability?: unknown;
@@ -46,6 +49,7 @@ interface ApiOutcome {
 }
 
 interface ApiMarket {
+  desc?: unknown;
   id?: unknown;
   specifier?: unknown;
   status?: unknown;
@@ -79,7 +83,7 @@ export function okData(body: unknown): Record<string, unknown> | null {
  * Markets reduced to the board shape. A suspended market or an inactive
  * outcome is dropped rather than kept with a price nobody can take.
  */
-function readMarkets(markets: ApiMarket[] | undefined): RawMarket[] {
+function readMarkets(markets: ApiMarket[] | undefined, names = false): RawMarket[] {
   const out: RawMarket[] = [];
   for (const m of markets ?? []) {
     const id = text(m.id) ?? (typeof m.id === "number" ? String(m.id) : null);
@@ -88,12 +92,25 @@ function readMarkets(markets: ApiMarket[] | undefined): RawMarket[] {
       .filter((o) => o.isActive === undefined || o.isActive === 1)
       .flatMap((o) => {
         const oid = text(o.id) ?? (typeof o.id === "number" ? String(o.id) : null);
-        return oid ? [{ id: oid, odds: o.odds, ...(o.probability !== undefined ? { probability: o.probability } : {}) }] : [];
+        const desc = names ? text(o.desc) : null;
+        return oid ? [{ id: oid, odds: o.odds, ...(o.probability !== undefined ? { probability: o.probability } : {}), ...(desc ? { desc } : {}) }] : [];
       });
     if (outcomes.length === 0) continue;
-    out.push({ market_id: id, specifier: text(m.specifier), outcomes });
+    const desc = names ? text(m.desc) : null;
+    out.push({ market_id: id, specifier: text(m.specifier), outcomes, ...(desc ? { desc } : {}) });
   }
   return out;
+}
+
+/**
+ * Every market listed on one event (GET /factsCenter/event), with SportyBet's
+ * own probability on each outcome, or null when the answer is not one.
+ * Measured: about 300 markets on a big game, against the 30-odd a board keeps.
+ */
+export function parseEventMarkets(body: unknown): RawMarket[] | null {
+  const data = okData(body) as ApiEvent | null;
+  if (!data || !Array.isArray(data.markets)) return null;
+  return readMarkets(data.markets, true);
 }
 
 /** One event, or null when it is missing anything the matcher relies on. */
@@ -231,7 +248,15 @@ export function builderRequest(eventId: string, parts: readonly { selection: Boo
   };
 }
 
-export type BuilderQuote = { valid: true; parentMarketId: string; odds: number } | { valid: false };
+export type BuilderQuote =
+  | {
+      valid: true;
+      parentMarketId: string;
+      odds: number;
+      /** SportyBet's own chance of the parts landing together, when it says. */
+      probability?: number;
+    }
+  | { valid: false };
 
 /**
  * SportyBet's answer to a Bet Builder pricing call: the combined price and
@@ -246,7 +271,8 @@ export function parseBuilderQuote(body: unknown): BuilderQuote | null {
   const parentMarketId = text(data.marketId);
   const odds = Number(data.odds);
   if (!parentMarketId || !Number.isFinite(odds) || odds <= 1) return { valid: false };
-  return { valid: true, parentMarketId, odds };
+  const probability = Number(data.probability);
+  return { valid: true, parentMarketId, odds, ...(probability > 0 && probability < 1 ? { probability } : {}) };
 }
 
 /** The link that opens a code on SportyBet Nigeria. */

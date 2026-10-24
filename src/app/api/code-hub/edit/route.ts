@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getEntitlement } from "@/lib/entitlements";
 import { viewerForTier } from "@/lib/viewer";
 import { editorContext, editorGames, scanCode, scanForViewer } from "@/lib/code-scan";
-import { saferCode, targetCode } from "@/lib/code-editor";
+import { legacySaferCode, saferCode, targetCode } from "@/lib/code-editor";
 
 /**
  * The Code Hub editor: reads a SportyBet code, puts the model on every game,
@@ -59,7 +59,8 @@ export async function POST(request: Request) {
   return NextResponse.json(
     {
       scan: shown,
-      safer: games.length ? saferCode(games) : null,
+      // EDITOR_POLICY=legacy: the editor before code-editor-policy.ts, the most likely pick on every game.
+      safer: games.length ? (process.env.EDITOR_POLICY?.trim() === "legacy" ? legacySaferCode(games) : saferCode(games)) : null,
       target: games.length && target ? targetCode(games, target) : null,
     },
     { headers: NO_STORE },

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { refreshArchive, refreshEspnShots, seasonsMissingReds } from "@/lib/archive/refresh";
+import { refreshArchive, refreshEspnCorners, refreshEspnGoals, refreshEspnShots, seasonsMissingReds } from "@/lib/archive/refresh";
 import { refreshReferees } from "@/lib/archive/referees";
 
 export const runtime = "nodejs";
@@ -26,12 +26,14 @@ export async function GET(request: Request) {
     .filter((s) => /^\d{4}$/.test(s))
     .slice(0, 4);
   const backfill = asked.length ? asked : await seasonsMissingReds().catch(() => []);
-  const [[archive, shots], referees] = await Promise.all([
+  const [[archive, shots, corners, goals], referees] = await Promise.all([
     (async () => {
       const a = await refreshArchive(new Date(), backfill).catch((err) => ({ error: String(err) }));
-      return [a, await refreshEspnShots().catch((err) => ({ error: String(err) }))] as const;
+      const sh = await refreshEspnShots().catch((err) => ({ error: String(err) }));
+      const c = await refreshEspnCorners().catch((err) => ({ error: String(err) }));
+      return [a, sh, c, await refreshEspnGoals().catch((err) => ({ error: String(err) }))] as const;
     })(),
     refreshReferees().catch((err) => ({ error: String(err) })),
   ]);
-  return NextResponse.json({ archive, shots, referees });
+  return NextResponse.json({ archive, shots, corners, goals, referees });
 }

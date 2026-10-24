@@ -5,7 +5,8 @@ import { checkAdmin } from "@/lib/admin";
 import { ALLOWANCE_WINDOW_MS, allowanceState, weeklyCodeAllowance } from "@/lib/code-hub-plans";
 import { bookingAvailable, bookingCodeFor, peekBookingCode } from "@/lib/odds/booking-code";
 import { KICKOFF_MARGIN_MS, MAX_LEGS, type BookingLeg, type BookingProblem } from "@/lib/odds/booking";
-import { offeredOn, toSportyBet, toSportyBetBuilder } from "@/lib/odds/markets";
+import { isRawMarket, offeredOn, toSportyBet, toSportyBetBuilder } from "@/lib/odds/markets";
+import { fetchEventMarkets } from "@/lib/odds/sportybet-direct";
 import { bookableOn } from "@/lib/odds/bookable";
 import { friendlyLabel } from "@/lib/forge";
 import { findOnBoard } from "@/lib/odds/sportybet";
@@ -67,6 +68,8 @@ interface IncomingLeg {
   kickoff?: unknown;
   league?: unknown;
   market?: unknown;
+  /** SportyBet's event id, when the leg came off a SportyBet code (the Code Hub editor). */
+  eventId?: unknown;
 }
 
 function str(value: unknown): string | null {
@@ -162,8 +165,28 @@ export async function POST(request: Request) {
         problems.push({ matchId, problem: "starting" });
         return;
       }
+      // A leg off someone's SportyBet code names its event: a pick only the
+      // full event lists (1UP, goal bounds, both halves...) or a game outside
+      // our competitions is checked on that event itself, not on our board.
+      const eventId = str(raw.eventId);
+      const direct = eventId && /^sr:match:\d+$/.test(eventId) ? eventId : null;
+      const onEvent = async () => {
+        const markets = await fetchEventMarkets(direct!).catch(() => null);
+        if (!markets?.length) {
+          problems.push({ matchId, problem: "not-listed" });
+          return;
+        }
+        if (!wanted.every((w) => offeredOn(w, markets))) {
+          problems.push({ matchId, problem: "not-offered" });
+          return;
+        }
+        legs[index] = { market, eventId: direct!, kickoff, markets };
+        matchIds[index] = matchId;
+      };
+      if (direct && isRawMarket(market)) return onEvent();
       const league = leagueByProviderName(str(raw.league) ?? "");
       if (!league || !(await sportyBetTournament(league.code))) {
+        if (direct) return onEvent();
         problems.push({ matchId, problem: "unsupported-competition" });
         return;
       }
@@ -172,6 +195,7 @@ export async function POST(request: Request) {
         { leagueCode: league.code, matchId: str(raw.matchId) ?? undefined },
       ).catch(() => null);
       if (!event) {
+        if (direct) return onEvent();
         problems.push({ matchId, problem: "not-listed" });
         return;
       }
@@ -186,6 +210,7 @@ export async function POST(request: Request) {
         const b = selection ? bookableOn(market, event.markets) : null;
         const ok = b ? b.kind === "exact" || b.kind === "twin" : wanted.every((w) => offeredOn(w, event.markets));
         if (!ok) {
+          if (direct) return onEvent();
           problems.push({ matchId, problem: "not-offered" });
           return;
         }

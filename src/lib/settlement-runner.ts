@@ -3,6 +3,8 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getMatch } from "@/lib/providers";
 import { evaluatePick, evaluateStatPick, statKindOf, type PickResult } from "@/lib/settlement";
+import { gradeLegFull } from "@/lib/leg-pricing";
+import { isRawMarket } from "@/lib/odds/markets";
 import { espnDay, espnStatsComplete, findEspnGame, type EspnResult } from "@/lib/archive/espn-shots";
 import { leagueByCode } from "@/lib/leagues";
 import { priceInSnapshot } from "@/lib/odds/market-prob";
@@ -213,13 +215,39 @@ export async function settleShadowPicks(admin: SupabaseClient): Promise<number> 
     .in("match_id", ids)
     .eq("status", "finished");
   const scores = new Map((results ?? []).map((r) => [r.match_id as string, r]));
+  // Half-time scores, for the new markets settled on the halves (0079).
+  const halves = new Map<string, { home: number; away: number }>();
+  const rawIds = [...new Set(rows.filter((r) => isRawMarket(r.market as string)).map((r) => r.match_id as string))].filter((id) =>
+    /^[0-9a-f-]{36}$/i.test(id),
+  );
+  if (rawIds.length > 0) {
+    const { data: ht } = await admin.from("matches").select("id, ht_home, ht_away").in("id", rawIds);
+    for (const m of ht ?? []) {
+      if (typeof m.ht_home === "number" && typeof m.ht_away === "number") halves.set(m.id as string, { home: m.ht_home, away: m.ht_away });
+    }
+  }
 
   let n = 0;
   for (const row of rows) {
     const s = scores.get(row.match_id as string);
     if (typeof s?.home_goals !== "number" || typeof s?.away_goals !== "number") continue;
-    const result = evaluatePick(row.market as string, s.home_goals, s.away_goals);
-    if (!result) continue;
+    const market = row.market as string;
+    const graded = isRawMarket(market)
+      ? gradeLegFull(market, { home: s.home_goals, away: s.away_goals }, halves.get(row.match_id as string) ?? null)
+      : evaluatePick(market, s.home_goals, s.away_goals);
+    const result = graded === "win" || graded === "lose" || graded === "push" ? graded : null;
+    if (!result) {
+      // A halves market whose half-time score never came: closed ungraded after
+      // three days, so it doesn't hold a place in this queue for ever.
+      if (isRawMarket(market) && Date.parse(row.kickoff as string) < Date.now() - 3 * 86_400_000) {
+        await admin
+          .from("shadow_picks")
+          .update({ actual_home_goals: s.home_goals, actual_away_goals: s.away_goals, settled_at: new Date().toISOString() })
+          .eq("match_id", row.match_id as string)
+          .eq("market", market);
+      }
+      continue;
+    }
     const closing = await closingFor(row.match_id as string, row.kickoff as string, row.market as string);
     const { error } = await admin
       .from("shadow_picks")

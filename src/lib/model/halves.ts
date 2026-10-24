@@ -97,16 +97,24 @@ const RESULT = (x: number, y: number) => (x > y ? "H" : x === y ? "D" : "A");
 export function halfGrids(
   lambda: number, mu: number, share: HalfShare, tilt = 0, secondTilt = 0,
 ): { first: number[][]; second: number[][] } {
+  const r = halfRates(lambda, mu, share, tilt, secondTilt);
+  return { first: scoreMatrix(r.first.home, r.first.away), second: scoreMatrix(r.second.home, r.second.away) };
+}
+
+/** Each side's expected goals in each half, after the share and tilts (halfGrids' inputs). */
+export function halfRates(
+  lambda: number, mu: number, share: HalfShare, tilt = 0, secondTilt = 0,
+): { first: { home: number; away: number }; second: { home: number; away: number } } {
   const ratio = mu > 0 && lambda > 0 ? lambda / mu : 1;
   const clamp = (x: number) => Math.min(0.75, Math.max(0.2, x));
   const sh = clamp(share.home * ratio ** tilt);
   const sa = clamp(share.away * ratio ** -tilt);
   const second = (s: number, r: number) => Math.min(0.8, Math.max(0.25, s * r));
   return {
-    first: scoreMatrix(lambda * sh, mu * sa),
+    first: { home: lambda * sh, away: mu * sa },
     second: secondTilt === 0
-      ? scoreMatrix(lambda * (1 - sh), mu * (1 - sa))
-      : scoreMatrix(lambda * second(1 - share.home, ratio ** secondTilt), mu * second(1 - share.away, ratio ** -secondTilt)),
+      ? { home: lambda * (1 - sh), away: mu * (1 - sa) }
+      : { home: lambda * second(1 - share.home, ratio ** secondTilt), away: mu * second(1 - share.away, ratio ** -secondTilt) },
   };
 }
 

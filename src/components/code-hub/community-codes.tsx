@@ -205,6 +205,7 @@ function PostCard({ post, rank, highlight = false }: { post: CommunityPost; rank
                 <span className="block truncate font-semibold">{g.label}</span>
                 <span className="block truncate text-xs text-ink-dim">
                   {g.homeName} v {g.awayName}
+                  {g.source === "estimate" ? " · our estimate" : g.source && g.source !== "model" ? " · SportyBet's read" : ""}
                 </span>
               </span>
               <span className="flex shrink-0 items-center gap-2">

@@ -12,6 +12,8 @@ import { useCallback, useSyncExternalStore } from "react";
 
 export interface SlipLeg {
   matchId: string;
+  /** SportyBet's event id, on a leg that came off a SportyBet code (the Code Hub editor). */
+  eventId?: string;
   fixture: string;
   league: string;
   kickoff: string;

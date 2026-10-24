@@ -51,6 +51,8 @@ interface Slip {
   settings: ForgeSettings;
   /** Games left out because they are in a Pro league (free plan). */
   proHeld?: number;
+  /** Why the combo falls short of the games or price asked for (lib/forge-solve.ts). */
+  notes?: string[];
 }
 
 const SETTINGS_KEY = "betrix.forge.settings.v1";
@@ -83,7 +85,7 @@ function riskFor(target: number): ForgeRisk {
   return target <= 2.5 ? "safe" : target <= 8 ? "balanced" : "risky";
 }
 
-const SETTINGS_VERSION = 2;
+const SETTINGS_VERSION = 3;
 
 /* ----------------------------------------------------------------- studio */
 
@@ -183,6 +185,7 @@ export function ForgeStudio() {
           removed: again && slip ? slip.removed : [],
           settings,
           proHeld: typeof body.proHeld === "number" ? body.proHeld : 0,
+          notes: Array.isArray(body.notes) ? body.notes.filter((n: unknown): n is string => typeof n === "string") : [],
         });
         setLocked((prev) => new Set([...prev].filter((id) => (body.legs as ForgeLeg[]).some((l) => l.matchId === id))));
         setAllowance((a) => (a ? { ...a, used: body.used ?? a.used, limit: body.limit ?? a.limit } : a));
@@ -416,8 +419,8 @@ function SettingsPanel({
             />
           </label>
           <p className="mt-2 text-xs leading-relaxed text-ink-dim">
-            Forge takes the strongest picks on the card first, then the next strongest, until it reaches your price. A
-            smaller price needs fewer games.
+            Forge picks the strongest games on the card, then chooses each game&apos;s line so the combo lands on your
+            price.
           </p>
         </Section>
 
@@ -507,15 +510,15 @@ function SettingsPanel({
           <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-ink [&::-webkit-details-marker]:hidden">
             More options
             <span className="flex items-center gap-2 text-xs font-normal text-ink-dim">
-              Up to {settings.games} games · {settings.picksPerGame === 1 ? "1 pick" : `${settings.picksPerGame} picks`} a game
+              {settings.games} games · {settings.picksPerGame === 1 ? "1 pick" : `${settings.picksPerGame} picks`} a game
               <span aria-hidden className="transition-transform group-open:rotate-180">▾</span>
             </span>
           </summary>
           <div className="space-y-5 border-t border-line px-4 py-4">
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-sm font-medium text-ink">Most games</p>
-                <p className="text-xs text-ink-dim">Forge stops sooner if it reaches your price first.</p>
+                <p className="text-sm font-medium text-ink">Games</p>
+                <p className="text-xs text-ink-dim">Forge fills every one, as long as the card has enough games.</p>
               </div>
               <div className="flex shrink-0 items-center gap-1 rounded-xl border border-line bg-surface-2 px-1.5 py-1">
                 <StepButton label="Fewer games" onClick={() => patch({ games: Math.max(1, settings.games - 1) })}>
@@ -752,8 +755,15 @@ function ResultPanel({
           {t.priced > 0
             ? `Market prices as of ${pricedTime}${t.priced === slip.legs.length ? "" : ` on ${t.priced} of ${slip.legs.length} games`}. Prices change before kick-off.`
             : "Fair prices from the model; market prices will differ."}
-          {off && ` Closest the card allows to the ${target.toFixed(2)} you asked for.`}
+          {off && !slip.notes?.length && ` Closest the card allows to the ${target.toFixed(2)} you asked for.`}
         </p>
+        {!!slip.notes?.length && (
+          <ul className="mt-3 space-y-1.5 rounded-lg border border-amber/25 bg-amber/8 px-3 py-2.5 text-xs leading-relaxed text-ink-muted">
+            {slip.notes.map((n) => (
+              <li key={n}>{n}</li>
+            ))}
+          </ul>
+        )}
         {error && <ForgeError error={error} compact />}
         {!!slip.proHeld && !error && <ProHeldNote count={slip.proHeld} />}
         <div className="mt-4 border-t border-line pt-4">

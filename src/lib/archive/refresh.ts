@@ -3,7 +3,16 @@ import "server-only";
 import { LEAGUES } from "@/lib/leagues";
 import { parseCountryCsv, parseDivisionCsv, type ArchiveRow } from "@/lib/archive/football-data-uk";
 import { storeResults } from "@/lib/archive/history-store";
-import { ESPN_SHOT_LEAGUES, espnDay, matchShots, type ArchiveRow as ShotRow } from "@/lib/archive/espn-shots";
+import {
+  ESPN_CORNER_LEAGUES,
+  ESPN_GOAL_LEAGUES,
+  ESPN_SHOT_LEAGUES,
+  espnDay,
+  matchCorners,
+  matchGoals,
+  matchShots,
+  type ArchiveRow as ShotRow,
+} from "@/lib/archive/espn-shots";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 /**
@@ -86,6 +95,94 @@ export async function refreshEspnShots(now = new Date(), days = 7): Promise<{ ch
         .is("home_shots_on_target", null);
       if (!writeError) filled++;
     }
+  }
+  return { checked, filled };
+}
+
+/**
+ * Corners from ESPN for the last `days` of archived games that have none, in
+ * the competitions football-data.co.uk carries no corners for. Only the
+ * corner columns are written: shots feed the goal model and stay with
+ * refreshEspnShots's narrower list.
+ */
+export async function refreshEspnCorners(now = new Date(), days = 7): Promise<{ checked: number; filled: number }> {
+  const admin = supabaseAdmin();
+  const since = new Date(now.getTime() - (days + 1) * 86_400_000).toISOString();
+  let checked = 0;
+  let filled = 0;
+  for (const [league, slug] of Object.entries(ESPN_CORNER_LEAGUES)) {
+    const { data, error } = await admin
+      .from("historical_results")
+      .select("id, kickoff, home_name, away_name, home_goals, away_goals")
+      .eq("league_code", league)
+      .is("home_corners", null)
+      .gte("kickoff", since);
+    if (error || !data?.length) continue;
+    const rows: ShotRow[] = data.map((r) => ({
+      id: r.id as string,
+      kickoff: Date.parse(r.kickoff as string),
+      home: r.home_name as string,
+      away: r.away_name as string,
+      hg: r.home_goals as number,
+      ag: r.away_goals as number,
+    }));
+    checked += rows.length;
+    const games = (
+      await Promise.all(Array.from({ length: days + 1 }, (_, i) => espnDay(slug, new Date(now.getTime() - i * 86_400_000)).catch(() => [])))
+    ).flat();
+    for (const u of matchCorners(games, rows)) {
+      const { error: writeError } = await admin
+        .from("historical_results")
+        .update({ home_corners: u.hc, away_corners: u.ac })
+        .eq("id", u.id)
+        .is("home_corners", null);
+      if (!writeError) filled++;
+    }
+  }
+  return { checked, filled };
+}
+
+/**
+ * Goal timelines from ESPN for the last few days' archived games that have
+ * none (0078_goal_timelines.sql): when each goal came, for backtesting and
+ * grading the 1UP-type markets, and the half-time score. A timeline is
+ * stored only when ESPN's goals add up to the score.
+ */
+export async function refreshEspnGoals(now = new Date(), days = 3): Promise<{ checked: number; filled: number }> {
+  const admin = supabaseAdmin();
+  const since = new Date(now.getTime() - (days + 1) * 86_400_000).toISOString();
+  let checked = 0;
+  let filled = 0;
+  for (const [league, slug] of Object.entries(ESPN_GOAL_LEAGUES)) {
+    const { data, error } = await admin
+      .from("historical_results")
+      .select("id, kickoff, home_name, away_name, home_goals, away_goals")
+      .eq("league_code", league)
+      .gte("kickoff", since);
+    if (error || !data?.length) continue;
+    const { data: done } = await admin.from("goal_timelines").select("result_id").in("result_id", data.map((r) => r.id as string));
+    const have = new Set((done ?? []).map((r) => r.result_id as string));
+    const rows: ShotRow[] = data
+      .filter((r) => !have.has(r.id as string))
+      .map((r) => ({
+        id: r.id as string,
+        kickoff: Date.parse(r.kickoff as string),
+        home: r.home_name as string,
+        away: r.away_name as string,
+        hg: r.home_goals as number,
+        ag: r.away_goals as number,
+      }));
+    if (!rows.length) continue;
+    checked += rows.length;
+    const games = (
+      await Promise.all(Array.from({ length: days + 1 }, (_, i) => espnDay(slug, new Date(now.getTime() - i * 86_400_000)).catch(() => [])))
+    ).flat();
+    const updates = matchGoals(games, rows);
+    if (!updates.length) continue;
+    const { error: writeError } = await admin
+      .from("goal_timelines")
+      .upsert(updates.map((u) => ({ result_id: u.id, goals: u.goals, ht_home: u.htHome, ht_away: u.htAway })), { onConflict: "result_id", ignoreDuplicates: true });
+    if (!writeError) filled += updates.length;
   }
   return { checked, filled };
 }

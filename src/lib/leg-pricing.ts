@@ -13,6 +13,8 @@
  * statGridsFor).
  */
 import { evaluatePick, evaluateStatPick, type PickResult } from "@/lib/settlement";
+import { fromRaw } from "@/lib/odds/markets";
+import { rawGrader } from "@/lib/odds/raw-grades";
 
 export type StatFamily = "corners" | "shots" | "sot" | "bookings";
 const STAT_FAMILIES: readonly StatFamily[] = ["corners", "shots", "sot", "bookings"];
@@ -22,6 +24,11 @@ export interface PricingContext {
   goals?: number[][];
   /** P(home count = i, away count = j), per count family. */
   stats?: Partial<Record<StatFamily, number[][]>>;
+  /**
+   * Each half's own score grid (halves.ts halfGrids), for markets settled on
+   * the halves: half-time/full-time, both halves over 1.5, second-half lines.
+   */
+  halves?: { first: number[][]; second: number[][] };
 }
 
 export interface LegPrice {
@@ -64,6 +71,11 @@ const isQuarter = (line: number) => Math.abs((line * 4) % 2) === 1;
 
 /** One leg against one result, split stake included; null when the market isn't one we price. */
 export function gradeLeg(market: string, home: number, away: number): LegOutcome | null {
+  const raw = fromRaw(market);
+  if (raw) {
+    const g = rawGrader(raw);
+    return g?.scope === "ft" ? g.grade(home, away) : null;
+  }
   const base = (m: string): PickResult | null => (statFamilyOf(m) ? evaluateStatPick(m, home, away) : evaluatePick(m, home, away));
   const line = lineOf(market);
   // evaluatePick folds a quarter handicap into win/push; split it here so a
@@ -101,29 +113,106 @@ function sumGrid(grid: number[][], grade: (i: number, j: number) => LegOutcome |
   return out;
 }
 
+/** A leg graded on both halves' scores; the final score is their sum. */
+type HalvesGrade = (h1: number, a1: number, h2: number, a2: number) => LegOutcome | null;
+
+/**
+ * How a leg (or a same-game combo's part) settles, and whether it needs the
+ * halves' scores; null for one priced off a count grid, or not priced at all.
+ */
+function goalsGrader(market: string): { halves: boolean; grade: HalvesGrade } | null {
+  const raw = fromRaw(market);
+  if (raw) {
+    const g = rawGrader(raw);
+    if (!g || g.scope === "corners") return null;
+    if (g.scope === "halves") return { halves: true, grade: g.grade };
+    return { halves: false, grade: (h1, a1, h2, a2) => g.grade(h1 + h2, a1 + a2) };
+  }
+  if (statFamilyOf(market)) return null;
+  return { halves: false, grade: (h1, a1, h2, a2) => gradeLeg(market, h1 + h2, a1 + a2) };
+}
+
+/** Every pair of half-time and second-half scores, weighted as the halves are independent. */
+function sumHalves(halves: { first: number[][]; second: number[][] }, grade: HalvesGrade): LegPrice | null {
+  const { first, second } = halves;
+  const out = empty();
+  let seen = false;
+  for (let h1 = 0; h1 < first.length; h1++) {
+    for (let a1 = 0; a1 < first[h1].length; a1++) {
+      const p1 = first[h1][a1];
+      if (!(p1 > 1e-9)) continue;
+      for (let h2 = 0; h2 < second.length; h2++) {
+        for (let a2 = 0; a2 < second[h2].length; a2++) {
+          const p = p1 * second[h2][a2];
+          if (!(p > 1e-12)) continue;
+          const g = grade(h1, a1, h2, a2);
+          if (!g) return null;
+          out[g] += p;
+          seen = true;
+        }
+      }
+    }
+  }
+  if (!seen) return null;
+  out.survive = out.win + out.halfWin + out.push + out.halfLose;
+  return out;
+}
+
+/** Several legs that must all survive: wins outright only when every one wins. */
+function together(gs: (LegOutcome | null)[]): LegOutcome | null {
+  if (gs.some((g) => g === null)) return null;
+  if (gs.every((g) => g === "win")) return "win";
+  if (gs.some((g) => g === "lose")) return "lose";
+  if (gs.some((g) => g === "halfLose")) return "halfLose";
+  return gs.some((g) => g === "push") ? "push" : "halfWin";
+}
+
 /**
  * The leg's chance of each settlement, or null when it is not a market we
  * price or the grid it needs is missing (a competition with no corners
  * history, a stat family inside a same-game combo).
+ *
+ * Whole-match markets read the full-match grid. Markets settled on the
+ * halves read the two half grids together, a little less exact on the final
+ * score (no low-score correction), which is why only they use them.
  */
 export function priceLeg(market: string, ctx: PricingContext): LegPrice | null {
-  if (market.startsWith(COMBO)) {
-    const parts = market.slice(COMBO.length).split("+");
-    if (!ctx.goals || parts.some((p) => statFamilyOf(p))) return null;
-    // Every part must survive for the combo to; it wins outright only when all win.
-    return sumGrid(ctx.goals, (i, j) => {
-      const gs = parts.map((p) => gradeLeg(p, i, j));
-      if (gs.some((g) => g === null)) return null;
-      if (gs.every((g) => g === "win")) return "win";
-      if (gs.some((g) => g === "lose")) return "lose";
-      if (gs.some((g) => g === "halfLose")) return "halfLose";
-      return gs.some((g) => g === "push") ? "push" : "halfWin";
-    });
+  const parts = market.startsWith(COMBO) ? market.slice(COMBO.length).split("+") : [market];
+  const raw = parts.length === 1 ? fromRaw(market) : null;
+  const family = parts.length === 1 && !raw ? statFamilyOf(market) : null;
+  if (family) {
+    const grid = ctx.stats?.[family];
+    return grid ? sumGrid(grid, (i, j) => gradeLeg(market, i, j)) : null;
   }
-  const family = statFamilyOf(market);
-  const grid = family ? ctx.stats?.[family] : ctx.goals;
-  if (!grid) return null;
-  return sumGrid(grid, (i, j) => gradeLeg(market, i, j));
+  const corners = raw && rawGrader(raw);
+  if (corners && corners.scope === "corners") {
+    const grid = ctx.stats?.corners;
+    return grid ? sumGrid(grid, corners.grade) : null;
+  }
+  const graders = parts.map(goalsGrader);
+  if (graders.some((g) => g === null)) return null;
+  const all = graders as { halves: boolean; grade: HalvesGrade }[];
+  const grade: HalvesGrade = (h1, a1, h2, a2) => (all.length === 1 ? all[0].grade(h1, a1, h2, a2) : together(all.map((g) => g.grade(h1, a1, h2, a2))));
+  if (all.some((g) => g.halves)) return ctx.halves ? sumHalves(ctx.halves, grade) : null;
+  // Whole-match legs only: the full-match grid, its final score split nowhere.
+  return ctx.goals ? sumGrid(ctx.goals, (i, j) => grade(i, j, 0, 0)) : null;
+}
+
+/**
+ * One leg against a finished game, half-time score included: what grades a
+ * market settled on the halves. Null when it isn't one we can grade, or it
+ * needs a half-time score that wasn't recorded.
+ */
+export function gradeLegFull(market: string, ft: { home: number; away: number }, ht?: { home: number; away: number } | null): LegOutcome | null {
+  const parts = market.startsWith(COMBO) ? market.slice(COMBO.length).split("+") : [market];
+  const graders = parts.map(goalsGrader);
+  if (graders.some((g) => g === null)) return null;
+  const all = graders as { halves: boolean; grade: HalvesGrade }[];
+  if (all.some((g) => g.halves) && !ht) return null;
+  const [h1, a1] = ht ? [ht.home, ht.away] : [0, 0];
+  if (h1 > ft.home || a1 > ft.away) return null;
+  const gs = all.map((g) => g.grade(h1, a1, ft.home - h1, ft.away - a1));
+  return gs.length === 1 ? gs[0] : together(gs);
 }
 
 /** The refund and half-settled share, for "74% · 9% refund" beside a chance. */

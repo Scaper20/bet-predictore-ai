@@ -17,8 +17,13 @@ and `pg_stat_io` since 24 July (92 days).
   under a millisecond occasionally take over a second (below). That is the
   signature of an instance waiting on disk or CPU, which Postgres's own counters
   cannot show.
-- **So the missing evidence is the instance's own charts**, and they are not
-  reachable from SQL or the logs. See "Look here next".
+- **The instance's own charts then showed the real picture** (below): a
+  `t3a.nano` on the Free plan, memory at 80% and climbing, the disk-IO budget
+  full all week and 77% after the busiest day. The budget is not exhausted; the
+  email is the early warning. The instance is small for match-day traffic.
+- **A separate, more urgent problem turned up: the database is 476 MB and the
+  Free plan goes read-only at 500 MB.** One write-only table is a third of it
+  and growing about 5 MB a day. See "The 500 MB cap".
 
 ## What the database is actually doing
 
@@ -131,36 +136,84 @@ were planned with `EXPLAIN` and show up as `Conflict Filter`.
 - **`live-scores` still makes one PATCH per changed game.** One batched call per
   run would cut the commits further; it needs a small SQL function as well.
 
-## Look here next
+## What the Infrastructure page showed (24 October, evening)
 
-Supabase's own guidance (High Disk I/O) says the first stop is the dashboard:
+Supabase Dashboard, Project settings, Infrastructure:
 
-1. **Observability overview, "Disk IO balance"**: average remaining burst
-   balance. 100% is full, 0% is exhausted.
-2. **Project settings, Infrastructure**: the lowest balance in the last seven
-   days, with its chart. If "Disk IO % consumed" is over 1%, the workload used
-   more than the baseline that day.
-3. **Memory and swap** (Observability, or Grafana). Every project has 1 GB of
-   disk for swap; on a small instance, memory pressure turns into disk IO that
-   `pg_stat_io` never counts. `shared_buffers` is 224 MB and `effective_cache_size`
-   384 MB, which reads as a 1 GB instance.
-4. **Compute size.** Burst limits only apply to compute up to 2XL, and the
-   baseline is what the instance falls back to once the budget is spent. If the
-   charts show the budget draining on match days after these changes, the
-   instance is small for the traffic and the next step is a larger compute add-on.
+- **Compute: `t3a.nano`** (Supabase's Nano: about 0.5 GB of memory, shared CPU).
+  The Free plan only offers this. An earlier note here read `shared_buffers` (224
+  MB) as a 1 GB instance; it is a half-gigabyte one, so the cache takes close to
+  half its memory.
+- **Memory 80%**, up from roughly 67% a week earlier. On an instance this small
+  that is where swapping starts, and swap is disk IO that `pg_stat_io` never
+  counts. It fits the stalls above.
+- **Disk IO balance: 100% all week, 77% now.** It fell on 24 October, the
+  heaviest day; CPU also stepped up over the last few days, from the low 20s to
+  39%. It is not exhausted; "depleting" is the warning threshold.
+- **CPU 25 to 39%, 17 of 60 connections, disk 39%** (database 476 MB, WAL
+  128 MB, system 169 MB).
+
+Supabase's own guidance (High Disk I/O) for what to do about it: upgrade the
+compute add-on, or optimise usage. Both are in hand: the code and SQL changes
+above are live, and the compute question is below.
+
+## The 500 MB cap
+
+The Free plan puts a project into read-only mode when **database size** (the sum
+over all databases, 476 MB now; not the disk) passes 500 MB. In read-only mode
+every insert and update fails: sign-ups, payment records, the pick log, ingestion.
+
+`raw_payloads` is 152 MB of the 476 MB and is write-only: no view, function or
+page reads it, only the store and prune functions touch it. Every ingest call
+keeps its response for 90 days (`retain_days = 90`), and TheSportsDB's
+`eventsday.php` alone is 82 MB (888 snapshots of 95 KiB). Outside the live feed,
+which is capped at seven days, it grows 4 to 8 MB a day. With 24 MB of headroom
+that is about four to five days, before counting any other growth.
+
+`0077_trim_raw_payloads.sql` keeps three days instead of ninety (the newest
+response to every call is always kept) and prunes what is stored. Dry run before
+writing it: it deletes 3,208 rows (96 MB of payload) and keeps 2,213 (40 MB).
+Deleting does not shrink the files, so afterwards run
+`vacuum full public.raw_payloads;` as its own statement: it takes a brief
+exclusive lock and live-scores waits for it. Expect the table to fall from 152 MB
+to about 45 MB, and the database to about 370 MB.
+
+The other large tables are real data and grow slowly: `odds_snapshots` 98 MB,
+`elo_ratings` 61 MB, `historical_results` 59 MB, `matches` 45 MB.
+
+## Compute and plan: the decision to take
+
+Supabase says that in a paid organization the Nano size is billed the same as
+Micro and recommends moving to Micro. The same page prices Micro at about $10 a
+month, and the Pro plan includes a $10 compute credit, so Pro with Micro is about
+the $25 base price. What that changes:
+
+| | Free, Nano (now) | Pro, Micro |
+|---|---|---|
+| Memory | about 0.5 GB | 1 GB |
+| Database size cap | 500 MB, then read-only | 8 GB included, disk grows on its own |
+| Daily backups | none (Supabase advises exporting with `db dump`) | last 7 days |
+
+The change to Micro is applied from Project settings, Compute and Disk, with
+under two minutes of downtime usually; do it at a quiet hour (overnight, 2,000 to
+8,000 requests an hour), not during live games. The trimming above still makes
+sense on Pro: the archive is write-only.
 
 ## Apply
 
 1. `0075` is applied.
-2. Run `supabase/migrations/0076_quieter_database.sql` in the SQL editor. It
-   only replaces functions.
-3. Redeploy the edge function: `supabase functions deploy live-scores`.
+2. `0076_quieter_database.sql` is applied (function definitions checked live).
+3. `live-scores` is deployed as version 4 (24 October, 21:13 UTC). The first run
+   after it wrote 6 rows where the previous runs wrote 16.
+4. **`0077_trim_raw_payloads.sql` in the SQL editor, then
+   `vacuum full public.raw_payloads;`** Do this before 28 October.
 
 Check afterwards:
 
+    -- the database should fall well under 500 MB (the quota measure)
+    select pg_size_pretty(sum(pg_database_size(datname))) from pg_database;
+    select pg_size_pretty(pg_total_relation_size('public.raw_payloads'));
     -- the next live-scores runs should write fewer rows than they list
     select created, content from net._http_response order by created desc limit 5;
-    -- historical_results updates per day should fall to the number of real changes
-    select n_tup_upd from pg_stat_user_tables where relname = 'historical_results';
     -- no more spills: temp_bytes should stop climbing between two looks
     select temp_files, pg_size_pretty(temp_bytes) from pg_stat_database where datname = current_database();
