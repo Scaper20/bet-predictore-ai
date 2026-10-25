@@ -23,7 +23,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Sign in first." }, { status: 401 });
   }
 
-  const body = (await request.json()) as { tier?: string; cycle?: string; once?: boolean };
+  // A garbled or empty body reads as no plan chosen, refused below, rather than a crash.
+  const body = ((await request.json().catch(() => null)) ?? {}) as { tier?: unknown; cycle?: unknown; once?: unknown };
   const tier = body.tier;
   // Pay once: a prepaid period with no Paystack plan, so the checkout offers
   // every method (bank transfer, OPay, PalmPay, USSD, pay with bank, card).

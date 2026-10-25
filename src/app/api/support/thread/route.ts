@@ -57,8 +57,10 @@ export async function POST(request: Request) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const { body, email } = (await request.json()) as { body?: string; email?: string };
-  const message = (body ?? "").trim().slice(0, 4000);
+  const parsed = ((await request.json().catch(() => null)) ?? {}) as { body?: unknown; email?: unknown };
+  const body = typeof parsed.body === "string" ? parsed.body : "";
+  const email = typeof parsed.email === "string" ? parsed.email : undefined;
+  const message = body.trim().slice(0, 4000);
   if (!message) return NextResponse.json({ error: "Write a message first." }, { status: 400, headers: NO_STORE });
 
   if (!user) {

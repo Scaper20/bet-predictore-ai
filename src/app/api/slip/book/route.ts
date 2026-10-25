@@ -6,7 +6,7 @@ import { ALLOWANCE_WINDOW_MS, allowanceState, weeklyCodeAllowance } from "@/lib/
 import { bookingAvailable, bookingCodeFor, peekBookingCode } from "@/lib/odds/booking-code";
 import { KICKOFF_MARGIN_MS, MAX_LEGS, type BookingLeg, type BookingProblem } from "@/lib/odds/booking";
 import { isRawMarket, offeredOn, toSportyBet, toSportyBetBuilder } from "@/lib/odds/markets";
-import { fetchEventMarkets } from "@/lib/odds/sportybet-direct";
+import { fetchEventMarkets, readShareTicket } from "@/lib/odds/sportybet-direct";
 import { bookableOn } from "@/lib/odds/bookable";
 import { friendlyLabel } from "@/lib/forge";
 import { findOnBoard } from "@/lib/odds/sportybet";
@@ -113,7 +113,8 @@ export async function POST(request: Request) {
   }
 
   const body = (await request.json().catch(() => null)) as { legs?: IncomingLeg[] } | null;
-  const incoming = Array.isArray(body?.legs) ? body.legs : [];
+  // Anything that isn't a leg object (a stale or hand-made request) is ignored rather than crashing the booking.
+  const incoming = Array.isArray(body?.legs) ? body.legs.filter((l): l is IncomingLeg => typeof l === "object" && l !== null) : [];
   if (incoming.length === 0 || incoming.length > MAX_LEGS) {
     return NextResponse.json(
       { error: incoming.length ? `A code holds at most ${MAX_LEGS} picks.` : "Your combo is empty." },
@@ -141,7 +142,14 @@ export async function POST(request: Request) {
   const matchIds: string[] = [];
 
   await Promise.all(
-    incoming.map(async (raw, index) => {
+    incoming.map((raw, index) => checkLeg(raw, index).catch(() => {
+      // A lookup that failed outright: this leg is reported, the rest still checked.
+      problems.push({ matchId: str(raw.matchId) ?? `leg-${index}`, problem: "not-listed" });
+    })),
+  );
+
+  async function checkLeg(raw: IncomingLeg, index: number) {
+    {
       const matchId = str(raw.matchId) ?? `leg-${index}`;
       const homeName = str(raw.homeName);
       const awayName = str(raw.awayName);
@@ -221,8 +229,8 @@ export async function POST(request: Request) {
       }
       legs[index] = { market: booked, eventId: event.eventId, kickoff: event.kickoff, markets: event.markets };
       matchIds[index] = matchId;
-    }),
-  );
+    }
+  }
 
   if (problems.length > 0) {
     log({ outcome: "problems", problems });
@@ -254,8 +262,16 @@ export async function POST(request: Request) {
     remaining = state.remaining;
   }
 
-  const booked = await bookingCodeFor(legs);
+  const booked = await bookingCodeFor(legs).catch((): { ok: false; reason: "unavailable" } => ({ ok: false, reason: "unavailable" }));
   if (booked.ok) {
+    // The code read back as SportyBet loads it: its total right now, so the
+    // user sees what they'll get, not what we aimed at. A Bet Builder's parts
+    // are priced together, which the read-back doesn't give, so then none.
+    const ticket = await readShareTicket(booked.bookingCode).catch(() => null);
+    const total =
+      ticket && ticket.legs.length > 0 && ticket.legs.every((l) => l.odds !== null && !l.parentBetBuilderMarketId)
+        ? Math.round(ticket.legs.reduce((p, l) => p * l.odds!, 1) * 100) / 100
+        : null;
     if (given && remaining !== null && !given.has(booked.bookingCode)) remaining = Math.max(0, remaining - 1);
     log({
       outcome: booked.cached ? "cached" : "booked",
@@ -273,6 +289,8 @@ export async function POST(request: Request) {
         /** Codes left in the member's rolling week; null when unlimited. */
         remaining,
         swapped,
+        /** SportyBet's total for the code right now; null when it can't be read (a Bet Builder on it). */
+        odds: total,
       },
       { headers: NO_STORE },
     );

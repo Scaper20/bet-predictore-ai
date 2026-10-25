@@ -9,16 +9,16 @@ import { LEG_MARKET_GAP } from "@/lib/market-check";
 import type { BoardMarket } from "@/lib/odds/bookable";
 import { findOnBoard } from "@/lib/odds/sportybet";
 import type { EditorGame } from "@/lib/code-editor";
-import { fromRaw, isRawMarket, offeredOn, toSportyBet, toSportyBetBuilder } from "@/lib/odds/markets";
+import { fromRaw, isRawMarket, offeredOn, priceOn, toSportyBet, toSportyBetBuilder } from "@/lib/odds/markets";
 import { saferLines } from "@/lib/code-editor-policy";
-import type { RawMarket } from "@/lib/odds/sportybet-api";
+import type { RawMarket, Ticket } from "@/lib/odds/sportybet-api";
 import { rawGrader } from "@/lib/odds/raw-grades";
 import { builderParts, marketRead, oddsOnly, type ReadSource } from "@/lib/odds/market-read";
 import { dbUpcoming } from "@/lib/providers/db-source";
 import { matchPrediction } from "@/lib/service";
 import type { Prediction } from "@/lib/model/predict";
 import { findFixture } from "@/lib/odds/match-fixture";
-import { fetchEventMarkets, priceBetBuilder, readShareTicket } from "@/lib/odds/sportybet-direct";
+import { fetchEventMarkets, priceBetBuilder, readShareTicketOrWhy } from "@/lib/odds/sportybet-direct";
 import { mapLimit } from "@/lib/map-limit";
 import { allSportyBetTournaments } from "@/lib/odds/sportybet-links";
 import { proLeagueLocked, type Viewer } from "@/lib/access";
@@ -137,9 +137,28 @@ async function readFromSportyBet(g: CodeGame): Promise<{ probability: number; so
 /** Games read at once on one code: enough to be quick, few enough not to hammer SportyBet or the model. */
 const SCAN_CONCURRENCY = 8;
 
+/** Why a code couldn't be scanned, in words for the user. */
+export const SCAN_FAILURE: Record<"not-found" | "unreachable", { error: string; status: number }> = {
+  "not-found": {
+    error: "SportyBet doesn't recognise that code. Check it for typos; a code also expires when its first game kicks off.",
+    status: 404,
+  },
+  unreachable: { error: "SportyBet isn't answering right now. Try again in a minute.", status: 503 },
+};
+
 export async function scanCode(code: string): Promise<CodeScan | null> {
-  const ticket = await readShareTicket(code);
-  if (!ticket) return null;
+  const out = await scanCodeOrWhy(code);
+  return "scan" in out ? out.scan : null;
+}
+
+/** The scan, or why there is none (SCAN_FAILURE says it to the user). */
+export async function scanCodeOrWhy(code: string): Promise<{ scan: CodeScan } | { why: "not-found" | "unreachable" }> {
+  const read = await readShareTicketOrWhy(code);
+  if (!("ticket" in read)) return read;
+  return { scan: await scanTicket(read.ticket) };
+}
+
+async function scanTicket(ticket: Ticket): Promise<CodeScan> {
   const games = gamesFromTicket(ticket.legs);
   const [links, tournaments] = await Promise.all([linkedMatches(games.map((g) => g.eventId)), allSportyBetTournaments()]);
   const leagueByTournament = new Map([...tournaments].map(([league, tid]) => [tid, league]));
@@ -221,10 +240,12 @@ export interface EditorContext {
   grids: Map<string, Partial<Record<StatFamily, number[][]>>>;
   /** Every market SportyBet lists on each game on the code, by event id: where safer lines are checked and read. */
   events: Map<string, RawMarket[]>;
+  /** SportyBet's quote for each Bet Builder on the code, by event id, where the scan had none. */
+  builders: Map<string, number>;
 }
 
 export async function editorContext(scan: CodeScan): Promise<EditorContext> {
-  const ctx: EditorContext = { listings: new Map(), stats: new Map(), grids: new Map(), events: new Map() };
+  const ctx: EditorContext = { listings: new Map(), stats: new Map(), grids: new Map(), events: new Map(), builders: new Map() };
   await Promise.all([
     mapLimit([...scan.predictions.values()], SCAN_CONCURRENCY, async (p) => {
       const id = p.match.id;
@@ -245,7 +266,24 @@ export async function editorContext(scan: CodeScan): Promise<EditorContext> {
       if (markets?.length) ctx.events.set(eventId, markets);
     }),
   ]);
+  // A Bet Builder has no listed price: one quote each, so "hit these odds" counts what SportyBet will pay.
+  await mapLimit(
+    scan.games.filter((g) => g.builder && !(g.price && g.price > 1) && ctx.events.has(g.eventId)),
+    SCAN_CONCURRENCY,
+    async (g) => {
+      const parts = builderParts(g.eventId, g.selections, ctx.events.get(g.eventId)!);
+      const quote = parts ? await priceBetBuilder({ index: 0, eventId: g.eventId, parts }).catch(() => null) : null;
+      if (quote?.valid) ctx.builders.set(g.eventId, quote.odds);
+    },
+  );
   return ctx;
+}
+
+/** SportyBet's price for a pick on the game's full listing, when it lists one. */
+function listedPrice(market: string, event: RawMarket[] | undefined): number | undefined {
+  const sel = event ? toSportyBet(market) : null;
+  const odds = sel ? priceOn(sel, event!) : undefined;
+  return odds && odds > 1 ? odds : undefined;
 }
 
 /**
@@ -285,15 +323,27 @@ export function editorGames(scan: CodeScan, ctx?: EditorContext): EditorGame[] {
     const p = g.matchId ? scan.predictions.get(g.matchId) : undefined;
     const event = ctx?.events.get(g.eventId);
     const pricing = p ? { goals: gridFor(p), halves: halvesFor(p), stats: ctx?.grids.get(g.matchId!) ?? {} } : null;
+    // The code's own price for its pick: the ticket's, else today's listing, else a builder's quote.
+    const ownPrice = (g.price && g.price > 1 ? g.price : undefined) ?? listedPrice(g.market, event) ?? ctx?.builders.get(g.eventId);
     const current =
       g.probability !== null
-        ? { market: g.market, label: g.label, probability: g.probability, fairOdds: Math.round((1 / g.probability) * 100) / 100, ...(g.source ? { source: g.source } : {}) }
+        ? {
+            market: g.market,
+            label: g.label,
+            probability: g.probability,
+            fairOdds: Math.round((1 / g.probability) * 100) / 100,
+            ...(g.source ? { source: g.source } : {}),
+            ...(ownPrice ? { price: ownPrice } : {}),
+          }
         : null;
     const ladder = saferLines(g.market).flatMap((m) => {
       const read = readPick(m, pricing, p, event);
       if (!read) return [];
       const label = fromRaw(m) ? saferLabel(m, event) ?? m : friendlyLabel(m, g.homeName ?? "Home", g.awayName ?? "Away", m);
-      return [{ market: m, label, probability: read.probability, fairOdds: Math.round((1 / read.probability) * 100) / 100, source: read.source }];
+      const price = listedPrice(m, event);
+      return [
+        { market: m, label, probability: read.probability, fairOdds: Math.round((1 / read.probability) * 100) / 100, source: read.source, ...(price ? { price } : {}) },
+      ];
     });
     const base = {
       eventId: g.eventId,
@@ -318,7 +368,11 @@ export function editorGames(scan: CodeScan, ctx?: EditorContext): EditorGame[] {
           marketGap: LEG_MARKET_GAP,
         })
       : all.filter((c) => toSportyBet(c.market) || toSportyBetBuilder(c.market));
-    const candidates = bookable.map((c) => ({ market: c.market, label: c.label, probability: c.probability, fairOdds: c.fairOdds }));
+    const candidates = bookable.map((c) => {
+      // The full event's price first (it lists every market), then the stored board's.
+      const price = listedPrice(c.market, event) ?? (c.price && c.price > 1 ? c.price : undefined);
+      return { market: c.market, label: c.label, probability: c.probability, fairOdds: c.fairOdds, ...(price ? { price } : {}) };
+    });
     return [{ ...base, matchId: g.matchId, league: p.match.league.name, candidates }];
   });
 }

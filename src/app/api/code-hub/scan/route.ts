@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getEntitlement } from "@/lib/entitlements";
 import { viewerForTier } from "@/lib/viewer";
-import { scanCode, scanForViewer } from "@/lib/code-scan";
+import { SCAN_FAILURE, scanCodeOrWhy, scanForViewer } from "@/lib/code-scan";
 
 /**
  * Reads any SportyBet code and returns the model's read of every game in it
@@ -37,19 +37,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Too many checks. Wait a minute and try again." }, { status: 429, headers: NO_STORE });
   }
   const body = (await request.json().catch(() => null)) as { code?: unknown } | null;
-  const code = typeof body?.code === "string" ? body.code.trim().toUpperCase() : "";
+  // Pasted codes come with spaces, dashes or a trailing full stop: only letters and digits count.
+  const code = typeof body?.code === "string" ? body.code.toUpperCase().replace(/[^A-Z0-9]/g, "") : "";
   if (!/^[A-Z0-9]{4,12}$/.test(code)) {
-    return NextResponse.json({ error: "That doesn't look like a SportyBet code." }, { status: 400, headers: NO_STORE });
-  }
-  const read = await scanCode(code).catch(() => null);
-  // Pro-league games stay locked for a free viewer until kick-off, as on every other page.
-  const scan = read ? scanForViewer(read, await viewerForTier(entitlement.tier)) : null;
-  if (!scan) {
     return NextResponse.json(
-      { error: "SportyBet doesn't recognise that code, or it has expired." },
-      { status: 404, headers: NO_STORE },
+      { error: "That doesn't look like a SportyBet code: 4 to 12 letters and numbers, like 5CKNWH." },
+      { status: 400, headers: NO_STORE },
     );
   }
+  const read = await scanCodeOrWhy(code).catch(() => ({ why: "unreachable" as const }));
+  if (!("scan" in read)) {
+    const { error, status } = SCAN_FAILURE[read.why];
+    return NextResponse.json({ error }, { status, headers: NO_STORE });
+  }
+  // Pro-league games stay locked for a free viewer until kick-off, as on every other page.
+  const scan = scanForViewer(read.scan, await viewerForTier(entitlement.tier));
   const { predictions: _predictions, ...out } = scan;
   return NextResponse.json(out, { headers: NO_STORE });
 }

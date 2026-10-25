@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { saferCode, targetCode, type EditorGame, type EditorPick } from "./code-editor";
 
+/** A pick as SportyBet lists it: its price is the fair one less a 5% margin. */
 const pick = (market: string, probability: number): EditorPick => ({
   market,
   label: market,
   probability,
   fairOdds: Math.round((1 / probability) * 100) / 100,
+  price: Math.round((1 / probability / 1.05) * 100) / 100,
 });
 
 function game(id: string, current: EditorPick | null, candidates: EditorPick[], ladder: EditorPick[] = []): EditorGame {
@@ -67,16 +69,15 @@ describe("targetCode", () => {
   it("climbs from the safest version toward the asked price", () => {
     const safe = saferCode([a, b, c]);
     const out = targetCode([a, b, c], 6);
-    // Near the target: these games can make 5.68 or 8.17 but nothing between.
-    expect(out.fairOdds).toBeGreaterThanOrEqual(6 * 0.8);
-    expect(out.fairOdds).toBeLessThanOrEqual(6 * 1.35);
+    expect(out.odds).toBeGreaterThanOrEqual(6 * 0.8);
+    expect(out.odds).toBeLessThanOrEqual(6 * 1.35);
     expect(out.chance).toBeLessThan(safe.chance);
   });
 
   it("takes the least likely games off when even the safest picks pay more than asked", () => {
     const out = targetCode([a, b, c], 2);
-    expect(out.fairOdds).toBeGreaterThanOrEqual(1.9);
-    expect(out.fairOdds).toBeLessThanOrEqual(2.1);
+    expect(out.odds).toBeGreaterThanOrEqual(1.9);
+    expect(out.odds).toBeLessThanOrEqual(2.1);
     expect(out.removed?.length).toBeGreaterThan(0);
   });
 
@@ -85,9 +86,31 @@ describe("targetCode", () => {
       game(`w${i}`, pick("ou:over:2.5", 0.5), [pick("dc:home-draw", 0.8), pick("1x2:home", 0.55)], [pick("ou:over:1.5", 0.75), pick("ou:over:0.5", 0.9)]),
     );
     const out = targetCode(wide, 5);
-    expect(out.fairOdds).toBeGreaterThanOrEqual(4.75);
-    expect(out.fairOdds).toBeLessThanOrEqual(5.25);
+    expect(out.odds).toBeGreaterThanOrEqual(4.75);
+    expect(out.odds).toBeLessThanOrEqual(5.25);
     expect(out.notes).toBeUndefined();
+  });
+
+  it("aims at SportyBet's prices, not the model's fair ones", () => {
+    // SportyBet pays 12% under fair here: aiming at fair odds of 8 would book about 5.5.
+    const short = (m: string, p: number): EditorPick => ({ ...pick(m, p), price: Math.round((1 / p / 1.12) * 100) / 100 });
+    const games = [0, 1, 2, 3, 4].map((i) =>
+      game(`s${i}`, short("ou:over:2.5", 0.5), [short("dc:home-draw", 0.8), short("1x2:home", 0.55)], [short("ou:over:1.5", 0.75)]),
+    );
+    const out = targetCode(games, 8);
+    expect(out.odds).toBeGreaterThanOrEqual(7.6);
+    expect(out.odds).toBeLessThanOrEqual(8.4);
+    expect(out.fairOdds).toBeGreaterThan(out.odds!);
+  });
+
+  it("never re-picks to a pick SportyBet has no price for, and marks an unpriced pick of the user's as an estimate", () => {
+    const unpriced = (m: string, p: number): EditorPick => ({ ...pick(m, p), price: undefined });
+    const g = game("u", unpriced("combo:1x2:home+btts:yes", 0.3), [unpriced("combo:1x2:home+ou:over:1.5", 0.45), pick("dc:home-draw", 0.7)]);
+    const out = targetCode([g], 3.2);
+    expect(out.games[0].market).not.toBe("combo:1x2:home+ou:over:1.5");
+    const stuck = targetCode([game("v", unpriced("combo:1x2:home+btts:yes", 0.3), [])], 3);
+    expect(stuck.oddsEstimated).toBe(true);
+    expect(stuck.notes?.some((n) => /estimate/.test(n))).toBe(true);
   });
 
   it("gets as close as the games allow when the target is out of reach", () => {

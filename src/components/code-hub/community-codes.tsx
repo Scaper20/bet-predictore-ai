@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Badge, Button, Input, LiveDot, Spinner } from "@/components/ui/primitives";
 import { LocalTime } from "@/components/ui/local-time";
 import { odds, percent } from "@/lib/format";
-import type { CommunityPost } from "@/lib/code-hub-posts-core";
+import type { CommunityPost, PostProblem } from "@/lib/code-hub-posts-core";
 import { POSTS_PER_DAY } from "@/lib/code-hub-posts-core";
 
 const SHARE = (code: string) => `https://www.sportybet.com/ng/?shareCode=${encodeURIComponent(code)}`;
@@ -38,23 +38,40 @@ export function CommunityCodes({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [posted, setPosted] = useState<number | null>(null);
+  /** Games that kept the code from going up, and whether leaving them off would fix it. */
+  const [problems, setProblems] = useState<{ list: PostProblem[]; canFix: boolean } | null>(null);
+  const [nextAt, setNextAt] = useState<number | null>(null);
+  const [rebooked, setRebooked] = useState<{ from: string; to: string; left: number } | null>(null);
 
-  const post = async () => {
+  const post = async (drop: string[] = []) => {
     setPending(true);
     setError(null);
+    setNextAt(null);
+    setRebooked(null);
     try {
       const response = await fetch("/api/code-hub/posts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code }),
+        body: JSON.stringify({ code, ...(drop.length ? { drop } : {}) }),
       });
-      const body = await response.json().catch(() => null);
+      const body = (await response.json().catch(() => null)) as {
+        post?: CommunityPost;
+        error?: string;
+        problems?: PostProblem[];
+        canFix?: boolean;
+        nextAt?: number;
+        rebooked?: { from: string; left: PostProblem[] };
+      } | null;
       if (!response.ok || !body?.post) {
-        setError(body?.error ?? "Couldn't post that just now.");
+        setError(body?.error ?? (response.status >= 500 ? "Something went wrong on our side. Try again shortly." : "Couldn't post that just now."));
+        setProblems(body?.problems?.length ? { list: body.problems, canFix: !!body.canFix } : null);
+        setNextAt(typeof body?.nextAt === "number" ? body.nextAt : null);
       } else {
-        const p = body.post as CommunityPost;
+        const p = body.post;
         setPosts((all) => [...all.filter((x) => x.id !== p.id), p].sort((a, b) => b.score - a.score));
         setPosted(p.id);
+        setProblems(null);
+        if (body.rebooked) setRebooked({ from: body.rebooked.from, to: p.code, left: body.rebooked.left.length });
         setCode("");
       }
     } catch {
@@ -81,12 +98,17 @@ export function CommunityCodes({
           <div className="flex flex-col gap-2 sm:flex-row">
             <Input
               value={code}
-              onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12))}
+              onChange={(e) => {
+                setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12));
+                // A different code: what was said about the last one no longer applies.
+                setProblems(null);
+                setError(null);
+              }}
               placeholder="Your SportyBet code"
               aria-label="SportyBet code to post"
               className="font-mono tracking-[0.12em] sm:max-w-xs"
             />
-            <Button onClick={post} disabled={pending || code.length < 4} className="py-2.5">
+            <Button onClick={() => post()} disabled={pending || code.length < 4} className="py-2.5">
               {pending && <Spinner className="size-3.5" />}
               Post my code
             </Button>
@@ -94,7 +116,53 @@ export function CommunityCodes({
           <p className="text-xs text-ink-dim">
             Up to {POSTS_PER_DAY} a day, 2 games or more, before the first kick-off.
           </p>
-          {error && <p className="text-sm text-rose">{error}</p>}
+          {error && (
+            <p className="text-sm text-rose" role="alert">
+              {error}
+              {nextAt !== null && (
+                <>
+                  {" "}
+                  Your next post opens <LocalTime iso={new Date(nextAt).toISOString()} kind="dayTime" />.
+                </>
+              )}
+            </p>
+          )}
+          {problems && (
+            <div className="space-y-2 rounded-xl border border-amber/40 bg-amber/5 p-3">
+              <ul className="space-y-1.5">
+                {problems.list.map((g) => (
+                  <li key={g.eventId} className="text-sm">
+                    <span className="block break-words font-semibold">
+                      {g.homeName ?? "?"} v {g.awayName ?? "?"}
+                    </span>
+                    <span className="block break-words text-xs text-ink-dim">
+                      {g.label}
+                      {g.kickoff !== null && (
+                        <>
+                          {" · "}
+                          <LocalTime iso={new Date(g.kickoff).toISOString()} kind="dayTime" />
+                        </>
+                      )}
+                    </span>
+                    <span className="block text-xs text-amber">{g.why}</span>
+                  </li>
+                ))}
+              </ul>
+              {problems.canFix && (
+                <Button variant="secondary" onClick={() => post(problems.list.map((g) => g.eventId))} disabled={pending} className="py-2">
+                  {pending && <Spinner className="size-3.5" />}
+                  Post without {problems.list.length === 1 ? "this game" : `these ${problems.list.length} games`}
+                </Button>
+              )}
+            </div>
+          )}
+          {rebooked && (
+            <p className="text-sm text-ink-muted">
+              Posted as a new code, <span className="font-mono font-semibold text-ink">{rebooked.to}</span>: your picks from{" "}
+              <span className="font-mono">{rebooked.from}</span> without the {rebooked.left === 1 ? "game" : `${rebooked.left} games`}{" "}
+              that couldn&apos;t go up.
+            </p>
+          )}
         </div>
       ) : (
         <p className="text-sm text-ink-muted">

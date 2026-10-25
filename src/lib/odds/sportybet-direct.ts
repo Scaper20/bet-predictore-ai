@@ -284,9 +284,23 @@ export async function fetchEventResult(eventId: string): Promise<EventResult | n
 
 /** A shared code read back in full: every selection with its game and current price. */
 export async function readShareTicket(code: string): Promise<Ticket | null> {
+  const read = await readShareTicketOrWhy(code);
+  return "ticket" in read ? read.ticket : null;
+}
+
+/**
+ * A shared code read back, or why not: "not-found" when SportyBet answered
+ * and has no such code (mistyped, or expired at its first kick-off),
+ * "unreachable" when SportyBet didn't answer at all, so the user is told to
+ * try again rather than that their code is wrong.
+ */
+export async function readShareTicketOrWhy(code: string): Promise<{ ticket: Ticket } | { why: "not-found" | "unreachable" }> {
   const clean = code.trim().toUpperCase();
-  if (!/^[A-Z0-9]{4,12}$/.test(clean)) return null;
-  return parseShareTicket(await call(`/orders/share/${encodeURIComponent(clean)}`));
+  if (!/^[A-Z0-9]{4,12}$/.test(clean)) return { why: "not-found" };
+  const body = await call(`/orders/share/${encodeURIComponent(clean)}`);
+  if (body === null) return { why: "unreachable" };
+  const ticket = parseShareTicket(body);
+  return ticket ? { ticket } : { why: "not-found" };
 }
 
 /** Event markets read in the last minute, so a code scanned twice asks once. */

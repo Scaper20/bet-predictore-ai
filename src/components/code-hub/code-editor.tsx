@@ -7,7 +7,7 @@ import { LocalTime } from "@/components/ui/local-time";
 import { BookCodeButton } from "@/components/slip/book-code-button";
 import { odds, percent } from "@/lib/format";
 import type { SlipLeg } from "@/lib/slip";
-import type { EditResult } from "@/lib/code-editor";
+import { totals, type EditResult } from "@/lib/code-editor";
 import type { CodeScore, ScoredGame, Verdict } from "@/lib/code-scan-core";
 
 interface ScanView extends CodeScore {
@@ -34,14 +34,10 @@ const SOURCE: Partial<Record<NonNullable<ScoredGame["source"]>, string>> = {
 /** A whole code's chance: long codes run to fractions of a percent, which "0.0%" would hide. */
 const chanceText = (v: number) => (v < 0.001 ? "<0.1%" : percent(v, v < 0.1 ? 1 : 0));
 
-/** The edited code without some games, its chance and fair odds recounted. */
+/** The edited code without some games, its chance and odds recounted. */
 function withoutGames(r: EditResult, removed: ReadonlySet<string>): EditResult {
   const games = r.games.filter((g) => !removed.has(g.matchId));
-  return {
-    games,
-    chance: Math.round(games.reduce((p, g) => p * g.probability, 1) * 10_000) / 10_000,
-    fairOdds: Math.round(games.reduce((o, g) => o * g.fairOdds, 1) * 100) / 100,
-  };
+  return { ...r, ...totals(games), games };
 }
 
 /** The edited code as slip legs, which the booking route already understands. */
@@ -70,7 +66,7 @@ export function CodeEditor({ signedIn }: { signedIn: boolean }) {
   const [mode, setMode] = useState<"safer" | "target">("safer");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [data, setData] = useState<{ scan: ScanView; safer: EditResult | null; target: EditResult | null } | null>(null);
+  const [data, setData] = useState<{ scan: ScanView; safer: EditResult | null; target: EditResult | null; readAt: number } | null>(null);
 
   const run = async (wanted: "safer" | "target") => {
     setPending(true);
@@ -85,10 +81,19 @@ export function CodeEditor({ signedIn }: { signedIn: boolean }) {
       });
       const body = await response.json().catch(() => null);
       if (!response.ok || !body?.scan) {
-        setError(body?.error ?? "Couldn't read that code just now.");
+        setError(
+          body?.error ??
+            (response.status === 429
+              ? "Too many checks. Wait a minute and try again."
+              : response.status >= 500
+                ? "Something went wrong on our side. Try again shortly."
+                : "Couldn't read that code just now."),
+        );
         setData(null);
       } else {
-        setData(body);
+        // The code was read; re-picking it may still have failed, and says so.
+        setError(typeof body.error === "string" ? body.error : null);
+        setData({ ...body, readAt: Date.now() });
       }
     } catch {
       setError("No connection. Check your network and try again.");
@@ -146,7 +151,7 @@ export function CodeEditor({ signedIn }: { signedIn: boolean }) {
               <Button
                 variant="secondary"
                 onClick={() => run("target")}
-                disabled={pending || code.length < 4 || !(Number(target) > 1.2)}
+                disabled={pending || code.length < 4 || !(Number(target) >= 1.2 && Number(target) <= 1000)}
                 className="flex-1 whitespace-nowrap py-2.5 sm:flex-none"
               >
                 {pending && mode === "target" && <Spinner className="size-3.5" />}
@@ -154,7 +159,14 @@ export function CodeEditor({ signedIn }: { signedIn: boolean }) {
               </Button>
             </div>
           </div>
-          {error && <p className="text-sm text-rose">{error}</p>}
+          {error && (
+            <p className="text-sm text-rose" role="alert">
+              {error}
+            </p>
+          )}
+          {target !== "" && !(Number(target) >= 1.2 && Number(target) <= 1000) && (
+            <p className="text-xs text-ink-dim">Odds to hit: a number from 1.2 to 1,000, like 5 or 10.5.</p>
+          )}
         </div>
       )}
 
@@ -178,7 +190,7 @@ export function CodeEditor({ signedIn }: { signedIn: boolean }) {
                 </span>
               </summary>
               <div className="border-t border-line p-1">
-                <ScanCard scan={data.scan} />
+                <ScanCard scan={data.scan} readAt={data.readAt} />
               </div>
             </details>
           </div>
@@ -189,14 +201,14 @@ export function CodeEditor({ signedIn }: { signedIn: boolean }) {
                 ? "Enter the odds you want and tap Hit these odds."
                 : "None of these games can still be re-picked: they have started, or we can't read them."}
             </div>
-            <ScanCard scan={data.scan} />
+            <ScanCard scan={data.scan} readAt={data.readAt} />
           </div>
         ))}
     </section>
   );
 }
 
-function ScanCard({ scan }: { scan: ScanView }) {
+function ScanCard({ scan, readAt }: { scan: ScanView; /** When the code was read: what "started" is measured against. */ readAt: number }) {
   return (
     <div className="min-w-0 rounded-xl border border-line bg-surface-2/40 p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
@@ -222,6 +234,11 @@ function ScanCard({ scan }: { scan: ScanView }) {
               </span>
               {/* Why a game wasn't read: worth reading in full, so it wraps rather than being cut off. */}
               {g.reason && <span className="mt-0.5 block text-xs text-amber">{g.reason}</span>}
+              {!g.reason && g.kickoff !== null && g.kickoff <= readAt + 10 * 60_000 && (
+                <span className="mt-0.5 block text-xs text-amber">
+                  {g.kickoff <= readAt ? "Started: it can't be re-picked." : "Kicks off within 10 minutes: too late to re-pick."}
+                </span>
+              )}
               {g.source && SOURCE[g.source] && <span className="mt-0.5 block text-xs text-ink-dim">{SOURCE[g.source]}</span>}
             </span>
             <span className="flex shrink-0 items-center gap-2">
@@ -265,7 +282,10 @@ function EditedCard({ result: full, before, mode }: { result: EditResult; before
         <BeforeAfter
           items={[
             { label: "Chance", before: before.chance, after: result.chance, show: chanceText },
-            { label: "Odds", before: before.odds, after: result.fairOdds, show: odds, note: "fair" },
+            // SportyBet's own prices, which the booked code pays; the fair price only when one is unknown.
+            result.odds !== null
+              ? { label: "SportyBet odds", before: before.odds, after: result.odds, show: odds, note: result.oddsEstimated ? "est." : undefined }
+              : { label: "Odds", before: before.odds, after: result.fairOdds, show: odds, note: "fair" },
           ]}
         />
         <BookCodeButton
@@ -298,7 +318,10 @@ function EditedCard({ result: full, before, mode }: { result: EditResult; before
                   </span>
                   {g.why && <span className="block break-words text-xs text-ink-dim">{g.why}</span>}
                 </span>
-                <span className="shrink-0 font-mono text-xs font-semibold text-brand">{percent(g.probability)}</span>
+                <span className="shrink-0 text-right font-mono text-xs">
+                  <span className="block font-semibold text-brand">{percent(g.probability)}</span>
+                  {g.price && <span className="block text-ink-dim">{odds(g.price)}</span>}
+                </span>
               </li>
             ))}
           </ul>
@@ -325,7 +348,10 @@ function EditedCard({ result: full, before, mode }: { result: EditResult; before
                   </span>
                   {g.source && SOURCE[g.source] && <span className="block break-words text-xs text-ink-dim">{SOURCE[g.source]}</span>}
                 </span>
-                <span className="shrink-0 font-mono text-xs text-ink-muted">{percent(g.probability)}</span>
+                <span className="shrink-0 text-right font-mono text-xs text-ink-muted">
+                  <span className="block">{percent(g.probability)}</span>
+                  {g.price && <span className="block text-ink-dim">{odds(g.price)}</span>}
+                </span>
               </li>
             ))}
           </ul>
