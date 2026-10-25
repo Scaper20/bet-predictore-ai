@@ -13,10 +13,21 @@ import type { SportyBetSelection } from "@/lib/odds/markets";
  * remember (has the home side ever led by two? who scored last?), so every
  * chance is exact for that process.
  *
- * An estimate: we store no goal times, so none of this has been checked
- * against results. Callers label it as such and never publish it as a pick
- * (docs: the plan's Tier 3). Against SportyBet's own book on a Serie A game
- * the 1UP, 2UP and lead-by-N chances land within a few points of its own.
+ * Backtested on 13,225 league games from July 2024 (scripts/lead-lab.ts:
+ * closing prices for each side's expected goals, ESPN's goal times for the
+ * result), so the test is of the timing alone:
+ *
+ *   market              said    landed      market              said    landed
+ *   1UP home            58.8%   59.9%       any lead by 2       49.7%   45.8%
+ *   1UP away            47.8%   48.5%       any 2 in a row      57.8%   56.0%
+ *   2UP home            46.1%   45.3%       first goal home     51.6%   51.6%
+ *   2UP away            33.7%   32.5%       first goal 1-15'    33.7%   30.9%
+ *   DC 1UP home/draw    72.7%   75.1%       over 0.5 by 25'     49.5%   46.9%
+ *
+ * The 1UP family is within about two points. Early-goal markets run about
+ * three high (goals are spread evenly within a half here; real games start
+ * slower) and "lead by 2" four high (a side two up eases off). Still labelled
+ * an estimate and never called strong until it has a live record.
  */
 
 export interface HalfRates {
