@@ -16,7 +16,7 @@
  * NPFL, CAF competitions and national-team football.
  */
 
-import type { Match, MatchStatus, ResultRow, StandingRow, Team } from "@/lib/types";
+import type { Match, MatchStatus, ResultRow, Team } from "@/lib/types";
 import { sportOrDefault } from "@/lib/sports";
 import { LEAGUES, leagueByProviderId, type LeagueDef } from "@/lib/leagues";
 import { getJson, RateGate } from "./http";
@@ -288,32 +288,6 @@ export async function fetchSeasonResultsByLeagueId(
     } catch {
       return [];
     }
-  });
-}
-
-export async function fetchStandings(league: LeagueDef, season?: string): Promise<StandingRow[]> {
-  const id = league.ids.theSportsDb;
-  if (!id) return [];
-  const s = season ?? currentSeasonLabel();
-  return cached(`sdb:table:${id}:${s}`, 30 * 60_000, async () => {
-    interface Row {
-      intRank?: string; idTeam?: string; strTeam?: string; strBadge?: string;
-      intPlayed?: string; intWin?: string; intDraw?: string; intLoss?: string;
-      intGoalsFor?: string; intGoalsAgainst?: string; intGoalDifference?: string; intPoints?: string;
-    }
-    const data = await v1<{ table?: Row[] | null }>(`lookuptable.php?l=${id}&s=${encodeURIComponent(s)}`);
-    return (data.table ?? []).map((r, i): StandingRow => ({
-      position: num(r.intRank ?? null) ?? i + 1,
-      team: team(r.idTeam, r.strTeam, r.strBadge),
-      played: num(r.intPlayed ?? null) ?? 0,
-      won: num(r.intWin ?? null) ?? 0,
-      drawn: num(r.intDraw ?? null) ?? 0,
-      lost: num(r.intLoss ?? null) ?? 0,
-      goalsFor: num(r.intGoalsFor ?? null) ?? 0,
-      goalsAgainst: num(r.intGoalsAgainst ?? null) ?? 0,
-      goalDifference: num(r.intGoalDifference ?? null) ?? 0,
-      points: num(r.intPoints ?? null) ?? 0,
-    }));
   });
 }
 

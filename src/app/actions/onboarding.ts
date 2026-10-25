@@ -98,15 +98,3 @@ export async function saveOnboardingStep(
 
   redirect(`/onboarding?step=${step + 1}&next=${encodeURIComponent(next)}`);
 }
-
-/**
- * Leaves the flow without finishing it.
- *
- * Records nothing beyond what earlier steps already saved and does NOT stamp
- * onboarded_at, so the "finish setting up" prompt on the account page still
- * has something to offer. Forcing the questionnaire would cost more sign-ups
- * than the answers are worth.
- */
-export async function skipOnboarding(formData: FormData) {
-  redirect(safeNext(formData.get("next"), POST_AUTH_DESTINATION));
-}

@@ -7,6 +7,7 @@ import { WaitlistWall } from "@/components/code-hub/waitlist-wall";
 import { hubGate, onWaitlist } from "@/lib/code-hub-gate";
 import { communityPosts, postForViewer } from "@/lib/code-hub-posts";
 import { viewerForTier } from "@/lib/viewer";
+import { splitStarted } from "@/lib/code-hub-posts-core";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/football/code-hub/community" },
@@ -30,12 +31,18 @@ export default async function CodeCommunityPage() {
   }
   const [community, viewer] = await Promise.all([communityPosts(), viewerForTier(entitlement.tier)]);
   const shown = (posts: typeof community.open) => posts.map((p) => postForViewer(p, viewer));
+  const { inPlay, finished } = splitStarted(community.recent);
   return (
     <>
       <PageHeader eyebrow="Code Hub" title="Community codes" description="Codes from members, ranked by the model." />
       <Container className="space-y-6 py-4 sm:space-y-8 sm:py-10">
         <HubTabs active="codeCommunity" />
-        <CommunityCodes initial={shown(community.open)} recent={shown(community.recent)} signedIn={entitlement.signedIn} />
+        <CommunityCodes
+          initial={shown(community.open)}
+          inPlay={shown(inPlay)}
+          finished={shown(finished)}
+          signedIn={entitlement.signedIn}
+        />
       </Container>
     </>
   );

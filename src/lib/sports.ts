@@ -76,10 +76,6 @@ export const DEFAULT_SPORT: SportId = "football";
 
 const BY_ID = new Map(SPORTS.map((s) => [s.id, s]));
 
-export function sportById(id: string): SportDescriptor | undefined {
-  return BY_ID.get(id as SportId);
-}
-
 export function isSportId(value: string): value is SportId {
   return BY_ID.has(value as SportId);
 }

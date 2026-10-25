@@ -61,8 +61,13 @@ export type BookingPlan =
   | { ok: true; selections: BookSelection[]; builders: BuilderGroup[]; signature: string; firstKickoff: number }
   | { ok: false; problems: BookingProblem[] };
 
-/** Most legs on one code. SportyBet's own limit is higher; nobody needs more. */
-export const MAX_LEGS = 20;
+/**
+ * Most legs on one code. SportyBet books and reads back far longer codes
+ * (measured October 2026: 21, 30, 40, 50, 60, 80 and 100 picks all booked and
+ * read back whole); 50 covers the longest parlays people actually post while
+ * still bounding a malformed request.
+ */
+export const MAX_LEGS = 50;
 
 /**
  * Legs closer to kickoff than this are refused. A booking takes a few seconds

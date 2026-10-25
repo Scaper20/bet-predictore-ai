@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getEntitlement } from "@/lib/entitlements";
 import { leagueByProviderName } from "@/lib/leagues";
 import { priceQuotes, type QuoteRequest } from "@/lib/odds";
+import { MAX_LEGS } from "@/lib/odds/booking";
 
 /**
  * Live prices for the selections on a user's slip.
@@ -25,13 +26,10 @@ export const dynamic = "force-dynamic";
 const NO_STORE = { "Cache-Control": "no-store" };
 
 /**
- * More legs than any slip the UI can build.
- *
- * The slip view warns at five and the accumulator maths is meaningless well
- * before twenty, so this bounds a malformed or hostile payload rather than
- * constraining a real user.
+ * The most legs read in one request: the same bound as a booking code
+ * (booking.ts), so a long code pasted into the editor is priced whole. It
+ * bounds a malformed or hostile payload rather than a real user.
  */
-const MAX_LEGS = 20;
 
 interface IncomingLeg {
   matchId?: unknown;

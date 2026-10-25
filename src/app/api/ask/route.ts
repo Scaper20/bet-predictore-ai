@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { getEntitlement, meets } from "@/lib/entitlements";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { aiEnabled } from "@/lib/ai/analyst";
+import { aiEnabled } from "@/lib/ai/enabled";
 import { ASK_SYSTEM_PROMPT } from "@/lib/ask/prompt";
 import { APP_TIMEZONE } from "@/lib/format";
 import { ASK_TOOLS, runTool, toolStatus, type AskTier } from "@/lib/ask/tools";

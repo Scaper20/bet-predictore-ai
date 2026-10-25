@@ -15,7 +15,7 @@
  * Set FOOTBALL_DATA_API_KEY to enable it.
  */
 
-import type { Match, MatchStatus, ResultRow, StandingRow, Team } from "@/lib/types";
+import type { Match, MatchStatus, ResultRow, Team } from "@/lib/types";
 import { LEAGUES, leagueByProviderId, type LeagueDef } from "@/lib/leagues";
 import { getJson, RateGate } from "./http";
 import { cached } from "./cache";
@@ -225,32 +225,6 @@ export async function fetchSeasonResults(
         };
       })
       .filter((r): r is ResultRow => r !== null);
-  });
-}
-
-export async function fetchStandings(league: LeagueDef): Promise<StandingRow[]> {
-  const code = league.ids.footballData;
-  if (!isConfigured() || !code) return [];
-  return cached(`fd:table:${code}`, 30 * 60_000, async () => {
-    interface Row {
-      position?: number; team?: FdTeam; playedGames?: number; won?: number;
-      draw?: number; lost?: number; goalsFor?: number; goalsAgainst?: number;
-      goalDifference?: number; points?: number;
-    }
-    const data = await fdGet<{ standings?: { type?: string; table?: Row[] }[] | null }>(`/competitions/${code}/standings`);
-    const total = data.standings?.find((s) => s.type === "TOTAL") ?? data.standings?.[0];
-    return (total?.table ?? []).map((r, i): StandingRow => ({
-      position: r.position ?? i + 1,
-      team: team(r.team),
-      played: r.playedGames ?? 0,
-      won: r.won ?? 0,
-      drawn: r.draw ?? 0,
-      lost: r.lost ?? 0,
-      goalsFor: r.goalsFor ?? 0,
-      goalsAgainst: r.goalsAgainst ?? 0,
-      goalDifference: r.goalDifference ?? 0,
-      points: r.points ?? 0,
-    }));
   });
 }
 

@@ -158,3 +158,13 @@ export function postForViewer(post: CommunityPost, viewer: Viewer, now = Date.no
   });
   return hidden ? { ...post, games, chance: null } : post;
 }
+
+/**
+ * Posts whose games have started, split for the page: still running (shown
+ * open) and decided (folded away). A post is decided once it has a result or
+ * is settled; until then it is in play, however late its last game.
+ */
+export function splitStarted(posts: readonly CommunityPost[]): { inPlay: CommunityPost[]; finished: CommunityPost[] } {
+  const finished = posts.filter((p) => p.result !== null || p.status === "settled");
+  return { inPlay: posts.filter((p) => !finished.includes(p)), finished };
+}

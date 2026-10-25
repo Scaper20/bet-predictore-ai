@@ -19,6 +19,7 @@ import { matchPrediction } from "@/lib/service";
 import type { Prediction } from "@/lib/model/predict";
 import { findFixture } from "@/lib/odds/match-fixture";
 import { fetchEventMarkets, priceBetBuilder, readShareTicket } from "@/lib/odds/sportybet-direct";
+import { mapLimit } from "@/lib/map-limit";
 import { allSportyBetTournaments } from "@/lib/odds/sportybet-links";
 import { proLeagueLocked, type Viewer } from "@/lib/access";
 import { gamesFromTicket, lockGames, scoreCode, verdictFor, type CodeGame, type CodeScore, type ScoredGame } from "./code-scan-core";
@@ -133,6 +134,9 @@ async function readFromSportyBet(g: CodeGame): Promise<{ probability: number; so
   return read ? { ...read, price: quote.odds } : null;
 }
 
+/** Games read at once on one code: enough to be quick, few enough not to hammer SportyBet or the model. */
+const SCAN_CONCURRENCY = 8;
+
 export async function scanCode(code: string): Promise<CodeScan | null> {
   const ticket = await readShareTicket(code);
   if (!ticket) return null;
@@ -141,8 +145,10 @@ export async function scanCode(code: string): Promise<CodeScan | null> {
   const leagueByTournament = new Map([...tournaments].map(([league, tid]) => [tid, league]));
   const predictions = new Map<string, Prediction>();
 
-  const scored = await Promise.all(
-    games.map(async (g): Promise<ScoredGame> => {
+  const scored = await mapLimit(
+    games,
+    SCAN_CONCURRENCY,
+    async (g): Promise<ScoredGame> => {
       const theirs = g.marketDesc && g.desc ? `${g.marketDesc}: ${g.desc}` : g.desc ?? "Pick";
       const raw = !g.market || isRawMarket(g.market);
       let base: ScoredGame = { ...g, matchId: null, leagueCode: null, probability: null, label: theirs, verdict: "unreadable" };
@@ -182,7 +188,7 @@ export async function scanCode(code: string): Promise<CodeScan | null> {
       }
       if (g.kickoff !== null && g.kickoff <= Date.now()) reason = "This game has started.";
       return { ...base, reason };
-    }),
+    },
   );
   return { code: ticket.code, deadline: ticket.deadline, games: scored, predictions, ...scoreCode(scored) };
 }
@@ -220,7 +226,7 @@ export interface EditorContext {
 export async function editorContext(scan: CodeScan): Promise<EditorContext> {
   const ctx: EditorContext = { listings: new Map(), stats: new Map(), grids: new Map(), events: new Map() };
   await Promise.all([
-    ...[...scan.predictions.values()].map(async (p) => {
+    mapLimit([...scan.predictions.values()], SCAN_CONCURRENCY, async (p) => {
       const id = p.match.id;
       const [event, stats, grids] = await Promise.all([
         findOnBoard(
@@ -234,7 +240,7 @@ export async function editorContext(scan: CodeScan): Promise<EditorContext> {
       if (stats) ctx.stats.set(id, stats);
       ctx.grids.set(id, grids);
     }),
-    ...[...new Set(scan.games.map((g) => g.eventId))].map(async (eventId) => {
+    mapLimit([...new Set(scan.games.map((g) => g.eventId))], SCAN_CONCURRENCY, async (eventId) => {
       const markets = await fetchEventMarkets(eventId).catch(() => null);
       if (markets?.length) ctx.events.set(eventId, markets);
     }),

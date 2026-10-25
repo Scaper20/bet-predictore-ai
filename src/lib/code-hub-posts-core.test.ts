@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { byRank, gradeCode, gradeGame, postForViewer, posterName, rankScore, recordOf, type CommunityPost } from "./code-hub-posts-core";
+import { byRank, gradeCode, gradeGame, postForViewer, posterName, rankScore, recordOf, splitStarted, type CommunityPost } from "./code-hub-posts-core";
 
 describe("rankScore", () => {
   it("prefers a fair price on a likelier code", () => {
@@ -92,5 +92,16 @@ describe("postForViewer", () => {
   it("shows everything to a paid viewer, and to anyone after kick-off", () => {
     expect(postForViewer(post, { paid: true, freeStrongId: null, freeIds: [] }, now)).toBe(post);
     expect(postForViewer(post, free, later + 1).chance).toBe(0.4);
+  });
+});
+
+describe("splitStarted", () => {
+  const post = (id: number, status: CommunityPost["status"], result: CommunityPost["result"]) =>
+    ({ id, status, result }) as CommunityPost;
+
+  it("keeps undecided posts in play and folds decided ones away", () => {
+    const { inPlay, finished } = splitStarted([post(1, "live", null), post(2, "settled", "won"), post(3, "live", "lost"), post(4, "settled", null)]);
+    expect(inPlay.map((p) => p.id)).toEqual([1]);
+    expect(finished.map((p) => p.id)).toEqual([2, 3, 4]);
   });
 });
