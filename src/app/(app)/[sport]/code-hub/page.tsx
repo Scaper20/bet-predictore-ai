@@ -6,7 +6,7 @@ import { Container } from "@/components/ui/container";
 import { Badge, EmptyState } from "@/components/ui/primitives";
 import { HubCard } from "@/components/code-hub/hub-card";
 import { meets } from "@/lib/entitlements";
-import { finishedScores, runningHub, todayHub } from "@/lib/code-hub-feed";
+import { finishedScores, pastHub, runningHub, todayHub } from "@/lib/code-hub-feed";
 import { codeState, hubAccess, hubLegResult, hubStatus } from "@/lib/code-hub";
 import { GENERATOR_ALLOWANCE } from "@/lib/code-hub-plans";
 import { bookingAvailable } from "@/lib/odds/booking-code";
@@ -37,7 +37,7 @@ export default async function CodeHubPage() {
     );
   }
 
-  const [today, running, live] = await Promise.all([todayHub(), runningHub(), bookingAvailable()]);
+  const [today, running, live, past] = await Promise.all([todayHub(), runningHub(), bookingAvailable(), pastHub(7)]);
   const paid = meets(entitlement.tier, "pro");
   const now = today.now;
   // Today's codes, then earlier four-day codes whose games are still on.
@@ -48,6 +48,13 @@ export default async function CodeHubPage() {
   const missed = (c: (typeof all)[number]) =>
     hubStatus(c.legs.map((l) => hubLegResult(l, scores[l.matchId])), c.firstKickoff, now) === "lost";
   const codes = all.filter((c) => !missed(c));
+  // The record: earlier codes that landed, newest first. Their games are over, so they are open to everyone.
+  const landed = past.days.flatMap((d) =>
+    d.codes.flatMap((c) => {
+      const results = c.legs.map((l) => hubLegResult(l, past.scores[l.matchId]));
+      return hubStatus(results, c.firstKickoff, now) === "won" ? [{ code: c, results }] : [];
+    }),
+  );
 
   return (
     <>
@@ -80,7 +87,7 @@ export default async function CodeHubPage() {
               }
             />
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3">
               {codes.map((c) => {
                 const results = c.legs.map((l) => hubLegResult(l, scores[l.matchId]));
                 return (
@@ -104,6 +111,42 @@ export default async function CodeHubPage() {
             </div>
           )}
         </section>
+
+        {landed.length > 0 && (
+          <section aria-labelledby="landed-heading">
+            <details className="group/landed" open>
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 py-1 [&::-webkit-details-marker]:hidden">
+                <h2 id="landed-heading" className="font-display text-lg font-bold text-ink">
+                  Landed in the last 7 days{" "}
+                  <span className="ml-1 rounded-full bg-brand/15 px-2 py-0.5 align-middle text-xs font-semibold text-brand">
+                    {landed.length}
+                  </span>
+                </h2>
+                <span aria-hidden className="text-ink-dim transition-transform group-open/landed:rotate-180">
+                  ▾
+                </span>
+              </summary>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {landed.map(({ code: c, results }) => (
+                  <HubCard
+                    key={`${c.day}-${c.tier}`}
+                    settledOn={shortDay(c.day)}
+                    tier={c.tier}
+                    legs={c.legs}
+                    odds={c.odds}
+                    probability={c.probability}
+                    firstKickoff={c.firstKickoff}
+                    access="open"
+                    status="won"
+                    results={results}
+                    code={{ state: "closed" }}
+                    preview={false}
+                  />
+                ))}
+              </div>
+            </details>
+          </section>
+        )}
 
         <section className="grid gap-4 text-sm text-ink-muted sm:grid-cols-3">
           <HowItem title="Built by the model">

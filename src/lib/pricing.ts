@@ -208,17 +208,6 @@ export const PLAN_MATRIX: MatrixGroup[] = [
   },
 ];
 
-/**
- * What paying yearly actually saves, in naira and percent.
- *
- * Worth computing rather than hardcoding "save 20%" in copy: the two numbers
- * would drift apart the first time a price changes, and the one that would
- * quietly stay wrong is the one customers read.
- */
-export function yearlySaving(plan: PlanDefinition): { amount: number; percent: number } | null {
-  return cycleSaving(plan, "yearly");
-}
-
 /** What a longer cycle saves against paying monthly for the same period. */
 export function cycleSaving(
   plan: PlanDefinition,

@@ -12,7 +12,7 @@
  * carries on with the other feeds.
  */
 
-import type { Match, MatchStatus, ResultRow, StandingRow, Team } from "@/lib/types";
+import type { Match, MatchStatus, ResultRow, Team } from "@/lib/types";
 import { LEAGUES, leagueByProviderId, type LeagueDef } from "@/lib/leagues";
 import { getJson, ProviderError } from "./http";
 import { cached } from "./cache";
@@ -190,40 +190,6 @@ export async function fetchSeasonResults(
         };
       })
       .filter((r): r is ResultRow => r !== null);
-  });
-}
-
-export async function fetchStandings(league: LeagueDef): Promise<StandingRow[]> {
-  const id = league.ids.apiFootball;
-  if (!isConfigured() || !id) return [];
-  const season = seasonYear();
-  return cached(`af:table:${id}:${season}`, 60 * 60_000, async () => {
-    interface Row {
-      rank?: number;
-      team?: { id?: number; name?: string; logo?: string };
-      points?: number; goalsDiff?: number;
-      all?: {
-        played?: number; win?: number; draw?: number; lose?: number;
-        goals?: { for?: number; against?: number };
-      };
-    }
-    const data = await afGet<{
-      response?: { league?: { standings?: Row[][] } }[] | null;
-      errors?: unknown;
-    }>(`/standings?league=${id}&season=${season}`);
-    const table = data.response?.[0]?.league?.standings?.[0] ?? [];
-    return table.map((r, i): StandingRow => ({
-      position: r.rank ?? i + 1,
-      team: team(r.team),
-      played: r.all?.played ?? 0,
-      won: r.all?.win ?? 0,
-      drawn: r.all?.draw ?? 0,
-      lost: r.all?.lose ?? 0,
-      goalsFor: r.all?.goals?.for ?? 0,
-      goalsAgainst: r.all?.goals?.against ?? 0,
-      goalDifference: r.goalsDiff ?? 0,
-      points: r.points ?? 0,
-    }));
   });
 }
 

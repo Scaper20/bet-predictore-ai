@@ -31,6 +31,9 @@ const SOURCE: Partial<Record<NonNullable<ScoredGame["source"]>, string>> = {
   odds: "From SportyBet's price alone, margin taken off.",
 };
 
+/** A whole code's chance: long codes run to fractions of a percent, which "0.0%" would hide. */
+const chanceText = (v: number) => (v < 0.001 ? "<0.1%" : percent(v, v < 0.1 ? 1 : 0));
+
 /** The edited code without some games, its chance and fair odds recounted. */
 function withoutGames(r: EditResult, removed: ReadonlySet<string>): EditResult {
   const games = r.games.filter((g) => !removed.has(g.matchId));
@@ -155,22 +158,40 @@ export function CodeEditor({ signedIn }: { signedIn: boolean }) {
         </div>
       )}
 
-      {data && (
-        // min-w-0 on the grid and its cards: without it a card grows to its
-        // longest one-line game name and runs off a phone's screen.
-        <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-2">
-          <ScanCard scan={data.scan} />
-          {edited ? (
+      {data &&
+        (edited ? (
+          // The edited code leads: on a long code the original read is a long
+          // scroll, and the new version is what people came for.
+          <div className="min-w-0 space-y-3">
             <EditedCard result={edited} before={data.scan} mode={mode} />
-          ) : (
-            <div className="min-w-0 rounded-xl border border-dashed border-line p-5 text-sm text-ink-muted">
+            <details className="group min-w-0 rounded-xl border border-line">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm [&::-webkit-details-marker]:hidden">
+                <span className="min-w-0">
+                  <span className="font-semibold">Your code as it is</span>{" "}
+                  <span className="text-ink-dim">
+                    · {data.scan.total} games
+                    {data.scan.chance !== null && <> · {chanceText(data.scan.chance)}</>}
+                  </span>
+                </span>
+                <span aria-hidden className="text-ink-dim transition-transform group-open:rotate-180">
+                  ▾
+                </span>
+              </summary>
+              <div className="border-t border-line p-1">
+                <ScanCard scan={data.scan} />
+              </div>
+            </details>
+          </div>
+        ) : (
+          <div className="min-w-0 space-y-3">
+            <div className="rounded-xl border border-dashed border-line p-4 text-sm text-ink-muted">
               {mode === "target" && !data.target
                 ? "Enter the odds you want and tap Hit these odds."
                 : "None of these games can still be re-picked: they have started, or we can't read them."}
             </div>
-          )}
-        </div>
-      )}
+            <ScanCard scan={data.scan} />
+          </div>
+        ))}
     </section>
   );
 }
@@ -223,7 +244,8 @@ function EditedCard({ result: full, before, mode }: { result: EditResult; before
   // A pick SportyBet won't take can be dropped here and the rest booked (BookCodeButton).
   const [removed, setRemoved] = useState<ReadonlySet<string>>(new Set());
   const result = removed.size ? withoutGames(full, removed) : full;
-  const changed = result.games.filter((g) => g.from).length;
+  const changedGames = result.games.filter((g) => g.from || (g.why && g.action !== "kept"));
+  const keptGames = result.games.filter((g) => !changedGames.includes(g));
   // A game outside our coverage goes by SportyBet's event id.
   const kept = new Set(result.games.flatMap((g) => [g.matchId, g.eventId ?? ""]));
   const taken = new Set((result.removed ?? []).map((g) => g.matchId));
@@ -232,59 +254,125 @@ function EditedCard({ result: full, before, mode }: { result: EditResult; before
   );
   const dropped = left.length + taken.size;
   return (
-    <div className="min-w-0 rounded-xl border border-brand/30 bg-brand/5 p-4">
-      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-        <p className="text-sm font-semibold">{mode === "safer" ? "Safer version" : "Re-picked for your odds"}</p>
-        <p className="text-xs text-ink-dim">
-          {changed} changed{dropped > 0 ? `, ${dropped} dropped` : ""}
-        </p>
-      </div>
-      <Totals chance={result.chance} oddsValue={result.fairOdds} label="Edited" fair />
-      <ul className="mt-3 space-y-2">
-        {result.games.map((g) => (
-          <li key={g.matchId} className="flex items-start justify-between gap-3 text-sm">
-            <span className="min-w-0 flex-1">
-              <span className="block break-words font-semibold">{g.label}</span>
-              <span className="block truncate text-xs text-ink-dim">
-                {g.homeName} v {g.awayName}
-              </span>
-              {g.from && <span className="block break-words text-xs text-amber">was {g.from.label}</span>}
-              {g.why && g.action !== "kept" && <span className="block break-words text-xs text-ink-dim">{g.why}</span>}
-              {g.source && SOURCE[g.source] && <span className="block break-words text-xs text-ink-dim">{SOURCE[g.source]}</span>}
-            </span>
-            <span className="shrink-0 font-mono text-xs text-ink-muted">{percent(g.probability)}</span>
-          </li>
-        ))}
-      </ul>
-      {result.notes?.map((n) => (
-        <p key={n} className="mt-3 text-xs text-amber">
-          {n}
-        </p>
-      ))}
-      {result.removed && result.removed.length > 0 && (
-        <ul className="mt-3 space-y-1 text-xs text-ink-dim">
-          {result.removed.map((g) => (
-            <li key={g.matchId} className="break-words">
-              <span className="font-semibold text-rose">Taken off:</span> {g.label} ({g.homeName} v {g.awayName}). {g.why}
-            </li>
-          ))}
-        </ul>
-      )}
-      {left.length > 0 && (
-        <p className="mt-3 text-xs text-ink-dim">
-          Left off:{" "}
-          {left.map((g) => `${g.homeName ?? "?"} v ${g.awayName ?? "?"}`).join(", ")}. A game is left off when it starts
-          within 10 minutes, we can&apos;t read it, or its read is Pro-only until kick-off.
-        </p>
-      )}
-      <div className="mt-4 border-t border-line pt-4">
+    <div className="min-w-0 overflow-hidden rounded-xl border border-brand/30 bg-brand/5">
+      <div className="space-y-3 p-4">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+          <p className="font-display text-base font-bold">{mode === "safer" ? "Safer version" : "Re-picked for your odds"}</p>
+          <p className="text-xs text-ink-dim">
+            {result.games.length} games · {changedGames.length} changed{dropped > 0 ? ` · ${dropped} off` : ""}
+          </p>
+        </div>
+        <BeforeAfter
+          items={[
+            { label: "Chance", before: before.chance, after: result.chance, show: chanceText },
+            { label: "Odds", before: before.odds, after: result.fairOdds, show: odds, note: "fair" },
+          ]}
+        />
         <BookCodeButton
           legs={toLegs(result)}
           remove={(matchId) => setRemoved((r) => new Set([...r, matchId]))}
           label="Get the new SportyBet code"
         />
+        {result.notes?.map((n) => (
+          <p key={n} className="text-xs text-amber">
+            {n}
+          </p>
+        ))}
       </div>
+
+      {changedGames.length > 0 && (
+        <div className="border-t border-brand/20 px-4 py-3">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-ink-dim">What changed</p>
+          <ul className="mt-1 divide-y divide-line/60">
+            {changedGames.map((g) => (
+              <li key={g.matchId} className="flex items-start justify-between gap-3 py-2 text-sm">
+                <span className="min-w-0 flex-1">
+                  <span className="block break-words font-semibold">{g.label}</span>
+                  {g.from && (
+                    <span className="block break-words text-xs text-ink-dim">
+                      was <span className="line-through">{g.from.label}</span>
+                    </span>
+                  )}
+                  <span className="block truncate text-xs text-ink-dim">
+                    {g.homeName} v {g.awayName}
+                  </span>
+                  {g.why && <span className="block break-words text-xs text-ink-dim">{g.why}</span>}
+                </span>
+                <span className="shrink-0 font-mono text-xs font-semibold text-brand">{percent(g.probability)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {keptGames.length > 0 && (
+        <details className="group border-t border-brand/20">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm [&::-webkit-details-marker]:hidden">
+            <span>
+              <span className="font-semibold">Kept as they were</span> <span className="text-ink-dim">· {keptGames.length}</span>
+            </span>
+            <span aria-hidden className="text-ink-dim transition-transform group-open:rotate-180">
+              ▾
+            </span>
+          </summary>
+          <ul className="divide-y divide-line/60 px-4 pb-3">
+            {keptGames.map((g) => (
+              <li key={g.matchId} className="flex items-start justify-between gap-3 py-2 text-sm">
+                <span className="min-w-0 flex-1">
+                  <span className="block break-words font-semibold">{g.label}</span>
+                  <span className="block truncate text-xs text-ink-dim">
+                    {g.homeName} v {g.awayName}
+                  </span>
+                  {g.source && SOURCE[g.source] && <span className="block break-words text-xs text-ink-dim">{SOURCE[g.source]}</span>}
+                </span>
+                <span className="shrink-0 font-mono text-xs text-ink-muted">{percent(g.probability)}</span>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+
+      {(taken.size > 0 || left.length > 0) && (
+        <div className="space-y-1 border-t border-brand/20 px-4 py-3 text-xs text-ink-dim">
+          {result.removed?.map((g) => (
+            <p key={g.matchId} className="break-words">
+              <span className="font-semibold text-rose">Taken off:</span> {g.label} ({g.homeName} v {g.awayName}). {g.why}
+            </p>
+          ))}
+          {left.length > 0 && (
+            <p>
+              <span className="font-semibold">Left off:</span>{" "}
+              {left.map((g) => `${g.homeName ?? "?"} v ${g.awayName ?? "?"}`).join(", ")}. A game is left off when it starts
+              within 10 minutes, we can&apos;t read it, or its read is Pro-only until kick-off.
+            </p>
+          )}
+        </div>
+      )}
     </div>
+  );
+}
+
+/** Before and after, side by side: what the edit bought. */
+function BeforeAfter({
+  items,
+}: {
+  items: { label: string; before: number | null; after: number | null; show: (v: number) => string; note?: string }[];
+}) {
+  return (
+    <dl className="grid grid-cols-2 gap-2">
+      {items.map((it) => (
+        <div key={it.label} className="rounded-lg bg-surface/70 px-3 py-2">
+          <dt className="text-[10px] uppercase tracking-wider text-ink-dim">
+            {it.label}
+            {it.note && <span className="normal-case tracking-normal"> ({it.note})</span>}
+          </dt>
+          <dd className="tnum mt-0.5 flex flex-wrap items-baseline gap-x-1.5">
+            {it.before !== null && <span className="text-xs text-ink-dim line-through">{it.show(it.before)}</span>}
+            <span className="text-lg font-bold text-ink">{it.after === null ? "–" : it.show(it.after)}</span>
+          </dd>
+        </div>
+      ))}
+    </dl>
   );
 }
 
@@ -293,7 +381,7 @@ function Totals({ chance, oddsValue, label, fair = false }: { chance: number | n
     <dl className="mt-3 grid grid-cols-2 gap-3">
       <div>
         <dt className="text-[10px] uppercase tracking-wider text-ink-dim">{label}: chance</dt>
-        <dd className="tnum mt-0.5 text-lg font-bold">{chance === null ? "–" : percent(chance, chance < 0.1 ? 1 : 0)}</dd>
+        <dd className="tnum mt-0.5 text-lg font-bold">{chance === null ? "–" : chanceText(chance)}</dd>
       </div>
       <div>
         <dt className="text-[10px] uppercase tracking-wider text-ink-dim">{fair ? "Fair odds" : "SportyBet odds"}</dt>

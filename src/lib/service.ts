@@ -23,7 +23,7 @@ import { archivedResults, storeResults } from "@/lib/archive/history-store";
 import { leagueClubTies } from "@/lib/archive/cup-ties";
 import { fitLeague, normaliseKey, type LeagueFit } from "@/lib/model/fit";
 import { scoreMatrix, deriveLiveWinProbability } from "@/lib/model/poisson";
-import { aiEnabled } from "@/lib/ai/analyst";
+import { aiEnabled } from "@/lib/ai/enabled";
 import { isLive } from "@/lib/format";
 import { internationalPool, leagueByCode } from "@/lib/leagues";
 import { sportOrDefault } from "@/lib/sports";
@@ -587,11 +587,6 @@ async function socialCounts(ids: string[]): Promise<Map<string, number>> {
 export async function freeViewer(): Promise<Viewer> {
   const set = await freePicksToday();
   return { paid: false, freeStrongId: set?.strong ?? null, freeIds: freeIds(set) };
-}
-
-/** Today's free Strong pick, by match id. */
-export async function freeStrongPickId(): Promise<string | null> {
-  return (await freePicksToday())?.strong ?? null;
 }
 
 /** Predictions for today's free picks, Strong first, then hot, then the rest. */

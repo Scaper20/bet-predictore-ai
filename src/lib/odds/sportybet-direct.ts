@@ -12,7 +12,6 @@ import {
   parseResults,
   parseShareResponse,
   parseShareTicket,
-  parseTournamentList,
   parseUpcoming,
   shareRequest,
   type BuilderQuote,
@@ -20,7 +19,6 @@ import {
   type RawMarket,
   type SportyBetEvent,
   type Ticket,
-  type TournamentEntry,
 } from "./sportybet-api";
 
 /**
@@ -213,12 +211,6 @@ export async function fetchFullBoard(maxPages = 40): Promise<SportyBetEvent[] | 
     for (const e of parsed.events) byId.set(e.eventId, e);
   }
   return [...byId.values()];
-}
-
-/** Every football tournament SportyBet lists, for suggesting league ids. */
-export async function fetchTournamentList(): Promise<TournamentEntry[] | null> {
-  const body = await call("/factsCenter/sportList?sportId=sr%3Asport%3A1&productId=3");
-  return body === null ? null : parseTournamentList(body);
 }
 
 /**

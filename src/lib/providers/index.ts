@@ -22,7 +22,7 @@
  * caller gets an empty list and the UI renders an explicit empty state.
  */
 
-import type { Match, ProviderHealth, ProviderId, ResultRow, StandingRow } from "@/lib/types";
+import type { Match, ProviderHealth, ProviderId, ResultRow } from "@/lib/types";
 import { internationalPool, leagueByCode as leagueByCodeSync, rankLeague, type LeagueDef } from "@/lib/leagues";
 import * as fd from "./football-data";
 import * as af from "./api-football";
@@ -514,20 +514,6 @@ async function getInternationalResults(league: LeagueDef): Promise<ResultRow[]> 
     }
   }
   return [...seen.values()].sort((a, b) => a.date - b.date);
-}
-
-export function getStandings(league: LeagueDef): Promise<StandingRow[]> {
-  return viaLayer(() => dbs.dbStandings(league), () => liveGetStandings(league), [], (v) => v.length === 0);
-}
-
-async function liveGetStandings(league: LeagueDef): Promise<StandingRow[]> {
-  const groups = await gather<StandingRow>([
-    fd.fetchStandings(league),
-    af.fetchStandings(league),
-    sdb.fetchStandings(league),
-  ]);
-  // Standings are not mergeable — take the first feed that returned a table.
-  return groups.find((g) => g.length > 0) ?? [];
 }
 
 export function getH2H(match: Match): Promise<ResultRow[]> {

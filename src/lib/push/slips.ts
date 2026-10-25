@@ -11,7 +11,8 @@ import { statKindOf } from "@/lib/settlement";
  * real fixture; grading uses the match ids against our own score sources.
  */
 
-export const MAX_SLIP_LEGS = 20;
+/** As long as the longest code we book (odds/booking.ts MAX_LEGS); 0080 holds the table to the same. */
+export const MAX_SLIP_LEGS = 50;
 /** Slips the server keeps per device; the oldest give way. */
 export const MAX_SLIPS_PER_DEVICE = 30;
 

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Badge, Button, Input, Spinner } from "@/components/ui/primitives";
+import { Badge, Button, Input, LiveDot, Spinner } from "@/components/ui/primitives";
 import { LocalTime } from "@/components/ui/local-time";
 import { odds, percent } from "@/lib/format";
 import type { CommunityPost } from "@/lib/code-hub-posts-core";
@@ -24,11 +24,13 @@ function priceBadge(fairness: number | null): { tone: "brand" | "neutral" | "ros
  */
 export function CommunityCodes({
   initial,
-  recent,
+  inPlay,
+  finished,
   signedIn,
 }: {
   initial: CommunityPost[];
-  recent: CommunityPost[];
+  inPlay: CommunityPost[];
+  finished: CommunityPost[];
   signedIn: boolean;
 }) {
   const [posts, setPosts] = useState(initial);
@@ -103,23 +105,42 @@ export function CommunityCodes({
         </p>
       )}
 
-      {posts.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-line p-5 text-sm text-ink-muted">
-          No codes posted for upcoming games yet. Be the first.
-        </p>
-      ) : (
-        <ol className="space-y-3">
-          {posts.map((p, i) => (
-            <PostCard key={p.id} post={p} rank={i + 1} highlight={p.id === posted} />
-          ))}
-        </ol>
+      <div className="space-y-2">
+        <SectionTitle title="Upcoming" count={posts.length} />
+        {posts.length === 0 ? (
+          <p className="rounded-xl border border-dashed border-line p-5 text-sm text-ink-muted">
+            No codes posted for upcoming games yet. Be the first.
+          </p>
+        ) : (
+          <ol className="space-y-3">
+            {posts.map((p, i) => (
+              <PostCard key={p.id} post={p} rank={i + 1} highlight={p.id === posted} />
+            ))}
+          </ol>
+        )}
+      </div>
+
+      {inPlay.length > 0 && (
+        <div className="space-y-2">
+          <SectionTitle title="In play" count={inPlay.length} live />
+          <ol className="space-y-3">
+            {inPlay.map((p) => (
+              <PostCard key={p.id} post={p} />
+            ))}
+          </ol>
+        </div>
       )}
 
-      {recent.length > 0 && (
-        <details className="rounded-xl border border-line p-4">
-          <summary className="cursor-pointer text-sm font-semibold">In play and just finished ({recent.length})</summary>
-          <ol className="mt-3 space-y-3">
-            {recent.map((p) => (
+      {finished.length > 0 && (
+        <details className="group">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 [&::-webkit-details-marker]:hidden">
+            <SectionTitle title="Finished" count={finished.length} extra={`${finished.filter((p) => p.result === "won").length} landed`} />
+            <span aria-hidden className="text-ink-dim transition-transform group-open:rotate-180">
+              ▾
+            </span>
+          </summary>
+          <ol className="mt-2 space-y-3">
+            {finished.map((p) => (
               <PostCard key={p.id} post={p} />
             ))}
           </ol>
@@ -142,19 +163,24 @@ function PostCard({ post, rank, highlight = false }: { post: CommunityPost; rank
       // Clipboard blocked: the code is on screen.
     }
   };
+  // Decided codes carry their result down the left edge; everything else keeps a plain border.
+  const edge = post.result === "won" ? "border-l-4 border-l-brand" : post.result === "lost" ? "border-l-4 border-l-rose" : "";
   return (
-    <li className={`rounded-xl border p-4 ${highlight ? "border-brand/50 bg-brand/5" : "border-line bg-surface-2/40"}`}>
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <li className={`rounded-xl border p-3.5 sm:p-4 ${edge} ${highlight ? "border-brand/50 bg-brand/5" : "border-line bg-surface-2/40"}`}>
+      <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-3">
-          {rank !== undefined && <span className="tnum font-display text-2xl font-bold text-ink-dim">{rank}</span>}
+          {rank !== undefined && <span className="tnum font-display text-xl font-bold leading-7 text-ink-dim">{rank}</span>}
           <div className="min-w-0">
-            <p className="font-mono text-lg font-bold tracking-[0.12em]">{post.code}</p>
+            <p className="font-mono text-lg font-bold leading-7 tracking-[0.12em]">{post.code}</p>
+            <p className="truncate text-xs text-ink-dim">
+              {post.authorName} · {post.record.landed}–{post.record.missed} record
+            </p>
             <p className="text-xs text-ink-dim">
-              {post.authorName} · {post.record.landed} landed, {post.record.missed} missed
+              Starts <LocalTime iso={post.firstKickoff} kind="dayTime" />
             </p>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex shrink-0 flex-col items-end gap-1">
           {post.result === "won" && <Badge tone="brand">Landed</Badge>}
           {post.result === "lost" && <Badge tone="rose">Missed</Badge>}
           {post.result === "void" && <Badge>Void</Badge>}
@@ -162,9 +188,9 @@ function PostCard({ post, rank, highlight = false }: { post: CommunityPost; rank
         </div>
       </div>
 
-      <dl className="mt-3 grid grid-cols-3 gap-3">
+      <dl className="mt-3 grid grid-cols-3 gap-2 rounded-lg bg-surface/60 px-3 py-2">
         <Stat label="Games" value={String(post.games.length)} />
-        <Stat label="SportyBet odds" value={post.odds === null ? "–" : odds(post.odds)} />
+        <Stat label="Odds" value={post.odds === null ? "–" : odds(post.odds)} />
         <Stat
           label="Our chance"
           value={
@@ -172,35 +198,43 @@ function PostCard({ post, rank, highlight = false }: { post: CommunityPost; rank
               ? percent(post.chance, post.chance < 0.1 ? 1 : 0)
               : post.games.some((g) => g.verdict === "locked")
                 ? "With Pro"
-                : `${post.readable} of ${post.games.length} read`
+                : `${post.readable}/${post.games.length} read`
           }
         />
       </dl>
 
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        <button type="button" onClick={copy} className="press rounded-lg bg-brand px-3 py-1.5 text-xs font-bold text-brand-ink hover:bg-brand-strong">
-          {copied ? "Copied" : "Copy code"}
-        </button>
-        <a
-          href={SHARE(post.code)}
-          target="_blank"
-          rel="noreferrer"
-          className="press rounded-lg border border-line px-3 py-1.5 text-xs font-semibold hover:bg-surface-2"
-        >
-          Open in SportyBet
-        </a>
-        <button type="button" onClick={() => setOpen((o) => !o)} className="text-xs font-semibold text-brand hover:underline">
-          {open ? "Hide games" : "See games"}
-        </button>
-        <span className="ml-auto text-xs text-ink-dim">
-          Starts <LocalTime iso={post.firstKickoff} kind="dayTime" />
+      {/* SportyBet stops loading a code at its first kick-off: only upcoming codes get the buttons. */}
+      {rank !== undefined && (
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <button type="button" onClick={copy} className="press rounded-lg bg-brand px-3 py-2 text-xs font-bold text-brand-ink hover:bg-brand-strong">
+            {copied ? "Copied" : "Copy code"}
+          </button>
+          <a
+            href={SHARE(post.code)}
+            target="_blank"
+            rel="noreferrer"
+            className="press rounded-lg border border-line px-3 py-2 text-center text-xs font-semibold hover:bg-surface-2"
+          >
+            Open in SportyBet
+          </a>
+        </div>
+      )}
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="mt-2 flex w-full items-center justify-center gap-1 rounded-lg py-1.5 text-xs font-semibold text-brand hover:bg-brand/5"
+      >
+        {open ? "Hide games" : `See the ${post.games.length} games`}
+        <span aria-hidden className={`transition-transform ${open ? "rotate-180" : ""}`}>
+          ▾
         </span>
-      </div>
+      </button>
 
       {open && (
-        <ul className="mt-3 space-y-2 border-t border-line pt-3">
+        <ul className="mt-2 divide-y divide-line/60 border-t border-line">
           {post.games.map((g, i) => (
-            <li key={`${g.matchId ?? i}-${g.market}`} className="flex items-start justify-between gap-3 text-sm">
+            <li key={`${g.matchId ?? i}-${g.market}`} className="flex items-start justify-between gap-3 py-2 text-sm">
               <span className="min-w-0">
                 <span className="block truncate font-semibold">{g.label}</span>
                 <span className="block truncate text-xs text-ink-dim">
@@ -219,6 +253,17 @@ function PostCard({ post, rank, highlight = false }: { post: CommunityPost; rank
         </ul>
       )}
     </li>
+  );
+}
+
+function SectionTitle({ title, count, live = false, extra }: { title: string; count: number; live?: boolean; extra?: string }) {
+  return (
+    <h3 className="flex items-center gap-2 text-sm font-semibold text-ink">
+      {live && <LiveDot />}
+      {title}
+      <span className="rounded-full bg-surface-2 px-2 py-0.5 text-xs font-semibold text-ink-muted">{count}</span>
+      {extra && <span className="text-xs font-normal text-ink-dim">{extra}</span>}
+    </h3>
   );
 }
 
