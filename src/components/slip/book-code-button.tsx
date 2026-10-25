@@ -35,7 +35,7 @@ interface Swap {
 }
 
 type Result =
-  | { kind: "code"; code: string; url: string; deadline: number; remaining: number | null; swapped: Swap[] }
+  | { kind: "code"; code: string; url: string; deadline: number; remaining: number | null; swapped: Swap[]; odds: number | null }
   | { kind: "problems"; problems: { matchId: string; problem: LegProblem }[] }
   | { kind: "error"; message: string; upgrade?: boolean; nextFreeAt?: number | null };
 
@@ -89,6 +89,7 @@ export function BookCodeButton({
             deadline?: number;
             remaining?: number | null;
             swapped?: Swap[];
+            odds?: number | null;
             problems?: { matchId: string; problem: LegProblem }[];
             error?: string;
             upgrade?: boolean;
@@ -104,6 +105,7 @@ export function BookCodeButton({
           deadline: body.deadline,
           remaining: body.remaining ?? null,
           swapped: body.swapped ?? [],
+          odds: typeof body.odds === "number" ? body.odds : null,
         };
       } else if (body?.problems?.length) {
         value = { kind: "problems", problems: body.problems };
@@ -127,6 +129,11 @@ export function BookCodeButton({
     return (
       <div className="space-y-2">
         <CodeBox code={current.code} />
+        {current.odds !== null && (
+          <p className="text-xs text-ink-muted">
+            SportyBet total right now: <span className="tnum font-semibold text-ink">{current.odds.toFixed(2)}</span>
+          </p>
+        )}
         {current.swapped.map((s) => (
           <p key={s.matchId} className="text-[11px] leading-relaxed text-ink-muted">
             <span className="font-semibold text-ink">{legs.find((l) => l.matchId === s.matchId)?.fixture ?? "One pick"}</span>{" "}

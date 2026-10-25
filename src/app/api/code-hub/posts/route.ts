@@ -44,15 +44,28 @@ export async function POST(request: Request) {
   if (!allowed(entitlement.userId)) {
     return NextResponse.json({ error: "Too many tries. Wait a minute and try again." }, { status: 429, headers: NO_STORE });
   }
-  const body = (await request.json().catch(() => null)) as { code?: unknown } | null;
-  const code = typeof body?.code === "string" ? body.code.trim().toUpperCase() : "";
+  const body = (await request.json().catch(() => null)) as { code?: unknown; drop?: unknown } | null;
+  const code = typeof body?.code === "string" ? body.code.trim().toUpperCase().replace(/[^A-Z0-9]/g, "") : "";
   if (!/^[A-Z0-9]{4,12}$/.test(code)) {
-    return NextResponse.json({ error: "That doesn't look like a SportyBet code." }, { status: 400, headers: NO_STORE });
+    return NextResponse.json(
+      { error: "That doesn't look like a SportyBet code: 4 to 12 letters and numbers, like 5CKNWH." },
+      { status: 400, headers: NO_STORE },
+    );
   }
-  const out = await postCode(entitlement.userId, posterName(entitlement.displayName, entitlement.userId), code).catch(() => null);
+  // The games the poster agreed to leave off, by SportyBet event id.
+  const drop = Array.isArray(body?.drop)
+    ? body.drop.filter((x): x is string => typeof x === "string" && /^sr:match:\d+$/.test(x)).slice(0, 50)
+    : [];
+  const out = await postCode(entitlement.userId, posterName(entitlement.displayName, entitlement.userId), code, drop).catch(() => null);
   if (!out) return NextResponse.json({ error: "Couldn't post that just now. Try again." }, { status: 500, headers: NO_STORE });
-  if (!out.ok) return NextResponse.json({ error: out.error }, { status: out.status, headers: NO_STORE });
+  if (!out.ok) {
+    const { ok: _ok, status, ...rest } = out;
+    return NextResponse.json(rest, { status, headers: NO_STORE });
+  }
   // Tell the devices that want community codes, once the response is out (push/events.ts groups them).
   after(() => dispatchCommunity().then(() => undefined, () => undefined));
-  return NextResponse.json({ post: postForViewer(out.post, await viewerForTier(entitlement.tier)) }, { headers: NO_STORE });
+  return NextResponse.json(
+    { post: postForViewer(out.post, await viewerForTier(entitlement.tier)), ...(out.rebooked ? { rebooked: out.rebooked } : {}) },
+    { headers: NO_STORE },
+  );
 }

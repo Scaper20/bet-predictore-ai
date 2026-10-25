@@ -168,3 +168,41 @@ export function splitStarted(posts: readonly CommunityPost[]): { inPlay: Communi
   const finished = posts.filter((p) => p.result !== null || p.status === "settled");
   return { inPlay: posts.filter((p) => !finished.includes(p)), finished };
 }
+
+/** How long before kick-off a game is too close to post: a SportyBet code can't be loaded in time. */
+export const POST_KICKOFF_MARGIN_MS = 10 * 60_000;
+
+export type PostIssue = "started" | "starting" | "unlisted" | "unreadable";
+
+/** A game that keeps a code from going up as it is, named so the poster knows which. */
+export interface PostProblem {
+  eventId: string;
+  homeName: string | null;
+  awayName: string | null;
+  kickoff: number | null;
+  label: string;
+  issue: PostIssue;
+  /** In plain words, for the poster. */
+  why: string;
+}
+
+/**
+ * The games that keep a scanned code from going up as it is: started, about
+ * to start, gone from SportyBet, or a pick nothing can read. Each can be
+ * left off and the rest posted as a fresh code (code-hub-posts.ts postCode).
+ */
+export function postProblems(
+  games: readonly Pick<ScoredGame, "eventId" | "homeName" | "awayName" | "kickoff" | "label" | "verdict" | "probability" | "reason">[],
+  now = Date.now(),
+): PostProblem[] {
+  return games.flatMap((g): PostProblem[] => {
+    const base = { eventId: g.eventId, homeName: g.homeName, awayName: g.awayName, kickoff: g.kickoff, label: g.label };
+    if (g.kickoff === null) return [{ ...base, issue: "unlisted", why: "SportyBet isn't listing this game any more." }];
+    if (g.kickoff <= now) return [{ ...base, issue: "started", why: "Already started." }];
+    if (g.kickoff - now <= POST_KICKOFF_MARGIN_MS) return [{ ...base, issue: "starting", why: "Kicks off within 10 minutes." }];
+    if (g.verdict === "unreadable" && g.probability === null) {
+      return [{ ...base, issue: "unreadable", why: g.reason ?? "We can't read this pick." }];
+    }
+    return [];
+  });
+}

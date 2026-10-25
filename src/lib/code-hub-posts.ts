@@ -1,8 +1,11 @@
 import "server-only";
 
-import { scanCode } from "@/lib/code-scan";
+import { SCAN_FAILURE, scanCodeOrWhy, type CodeScan } from "@/lib/code-scan";
+import { bookingCodeFor } from "@/lib/odds/booking-code";
+import type { BookingLeg } from "@/lib/odds/booking";
+import { fetchEventMarkets } from "@/lib/odds/sportybet-direct";
 import { cached } from "@/lib/providers/cache";
-import { POSTS_PER_DAY, byRank, gradeCode, rankScore, recordOf, type PosterRecord } from "./code-hub-posts-core";
+import { POSTS_PER_DAY, byRank, gradeCode, postProblems, rankScore, recordOf, type PostProblem, type PosterRecord } from "./code-hub-posts-core";
 
 export { posterName, postForViewer } from "./code-hub-posts-core";
 
@@ -13,7 +16,7 @@ export { posterName, postForViewer } from "./code-hub-posts-core";
  * the settlement pass.
  */
 
-export type { CommunityPost, PostGame } from "./code-hub-posts-core";
+export type { CommunityPost, PostGame, PostProblem } from "./code-hub-posts-core";
 import type { CommunityPost, PostGame } from "./code-hub-posts-core";
 
 async function admin() {
@@ -108,34 +111,148 @@ export function communityPosts(): Promise<{ open: CommunityPost[]; recent: Commu
   });
 }
 
-export type PostOutcome = { ok: true; post: CommunityPost } | { ok: false; error: string; status: number };
+export type PostOutcome =
+  | { ok: true; post: CommunityPost; /** Set when the games that couldn't go up were left off and the rest booked afresh. */ rebooked?: { from: string; left: PostProblem[] } }
+  | {
+      ok: false;
+      error: string;
+      status: number;
+      /** The games that kept the code from going up, by name. */
+      problems?: PostProblem[];
+      /** Whether leaving them off would still leave a code worth posting (2 games or more). */
+      canFix?: boolean;
+      /** When the poster's next daily slot opens, epoch ms. */
+      nextAt?: number;
+    };
 
-/** Read, score and post a code for a member. */
-export async function postCode(userId: string, authorName: string, code: string): Promise<PostOutcome> {
+/** Fewest games a posted code may have. */
+const MIN_GAMES = 2;
+
+/**
+ * Read, score and post a code for a member.
+ *
+ * A code with games that can't go up (started, about to, gone from
+ * SportyBet, unreadable) is not just refused: the games are named, and when
+ * the poster says to leave them off (`drop`, their SportyBet event ids) the
+ * rest are booked as a fresh code with the same picks and that is posted.
+ */
+export async function postCode(userId: string, authorName: string, code: string, drop: readonly string[] = []): Promise<PostOutcome> {
   const db = await admin();
   const dayAgo = new Date(Date.now() - 86_400_000).toISOString();
-  const { count } = await db
+  const { data: today } = await db
     .from("code_hub_posts")
-    .select("id", { count: "exact", head: true })
+    .select("posted_at")
     .eq("user_id", userId)
-    .gte("posted_at", dayAgo);
-  if ((count ?? 0) >= POSTS_PER_DAY) {
-    return { ok: false, error: `You can post ${POSTS_PER_DAY} codes a day. Come back tomorrow.`, status: 429 };
+    .gte("posted_at", dayAgo)
+    .order("posted_at", { ascending: true });
+  if ((today?.length ?? 0) >= POSTS_PER_DAY) {
+    const nextAt = Date.parse(today![0].posted_at as string) + 86_400_000;
+    return { ok: false, error: `You've posted ${POSTS_PER_DAY} codes in the last 24 hours.`, status: 429, nextAt };
   }
 
-  const { data: existing } = await db.from("code_hub_posts").select("id").eq("code", code).neq("status", "removed").maybeSingle();
-  if (existing) return { ok: false, error: "That code is already up.", status: 409 };
+  const already = await alreadyUp(db, code, userId);
+  if (already) return already;
 
-  const scan = await scanCode(code).catch(() => null);
-  if (!scan) return { ok: false, error: "SportyBet doesn't recognise that code, or it has expired.", status: 404 };
-  if (scan.total < 2) return { ok: false, error: "Post a code with at least 2 games.", status: 400 };
-  if (scan.readable < 2) {
-    return { ok: false, error: "We could read fewer than 2 games on that code, so we can't rank it.", status: 400 };
+  const read = await scanCodeOrWhy(code).catch(() => ({ why: "unreachable" as const }));
+  if (!("scan" in read)) return { ok: false, ...SCAN_FAILURE[read.why] };
+  const scan = read.scan;
+  if (scan.total < MIN_GAMES) return { ok: false, error: `A posted code needs at least ${MIN_GAMES} games; this one has ${scan.total}.`, status: 400 };
+
+  const problems = postProblems(scan.games);
+  if (problems.length > 0) {
+    const fixable = scan.total - problems.length >= MIN_GAMES;
+    const dropping = new Set(drop);
+    // Asked to leave them off, and every game that needs it is among those named.
+    if (fixable && problems.every((p) => dropping.has(p.eventId))) {
+      return repost(userId, authorName, scan, dropping, problems);
+    }
+    const n = problems.length;
+    return {
+      ok: false,
+      error: fixable
+        ? `${n === 1 ? "One game" : `${n} games`} on this code can't go up. Leave ${n === 1 ? "it" : "them"} off and we'll post the rest as a new code.`
+        : `Only ${scan.total - n} of the ${scan.total} games on this code can go up, and a posted code needs at least ${MIN_GAMES}.`,
+      status: 422,
+      problems,
+      canFix: fixable,
+    };
+  }
+  return insertPost(db, userId, authorName, scan);
+}
+
+/** The code already up: by this poster, or by someone else. */
+async function alreadyUp(db: Awaited<ReturnType<typeof admin>>, code: string, userId: string): Promise<PostOutcome | null> {
+  const { data: existing } = await db.from("code_hub_posts").select("id, user_id").eq("code", code).neq("status", "removed").maybeSingle();
+  if (!existing) return null;
+  return {
+    ok: false,
+    error: existing.user_id === userId ? "You've already posted this code: it's in the list." : "Someone has already posted this code: it's in the list.",
+    status: 409,
+  };
+}
+
+/**
+ * The code's other games, booked afresh with exactly the picks they had
+ * (SportyBet's own selections, Bet Builders included), and posted.
+ */
+async function repost(
+  userId: string,
+  authorName: string,
+  scan: CodeScan,
+  drop: ReadonlySet<string>,
+  left: PostProblem[],
+): Promise<PostOutcome> {
+  const keep = scan.games.filter((g) => !drop.has(g.eventId));
+  const legs: BookingLeg[] = [];
+  for (const g of keep) {
+    if (!g.market || g.kickoff === null) {
+      return { ok: false, error: `We couldn't rebook ${g.homeName ?? "a game"} v ${g.awayName ?? "?"}. Try posting the code again.`, status: 422 };
+    }
+    // A Bet Builder is priced from the event's markets when booked.
+    const markets = g.builder ? ((await fetchEventMarkets(g.eventId).catch(() => null)) ?? undefined) : undefined;
+    legs.push({ market: g.market, eventId: g.eventId, kickoff: g.kickoff, ...(markets ? { markets } : {}) });
+  }
+  const booked = await bookingCodeFor(legs).catch(() => null);
+  if (!booked || (!booked.ok && booked.reason === "unavailable")) {
+    return { ok: false, error: "SportyBet isn't taking new codes right now, so we couldn't post the rest. Try again in a minute.", status: 503 };
+  }
+  if (!booked.ok) {
+    // A pick SportyBet won't book any more: name its game, so it can be left off too.
+    const refused = booked.problems.flatMap((p) => ("index" in p ? [keep[p.index]] : [])).filter((g, i, all) => g && all.indexOf(g) === i);
+    const more: PostProblem[] = refused.map((g) => ({
+      eventId: g.eventId,
+      homeName: g.homeName,
+      awayName: g.awayName,
+      kickoff: g.kickoff,
+      label: g.label,
+      issue: "unlisted",
+      why: "SportyBet won't book this pick any more.",
+    }));
+    const all = [...left, ...more];
+    return {
+      ok: false,
+      error: more.length ? "SportyBet won't book some of the other picks either. Leave them off too?" : "SportyBet wouldn't book the rest just now. Try again shortly.",
+      status: 422,
+      problems: all,
+      canFix: scan.total - all.length >= MIN_GAMES,
+    };
+  }
+  const fresh = await scanCodeOrWhy(booked.bookingCode).catch(() => ({ why: "unreachable" as const }));
+  if (!("scan" in fresh)) return { ok: false, ...SCAN_FAILURE[fresh.why] };
+  const db = await admin();
+  const already = await alreadyUp(db, fresh.scan.code, userId);
+  if (already) return already;
+  const out = await insertPost(db, userId, authorName, fresh.scan);
+  return out.ok ? { ...out, rebooked: { from: scan.code, left } } : out;
+}
+
+async function insertPost(db: Awaited<ReturnType<typeof admin>>, userId: string, authorName: string, scan: CodeScan): Promise<PostOutcome> {
+  if (scan.readable < MIN_GAMES) {
+    return { ok: false, error: `We could read only ${scan.readable} of the games on that code, so we can't rank it.`, status: 400 };
   }
   const kickoffs = scan.games.map((g) => g.kickoff).filter((k): k is number => typeof k === "number");
   if (kickoffs.length === 0) return { ok: false, error: "We couldn't read when these games start.", status: 400 };
   const first = Math.min(...kickoffs);
-  if (first <= Date.now()) return { ok: false, error: "A game on this code has already started.", status: 400 };
 
   const games: PostGame[] = scan.games.map((g) => ({
     matchId: g.matchId,
@@ -169,8 +286,8 @@ export async function postCode(userId: string, authorName: string, code: string)
     .single();
   if (error || !data) {
     // The unique index: someone posted it a moment ago.
-    if (error?.code === "23505") return { ok: false, error: "That code is already up.", status: 409 };
-    return { ok: false, error: "Couldn't post that just now. Try again.", status: 500 };
+    if (error?.code === "23505") return { ok: false, error: "Someone has just posted this code: it's in the list.", status: 409 };
+    return { ok: false, error: "Couldn't save your post just now. Try again.", status: 500 };
   }
   const recs = await records([userId]);
   return { ok: true, post: fromRow(data as Row, recs.get(userId) ?? { landed: 0, missed: 0 }) };

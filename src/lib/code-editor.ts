@@ -22,6 +22,12 @@ export interface EditorPick {
   fairOdds: number;
   /** Where the chance came from, when it isn't our model (code-scan-core.ts). */
   source?: ReadSource;
+  /**
+   * SportyBet's price for this pick on the game right now: what the booked
+   * code will actually pay. Absent when SportyBet lists no single price for
+   * it (a Bet Builder the editor would assemble).
+   */
+  price?: number;
 }
 
 export interface EditorGame {
@@ -71,6 +77,13 @@ export interface EditResult {
   chance: number;
   /** The product of the model's fair prices; SportyBet's own will be a little lower. */
   fairOdds: number;
+  /**
+   * The product of SportyBet's own prices: what the booked code pays as of
+   * now. Null when a pick has no SportyBet price (then only fairOdds is known).
+   */
+  odds: number | null;
+  /** True when `odds` includes a pick priced from our fair odds, not SportyBet's. */
+  oddsEstimated?: boolean;
   removed?: RemovedGame[];
   /** Anything worth saying about the result (a price it couldn't reach). */
   notes?: string[];
@@ -102,11 +115,20 @@ function result(
     ...(extra.why?.[i] ? { why: extra.why[i] } : {}),
   }));
   return {
+    ...totals(out),
     games: out,
-    chance: Math.round(out.reduce((p, g) => p * g.probability, 1) * 10_000) / 10_000,
-    fairOdds: Math.round(out.reduce((p, g) => p * g.fairOdds, 1) * 100) / 100,
     ...(extra.removed?.length ? { removed: extra.removed } : {}),
     ...(extra.notes?.length ? { notes: extra.notes } : {}),
+  };
+}
+
+/** A set of picks' chance, fair odds, and SportyBet's odds when every pick has a price. */
+export function totals(picks: readonly EditorPick[]): Pick<EditResult, "chance" | "fairOdds" | "odds"> {
+  const priced = picks.every((c) => c.price !== undefined && c.price > 1);
+  return {
+    chance: Math.round(picks.reduce((p, g) => p * g.probability, 1) * 10_000) / 10_000,
+    fairOdds: Math.round(picks.reduce((p, g) => p * g.fairOdds, 1) * 100) / 100,
+    odds: priced && picks.length > 0 ? Math.round(picks.reduce((p, g) => p * g.price!, 1) * 100) / 100 : null,
   };
 }
 
@@ -153,13 +175,25 @@ export function saferCode(games: readonly EditorGame[]): EditResult {
  * lands on the price with the highest chance of all landing (forge-solve.ts
  * solveOptions). When even the safest picks pay more than asked, the
  * riskiest games come off until it fits.
+ *
+ * Priced at SportyBet's own odds, never the model's fair ones: the target is
+ * what the user will see when they load the code, and SportyBet's margin
+ * alone puts a ten-leg code a third or more below its fair price. A pick
+ * with no SportyBet price (a Bet Builder the editor would assemble) is not
+ * offered here; the code's own pick without one counts at its fair price
+ * less a typical margin, and the result says so.
  */
 export function targetCode(games: readonly EditorGame[], target: number): EditResult {
+  let estimated = 0;
+  const priceOf = (c: EditorPick) => (c.price && c.price > 1 ? c.price : c.fairOdds / ESTIMATED_MARGIN);
   const kept = games.filter((g) => g.current || usable(g).length > 0);
   const options = kept.map((g) => {
     const seen = new Set<string>();
     return [g.current, ...ladderOf(g), ...usable(g)].filter((c): c is EditorPick => {
       if (!c || !(c.fairOdds > 1) || !(c.probability > 0) || seen.has(c.market)) return false;
+      // Only the user's own pick may go without a SportyBet price.
+      if (!(c.price && c.price > 1) && c !== g.current) return false;
+      if (!(priceOf(c) > 1)) return false;
       seen.add(c.market);
       return true;
     });
@@ -167,7 +201,7 @@ export function targetCode(games: readonly EditorGame[], target: number): EditRe
   const live = kept.filter((_, i) => options[i].length > 0);
   const opts = options.filter((o) => o.length > 0);
   const solved = solveOptions(
-    opts.map((o) => ({ opts: o.map((c) => ({ lo: Math.log(c.fairOdds), q: Math.log(c.probability) })) })),
+    opts.map((o) => ({ opts: o.map((c) => ({ lo: Math.log(priceOf(c)), q: Math.log(c.probability) })) })),
     target,
   );
   if (!solved) return result([], []);
@@ -176,26 +210,37 @@ export function targetCode(games: readonly EditorGame[], target: number): EditRe
   const removed: RemovedGame[] = [];
   const notes: string[] = [];
   const [lo, hi] = priceBand(target);
-  let odds = picks.reduce((p, c) => p * c.fairOdds, 1);
+  let odds = picks.reduce((p, c) => p * priceOf(c), 1);
   if (odds > hi) {
     // Too long even at the safest picks: the least likely games come off first.
     const order = picks.map((c, i) => i).sort((a, b) => picks[a].probability - picks[b].probability);
     const drop = new Set<number>();
     for (const i of order) {
       if (odds <= hi) break;
-      if (odds / picks[i].fairOdds < lo) continue;
+      if (odds / priceOf(picks[i]) < lo) continue;
       drop.add(i);
-      odds /= picks[i].fairOdds;
+      odds /= priceOf(picks[i]);
       removed.push(removal(games2[i], `Taken off to bring the price down to ${target}.`));
     }
     games2 = games2.filter((_, i) => !drop.has(i));
     picks = picks.filter((_, i) => !drop.has(i));
   }
+  estimated = picks.filter((c) => !(c.price && c.price > 1)).length;
   if (odds < lo - 1e-9 || odds > hi + 1e-9) {
-    notes.push(`${odds.toFixed(2)} is as close to ${target} as these games get.`);
+    notes.push(`${odds.toFixed(2)} is as close to ${target} as these games get at SportyBet's prices.`);
   }
-  return result(games2, picks, { removed, notes });
+  if (estimated > 0) {
+    notes.push(
+      `${estimated === 1 ? "One pick has" : `${estimated} picks have`} no SportyBet price we can read (a Bet Builder), so the total is an estimate: check it on SportyBet.`,
+    );
+  }
+  const out = result(games2, picks, { removed, notes });
+  // With an estimated pick the total is still worth showing, marked as such.
+  return out.odds === null && estimated > 0 ? { ...out, odds: Math.round(odds * 100) / 100, oddsEstimated: true } : out;
 }
+
+/** A typical SportyBet margin on one pick, for a pick whose own price we can't read. */
+const ESTIMATED_MARGIN = 1.07;
 
 /** The editor before code-editor-policy.ts, kept for EDITOR_POLICY=legacy: the most likely pick on every game. */
 export function legacySaferCode(games: readonly EditorGame[]): EditResult {

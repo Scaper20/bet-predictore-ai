@@ -71,19 +71,26 @@ export function BillingPlans({
   async function checkout(tier: "pro" | "vip", tierCycle: BillingCycle, renew = false) {
     setError(null);
     setPending(renew ? `${tier}:renew` : tier);
+    // Only our own messages reach the user: a dropped connection or an error page says so plainly.
+    const fail = (message: string) => {
+      setError(message);
+      setPending(null);
+    };
+    let res: Response;
     try {
-      const res = await fetch(flutterwave ? "/api/billing/flutterwave/checkout" : "/api/billing/checkout", {
+      res = await fetch(flutterwave ? "/api/billing/flutterwave/checkout" : "/api/billing/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ tier, cycle: tierCycle, country: market.country, once: !flutterwave && !renew }),
       });
-      const body = await res.json();
-      if (!res.ok) throw new Error(body.error ?? "Checkout failed.");
-      window.location.assign(body.authorization_url);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Checkout failed.");
-      setPending(null);
+    } catch {
+      return fail("No connection. Check your network and try again.");
     }
+    const body = (await res.json().catch(() => null)) as { error?: string; authorization_url?: string } | null;
+    if (!res.ok || !body?.authorization_url) {
+      return fail(body?.error ?? "Checkout couldn't start just now. You haven't been charged; try again shortly.");
+    }
+    window.location.assign(body.authorization_url);
   }
 
   return (

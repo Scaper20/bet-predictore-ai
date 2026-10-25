@@ -12,15 +12,21 @@ export function ManageSubscriptionButton() {
   async function manage() {
     setError(null);
     setPending(true);
+    let res: Response;
     try {
-      const res = await fetch("/api/billing/manage", { method: "POST" });
-      const body = await res.json();
-      if (!res.ok) throw new Error(body.error ?? "Couldn't open the subscription manager.");
-      window.location.assign(body.link);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Couldn't open the subscription manager.");
+      res = await fetch("/api/billing/manage", { method: "POST" });
+    } catch {
+      setError("No connection. Check your network and try again.");
       setPending(false);
+      return;
     }
+    const body = (await res.json().catch(() => null)) as { error?: string; link?: string } | null;
+    if (!res.ok || !body?.link) {
+      setError(body?.error ?? "Couldn't open the subscription manager just now. Try again shortly.");
+      setPending(false);
+      return;
+    }
+    window.location.assign(body.link);
   }
 
   return (

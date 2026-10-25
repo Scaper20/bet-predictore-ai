@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { byRank, gradeCode, gradeGame, postForViewer, posterName, rankScore, recordOf, splitStarted, type CommunityPost } from "./code-hub-posts-core";
+import { byRank, gradeCode, gradeGame, postForViewer, posterName, postProblems, rankScore, recordOf, splitStarted, type CommunityPost } from "./code-hub-posts-core";
 
 describe("rankScore", () => {
   it("prefers a fair price on a likelier code", () => {
@@ -103,5 +103,44 @@ describe("splitStarted", () => {
     const { inPlay, finished } = splitStarted([post(1, "live", null), post(2, "settled", "won"), post(3, "live", "lost"), post(4, "settled", null)]);
     expect(inPlay.map((p) => p.id)).toEqual([1]);
     expect(finished.map((p) => p.id)).toEqual([2, 3, 4]);
+  });
+});
+
+describe("postProblems", () => {
+  const now = Date.parse("2026-10-25T12:00:00Z");
+  const g = (eventId: string, kickoff: number | null, extra: Partial<{ verdict: "strong" | "unreadable"; probability: number | null; reason: string }> = {}) => ({
+    eventId,
+    homeName: `${eventId}H`,
+    awayName: `${eventId}A`,
+    kickoff,
+    label: "Over 1.5",
+    verdict: extra.verdict ?? ("strong" as const),
+    probability: extra.probability === undefined ? 0.7 : extra.probability,
+    ...(extra.reason ? { reason: extra.reason } : {}),
+  });
+
+  it("names each game that keeps a code from going up, and why", () => {
+    const out = postProblems(
+      [
+        g("live", now - 20 * 60_000),
+        g("soon", now + 5 * 60_000),
+        g("gone", null),
+        g("unread", now + 3600_000, { verdict: "unreadable", probability: null, reason: "SportyBet no longer lists this pick." }),
+        g("fine", now + 3600_000),
+      ],
+      now,
+    );
+    expect(out.map((p) => [p.eventId, p.issue])).toEqual([
+      ["live", "started"],
+      ["soon", "starting"],
+      ["gone", "unlisted"],
+      ["unread", "unreadable"],
+    ]);
+    expect(out[3].why).toBe("SportyBet no longer lists this pick.");
+    expect(out[0]).toMatchObject({ homeName: "liveH", awayName: "liveA" });
+  });
+
+  it("has nothing to say about a code that can go up", () => {
+    expect(postProblems([g("a", now + 3600_000), g("b", now + 7200_000)], now)).toEqual([]);
   });
 });
