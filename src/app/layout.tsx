@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Unbounded, Space_Grotesk, IBM_Plex_Mono } from "next/font/google";
+import Script from "next/script";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { SITE_URL as SITE } from "@/lib/site-url";
@@ -136,6 +137,18 @@ const THEME_INIT_SCRIPT = `
   } catch (e) {}
 `;
 
+/**
+ * X (Twitter) conversion tracking base code, pixel ri02j, exactly as X
+ * supplies it: loads uwt.js once on every page so ad clicks from X can be
+ * counted as visits. Its hosts are allowed in next.config.ts's CSP.
+ */
+const X_PIXEL_SCRIPT = `
+!function(e,t,n,s,u,a){e.twq||(s=e.twq=function(){s.exe?s.exe.apply(s,arguments):s.queue.push(arguments);
+},s.version='1.1',s.queue=[],u=t.createElement(n),u.async=!0,u.src='https://static.ads-twitter.com/uwt.js',
+a=t.getElementsByTagName(n)[0],a.parentNode.insertBefore(u,a))}(window,document,'script');
+twq('config','ri02j');
+`;
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
@@ -163,6 +176,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <MaintenanceWatcher />
         <Analytics />
         <SpeedInsights />
+        {/* X conversion tracking base code */}
+        <Script id="x-pixel" strategy="afterInteractive" dangerouslySetInnerHTML={{ __html: X_PIXEL_SCRIPT }} />
+        {/* End X conversion tracking base code */}
       </body>
     </html>
   );
