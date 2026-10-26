@@ -28,11 +28,13 @@ const MOVED = ["live", "fixtures", "predictions", "trends", "track-record"];
  * - connect-src is this origin plus the Supabase project (REST and
  *   realtime). Server-side calls to the data and payment APIs never pass
  *   through the browser, so they aren't listed.
- * - X conversion tracking (the pixel in app/layout.tsx): its script from
- *   static.ads-twitter.com, and the hosts it reports visits to.
+ * - X conversion tracking (the pixel in app/layout.tsx): X's hosts, named
+ *   in script-src, connect-src and img-src as X's Pixel Helper asks (it
+ *   reports "no pixel fired" when they aren't listed by name, even where
+ *   img-src's https: already covers them), plus t.co, where the pixel's
+ *   reports also go.
  */
-const X_PIXEL_SCRIPT_HOSTS = ["https://static.ads-twitter.com"];
-const X_PIXEL_CONNECT_HOSTS = [
+const X_PIXEL_HOSTS = [
   "https://static.ads-twitter.com",
   "https://ads-twitter.com",
   "https://ads-api.twitter.com",
@@ -43,15 +45,15 @@ const X_PIXEL_CONNECT_HOSTS = [
 function contentSecurityPolicy(): string {
   const dev = process.env.NODE_ENV === "development";
   const supabase = safeOrigin(process.env.NEXT_PUBLIC_SUPABASE_URL);
-  const connect = ["'self'", ...X_PIXEL_CONNECT_HOSTS];
+  const connect = ["'self'", ...X_PIXEL_HOSTS];
   if (supabase) connect.push(supabase, supabase.replace(/^https:/, "wss:"));
   if (dev) connect.push("ws://localhost:*", "https://va.vercel-scripts.com");
 
   return [
     "default-src 'self'",
-    `script-src 'self' 'unsafe-inline' ${X_PIXEL_SCRIPT_HOSTS.join(" ")}${dev ? " 'unsafe-eval' https://va.vercel-scripts.com" : ""}`,
+    `script-src 'self' 'unsafe-inline' ${X_PIXEL_HOSTS.join(" ")}${dev ? " 'unsafe-eval' https://va.vercel-scripts.com" : ""}`,
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob: https:",
+    `img-src 'self' data: blob: https: ${X_PIXEL_HOSTS.join(" ")}`,
     "font-src 'self' data:",
     `connect-src ${connect.join(" ")}`,
     "worker-src 'self'",
