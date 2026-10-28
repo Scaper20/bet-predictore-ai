@@ -6,6 +6,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import { SITE_URL as SITE } from "@/lib/site-url";
 import { JsonLd } from "@/components/seo/json-ld";
 import { COMPANY } from "@/lib/company";
+import { SOCIALS, X_HANDLE } from "@/lib/socials";
 import { ServiceWorkerRegister } from "@/components/pwa/service-worker-register";
 import { TrackedSlipsPushSync } from "@/components/pwa/tracked-slips-push-sync";
 import { MaintenanceWatcher } from "@/components/layout/maintenance-watcher";
@@ -35,6 +36,7 @@ const ORG_JSON_LD = {
       email: COMPANY.supportEmail,
       address: { "@type": "PostalAddress", addressCountry: COMPANY.countryCode },
       contactPoint: { "@type": "ContactPoint", contactType: "customer support", email: COMPANY.supportEmail },
+      sameAs: SOCIALS.filter((s) => s.profile).map((s) => s.href),
     },
     {
       "@type": "WebSite",
@@ -90,6 +92,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
+    site: X_HANDLE,
+    creator: X_HANDLE,
     title: "KiqStat — Football Predictions",
     description: "Data-driven football insight for fans across Africa and the world.",
   },
@@ -149,6 +153,21 @@ a=t.getElementsByTagName(n)[0],a.parentNode.insertBefore(u,a))}(window,document,
 twq('config','ri02j');
 `;
 
+/**
+ * Google Analytics 4: on only when NEXT_PUBLIC_GA_MEASUREMENT_ID (G-XXXXXXX)
+ * is set, and only on the production host, so previews and local runs don't
+ * count as visits. Page views on client-side navigation are sent by GA's
+ * enhanced measurement (history changes), on by default for a web stream.
+ */
+const GA_ID = /^G-[A-Z0-9]+$/.test(process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID ?? "") && process.env.NEXT_PUBLIC_VERCEL_ENV !== "preview"
+  ? process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID!
+  : null;
+
+const gaInit = (id: string) => `
+window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}
+gtag('js',new Date());gtag('config','${id}');
+`;
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
@@ -176,6 +195,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <MaintenanceWatcher />
         <Analytics />
         <SpeedInsights />
+        {GA_ID && (
+          <>
+            {/* Google Analytics 4 (gtag.js): hosts allowed in next.config.ts's CSP. */}
+            <Script id="ga-loader" strategy="afterInteractive" src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`} />
+            <Script id="ga-init" strategy="afterInteractive" dangerouslySetInnerHTML={{ __html: gaInit(GA_ID) }} />
+          </>
+        )}
         {/* X conversion tracking base code */}
         <Script id="x-pixel" strategy="afterInteractive" dangerouslySetInnerHTML={{ __html: X_PIXEL_SCRIPT }} />
         {/* End X conversion tracking base code */}

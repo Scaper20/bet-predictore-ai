@@ -4,6 +4,8 @@ import { Container } from "@/components/ui/container";
 import { sportPath, scoresPath } from "@/lib/routes";
 import { COMPANY } from "@/lib/company";
 import { FooterColumn } from "@/components/layout/footer-column";
+import { SOCIALS } from "@/lib/socials";
+import { SocialIcon } from "@/components/icons/social-icons";
 
 /*
  * The footer renders in the (app) layout, above the [sport] segment, so it
@@ -64,6 +66,22 @@ export function SiteFooter() {
               Data-driven football insight for fans across Africa and the world. Real fixtures,
               real results, and a model that shows its working.
             </p>
+            <ul className="mt-5 flex flex-wrap gap-2" aria-label="KiqStat elsewhere">
+              {SOCIALS.map((s) => (
+                <li key={s.id}>
+                  <a
+                    href={s.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={s.label}
+                    title={s.label}
+                    className="grid size-10 place-items-center rounded-xl border border-line bg-surface text-ink-muted transition-colors hover:border-brand/40 hover:text-brand"
+                  >
+                    <SocialIcon id={s.id} className="size-[18px]" />
+                  </a>
+                </li>
+              ))}
+            </ul>
           </div>
 
           {COLUMNS.map((col) => (

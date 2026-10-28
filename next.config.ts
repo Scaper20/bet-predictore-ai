@@ -34,6 +34,19 @@ const MOVED = ["live", "fixtures", "predictions", "trends", "track-record"];
  *   img-src's https: already covers them), plus t.co, where the pixel's
  *   reports also go.
  */
+/**
+ * Google Analytics 4 (gtag.js, app/layout.tsx, only when
+ * NEXT_PUBLIC_GA_MEASUREMENT_ID is set): the loader comes from
+ * googletagmanager.com and hits go to the regional *.google-analytics.com
+ * collectors.
+ */
+const GA_SCRIPT_HOSTS = ["https://www.googletagmanager.com"];
+const GA_CONNECT_HOSTS = [
+  "https://www.googletagmanager.com",
+  "https://*.google-analytics.com",
+  "https://*.analytics.google.com",
+];
+
 const X_PIXEL_HOSTS = [
   "https://static.ads-twitter.com",
   "https://ads-twitter.com",
@@ -45,13 +58,13 @@ const X_PIXEL_HOSTS = [
 function contentSecurityPolicy(): string {
   const dev = process.env.NODE_ENV === "development";
   const supabase = safeOrigin(process.env.NEXT_PUBLIC_SUPABASE_URL);
-  const connect = ["'self'", ...X_PIXEL_HOSTS];
+  const connect = ["'self'", ...X_PIXEL_HOSTS, ...GA_CONNECT_HOSTS];
   if (supabase) connect.push(supabase, supabase.replace(/^https:/, "wss:"));
   if (dev) connect.push("ws://localhost:*", "https://va.vercel-scripts.com");
 
   return [
     "default-src 'self'",
-    `script-src 'self' 'unsafe-inline' ${X_PIXEL_HOSTS.join(" ")}${dev ? " 'unsafe-eval' https://va.vercel-scripts.com" : ""}`,
+    `script-src 'self' 'unsafe-inline' ${[...X_PIXEL_HOSTS, ...GA_SCRIPT_HOSTS].join(" ")}${dev ? " 'unsafe-eval' https://va.vercel-scripts.com" : ""}`,
     "style-src 'self' 'unsafe-inline'",
     `img-src 'self' data: blob: https: ${X_PIXEL_HOSTS.join(" ")}`,
     "font-src 'self' data:",
