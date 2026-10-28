@@ -4,9 +4,6 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Badge, ButtonLink, LiveDot } from "@/components/ui/primitives";
 import { Crest } from "@/components/ui/crest";
-import { isStrong } from "@/lib/model/tiers";
-import { StrongBadge } from "@/components/ui/strong-badge";
-import { RiskBadge } from "@/components/ui/risk-badge";
 import { matchPath, sportPath, scoresPath } from "@/lib/routes";
 import { BttsPanel, CorrectScorePanel, DoubleChancePanel, GoalsPanel, H2HPanel, OutcomePanel } from "@/components/match/market-panels";
 import { AddToSlip } from "@/components/match/add-to-slip";
@@ -16,12 +13,13 @@ import { LeagueTable } from "@/components/stats/league-table";
 import { SplitBar } from "@/components/stats/split-bar";
 import { FormPips } from "@/components/stats/form-pips";
 import { Morph, morphName } from "@/components/motion/morph";
-import { AnimatedNumber } from "@/components/motion/animated-number";
 import { matchContext, type MatchContext } from "@/lib/stats/match-context";
 import type { Outcome } from "@/lib/stats/compute";
 import { AskAboutMatch, AskPageContext } from "@/components/ask/ask-page-context";
-import { PricesPanel, PricesPanelSkeleton } from "@/components/match/prices-panel";
 import { TopPicks } from "@/components/match/top-picks";
+import { MorePredictions } from "@/components/match/more-predictions";
+import { ChipTabs, type ChipTab } from "@/components/ui/chip-tabs";
+import type { StatMarkets } from "@/lib/model/match-stats";
 import { LiveWinProbabilityPanel } from "@/components/match/live-win-probability-panel";
 import { LiveMatchProvider, LiveProgress, LiveScore, LiveStatusBadge } from "@/components/match/live-scoreboard";
 import { Gate } from "@/components/entitlements/gate";
@@ -36,7 +34,6 @@ import { matchDetail } from "@/lib/service";
 import { getViewer } from "@/lib/viewer";
 import { isProLeague } from "@/lib/pro-leagues";
 import { ProLeagueAfterKickoff, ProLeagueMarketsLock, ProLeaguePickLock, ProStatsLock } from "@/components/entitlements/pro-league-lock";
-import { LockedNumber } from "@/components/entitlements/locked-pick";
 import { viewPrediction, type ViewedPrediction } from "@/lib/access";
 import { MatchAccessProvider, ProMarkets } from "@/components/match/match-access";
 import { SITE_URL as SITE } from "@/lib/site-url";
@@ -122,7 +119,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   const label = `${match.home.name} v ${match.away.name}`;
 
   const tabs: MatchTab[] = [
-    { key: "overview", label: "Overview", panel: <Overview match={match} prediction={prediction} ctx={ctx} live={live} label={label} proLeagueOpened={proLeagueOpened} /> },
+    { key: "overview", label: "Overview", panel: <Overview match={match} prediction={prediction} ctx={ctx} live={live} label={label} proLeagueOpened={proLeagueOpened} corners={proLocked ? null : extra?.stats.corners} /> },
     { key: "markets", label: "Predictions", short: "Picks", panel: <Markets prediction={prediction} extra={proLocked ? null : extra} statsLocked={!viewer.paid} /> },
     { key: "stats", label: "Stats", panel: <MatchStats match={match} home={ctx.home} away={ctx.away} counts={counts} averages={averages} /> },
     ...(ctx.table
@@ -254,6 +251,7 @@ function Overview({
   live,
   label,
   proLeagueOpened,
+  corners,
 }: {
   match: Match;
   prediction: ViewedPrediction;
@@ -261,6 +259,8 @@ function Overview({
   live: boolean;
   proLeagueOpened: boolean;
   label: string;
+  /** Pro: the corners markets, for the corners top pick. */
+  corners?: StatMarkets | null;
 }) {
   const pick = prediction.topPick;
   const homeForm: Outcome[] = ctx.home?.form.letters ?? prediction.form.home.entries.map((e) => e.result as Outcome);
@@ -268,7 +268,7 @@ function Overview({
 
   return (
     <div className="grid gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] lg:items-start">
-      <div className="min-w-0 space-y-5">
+      <div className="min-w-0 space-y-4">
         {live && (
           <Gate
             requires="vip"
@@ -286,22 +286,19 @@ function Overview({
         {prediction.locked.proLeague && prediction.sufficiency.publishable ? (
           <ProLeaguePickLock group={pick?.group} leagueCode={match.league.code} leagueName={match.league.name} />
         ) : pick && prediction.sufficiency.publishable ? (
-          <section className="orbit-border card rounded-2xl p-5 sm:p-6">
-            <p className="flex min-h-5 flex-wrap items-center gap-x-2 gap-y-1 text-[10.5px] font-semibold uppercase leading-none tracking-[0.14em] text-ink-dim">
-              <span className="whitespace-nowrap">Our pick</span> {isStrong(pick, match.league.code) && <StrongBadge />} <RiskBadge pick={pick} />
-            </p>
-            <div className="mt-2 flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
-              <p className="font-display text-2xl font-bold text-ink sm:text-3xl">{pick.label}</p>
-              <div className="text-right">
-                <AnimatedNumber value={pick.probability * 100} decimals={1} suffix="%" className="font-mono tracking-tighter text-2xl font-semibold text-brand sm:text-3xl" />
-              </div>
-            </div>
-            {prediction.sufficiency.level === "limited" && (
-              <p className="mt-2 text-xs text-amber">Thin data · treat as a guide</p>
-            )}
-            {prediction.marketCheck && <MarketCheckNote check={prediction.marketCheck} />}
-            {proLeagueOpened && <ProLeagueAfterKickoff />}
-          </section>
+          <TopPicks
+            prediction={prediction}
+            corners={corners}
+            notes={
+              (prediction.sufficiency.level === "limited" || prediction.marketCheck || proLeagueOpened) && (
+                <div className="mt-2">
+                  {prediction.sufficiency.level === "limited" && <p className="text-xs text-amber">Thin data · treat as a guide</p>}
+                  {prediction.marketCheck && <MarketCheckNote check={prediction.marketCheck} />}
+                  {proLeagueOpened && <ProLeagueAfterKickoff />}
+                </div>
+              )
+            }
+          />
         ) : (
           <section className="card p-5">
             <p className="text-sm font-semibold text-amber">No pick for this game</p>
@@ -313,19 +310,9 @@ function Overview({
           </section>
         )}
 
-        {prediction.locked.markets ? (
-          <div className="stagger grid grid-cols-3 gap-3">
-            {["xG", "Over 2.5", "Both score"].map((l, i) => (
-              <Fact key={l} index={i} label={l} value={<LockedNumber />} />
-            ))}
-          </div>
-        ) : (
-          <div className="stagger grid grid-cols-3 gap-3">
-            <Fact index={0} label="xG" value={`${prediction.markets.expectedGoals.home.toFixed(1)} – ${prediction.markets.expectedGoals.away.toFixed(1)}`} />
-            <Fact index={1} label="Over 2.5" value={percent(prediction.markets.over["2.5"])} hot={prediction.markets.over["2.5"] >= 0.6} />
-            <Fact index={2} label="Both score" value={percent(prediction.markets.bttsYes)} hot={prediction.markets.bttsYes >= 0.6} />
-          </div>
-        )}
+        <OutcomePanel prediction={prediction} facts={!prediction.locked.markets} />
+
+        {!prediction.locked.proLeague && <MorePredictions prediction={prediction} />}
 
         {(homeForm.length > 0 || awayForm.length > 0) && (
           <section className="card p-5">
@@ -353,22 +340,24 @@ function Overview({
   );
 }
 
-/** Why the pick isn't the model's own first choice: SportyBet rated that one well below us. */
+/**
+ * Why the pick isn't the model's own first choice: SportyBet rated that one
+ * well below us, or doesn't offer its line on this game.
+ */
 function MarketCheckNote({ check }: { check: NonNullable<ViewedPrediction["marketCheck"]> }) {
+  if (check.reason === "unlisted" || check.marketChance === null) {
+    return (
+      <p className="mt-2 text-xs leading-relaxed text-ink-dim">
+        Our first lean was {check.setAside.label} at {percent(check.setAside.probability)}, but SportyBet doesn&apos;t
+        offer that line on this game, so the pick is one you can load.
+      </p>
+    );
+  }
   return (
     <p className="mt-2 text-xs leading-relaxed text-ink-dim">
       Our first lean was {check.setAside.label} at {percent(check.setAside.probability)}, but SportyBet rates it{" "}
       {percent(check.marketChance)}. Picks the market rates that much lower have landed far less often, so we set it aside.
     </p>
-  );
-}
-
-function Fact({ label, value, hot = false, index }: { label: string; value: React.ReactNode; hot?: boolean; index: number }) {
-  return (
-    <div style={{ ["--i" as string]: index }} className={`min-w-0 rounded-xl border px-2 py-3 text-center sm:px-3 ${hot ? "border-brand/25 bg-brand/[0.06]" : "border-line bg-surface"}`}>
-      <p className="truncate text-[10px] font-medium uppercase tracking-wider text-ink-dim">{label}</p>
-      <p className={`tnum mt-1 whitespace-nowrap font-mono tracking-tighter text-sm font-medium min-[360px]:text-[15px] min-[400px]:text-base sm:text-xl sm:tracking-tight ${hot ? "text-brand" : "text-ink"}`}>{value}</p>
-    </div>
   );
 }
 
@@ -398,53 +387,59 @@ function Markets({
   if (prediction.locked.proLeague) {
     return (
       <div className="space-y-5">
-        <OutcomePanel prediction={prediction} />
         <ProLeagueMarketsLock leagueCode={prediction.match.league.code} leagueName={prediction.match.league.name} />
       </div>
     );
   }
-  return (
-    <div className="space-y-5">
-      {/* Free and server-rendered: the 1X2 split is what search indexes and
-          what earns the click, so it never sits behind a wall (lib/gating.ts). */}
-      <TopPicks prediction={prediction} corners={extra?.stats.corners} />
-      <OutcomePanel prediction={prediction} />
-      {/* The only numbers here a bookmaker produced; streamed, because two
-          metered providers sit behind it. DepthGate is a conversion wall:
-          both providers are fetched a competition at a time and cached. */}
-      <DepthGate reason="Is the market price worth it?">
-        <Suspense fallback={<PricesPanelSkeleton />}>
-          <PricesPanel prediction={prediction} />
-        </Suspense>
-      </DepthGate>
-      {/* Every market beyond 1X2 comes off the same scoreline distribution,
-          so depth is one decision, not five: a free account opens it. */}
-      <DepthGate reason="Unlock every market on this match">
-        <GoalsPanel prediction={prediction} />
-        <div className="grid gap-5 sm:grid-cols-2">
-          <BttsPanel prediction={prediction} />
+  const h = prediction.match;
+  const sections: ChipTab[] = [
+    { key: "goals", label: "Goals", node: <GoalsPanel prediction={prediction} /> },
+    {
+      key: "result",
+      label: "Result & GG",
+      node: (
+        <div className="grid gap-3 sm:grid-cols-2">
           <DoubleChancePanel prediction={prediction} />
+          <BttsPanel prediction={prediction} />
         </div>
-        <CorrectScorePanel prediction={prediction} />
-        {extra && <GoalExtrasPanel goals={extra.goals} match={prediction.match} />}
-        {extra &&
-          (["corners", "cards", "shots", "shotsOnTarget"] as const).map((kind) => {
-            const m = extra.stats[kind];
-            return m ? <StatPanel key={kind} kind={kind} markets={m} match={prediction.match} referee={extra.referee} /> : null;
-          })}
-        {statsLocked && <ProStatsLock />}
-        {/* Pro: every extra line SportyBet lists, priced by the model (handicaps, team goals, corners, shots, bookings). */}
-        {!statsLocked && (
-          <Suspense fallback={<SportyBetLinesSkeleton />}>
-            <SportyBetLinesPanel prediction={prediction} />
-          </Suspense>
-        )}
-      </DepthGate>
-      {/* Pro: half-time markets and Asian handicap, fetched after the plan check. */}
-      <ProMarkets />
-    </div>
+      ),
+    },
+    { key: "score", label: "Correct score", node: <CorrectScorePanel prediction={prediction} /> },
+    ...(extra ? [{ key: "more-goals", label: "Team goals", node: <GoalExtrasPanel goals={extra.goals} match={h} /> }] : []),
+    ...(extra
+      ? (["corners", "shots", "shotsOnTarget", "cards"] as const).flatMap((kind) => {
+          const m = extra.stats[kind];
+          return m
+            ? [{ key: kind, label: STAT_LABEL[kind], node: <StatPanel kind={kind} markets={m} match={h} referee={extra.referee} /> }]
+            : [];
+        })
+      : statsLocked
+        ? [{ key: "stats", label: "Corners & shots", pro: true, node: <ProStatsLock /> }]
+        : []),
+    ...(!statsLocked
+      ? [{
+          key: "sportybet",
+          label: "On SportyBet",
+          node: (
+            <Suspense fallback={<SportyBetLinesSkeleton />}>
+              <SportyBetLinesPanel prediction={prediction} />
+            </Suspense>
+          ),
+        }]
+      : []),
+    // Pro: half-time markets and Asian handicap, fetched after the plan check.
+    { key: "halves", label: "Halves & handicap", pro: true, node: <ProMarkets /> },
+  ];
+  return (
+    // Every market beyond 1X2 comes off the same scoreline distribution, so
+    // depth is one decision: a free account opens it.
+    <DepthGate reason="Unlock every market on this match">
+      <ChipTabs sections={sections} ariaLabel="Markets" />
+    </DepthGate>
   );
 }
+
+const STAT_LABEL = { corners: "Corners", shots: "Shots", shotsOnTarget: "On target", cards: "Cards" } as const;
 
 /**
  * One side of the scoreboard: crest above the name on every screen, so a

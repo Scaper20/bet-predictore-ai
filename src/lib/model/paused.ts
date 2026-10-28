@@ -1,3 +1,5 @@
+import { override, type Surface } from "./selections";
+
 /**
  * Selections paused as picks (the headline, the digest, Code Hub, Forge's
  * builds). Their probabilities are still computed and shown.
@@ -28,6 +30,17 @@ export function isPausedHandicap(market: string): boolean {
   return Boolean(m && Math.abs(Number(m[2])) >= 1);
 }
 
-export function isPausedPick(market: string): boolean {
+/**
+ * Paused on this surface: the owner's switch first (model/selections.ts),
+ * then the pauses above.
+ */
+export function isPausedPick(market: string, surface: Surface = "headline"): boolean {
+  const o = override(market, surface);
+  if (o !== undefined) return !o;
+  return pausedByRule(market);
+}
+
+/** Paused by the rules above alone, whatever the owner has switched. */
+export function pausedByRule(market: string): boolean {
   return PAUSED_PICK_MARKETS.includes(market) || market.startsWith("ou:under:") || isPausedHandicap(market);
 }

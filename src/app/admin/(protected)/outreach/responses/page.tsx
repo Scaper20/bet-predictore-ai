@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Badge, EmptyState } from "@/components/ui/primitives";
 import { StatCard } from "@/components/admin/stat-card";
 import type { Tier } from "@/lib/entitlements";
+import { requirePermission } from "@/lib/admin";
 
 export const metadata: Metadata = { title: "Survey responses" };
 
@@ -22,6 +23,7 @@ export default async function SurveyResponsesPage({
 }: {
   searchParams: Promise<{ survey?: string; page?: string }>;
 }) {
+  await requirePermission("outreach.manage");
   const { survey: surveyParam, page: pageParam } = await searchParams;
   const survey: SurveyType = isSurveyType(surveyParam) ? surveyParam : "survey_subscribed";
   const page = Math.max(1, Number(pageParam) || 1);
@@ -44,7 +46,8 @@ export default async function SurveyResponsesPage({
         <Link href="/admin/outreach" className="text-sm text-ink-muted underline underline-offset-2 hover:text-ink">
           ← Back to outreach
         </Link>
-        <h1 className="font-display mt-3 text-2xl font-bold">Survey responses</h1>
+        <p className="mt-3 font-mono text-[10.5px] uppercase tracking-[0.16em] text-brand">Growth · Outreach</p>
+        <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight sm:text-[28px]">Survey responses</h1>
         <p className="mt-1 max-w-2xl text-sm text-ink-muted">Only submitted answers.</p>
       </div>
 

@@ -20,6 +20,8 @@ import { LiveScoresProvider } from "@/components/match/pick-action";
 import { loadPicks, parsePickQuery } from "@/lib/pick-feed";
 import { PICK_BATCH } from "@/lib/pick-list";
 import { ProductIcon } from "@/components/icons/product-icon";
+import { LastMatchdayStat } from "@/components/match/matchday-stats";
+import { ENGINE_GROUPS, type EngineGroup } from "@/lib/model/headline-engine";
 
 /**
  * One title per league view. Without this every ?league= variant shared the
@@ -58,7 +60,7 @@ export const revalidate = 300;
 export default async function PredictionsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ league?: string; tier?: string; risk?: string; sort?: string }>;
+  searchParams: Promise<{ league?: string; tier?: string; risk?: string; sort?: string; family?: string }>;
 }) {
   const params = await searchParams;
   const q = parsePickQuery(params);
@@ -74,11 +76,11 @@ export default async function PredictionsPage({
     { ...q, followed: preferences.leagues },
     { withBest: true },
   );
-  const { strongOnly, risk, byChance } = q;
+  const { strongOnly, risk, byChance, family } = q;
   const league = def?.code;
   // The query the list sends back for each next batch, so its offsets line up.
   const query = new URLSearchParams(
-    Object.entries({ league, tier: strongOnly ? "strong" : undefined, risk, sort: byChance ? "chance" : undefined }).filter(
+    Object.entries({ league, family, tier: strongOnly ? "strong" : undefined, risk, sort: byChance ? "chance" : undefined }).filter(
       (e): e is [string, string] => typeof e[1] === "string",
     ),
   ).toString();
@@ -89,6 +91,11 @@ export default async function PredictionsPage({
         eyebrow="Predictions"
         title={def ? `${def.name} picks` : "Picks"}
         description="Data insights from analysed football matches."
+        actions={
+          <Suspense fallback={null}>
+            <LastMatchdayStat />
+          </Suspense>
+        }
       />
 
       <div className={`${containerClass()} space-y-7 py-4 sm:py-10`}>
@@ -102,11 +109,13 @@ export default async function PredictionsPage({
           <ProLeaguesBanner held={proHeld} />
         ) : null}
 
-        <PickFilters strongOnly={strongOnly} risk={risk} byChance={byChance} league={league} />
+        <FamilyFilter family={family} league={league} />
+
+        <PickFilters strongOnly={strongOnly} risk={risk} byChance={byChance} league={league} family={family} />
 
         {feed && <CoverageNotice coverage={feed.coverage} />}
 
-        {bestBet?.topPick && (!strongOnly || isStrong(bestBet.topPick, bestBet.match.league.code)) && (
+        {!family && bestBet?.topPick && (!strongOnly || isStrong(bestBet.topPick, bestBet.match.league.code)) && (
           <LiveScoresProvider matches={[{ id: bestBet.match.id, kickoff: bestBet.match.kickoff, status: bestBet.match.status }]}>
             <BestBetOfDay prediction={bestBet} />
           </LiveScoresProvider>
@@ -121,6 +130,13 @@ export default async function PredictionsPage({
           />
         ) : (
           <>
+            {family && !strongOnly && !risk && rows.length === 0 && (
+              <EmptyState
+                icon={<ProductIcon name="scale" className="size-6" />}
+                title={`No ${ENGINE_GROUPS.find((g) => g.id === family)?.label.toLowerCase()} picks right now`}
+                description="Each needs a line SportyBet lists at 1.20 or more that both we and SportyBet rate highly. Try another market."
+              />
+            )}
             {(strongOnly || risk) && rows.length === 0 && (
               <EmptyState
                 icon={<ProductIcon name={strongOnly ? "star" : "scale"} className="size-6" />}
@@ -169,15 +185,18 @@ function PickFilters({
   risk,
   byChance,
   league,
+  family,
 }: {
   strongOnly: boolean;
   risk?: RiskLevel;
   byChance: boolean;
   league?: string;
+  family?: EngineGroup;
 }) {
   const href = (next: { strong?: boolean; risk?: RiskLevel | null; chance?: boolean }) => {
     const q = new URLSearchParams();
     if (league) q.set("league", league);
+    if (family) q.set("family", family);
     const strong = next.strong ?? strongOnly;
     const r = next.risk === undefined ? risk : next.risk;
     const c = next.chance ?? byChance;
@@ -218,5 +237,36 @@ function PickFilters({
         </Link>
       </nav>
     </div>
+  );
+}
+
+/**
+ * Which market each row shows: the game's headline, or its best pick in one
+ * group (headline-engine.ts), each a line SportyBet lists at 1.20 or more.
+ * Changing market starts the other filters afresh.
+ */
+function FamilyFilter({ family, league }: { family?: EngineGroup; league?: string }) {
+  const href = (f?: EngineGroup) => {
+    const q = new URLSearchParams();
+    if (league) q.set("league", league);
+    if (f) q.set("family", f);
+    const qs = q.toString();
+    return `${sportPath("predictions")}${qs ? `?${qs}` : ""}`;
+  };
+  const tab = (active: boolean) =>
+    `shrink-0 border-b-2 px-1 pb-2 text-sm font-semibold transition-colors ${
+      active ? "border-brand text-ink" : "border-transparent text-ink-muted hover:text-ink"
+    }`;
+  return (
+    <nav aria-label="Market" className="no-scrollbar -mx-4 flex items-center gap-5 overflow-x-auto border-b border-line px-4 sm:mx-0 sm:px-0">
+      <Link href={href()} className={tab(!family)} aria-current={!family ? "page" : undefined}>
+        Headline
+      </Link>
+      {ENGINE_GROUPS.map((g) => (
+        <Link key={g.id} href={href(g.id)} className={tab(family === g.id)} aria-current={family === g.id ? "page" : undefined}>
+          {g.label}
+        </Link>
+      ))}
+    </nav>
   );
 }

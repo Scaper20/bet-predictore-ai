@@ -219,3 +219,76 @@ export function gradeLegFull(market: string, ft: { home: number; away: number },
 export function refundShare(price: LegPrice): number {
   return price.push + price.halfWin + price.halfLose;
 }
+
+/** A count grid folded onto what a stat leg reads: the total, each side, and home minus away. */
+interface Marginals {
+  total: number[];
+  home: number[];
+  away: number[];
+  /** Index d + offset is home minus away = d. */
+  diff: number[];
+  offset: number;
+}
+
+function marginalsOf(grid: number[][]): Marginals {
+  const rows = grid.length;
+  const cols = Math.max(0, ...grid.map((r) => r.length));
+  const m: Marginals = { total: Array(rows + cols).fill(0), home: Array(rows).fill(0), away: Array(cols).fill(0), diff: Array(rows + cols).fill(0), offset: cols };
+  for (let i = 0; i < rows; i++) {
+    for (let j = 0; j < grid[i].length; j++) {
+      const p = grid[i][j];
+      if (!(p > 0)) continue;
+      m.total[i + j] += p;
+      m.home[i] += p;
+      m.away[j] += p;
+      m.diff[i - j + cols] += p;
+    }
+  }
+  return m;
+}
+
+function sumMarginal(dist: number[], grade: (k: number) => LegOutcome | null): LegPrice | null {
+  const out = empty();
+  let seen = false;
+  for (let k = 0; k < dist.length; k++) {
+    const p = dist[k];
+    if (!(p > 0)) continue;
+    const g = grade(k);
+    if (!g) return null;
+    out[g] += p;
+    seen = true;
+  }
+  if (!seen) return null;
+  out.survive = out.win + out.halfWin + out.push + out.halfLose;
+  return out;
+}
+
+/**
+ * priceLeg for many corners, shots and shots-on-target legs on one game.
+ *
+ * Every stat leg reads only the total, one side's count, or the difference,
+ * so each grid is folded onto those once and a leg costs a few dozen
+ * additions instead of a grade per cell (a shots grid is 71×71). Each value
+ * is still graded by gradeLeg, so a leg prices exactly as priceLeg prices it;
+ * anything else falls through to priceLeg.
+ */
+export function statLegPricer(ctx: PricingContext): (market: string) => LegPrice | null {
+  const folded = new Map<StatFamily, Marginals>();
+  return (market) => {
+    const family = statFamilyOf(market);
+    const grid = family ? ctx.stats?.[family] : undefined;
+    if (!family || !grid) return priceLeg(market, ctx);
+    let m = folded.get(family);
+    if (!m) folded.set(family, (m = marginalsOf(grid)));
+    const [, a, b] = market.split(":");
+    if (a === "over" || a === "under") return sumMarginal(m.total, (t) => gradeLeg(market, t, 0));
+    if ((a === "home" || a === "away") && (b === "over" || b === "under")) {
+      return a === "home" ? sumMarginal(m.home, (h) => gradeLeg(market, h, 0)) : sumMarginal(m.away, (x) => gradeLeg(market, 0, x));
+    }
+    if (a === "most" || a === "hcp") {
+      const off = m.offset;
+      return sumMarginal(m.diff, (k) => gradeLeg(market, Math.max(k - off, 0), Math.max(off - k, 0)));
+    }
+    return priceLeg(market, ctx);
+  };
+}

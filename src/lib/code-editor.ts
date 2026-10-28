@@ -1,4 +1,5 @@
 import { decide, type Action } from "@/lib/code-editor-policy";
+import { ESTIMATED_MARGIN } from "@/lib/forge";
 import { priceBand, solveOptions } from "@/lib/forge-solve";
 import type { ReadSource } from "@/lib/odds/market-read";
 
@@ -238,9 +239,6 @@ export function targetCode(games: readonly EditorGame[], target: number): EditRe
   // With an estimated pick the total is still worth showing, marked as such.
   return out.odds === null && estimated > 0 ? { ...out, odds: Math.round(odds * 100) / 100, oddsEstimated: true } : out;
 }
-
-/** A typical SportyBet margin on one pick, for a pick whose own price we can't read. */
-const ESTIMATED_MARGIN = 1.07;
 
 /** The editor before code-editor-policy.ts, kept for EDITOR_POLICY=legacy: the most likely pick on every game. */
 export function legacySaferCode(games: readonly EditorGame[]): EditResult {

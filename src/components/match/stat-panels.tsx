@@ -17,8 +17,8 @@ import { Ask, AskList, More, Pick3 } from "@/components/match/likelihood";
 
 function Section({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
   return (
-    <section className="card p-5 sm:p-7">
-      <div className="mb-5 flex items-baseline justify-between gap-3">
+    <section className="card p-4 sm:p-5">
+      <div className="mb-3 flex items-baseline justify-between gap-3">
         <h2 className="font-sans text-sm font-semibold uppercase tracking-wider text-ink-muted">{title}</h2>
         {hint && <span className="shrink-0 text-right text-xs text-ink-dim">{hint}</span>}
       </div>
@@ -28,7 +28,7 @@ function Section({ title, hint, children }: { title: string; hint?: string; chil
 }
 
 function Label({ children }: { children: React.ReactNode }) {
-  return <p className="mb-2 mt-5 text-[11px] font-semibold uppercase tracking-wider text-ink-dim first:mt-0">{children}</p>;
+  return <p className="mb-2 mt-4 text-[11px] font-semibold uppercase tracking-wider text-ink-dim first:mt-0">{children}</p>;
 }
 
 function Note({ children }: { children: React.ReactNode }) {

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getAuditLog } from "@/lib/admin-analytics";
 import { AdminTable, AdminTableHead, AdminTableRow, AdminTableCell } from "@/components/admin/admin-table";
 import { EmptyState } from "@/components/ui/primitives";
+import { requirePermission } from "@/lib/admin";
 
 export const metadata: Metadata = { title: "Audit log" };
 
@@ -10,6 +11,7 @@ export default async function AdminAuditLogPage({
 }: {
   searchParams: Promise<{ page?: string }>;
 }) {
+  await requirePermission("audit.view");
   const { page: pageParam } = await searchParams;
   const page = Math.max(1, Number(pageParam) || 1);
   const { rows, hasMore } = await getAuditLog(page);
@@ -17,7 +19,8 @@ export default async function AdminAuditLogPage({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-display text-2xl font-bold">Audit log</h1>
+        <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-brand">Governance</p>
+        <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight sm:text-[28px]">Audit log</h1>
         <p className="mt-1 text-sm text-ink-muted">Every admin grant, revoke, and ticket action — who did what, when.</p>
       </div>
 

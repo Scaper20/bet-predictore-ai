@@ -11,10 +11,11 @@
  * model, the database or parse.bot. The server side is lib/code-hub-feed.ts.
  */
 
-import { forge, toLeg, type ForgeLeg, type ForgeMarket, type ForgeRisk, type ForgeSettings, type PoolEntry } from "@/lib/forge";
+import { forge, oddsOf, toLeg, type ForgeLeg, type ForgeMarket, type ForgeRisk, type ForgeSettings, type PoolEntry } from "@/lib/forge";
 import { isQuotable } from "@/lib/odds/markets";
 import { twinsOf } from "@/lib/odds/bookable";
-import { isPausedPick } from "@/lib/model/paused";
+import { pausedByRule } from "@/lib/model/paused";
+import { override } from "@/lib/model/selections";
 import { COMBO_PREFIX, gradeMarket } from "@/lib/slip-tracker";
 
 /* ------------------------------------------------------------------ tiers */
@@ -60,7 +61,7 @@ export const HUB_TIERS: HubTier[] = [
   { id: "3", target: 3, games: 3, risk: "safe", name: "Solid 3", blurb: "Short prices, a little more reward", days: 1 },
   { id: "5", target: 5, games: 4, risk: "balanced", name: "Balanced 5", blurb: "The everyday combo", days: 1 },
   { id: "10", target: 10, games: 5, risk: "balanced", name: "Stretch 10", blurb: "Longer, still built on strong reads", days: 1 },
-  { id: "20", target: 20, games: 7, risk: "balanced", name: "Long shot 20", blurb: "Seven to nine strong reads, lands least often of the day", days: 1 },
+  { id: "20", target: 20, games: 7, risk: "balanced", name: "Long shot 20", blurb: "Seven to eleven strong reads, lands least often of the day", days: 1 },
   { id: "50", target: 50, games: 9, risk: "balanced", name: "Four-day 50", blurb: "Up to four days of games, nine to eleven strong reads", days: 4, retired: true },
   { id: "100", target: 100, games: 11, risk: "balanced", name: "Four-day 100", blurb: "Up to four days of games, eleven to thirteen strong reads", days: 4, retired: true },
 ];
@@ -86,11 +87,11 @@ export function hubStrategy(tier: Pick<HubTier, "target">): "flex" | "count" {
 /**
  * The lengths a tier's code may take: a flexible code from one game under its
  * usual count (never a single) up to HUB_EXTRA_GAMES over, a counted one from
- * its count up to HUB_EXTRA_GAMES over.
+ * its count up to HUB_COUNT_EXTRA_GAMES over.
  */
 export function hubGameRange(tier: Pick<HubTier, "games" | "target">): [number, number] {
-  const fewest = hubStrategy(tier) === "flex" ? Math.max(2, tier.games - 1) : tier.games;
-  return [fewest, tier.games + HUB_EXTRA_GAMES];
+  const flex = hubStrategy(tier) === "flex";
+  return [flex ? Math.max(2, tier.games - 1) : tier.games, tier.games + (flex ? HUB_EXTRA_GAMES : HUB_COUNT_EXTRA_GAMES)];
 }
 
 /* -------------------------------------------------------------- building */
@@ -143,6 +144,13 @@ export const HUB_MIN_TARGET_SHARE = 0.9;
  * beat leaving the tier out.
  */
 export const HUB_EXTRA_GAMES = 2;
+/**
+ * The 10 and 20 may add more. Built to SportyBet's prices rather than fair
+ * odds (28 Oct 2026), a 20 at two extra games was never reached in a year's
+ * replay (scripts/decision-lab.ts --hub=18) and a 10 on 87 days of 225; at
+ * four, on 73 and 117 days, loading at 19.4 and 9.7 on average.
+ */
+export const HUB_COUNT_EXTRA_GAMES = 4;
 
 /** The Forge markets the hub asks candidatesFor for; hubMarketAllowed narrows them. */
 export const HUB_FORGE_MARKETS: ForgeMarket[] = ["result", "double_chance", "goals", "handicap"];
@@ -160,13 +168,21 @@ export const HUB_FORGE_MARKETS: ForgeMarket[] = ["result", "double_chance", "goa
  * others. Unders are paused everywhere for now (model/paused.ts).
  */
 export function hubMarketAllowed(market: string): boolean {
+  // Switched by the owner (model/selections.ts) before the rules below.
+  const o = override(market, "codeHub");
+  if (o !== undefined) return o;
+  return hubByRule(market);
+}
+
+/** Whether the rules in code let a code carry this market, whatever the owner has switched. */
+export function hubByRule(market: string): boolean {
   const [family, side, line] = market.split(":");
   if (family === "1x2" || family === "dc") return true;
   // The three-way handicap SportyBet lists in place of a big Asian line wins
   // on exactly the same results (odds/bookable.ts), so it follows that line.
   if (family === "eh") return twinsOf(market).some((t) => t.market.startsWith("ah:") && hubMarketAllowed(t.market));
   // Only +-0.5 while the goal-or-more lines are paused (model/paused.ts).
-  if (family === "ah") return Math.abs((Number(line) * 2) % 2) === 1 && !isPausedPick(market);
+  if (family === "ah") return Math.abs((Number(line) * 2) % 2) === 1 && !pausedByRule(market);
   return family === "ou" && side === "over" && line === "1.5";
 }
 
@@ -255,14 +271,14 @@ export function buildHub(
     const strategy = options.strategy ?? hubStrategy(tier);
     if (strategy === "best") legs = compileBest(pool, tier.target, [...uses.keys()], { ...options, maxLegs: options.maxLegs ?? tier.games + HUB_EXTRA_GAMES });
     if (strategy === "flex") legs = compileFlex(pool, tier, [...uses.keys()], seed + Number(tier.id), options);
-    for (let games = tier.games; strategy === "count" && games <= tier.games + HUB_EXTRA_GAMES && !legs; games++) {
+    for (let games = tier.games; strategy === "count" && games <= tier.games + (options.extraGames ?? HUB_COUNT_EXTRA_GAMES) && !legs; games++) {
       const built = forge(pool, { ...hubSettings(tier), games }, {
         locked: [],
         removed: [],
         avoid: [...uses.keys()],
         seed: seed + Number(tier.id),
       }).legs;
-      if (built.length >= games && hubTotals(built).odds >= HUB_MIN_TARGET_SHARE * tier.target) legs = built;
+      if (built.length >= games && buildOdds(built) >= HUB_MIN_TARGET_SHARE * tier.target) legs = built;
     }
     if (!legs) continue;
     for (const l of legs) {
@@ -290,6 +306,8 @@ export interface HubBuildOptions {
   /** Legs shorter than this add risk without adding odds. */
   minLegOdds?: number;
   maxLegs?: number;
+  /** "count" only: games a tier may add over its usual count (HUB_COUNT_EXTRA_GAMES), for the lab. */
+  extraGames?: number;
   /**
    * "best" only: raise the shortest leg allowed to what the code's odds need
    * inside its game limit, Forge's rule (forge.ts forgeBest), so a long code
@@ -312,7 +330,7 @@ export function compileBest(pool: PoolEntry[], target: number, avoid: string[], 
   const avoided = new Set(avoid);
   const ranked = pool
     .flatMap((e) => {
-      const options_ = e.candidates.filter((c) => c.fairOdds >= minOdds);
+      const options_ = e.candidates.filter((c) => oddsOf(c) >= minOdds);
       if (options_.length === 0) return [];
       const best = options_.reduce((a, b) => (quality(b.market, b.probability) > quality(a.market, a.probability) ? b : a));
       // A game a shorter code already uses ranks a little lower, so codes spread.
@@ -324,9 +342,9 @@ export function compileBest(pool: PoolEntry[], target: number, avoid: string[], 
   let odds = 1;
   for (const r of ranked) {
     if (odds >= HUB_MIN_TARGET_SHARE * target || legs.length >= maxLegs) break;
-    if (odds * r.c.fairOdds > target * 1.3) continue;
+    if (odds * oddsOf(r.c) > target * 1.3) continue;
     legs.push(toLeg(r.entry, r.c));
-    odds *= r.c.fairOdds;
+    odds *= oddsOf(r.c);
   }
   return odds >= HUB_MIN_TARGET_SHARE * target ? legs.sort((a, b) => Date.parse(a.kickoff) - Date.parse(b.kickoff)) : null;
 }
@@ -346,7 +364,7 @@ export function compileFlex(pool: PoolEntry[], tier: HubTier, avoid: string[], s
   for (let games = fewest; games <= most; games++) {
     const legs = forge(pool, { ...hubSettings(tier), games }, { locked: [], removed: [], avoid, seed }).legs;
     if (legs.length < games) continue;
-    const odds = hubTotals(legs).odds;
+    const odds = buildOdds(legs);
     if (odds < HUB_MIN_TARGET_SHARE * tier.target || odds > tier.target * 1.3) continue;
     const weakest = Math.min(...legs.map((l) => quality(l.market, l.probability)));
     if (!best || weakest > best.weakest + 1e-9) best = { legs, weakest };
@@ -355,6 +373,14 @@ export function compileFlex(pool: PoolEntry[], tier: HubTier, avoid: string[], s
 }
 
 /* ---------------------------------------------------------------- totals */
+
+/**
+ * What a code will load at on SportyBet while it is being built: each leg's
+ * SportyBet price, or its fair odds less a typical margin where the board
+ * has none (forge.ts oddsOf). Every gate against a tier's odds uses this, so
+ * a "10" is a 10 at SportyBet's prices, not the model's.
+ */
+export const buildOdds = (legs: readonly Pick<ForgeLeg, "price" | "fairOdds">[]) => legs.reduce((o, l) => o * oddsOf(l), 1);
 
 export const hubLegOdds = (l: Pick<HubLeg, "price" | "fairOdds">) => l.price ?? l.fairOdds;
 

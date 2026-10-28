@@ -11,6 +11,7 @@ import { pickTier } from "@/lib/model/tiers";
 import { leagueByCode } from "@/lib/leagues";
 import { newMarketShadow, shadowPicks } from "@/lib/model/shadow";
 import { marketTotalPicks } from "@/lib/model/market-total";
+import type { EnginePick } from "@/lib/model/headline-engine";
 
 // Runs the football providers and Supabase's service-role client — both
 // Node-only. Proxy (src/proxy.ts) doesn't touch /api/ at all, so no session
@@ -192,6 +193,41 @@ async function logUpcomingPicks(admin: ReturnType<typeof supabaseAdmin>): Promis
     );
   if (newMarkets.length > 0) {
     await admin.from("shadow_picks").upsert(newMarkets, { onConflict: "match_id,market" }).then(
+      () => undefined,
+      () => undefined,
+    );
+  }
+  // The headline engine's read (0082): its headline in shadow beside the
+  // published one, and its best pick per group. Own call, best effort.
+  const engine = predictions
+    .filter((p) => p.sufficiency.publishable && p.topPick && p.engine)
+    .flatMap((p) => {
+      const base = {
+        match_id: p.match.id,
+        published_market: p.topPick!.market,
+        league_code: p.match.league.code ?? null,
+        home_name: p.match.home.name,
+        away_name: p.match.away.name,
+        kickoff: p.match.kickoff,
+        logged_at: new Date().toISOString(),
+      };
+      const row = (slot: string, e: EnginePick) => ({
+        ...base,
+        slot,
+        market: e.market,
+        label: e.label,
+        family: e.family,
+        probability: e.probability,
+        calibrated: e.calibrated,
+        market_prob: e.marketChance !== null ? Math.round(e.marketChance * 10_000) / 10_000 : null,
+        price: e.price,
+        load_price: e.loadPrice,
+      });
+      const { headline, groups } = p.engine!;
+      return [...(headline ? [row("headline", headline)] : []), ...groups.map((g) => row(g.group, g))];
+    });
+  if (engine.length > 0) {
+    await admin.from("engine_picks").upsert(engine, { onConflict: "match_id,slot" }).then(
       () => undefined,
       () => undefined,
     );

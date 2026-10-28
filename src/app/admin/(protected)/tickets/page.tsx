@@ -3,6 +3,8 @@ import Link from "next/link";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { AdminTable, AdminTableHead, AdminTableRow, AdminTableCell } from "@/components/admin/admin-table";
 import { Badge, EmptyState, type Tone } from "@/components/ui/primitives";
+import { requirePermission } from "@/lib/admin";
+import { emailView } from "@/lib/admin-access";
 
 export const metadata: Metadata = { title: "Tickets" };
 
@@ -30,6 +32,8 @@ export default async function AdminTicketsPage({
 }: {
   searchParams: Promise<{ status?: string }>;
 }) {
+  const me = await requirePermission("support.view");
+  const showEmail = emailView(me.roles);
   const { status: statusParam } = await searchParams;
   const status = isStatusFilter(statusParam) ? statusParam : undefined;
 
@@ -51,7 +55,10 @@ export default async function AdminTicketsPage({
 
   return (
     <div className="space-y-6">
-      <h1 className="font-display text-2xl font-bold">Tickets</h1>
+      <div>
+        <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-brand">Customers</p>
+        <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight sm:text-[28px]">Tickets</h1>
+      </div>
 
       <div className="flex flex-wrap gap-2">
         <Link
@@ -89,7 +96,7 @@ export default async function AdminTicketsPage({
                     </Badge>
                   </div>
                   <div className="mt-2 flex justify-between text-xs text-ink-muted">
-                    <span className="truncate">{profile?.email ?? (t.guest_email ? `${t.guest_email} (guest)` : "—")}</span>
+                    <span className="truncate">{showEmail(profile?.email) ?? (t.guest_email ? `${showEmail(t.guest_email)} (guest)` : "—")}</span>
                     <span className="shrink-0">
                       {new Date(t.updated_at).toLocaleString("en-NG", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
                     </span>
@@ -113,7 +120,7 @@ export default async function AdminTicketsPage({
                           {t.subject}
                         </Link>
                       </AdminTableCell>
-                      <AdminTableCell className="text-ink-muted">{profile?.email ?? (t.guest_email ? `${t.guest_email} (guest)` : "—")}</AdminTableCell>
+                      <AdminTableCell className="text-ink-muted">{showEmail(profile?.email) ?? (t.guest_email ? `${showEmail(t.guest_email)} (guest)` : "—")}</AdminTableCell>
                       <AdminTableCell>
                         <Badge tone={STATUS_TONE[t.status] ?? "neutral"}>{t.status}</Badge>
                       </AdminTableCell>

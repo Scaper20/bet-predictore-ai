@@ -1,4 +1,4 @@
-import { checkAdmin, logAdminAction } from "@/lib/admin";
+import { checkPermission, logAdminAction } from "@/lib/admin";
 import { getPayoutSheet } from "@/lib/partners-feed";
 import { payoutCsv } from "@/lib/partners";
 
@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 /** The bank-transfer sheet for everyone due a payout now. Route handlers get no layout gating, so the gate is here. */
 export async function GET() {
-  const gate = await checkAdmin();
+  const gate = await checkPermission("partners.payout");
   if (!gate.ok) return new Response(gate.error, { status: gate.status });
 
   const lines = await getPayoutSheet();

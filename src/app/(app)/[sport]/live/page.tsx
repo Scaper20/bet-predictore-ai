@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
+import { ProjectedMatchdayStat } from "@/components/match/matchday-stats";
 import { PageHeader } from "@/components/ui/page-header";
 import { LiveBoard } from "@/components/match/live-board";
 import { CoverageNotice } from "@/components/ui/coverage-notice";
@@ -92,6 +94,13 @@ export default async function ScoresPage({ searchParams }: { searchParams: Promi
         eyebrow="Scores"
         title={def && view !== "live" ? `${def.name} ${t.title.toLowerCase()}` : t.title}
         description={t.description}
+        actions={
+          view === "fixtures" ? (
+            <Suspense fallback={null}>
+              <ProjectedMatchdayStat league={def?.code} />
+            </Suspense>
+          ) : undefined
+        }
       />
       <div className={`${containerClass()} space-y-6 py-6 sm:py-8`}>
         <UrlTabs ariaLabel="Scores" value={view} tabs={tabs} className="max-w-md" />

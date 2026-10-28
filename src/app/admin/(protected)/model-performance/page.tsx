@@ -4,17 +4,28 @@ import { StatCard } from "@/components/admin/stat-card";
 import { EmptyState } from "@/components/ui/primitives";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { pairedLogLoss, priceSkill, type PriceSkill, type PricedOutcome } from "@/lib/odds/price-skill";
+import { requirePermission } from "@/lib/admin";
+import { can } from "@/lib/admin-access";
+import { switchesFresh } from "@/lib/switches";
+import { summariseEngine, type EngineLogRow, type EngineRecord, type PublishedLogRow } from "@/lib/engine-record";
+import { EngineSection } from "@/components/admin/engine-section";
 
 export const metadata: Metadata = { title: "Model performance" };
 
 export default async function ModelPerformancePage() {
-  const [perf, shadow, prices] = await Promise.all([getModelPerformance(), getShadowRecord(), getPriceRecord()]);
+  const identity = await requirePermission("model.view");
+  const [perf, shadow, prices, engine, sw, accuracy] = await Promise.all([getModelPerformance(), getShadowRecord(), getPriceRecord(), getEngineRecord(), switchesFresh(), getMarketAccuracy()]);
+  const engineSection = <EngineSection record={engine} enabled={sw.headline_engine.enabled} canSwitch={can(identity.roles, "model.manage")} />;
   const totalSettled = perf.overall.wins + perf.overall.losses + perf.overall.pushes;
 
   if (totalSettled === 0) {
     return (
       <div className="space-y-6">
-        <h1 className="font-display text-2xl font-bold">Model performance</h1>
+        <div>
+          <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-brand">Product</p>
+          <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight sm:text-[28px]">Model performance</h1>
+        </div>
+        {engineSection}
         <EmptyState
           icon="📊"
           title="No settled picks yet"
@@ -26,9 +37,16 @@ export default async function ModelPerformancePage() {
 
   return (
     <div className="space-y-8">
-      <h1 className="font-display text-2xl font-bold">Model performance</h1>
+      <div>
+        <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-brand">Product</p>
+        <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight sm:text-[28px]">Model performance</h1>
+      </div>
+
+      {engineSection}
 
       <PricesSection data={prices} />
+
+      <MarketAccuracySection rows={accuracy} />
 
       <ShadowSection rows={shadow.filter((r) => r.reason !== "market-total")} />
 
@@ -71,6 +89,43 @@ export default async function ModelPerformancePage() {
       </section>
     </div>
   );
+}
+
+/** The engine's log and the published headlines on the same games, newest 3,000. */
+async function getEngineRecord(): Promise<EngineRecord> {
+  try {
+    const db = supabaseAdmin();
+    const { data: rows } = await db
+      .from("engine_picks")
+      .select("match_id, slot, market, family, calibrated, load_price, result, logged_at")
+      .order("kickoff", { ascending: false })
+      .limit(3000);
+    const engineRows: EngineLogRow[] = (rows ?? []).map((r) => ({
+      ...(r as Omit<EngineLogRow, "calibrated" | "load_price">),
+      calibrated: Number(r.calibrated),
+      load_price: Number(r.load_price),
+    }));
+    const ids = [...new Set(engineRows.filter((r) => r.slot === "headline").map((r) => r.match_id))];
+    const published: PublishedLogRow[] = [];
+    for (let i = 0; i < ids.length; i += 300) {
+      const { data } = await db
+        .from("predictions_log")
+        .select("match_id, market, probability, price_at_publish, result")
+        .in("match_id", ids.slice(i, i + 300));
+      for (const p of data ?? []) {
+        published.push({
+          match_id: p.match_id as string,
+          market: p.market as string,
+          probability: Number(p.probability),
+          price_at_publish: p.price_at_publish === null ? null : Number(p.price_at_publish),
+          result: p.result as PublishedLogRow["result"],
+        });
+      }
+    }
+    return summariseEngine(engineRows, published);
+  } catch {
+    return summariseEngine([], []);
+  }
 }
 
 interface ShadowRow {
@@ -353,5 +408,87 @@ function CalibrationBar({ label, value, tone }: { label: string; value: number; 
         <div className={`h-full rounded-full ${tone === "cyan" ? "bg-cyan" : "bg-brand"}`} style={{ width: `${value * 100}%` }} />
       </div>
     </div>
+  );
+}
+
+interface MarketAccuracyRow {
+  market_key: string;
+  lines: number;
+  stated: number;
+  landed: number;
+  brier: number;
+  skill: number | null;
+  picks: number;
+  picks_landed: number | null;
+  picks_stated: number | null;
+  updated_at: string;
+}
+
+/** The replay of every SportyBet market we price (scripts/market-accuracy.ts, 0085). */
+async function getMarketAccuracy(): Promise<MarketAccuracyRow[]> {
+  try {
+    const { data } = await supabaseAdmin().from("market_accuracy").select("*").order("market_key");
+    return (data ?? []).map((r) => ({
+      ...(r as MarketAccuracyRow),
+      stated: Number(r.stated),
+      landed: Number(r.landed),
+      brier: Number(r.brier),
+      skill: r.skill === null ? null : Number(r.skill),
+      picks_landed: r.picks_landed === null ? null : Number(r.picks_landed),
+      picks_stated: r.picks_stated === null ? null : Number(r.picks_stated),
+    }));
+  } catch {
+    return [];
+  }
+}
+
+function MarketAccuracySection({ rows }: { rows: MarketAccuracyRow[] }) {
+  if (rows.length === 0) return null;
+  const pct = (v: number) => `${(v * 100).toFixed(1)}%`;
+  return (
+    <section className="card p-5 sm:p-6">
+      <h2 className="mb-1 font-sans text-sm font-semibold uppercase tracking-wider text-ink-muted">Every market, replayed</h2>
+      <p className="mb-5 max-w-3xl text-xs leading-relaxed text-ink-dim">
+        Every prediction made before its game, July 2025 on, 17 divisions, on the lines SportyBet sets. Skill is how much
+        better than a naive read the model scores (each club&rsquo;s own averages for corners and shots; the closing market
+        for result, double chance and 2.5 goals). The right-hand columns are what a published pick would be: lines the model
+        rated 70-85%. Updated {new Date(rows[0].updated_at).toLocaleDateString("en-GB")}; per-club figures are in team_accuracy.
+      </p>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[40rem] text-left text-xs">
+          <thead className="text-ink-dim">
+            <tr className="border-b border-line">
+              <th className="py-2 pr-3 font-medium">Market</th>
+              <th className="py-2 pr-3 text-right font-medium">Lines</th>
+              <th className="py-2 pr-3 text-right font-medium">Stated</th>
+              <th className="py-2 pr-3 text-right font-medium">Landed</th>
+              <th className="py-2 pr-3 text-right font-medium">Skill</th>
+              <th className="py-2 pr-3 text-right font-medium">70-85% picks</th>
+              <th className="py-2 text-right font-medium">Landed / stated</th>
+            </tr>
+          </thead>
+          <tbody className="tnum font-mono">
+            {rows.map((r) => {
+              const gap = r.picks_landed !== null && r.picks_stated !== null ? r.picks_landed - r.picks_stated : null;
+              return (
+                <tr key={r.market_key} className="border-b border-line/60">
+                  <td className="py-1.5 pr-3 font-sans font-semibold text-ink">{r.market_key}</td>
+                  <td className="py-1.5 pr-3 text-right text-ink-muted">{r.lines.toLocaleString()}</td>
+                  <td className="py-1.5 pr-3 text-right text-ink-muted">{pct(r.stated)}</td>
+                  <td className="py-1.5 pr-3 text-right">{pct(r.landed)}</td>
+                  <td className={`py-1.5 pr-3 text-right ${r.skill === null ? "text-ink-dim" : r.skill > 0 ? "text-brand" : "text-rose"}`}>
+                    {r.skill === null ? "—" : `${r.skill > 0 ? "+" : ""}${(r.skill * 100).toFixed(1)}%`}
+                  </td>
+                  <td className="py-1.5 pr-3 text-right text-ink-muted">{r.picks.toLocaleString()}</td>
+                  <td className={`py-1.5 text-right ${gap === null || r.picks < 100 ? "text-ink-dim" : gap >= 0 ? "text-brand" : gap < -0.02 ? "text-rose" : "text-ink"}`}>
+                    {r.picks_landed === null ? "—" : `${pct(r.picks_landed)} / ${pct(r.picks_stated ?? 0)}`}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </section>
   );
 }

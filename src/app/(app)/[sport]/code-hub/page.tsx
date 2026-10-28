@@ -12,6 +12,7 @@ import { GENERATOR_ALLOWANCE } from "@/lib/code-hub-plans";
 import { bookingAvailable } from "@/lib/odds/booking-code";
 import { WaitlistWall } from "@/components/code-hub/waitlist-wall";
 import { HubTabs } from "@/components/code-hub/hub-tabs";
+import { ChipTabs } from "@/components/ui/chip-tabs";
 import { hubGate, onWaitlist } from "@/lib/code-hub-gate";
 
 export const metadata: Metadata = {
@@ -48,13 +49,15 @@ export default async function CodeHubPage() {
   const missed = (c: (typeof all)[number]) =>
     hubStatus(c.legs.map((l) => hubLegResult(l, scores[l.matchId])), c.firstKickoff, now) === "lost";
   const codes = all.filter((c) => !missed(c));
-  // The record: earlier codes that landed, newest first. Their games are over, so they are open to everyone.
-  const landed = past.days.flatMap((d) =>
-    d.codes.flatMap((c) => {
-      const results = c.legs.map((l) => hubLegResult(l, past.scores[l.matchId]));
-      return hubStatus(results, c.firstKickoff, now) === "won" ? [{ code: c, results }] : [];
-    }),
-  );
+  // The record, newest first, won and lost alike: earlier codes whose games
+  // are over, and today's or running codes already beaten by a leg. Settled,
+  // so open to everyone.
+  const settled = [
+    ...all.filter(missed).map((c) => ({ code: c, results: c.legs.map((l) => hubLegResult(l, scores[l.matchId])) })),
+    ...past.days.flatMap((d) => d.codes.map((c) => ({ code: c, results: c.legs.map((l) => hubLegResult(l, past.scores[l.matchId])) }))),
+  ].map((x) => ({ ...x, status: hubStatus(x.results, x.code.firstKickoff, now) }));
+  const landed = settled.filter((x) => x.status === "won");
+  const lost = settled.filter((x) => x.status === "lost");
 
   return (
     <>
@@ -112,39 +115,24 @@ export default async function CodeHubPage() {
           )}
         </section>
 
-        {landed.length > 0 && (
-          <section aria-labelledby="landed-heading">
-            <details className="group/landed" open>
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 py-1 [&::-webkit-details-marker]:hidden">
-                <h2 id="landed-heading" className="font-display text-lg font-bold text-ink">
-                  Landed in the last 7 days{" "}
-                  <span className="ml-1 rounded-full bg-brand/15 px-2 py-0.5 align-middle text-xs font-semibold text-brand">
-                    {landed.length}
-                  </span>
-                </h2>
-                <span aria-hidden className="text-ink-dim transition-transform group-open/landed:rotate-180">
-                  ▾
-                </span>
-              </summary>
-              <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                {landed.map(({ code: c, results }) => (
-                  <HubCard
-                    key={`${c.day}-${c.tier}`}
-                    settledOn={shortDay(c.day)}
-                    tier={c.tier}
-                    legs={c.legs}
-                    odds={c.odds}
-                    probability={c.probability}
-                    firstKickoff={c.firstKickoff}
-                    access="open"
-                    status="won"
-                    results={results}
-                    code={{ state: "closed" }}
-                    preview={false}
-                  />
-                ))}
-              </div>
-            </details>
+        {landed.length + lost.length > 0 && (
+          <section aria-labelledby="results-heading" className="space-y-3">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <h2 id="results-heading" className="font-display text-lg font-bold text-ink">
+                Results, last 7 days
+              </h2>
+              <p className="tnum text-sm text-ink-muted">
+                <span className="font-semibold text-brand">{landed.length} won</span> ·{" "}
+                <span className="font-semibold text-rose">{lost.length} lost</span> · {Math.round((100 * landed.length) / (landed.length + lost.length))}% landed
+              </p>
+            </div>
+            <ChipTabs
+              ariaLabel="Results"
+              sections={[
+                { key: "won", label: `Won · ${landed.length}`, node: <ResultGrid items={landed} empty="No code landed in the last 7 days." /> },
+                { key: "lost", label: `Lost · ${lost.length}`, node: <ResultGrid items={lost} empty="No code lost in the last 7 days." /> },
+              ]}
+            />
           </section>
         )}
 
@@ -167,6 +155,33 @@ export default async function CodeHubPage() {
         </section>
       </Container>
     </>
+  );
+}
+
+type Settled = { code: Awaited<ReturnType<typeof todayHub>>["codes"][number]; results: ReturnType<typeof hubLegResult>[]; status: "won" | "lost" | "live" | "pending" };
+
+/** Settled codes, each with its games and how every leg went. */
+function ResultGrid({ items, empty }: { items: Settled[]; empty: string }) {
+  if (items.length === 0) return <p className="card p-5 text-sm text-ink-dim">{empty}</p>;
+  return (
+    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      {items.map(({ code: c, results, status }) => (
+        <HubCard
+          key={`${c.day}-${c.tier}`}
+          settledOn={shortDay(c.day)}
+          tier={c.tier}
+          legs={c.legs}
+          odds={c.odds}
+          probability={c.probability}
+          firstKickoff={c.firstKickoff}
+          access="open"
+          status={status}
+          results={results}
+          code={{ state: "closed" }}
+          preview={false}
+        />
+      ))}
+    </div>
   );
 }
 

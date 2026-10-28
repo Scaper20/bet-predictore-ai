@@ -10,7 +10,9 @@
 
 import { calibrateResult, type ResultCalibration } from "./result-calibration";
 import { sweetSpotPick } from "./sweet-spots";
-import { isPausedPick, PAUSED_PICK_MARKETS } from "./paused";
+import { pausedByRule, PAUSED_PICK_MARKETS } from "./paused";
+import { override } from "./selections";
+import type { EngineRead } from "./headline-engine";
 import type { Match, ResultRow } from "@/lib/types";
 import { leagueByCode, type LeagueDef } from "@/lib/leagues";
 import {
@@ -88,8 +90,18 @@ export interface Prediction {
   topPick: Pick | null;
   /** True when topPick came from a sweet spot (sweet-spots.ts) rather than the usual ranking. */
   sweetSpot?: boolean;
-  /** The model's own top pick, set aside because SportyBet rated it well below the model (market-check.ts). */
-  marketCheck?: { setAside: Pick; marketChance: number };
+  /**
+   * The model's own top pick, set aside (market-check.ts): SportyBet rated it
+   * well below the model ("market", with SportyBet's chance), or SportyBet
+   * doesn't list its line on this game ("unlisted").
+   */
+  marketCheck?: { setAside: Pick; marketChance: number | null; reason?: "market" | "unlisted" };
+  /**
+   * The headline engine's read (headline-engine.ts): its own headline and the
+   * best pick in each group. Set wherever the game was checked against
+   * SportyBet's board (service.ts marketChecked).
+   */
+  engine?: EngineRead;
   /** What in the data the model is reacting to; see insights.ts. */
   insights: Insight[];
   /** Whether there is enough real history to stand behind this prediction. */
@@ -378,7 +390,7 @@ export function inflateDraws(grid: number[][], factor: number): number[][] {
  * much evidence sits behind it. A 70% probability off six matches of history
  * should not read the same as a 70% probability off two full seasons.
  */
-function confidenceFor(probability: number, dataQuality: number, uncertainty: number): number {
+export function confidenceFor(probability: number, dataQuality: number, uncertainty: number): number {
   // Probability contributes most, but is discounted when the 1X2 spread is
   // near-uniform and when the underlying sample is thin.
   const evidence = 0.55 + 0.45 * (dataQuality / 100);
@@ -616,9 +628,17 @@ export const HEADLINE_MIN_PROBABILITY: Readonly<Record<string, number>> = {
 
 export function headlineEligible(p: Pick): boolean {
   if (p.probability > HEADLINE_MAX_PROBABILITY) return false;
+  // Switched by the owner (model/selections.ts): on is eligible under the same cap, off never.
+  const o = override(p.market, "headline");
+  if (o !== undefined) return o;
   if (p.probability < (HEADLINE_MIN_PROBABILITY[p.market] ?? 0)) return false;
-  if (isPausedPick(p.market)) return false;
-  const [family, , line] = p.market.split(":");
+  return headlineByRule(p.market);
+}
+
+/** Whether the rules in code let this market head a prediction, whatever the owner has switched. */
+export function headlineByRule(market: string): boolean {
+  if (pausedByRule(market)) return false;
+  const [family, , line] = market.split(":");
   if (family === "1x2" || family === "dc") return true;
   return family === "ou" && (line === "1.5" || line === "2.5" || line === "3.5");
 }

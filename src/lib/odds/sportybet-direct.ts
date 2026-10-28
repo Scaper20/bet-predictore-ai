@@ -107,7 +107,11 @@ async function call(path: string, init: { method?: "GET" | "POST"; body?: unknow
       headers: init.body !== undefined ? { ...HEADERS, "Content-Type": "application/json" } : HEADERS,
       body: init.body !== undefined ? JSON.stringify(init.body) : undefined,
       signal: AbortSignal.timeout(TIMEOUT_MS),
-      cache: "no-store",
+      // No `cache` option on purpose, as in providers/http.ts. Next's default
+      // still fetches fresh every time and stores nothing, but "no-store"
+      // turned an ISR page (home, trends) dynamic mid-render whenever it
+      // refreshed a stale board: "Page changed from static to dynamic at
+      // runtime", a failed regeneration and a slower page.
     }).catch((err: unknown) => {
       health.failedAt = Date.now();
       health.reason = err instanceof Error && err.name === "TimeoutError" ? "timeout" : "network";

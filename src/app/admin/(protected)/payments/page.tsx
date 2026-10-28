@@ -3,6 +3,7 @@ import { getPayments } from "@/lib/admin-analytics";
 import { AdminTable, AdminTableHead, AdminTableRow, AdminTableCell } from "@/components/admin/admin-table";
 import { ExpirePaymentsButton } from "@/components/admin/expire-payments-button";
 import { Badge, EmptyState, type Tone } from "@/components/ui/primitives";
+import { requirePermission } from "@/lib/admin";
 
 export const metadata: Metadata = { title: "Payments" };
 
@@ -13,6 +14,7 @@ export default async function AdminPaymentsPage({
 }: {
   searchParams: Promise<{ page?: string }>;
 }) {
+  await requirePermission("finance.view");
   const { page: pageParam } = await searchParams;
   const page = Math.max(1, Number(pageParam) || 1);
   const { rows, hasMore } = await getPayments(page);
@@ -21,7 +23,8 @@ export default async function AdminPaymentsPage({
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-bold">Payments</h1>
+          <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-brand">Business</p>
+          <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight sm:text-[28px]">Payments</h1>
           <p className="mt-1 text-sm text-ink-muted">
             A checkout that never got a Paystack webhook automatically flips from pending to failed after 24h.
           </p>

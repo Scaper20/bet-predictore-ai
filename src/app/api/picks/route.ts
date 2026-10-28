@@ -17,6 +17,7 @@ export async function GET(request: Request) {
     tier: url.searchParams.get("tier"),
     risk: url.searchParams.get("risk"),
     sort: url.searchParams.get("sort"),
+    family: url.searchParams.get("family"),
   });
   const offset = Math.max(0, Number.parseInt(url.searchParams.get("offset") ?? "0", 10) || 0);
   const preferences = await getPreferences();

@@ -2,6 +2,7 @@ import type { Pick, Prediction } from "@/lib/model/predict";
 import type { MarketProbabilities } from "@/lib/model/poisson";
 import { isStrong } from "@/lib/model/tiers";
 import { isProLeague } from "@/lib/pro-leagues";
+import type { EngineGroup } from "@/lib/model/headline-engine";
 
 /**
  * What each viewer may see.
@@ -101,6 +102,20 @@ function lockMarkets(m: MarketProbabilities): MarketProbabilities {
 export interface ViewedPrediction extends Prediction {
   /** proLeague: locked because the match is in a Pro league before kick-off. */
   locked: { pick: boolean; markets: boolean; proLeague?: boolean };
+  /** The "More predictions" groups held back from this viewer: named, never shown. */
+  lockedGroups?: EngineGroup[];
+}
+
+/**
+ * The engine's read as a viewer may have it. Its own headline is never sent
+ * (in shadow it is unpublished; switched on it is already the top pick).
+ * Pro gets every group's pick; a free viewer the strongest one, the rest
+ * named and locked; a locked Pro-league game none.
+ */
+function viewEngine(p: Prediction, open: number): { engine: Prediction["engine"]; lockedGroups: EngineGroup[] | undefined } {
+  if (!p.engine) return { engine: undefined, lockedGroups: undefined };
+  const groups = p.engine.groups;
+  return { engine: { headline: null, groups: groups.slice(0, open) }, lockedGroups: groups.slice(open).map((g) => g.group) };
 }
 
 /**
@@ -143,6 +158,7 @@ function proLeagueView(p: Prediction): ViewedPrediction {
     topPick: p.topPick ? lockPick(p.topPick, p.match.league.code) : null,
     // The pick set aside names a selection too.
     marketCheck: undefined,
+    ...viewEngine(p, 0),
     locked: { pick: true, markets: true, proLeague: true },
   };
 }
@@ -151,12 +167,15 @@ function proLeagueView(p: Prediction): ViewedPrediction {
  * The site's view: everything for everyone, except the Pro extras (Asian
  * handicap and the half-by-half markets), stripped for a free viewer.
  */
+/** "More predictions" a free viewer sees on a game: the strongest group's pick. */
+export const FREE_GROUP_PICKS = 1;
+
 export function viewPrediction(p: Prediction, viewer: Viewer, now = Date.now()): ViewedPrediction {
-  if (viewer.paid) return { ...p, locked: { pick: false, markets: false } };
+  if (viewer.paid) return { ...p, ...viewEngine(p, Infinity), locked: { pick: false, markets: false } };
   if (proLeagueLocked(p.match, viewer, now)) return proLeagueView(p);
   const { halves: _halves, ...markets } = p.markets;
   void _halves;
-  return { ...p, markets, asianHandicap: [], locked: { pick: false, markets: false } };
+  return { ...p, markets, asianHandicap: [], ...viewEngine(p, FREE_GROUP_PICKS), locked: { pick: false, markets: false } };
 }
 
 /**
@@ -164,7 +183,7 @@ export function viewPrediction(p: Prediction, viewer: Viewer, now = Date.now()):
  * headline pick only when it is 1X2 or one of today's free picks.
  */
 export function toolView(p: Prediction, viewer: Viewer, now = Date.now()): ViewedPrediction {
-  if (viewer.paid) return { ...p, locked: { pick: false, markets: false } };
+  if (viewer.paid) return { ...p, ...viewEngine(p, Infinity), locked: { pick: false, markets: false } };
   if (proLeagueLocked(p.match, viewer, now)) return proLeagueView(p);
   const pickOpen = pickVisible(p.topPick, p.match.id, viewer, p.match.league.code);
   const freePick = p.match.id === viewer.freeStrongId || viewer.freeIds.includes(p.match.id);
@@ -175,6 +194,7 @@ export function toolView(p: Prediction, viewer: Viewer, now = Date.now()): Viewe
     picks: p.picks.filter((x) => isFreeMarket(x.market) || (freePick && x.market === p.topPick?.market)),
     topPick: p.topPick ? (pickOpen ? p.topPick : lockPick(p.topPick, p.match.league.code)) : null,
     ...(pickOpen ? {} : { marketCheck: undefined }),
+    ...viewEngine(p, 0),
     locked: { pick: !pickOpen, markets: true },
   };
 }

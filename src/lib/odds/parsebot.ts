@@ -102,7 +102,7 @@ export async function parsebotCall<T>(
     // Bounded: a stalled call used to hold every caller sharing its promise
     // until the function's 60-second limit, which took Forge down in October.
     signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-    cache: "no-store",
+    // No `cache` option: "no-store" made an ISR page dynamic mid-render (see sportybet-direct.ts).
   }).catch(() => null);
 
   const parsed = response?.ok ? ((await response.json().catch(() => null)) as unknown) : null;

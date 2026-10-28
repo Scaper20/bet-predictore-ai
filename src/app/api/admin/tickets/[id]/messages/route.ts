@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { checkAdmin } from "@/lib/admin";
+import { checkPermission } from "@/lib/admin";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -7,9 +7,9 @@ const NO_STORE = { "Cache-Control": "no-store" };
 
 /** Lets an open admin ticket view poll for the user's incoming replies
  * without a full page refresh — same "feels live" requirement as the
- * user-facing widget, gated the admin way (checkAdmin, not RLS). */
+ * user-facing widget, gated the admin way (checkPermission, not RLS). */
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const gate = await checkAdmin();
+  const gate = await checkPermission("support.view");
   if (!gate.ok) return NextResponse.json({ error: gate.error }, { status: gate.status, headers: NO_STORE });
 
   const { id } = await params;

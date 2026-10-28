@@ -4,6 +4,7 @@ import { VipInviteForm } from "@/components/admin/vip-invite-form";
 import { setVipRemoved } from "@/app/actions/admin/vip-chat";
 import { vipChatSettings, vipRoster, type RosterRow } from "@/lib/vip-chat-store";
 import { formatWhatsAppNumber, type RosterStatus } from "@/lib/vip-chat";
+import { requirePermission } from "@/lib/admin";
 
 export const metadata: Metadata = { title: "VIP chat" };
 export const dynamic = "force-dynamic";
@@ -19,6 +20,7 @@ const when = (iso: string | null) =>
   iso ? new Date(iso).toLocaleString("en-NG", { dateStyle: "medium", timeStyle: "short", timeZone: "Africa/Lagos" }) : "–";
 
 export default async function AdminVipChatPage() {
+  await requirePermission("vip.manage");
   const [settings, roster] = await Promise.all([vipChatSettings(), vipRoster()]);
   const count = (s: RosterStatus) => roster.rows.filter((r) => r.status === s).length;
   const toRemove = roster.rows.filter((r) => r.status === "remove");
@@ -26,7 +28,8 @@ export default async function AdminVipChatPage() {
   return (
     <div className="max-w-5xl space-y-8">
       <div>
-        <h1 className="font-display text-2xl font-bold">VIP chat</h1>
+        <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-brand">Growth</p>
+        <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight sm:text-[28px]">VIP chat</h1>
         <p className="mt-1 max-w-3xl text-sm text-ink-muted">
           The members-only WhatsApp group. Keep &ldquo;Approve new participants&rdquo; on in the group settings and let in a
           request only when its number is on this list as VIP. When a plan lapses the number moves to the top under

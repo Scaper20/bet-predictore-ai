@@ -8,6 +8,8 @@ import { StatCard } from "@/components/admin/stat-card";
 import { CopyButton } from "@/components/admin/copy-button";
 import { PartnerForm } from "@/components/admin/partner-forms";
 import { Badge, EmptyState } from "@/components/ui/primitives";
+import { requirePermission } from "@/lib/admin";
+import { can } from "@/lib/admin-access";
 
 export const metadata: Metadata = { title: "Partners" };
 export const dynamic = "force-dynamic";
@@ -16,6 +18,7 @@ const sum = (totals: { held: number; payable: number; paid: number; currency: st
   totals.length === 0 ? "₦0" : totals.map((b) => moneyText(b[key], b.currency)).join(" + ");
 
 export default async function AdminPartnersPage() {
+  const me = await requirePermission("partners.view");
   const { partners, totals, signups, subscribers } = await getPartnersOverview();
   const due = partners.filter((p) => p.status === "active" && p.balances.some((b) => b.payoutDue)).length;
 
@@ -23,13 +26,14 @@ export default async function AdminPartnersPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-bold">Partners</h1>
+          <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-brand">Business</p>
+          <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight sm:text-[28px]">Partners</h1>
           <p className="mt-1 max-w-2xl text-sm text-ink-muted">
             Each partner has a link. Users who sign up through it and pay earn the partner a share of the net payment for their first 12 months.
             A commission is held 14 days (the refund window), then becomes payable.
           </p>
         </div>
-        {due > 0 && (
+        {due > 0 && can(me.roles, "partners.payout") && (
           <a href="/admin/partners/payouts.csv" className="text-sm font-medium text-brand underline underline-offset-2 hover:text-brand-strong">
             Download payout sheet ({due})
           </a>

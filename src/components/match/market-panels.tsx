@@ -3,35 +3,51 @@ import type { Prediction } from "@/lib/model/predict";
 import { GOAL_LINES, scoreMatrix, type AsianHandicapLine } from "@/lib/model/poisson";
 import { ProbabilityBar } from "@/components/ui/primitives";
 import { percent } from "@/lib/format";
-import { Ask, AskList, CountChart, More, inTen, oneIn } from "@/components/match/likelihood";
+import { Ask, AskList, inTen, oneIn } from "@/components/match/likelihood";
 
-export function OutcomePanel({ prediction }: { prediction: Prediction }) {
+/**
+ * The 1X2 split as three columns, the likeliest lit, and the game's shape
+ * underneath (expected goals, over 2.5, both score) unless those are locked.
+ */
+export function OutcomePanel({ prediction, facts = true }: { prediction: Prediction; facts?: boolean }) {
   const { markets: m, match } = prediction;
   const rows = [
-    { label: match.home.name, value: m.home, key: "home" },
+    { label: match.home.shortName, value: m.home, key: "home" },
     { label: "Draw", value: m.draw, key: "draw" },
-    { label: match.away.name, value: m.away, key: "away" },
+    { label: match.away.shortName, value: m.away, key: "away" },
   ];
   const best = Math.max(m.home, m.draw, m.away);
 
   return (
     <Panel title="Match result" hint="1X2">
-      <div className="space-y-4">
-        {rows.map((r) => (
-          <div key={r.key}>
-            <div className="mb-1.5 flex items-baseline justify-between gap-3">
-              <span className={`min-w-0 truncate text-sm ${r.value === best ? "font-semibold text-ink" : "text-ink-muted"}`}>
-                {r.label}
-              </span>
-              <span className="flex shrink-0 items-baseline gap-3">
-                <span className="tnum text-sm font-bold">{percent(r.value, 1)}</span>
-              </span>
+      <div className="grid grid-cols-3 gap-2">
+        {rows.map((r) => {
+          const top = r.value === best;
+          return (
+            <div key={r.key} className={`min-w-0 rounded-xl px-2 py-2.5 text-center ${top ? "bg-brand/10 ring-1 ring-brand/40" : "bg-surface-2"}`}>
+              <p className={`tnum font-mono text-lg font-semibold tracking-tight sm:text-xl ${top ? "text-brand" : "text-ink"}`}>{percent(r.value)}</p>
+              <p className="mt-0.5 truncate text-[11px] text-ink-dim" title={r.label}>{r.label}</p>
             </div>
-            <ProbabilityBar value={r.value} tone={r.value === best ? "brand" : "neutral"} />
-          </div>
-        ))}
+          );
+        })}
       </div>
+      {facts && (
+        <dl className="mt-3 grid grid-cols-3 divide-x divide-line rounded-xl border border-line text-center">
+          <Fact label="xG" value={`${m.expectedGoals.home.toFixed(1)}–${m.expectedGoals.away.toFixed(1)}`} />
+          <Fact label="Over 2.5" value={percent(m.over["2.5"])} hot={m.over["2.5"] >= 0.6} />
+          <Fact label="Both score" value={percent(m.bttsYes)} hot={m.bttsYes >= 0.6} />
+        </dl>
+      )}
     </Panel>
+  );
+}
+
+function Fact({ label, value, hot = false }: { label: string; value: string; hot?: boolean }) {
+  return (
+    <div className="min-w-0 px-1 py-2">
+      <dt className="truncate text-[10px] font-medium uppercase tracking-wider text-ink-dim">{label}</dt>
+      <dd className={`tnum mt-0.5 font-mono text-sm font-semibold ${hot ? "text-brand" : "text-ink"}`}>{value}</dd>
+    </div>
   );
 }
 
@@ -57,21 +73,43 @@ export function expectSentence(prediction: Prediction): string {
   return `Expect ${goals}, ${both}${keeper}.`;
 }
 
+/**
+ * Every goal line as one ladder, over beside under, the likelier side lit:
+ * five rows instead of a chart and five questions.
+ */
 export function GoalsPanel({ prediction }: { prediction: Prediction }) {
   const { markets: m, match } = prediction;
-  const words = ["1 or more goals", "2 or more goals", "3 or more goals", "4 or more goals", "5 or more goals"];
+  const t = totals(prediction);
+  const likeliest = t.reduce((b, x) => (x.p > b.p ? x : b), t[0]);
 
   return (
-    <Panel title="Goals" hint={`${match.home.shortName} ${m.expectedGoals.home.toFixed(1)} – ${m.expectedGoals.away.toFixed(1)} ${match.away.shortName} expected`}>
-      <p className="mb-5 rounded-lg bg-surface-2 px-4 py-3 text-sm leading-relaxed text-ink">{expectSentence(prediction)}</p>
-      <CountChart bars={totals(prediction)} noun="goals" />
-      <div className="mt-4">
-        <AskList>
-          {GOAL_LINES.map((line, i) => (
-            <Ask key={line} q={words[i]} sub={`Over ${line}`} p={m.over[String(line)]} />
-          ))}
-        </AskList>
-      </div>
+    <Panel title="Goals" hint={`xG ${match.home.shortName} ${m.expectedGoals.home.toFixed(1)} – ${m.expectedGoals.away.toFixed(1)} ${match.away.shortName}`}>
+      <p className="mb-3 text-xs leading-relaxed text-ink-muted">{expectSentence(prediction)}</p>
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="text-[10.5px] uppercase tracking-wider text-ink-dim">
+            <th className="pb-1.5 text-left font-medium">Line</th>
+            <th className="pb-1.5 text-right font-medium">Over</th>
+            <th className="pb-1.5 text-right font-medium">Under</th>
+          </tr>
+        </thead>
+        <tbody className="tnum font-mono">
+          {GOAL_LINES.map((line) => {
+            const over = m.over[String(line)];
+            const under = 1 - over;
+            return (
+              <tr key={line} className="border-t border-line/70">
+                <td className="py-1.5 font-sans text-ink-muted">{line}</td>
+                <td className={`py-1.5 text-right ${over >= under ? "font-semibold text-brand" : "text-ink-muted"}`}>{percent(over)}</td>
+                <td className={`py-1.5 text-right ${under > over ? "font-semibold text-brand" : "text-ink-muted"}`}>{percent(under)}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      <p className="mt-3 text-xs text-ink-dim">
+        Likeliest total: <span className="font-semibold text-ink">{likeliest.label} goals</span> ({percent(likeliest.p)})
+      </p>
     </Panel>
   );
 }
@@ -105,30 +143,21 @@ export function DoubleChancePanel({ prediction }: { prediction: Prediction }) {
 }
 
 export function CorrectScorePanel({ prediction }: { prediction: Prediction }) {
-  const scores = prediction.markets.correctScore.slice(0, 10);
+  const scores = prediction.markets.correctScore.slice(0, 9);
   const top = scores[0]?.probability ?? 1;
-  const row = (s: (typeof scores)[number]) => (
-    <li key={`${s.home}-${s.away}`} className="grid grid-cols-[auto_1fr_auto] items-center gap-3">
-      <span className="tnum w-12 font-mono text-sm font-semibold">
-        {s.home}-{s.away}
-      </span>
-      <div className="h-1.5 overflow-hidden rounded-full bg-surface-3">
-        <div className="h-full rounded-full bg-violet" style={{ width: `${(s.probability / top) * 100}%` }} />
-      </div>
-      <span className="tnum w-14 text-right text-xs font-semibold text-ink-muted" title={percent(s.probability, 1)}>
-        {oneIn(s.probability)}
-      </span>
-    </li>
-  );
 
   return (
-    <Panel title="Correct score" hint="Most likely scorelines">
-      <ol className="space-y-2.5">{scores.slice(0, 5).map(row)}</ol>
-      {scores.length > 5 && (
-        <More title="More scorelines">
-          <ol className="space-y-2.5 pt-2">{scores.slice(5).map(row)}</ol>
-        </More>
-      )}
+    <Panel title="Correct score" hint="Likeliest scorelines">
+      <ol className="grid grid-cols-3 gap-2">
+        {scores.map((s, i) => (
+          <li key={`${s.home}-${s.away}`} className={`rounded-lg px-2 py-2 text-center ${i === 0 ? "bg-violet/10 ring-1 ring-violet/40" : "bg-surface-2"}`}>
+            <p className="tnum font-mono text-base font-semibold">
+              {s.home}-{s.away}
+            </p>
+            <p className="tnum text-[11px] text-ink-dim" title={oneIn(s.probability)}>{percent(s.probability, 1)}</p>
+          </li>
+        ))}
+      </ol>
       <Footnote>Even the likeliest score comes up only about {oneIn(top)} times: scorelines are long shots by nature.</Footnote>
     </Panel>
   );
@@ -224,8 +253,8 @@ function Panel({
   children: React.ReactNode;
 }) {
   return (
-    <section className="card p-5 sm:p-7">
-      <div className="mb-5 flex items-baseline justify-between gap-3">
+    <section className="card p-4 sm:p-5">
+      <div className="mb-3 flex items-baseline justify-between gap-3">
         <h2 className="font-sans text-sm font-semibold uppercase tracking-wider text-ink-muted">{title}</h2>
         {hint && <span className="shrink-0 text-xs text-ink-dim">{hint}</span>}
       </div>
@@ -246,7 +275,7 @@ function BigStat({ label, value, highlight }: { label: string; value: string; hi
 }
 
 function Footnote({ children }: { children: React.ReactNode }) {
-  return <p className="mt-5 text-[11px] leading-relaxed text-ink-dim">{children}</p>;
+  return <p className="mt-3 text-[11px] leading-relaxed text-ink-dim">{children}</p>;
 }
 
 /**

@@ -9,6 +9,8 @@ import { StatCard } from "@/components/admin/stat-card";
 import { CopyButton } from "@/components/admin/copy-button";
 import { CreditSignupForm, PartnerForm, PartnerStatusForm, PayoutForm, ReverseForm } from "@/components/admin/partner-forms";
 import { Badge, EmptyState, type Tone } from "@/components/ui/primitives";
+import { requirePermission } from "@/lib/admin";
+import { can } from "@/lib/admin-access";
 
 export const metadata: Metadata = { title: "Partner" };
 export const dynamic = "force-dynamic";
@@ -17,6 +19,8 @@ const STANDING_TONE: Record<Standing, Tone> = { held: "amber", payable: "brand",
 const date = (iso: string) => new Date(iso).toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" });
 
 export default async function AdminPartnerPage({ params }: { params: Promise<{ id: string }> }) {
+  const me = await requirePermission("partners.view");
+  const canPay = can(me.roles, "partners.payout");
   const { id } = await params;
   const detail = await getPartnerDetail(id);
   if (!detail) notFound();
@@ -29,8 +33,9 @@ export default async function AdminPartnerPage({ params }: { params: Promise<{ i
         <Link href="/admin/partners" className="text-xs text-ink-muted underline underline-offset-2 hover:text-ink">
           ← All partners
         </Link>
-        <div className="mt-2 flex flex-wrap items-center gap-3">
-          <h1 className="font-display text-2xl font-bold">{partner.name}</h1>
+        <p className="mt-3 font-mono text-[10.5px] uppercase tracking-[0.16em] text-brand">Business · Partner</p>
+        <div className="mt-1.5 flex flex-wrap items-center gap-3">
+          <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-[28px]">{partner.name}</h1>
           <Badge tone={partner.status === "active" ? "brand" : "rose"}>{partner.status}</Badge>
           <Badge tone="neutral">{pctText(partner.rateBps)}</Badge>
         </div>
@@ -65,7 +70,7 @@ export default async function AdminPartnerPage({ params }: { params: Promise<{ i
             )}
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
-            {balances
+            {canPay && balances
               .filter((b) => b.payoutDue)
               .map((b) => (
                 <PayoutForm key={b.currency} id={partner.id} currency={b.currency} amountText={moneyText(b.payable, b.currency)} />
@@ -99,7 +104,7 @@ export default async function AdminPartnerPage({ params }: { params: Promise<{ i
                       {c.reversalReason && <p className="mt-1 text-[11px] text-ink-dim">{c.reversalReason}</p>}
                     </AdminTableCell>
                     <AdminTableCell>
-                      {c.kind === "commission" && c.status !== "reversed" && <ReverseForm id={c.id} partnerId={partner.id} />}
+                      {canPay && c.kind === "commission" && c.status !== "reversed" && <ReverseForm id={c.id} partnerId={partner.id} />}
                     </AdminTableCell>
                   </AdminTableRow>
                 );

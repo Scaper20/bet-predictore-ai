@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { checkAdmin, logAdminAction } from "@/lib/admin";
+import { checkPermission, logAdminAction } from "@/lib/admin";
 import { expireStalePendingPayments } from "@/lib/payments-feed";
 
 export type ExpirePaymentsState = { error: string | null; message: string | null };
@@ -12,7 +12,7 @@ export type ExpirePaymentsState = { error: string | null; message: string | null
  * tonight's run" or right after noticing a pile of stale pendings.
  */
 export async function expireStalePayments(_prev: ExpirePaymentsState): Promise<ExpirePaymentsState> {
-  const gate = await checkAdmin();
+  const gate = await checkPermission("finance.manage");
   if (!gate.ok) return { error: gate.error, message: null };
 
   const { expired } = await expireStalePendingPayments();

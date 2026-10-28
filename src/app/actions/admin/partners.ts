@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { checkAdmin, logAdminAction } from "@/lib/admin";
+import { checkPermission, logAdminAction } from "@/lib/admin";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { MAX_RATE_BPS, minPayout, moneyText, slugify, validSlug } from "@/lib/partners";
 import { creditPastPayments } from "@/lib/partner-attribution";
@@ -37,7 +37,7 @@ async function accountByEmail(email: string): Promise<{ id: string } | "missing"
 }
 
 export async function createPartner(_prev: PartnerActionState, formData: FormData): Promise<PartnerActionState> {
-  const gate = await checkAdmin();
+  const gate = await checkPermission("partners.manage");
   if (!gate.ok) return { error: gate.error, message: null };
 
   const name = clean(formData.get("name"), 120);
@@ -69,7 +69,7 @@ export async function createPartner(_prev: PartnerActionState, formData: FormDat
 
 /** Edits a partner. A new rate applies to payments from now on; earned commissions keep their own rate. */
 export async function updatePartner(_prev: PartnerActionState, formData: FormData): Promise<PartnerActionState> {
-  const gate = await checkAdmin();
+  const gate = await checkPermission("partners.manage");
   if (!gate.ok) return { error: gate.error, message: null };
 
   const id = clean(formData.get("id"), 40);
@@ -107,7 +107,7 @@ export async function updatePartner(_prev: PartnerActionState, formData: FormDat
 }
 
 export async function setPartnerStatus(_prev: PartnerActionState, formData: FormData): Promise<PartnerActionState> {
-  const gate = await checkAdmin();
+  const gate = await checkPermission("partners.manage");
   if (!gate.ok) return { error: gate.error, message: null };
 
   const id = clean(formData.get("id"), 40);
@@ -125,7 +125,7 @@ export async function setPartnerStatus(_prev: PartnerActionState, formData: Form
 
 /** Pays one partner's payable balance in one currency: records the payout and marks its commissions paid. */
 export async function payOutPartner(_prev: PartnerActionState, formData: FormData): Promise<PartnerActionState> {
-  const gate = await checkAdmin();
+  const gate = await checkPermission("partners.payout");
   if (!gate.ok) return { error: gate.error, message: null };
 
   const id = clean(formData.get("id"), 40);
@@ -156,7 +156,7 @@ export async function payOutPartner(_prev: PartnerActionState, formData: FormDat
 
 /** Reverses one commission after a refund or chargeback. A paid one leaves a clawback on the next payout. */
 export async function reverseCommission(_prev: PartnerActionState, formData: FormData): Promise<PartnerActionState> {
-  const gate = await checkAdmin();
+  const gate = await checkPermission("partners.payout");
   if (!gate.ok) return { error: gate.error, message: null };
 
   const id = clean(formData.get("id"), 40);
@@ -192,7 +192,7 @@ export async function reverseCommission(_prev: PartnerActionState, formData: For
  * their link.
  */
 export async function creditAccountToPartner(_prev: PartnerActionState, formData: FormData): Promise<PartnerActionState> {
-  const gate = await checkAdmin();
+  const gate = await checkPermission("partners.manage");
   if (!gate.ok) return { error: gate.error, message: null };
 
   const partnerId = clean(formData.get("partnerId"), 40);

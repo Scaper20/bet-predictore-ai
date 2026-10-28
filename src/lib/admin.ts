@@ -4,10 +4,13 @@ import { cache } from "react";
 import { redirect } from "next/navigation";
 import { supabaseServer, supabaseConfigured } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { can, cleanRoles, PERMISSIONS, type Permission, type Role } from "@/lib/admin-access";
 
 export interface AdminIdentity {
   id: string;
   email: string;
+  /** The staff roles this account holds (admin_users.roles); access is their union (lib/admin-access.ts). */
+  roles: Role[];
 }
 
 type Gate =
@@ -36,10 +39,14 @@ const getGate = cache(async (): Promise<Gate> => {
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, reason: "unauthenticated" };
 
-  const { data } = await supabase.from("admin_users").select("id").eq("id", user.id).maybeSingle();
+  const { data } = await supabase.from("admin_users").select("id, roles").eq("id", user.id).maybeSingle();
   if (!data) return { ok: false, reason: "forbidden" };
+  // A row whose roles are all unknown (or empty) is staff with no access, not
+  // an owner: cleanRoles never guesses upward.
+  const roles = cleanRoles(data.roles as unknown[] | null);
+  if (roles.length === 0) return { ok: false, reason: "forbidden" };
 
-  return { ok: true, identity: { id: user.id, email: user.email ?? "" } };
+  return { ok: true, identity: { id: user.id, email: user.email ?? "", roles } };
 });
 
 /** Only for admin/login/page.tsx, which needs the unauthenticated-vs-forbidden
@@ -56,6 +63,18 @@ export async function requireAdmin(): Promise<AdminIdentity> {
   const gate = await getGate();
   if (!gate.ok) redirect(gate.reason === "forbidden" ? "/admin/login?denied=1" : "/admin/login");
   return gate.identity;
+}
+
+/**
+ * The gate for a page that needs one permission. Signed-out and non-staff
+ * visitors go to the login page; staff without the permission land on
+ * /admin/denied, which names what is missing and who can grant it, rather
+ * than a page that renders half its data.
+ */
+export async function requirePermission(permission: Permission): Promise<AdminIdentity> {
+  const identity = await requireAdmin();
+  if (!can(identity.roles, permission)) redirect(`/admin/denied?need=${encodeURIComponent(permission)}`);
+  return identity;
 }
 
 export type AdminCheckResult =
@@ -87,6 +106,24 @@ export async function checkAdmin(): Promise<AdminCheckResult> {
   return { ok: true, identity: gate.identity };
 }
 
+/**
+ * checkAdmin plus one permission, for Server Actions and Route Handlers. Every
+ * admin mutation goes through this: the nav hiding a page is a courtesy, this
+ * is the boundary.
+ */
+export async function checkPermission(permission: Permission): Promise<AdminCheckResult> {
+  const gate = await checkAdmin();
+  if (!gate.ok) return gate;
+  if (!can(gate.identity.roles, permission)) {
+    return {
+      ok: false,
+      status: 403,
+      error: `Your role doesn't include "${PERMISSIONS[permission].label}". Ask the owner if you need it.`,
+    };
+  }
+  return gate;
+}
+
 /** One-line audit logging — every write goes through supabaseAdmin() since
  * admin_audit_log carries no RLS policy for `authenticated` at all. */
 export async function logAdminAction(
@@ -98,6 +135,7 @@ export async function logAdminAction(
   await supabaseAdmin().from("admin_audit_log").insert({
     admin_id: admin.id,
     admin_email: admin.email,
+    admin_roles: admin.roles,
     action,
     target,
     detail,

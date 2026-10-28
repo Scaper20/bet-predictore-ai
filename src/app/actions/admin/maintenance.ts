@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { checkAdmin, logAdminAction } from "@/lib/admin";
+import { checkPermission, logAdminAction } from "@/lib/admin";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { MAINTENANCE_MESSAGE_MAX } from "@/lib/maintenance";
 
@@ -16,7 +16,7 @@ export async function setMaintenance(
   _prev: MaintenanceActionState,
   formData: FormData,
 ): Promise<MaintenanceActionState> {
-  const gate = await checkAdmin();
+  const gate = await checkPermission("site.maintenance");
   if (!gate.ok) return { error: gate.error, message: null };
 
   const intent = String(formData.get("intent") ?? "");

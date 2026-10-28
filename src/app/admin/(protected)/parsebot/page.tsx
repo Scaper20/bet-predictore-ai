@@ -5,6 +5,7 @@ import { SwitchForm } from "@/components/admin/switch-form";
 import { switchesFresh } from "@/lib/switches";
 import { capsFrom, CREDIT_COST } from "@/lib/odds/parsebot-budget";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { requirePermission } from "@/lib/admin";
 
 export const metadata: Metadata = { title: "parse.bot and Code Hub" };
 export const dynamic = "force-dynamic";
@@ -45,6 +46,7 @@ async function usage() {
 }
 
 export default async function AdminParsebotPage() {
+  await requirePermission("codehub.manage");
   const [sw, u] = await Promise.all([switchesFresh(), usage()]);
   const caps = capsFrom(process.env);
   const keySet = Boolean(process.env.PARSEBOT_API_KEY?.trim());
@@ -54,7 +56,8 @@ export default async function AdminParsebotPage() {
   return (
     <div className="max-w-3xl space-y-8">
       <div>
-        <h1 className="font-display text-2xl font-bold">parse.bot and Code Hub</h1>
+        <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-brand">Product</p>
+        <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight sm:text-[28px]">parse.bot and Code Hub</h1>
         <p className="mt-1 text-sm text-ink-muted">
           SportyBet prices and booking codes come straight from SportyBet (see{" "}
           <Link href="/admin/sportybet" className="text-brand hover:underline">SportyBet matching</Link>). parse.bot, paid per

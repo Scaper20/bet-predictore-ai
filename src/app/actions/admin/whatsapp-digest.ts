@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { checkAdmin, logAdminAction } from "@/lib/admin";
+import { checkPermission, logAdminAction } from "@/lib/admin";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { buildDailyDigest } from "@/lib/whatsapp-digest-feed";
 import { APP_TIMEZONE } from "@/lib/format";
@@ -18,7 +18,7 @@ export type WhatsappDigestActionState = { error: string | null };
 export async function regenerateWhatsappDigest(
   _prev: WhatsappDigestActionState,
 ): Promise<WhatsappDigestActionState> {
-  const gate = await checkAdmin();
+  const gate = await checkPermission("whatsapp.manage");
   if (!gate.ok) return { error: gate.error };
 
   const now = new Date();

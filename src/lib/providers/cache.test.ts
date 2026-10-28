@@ -110,4 +110,19 @@ describe("cached", () => {
     expect(cacheStats().entries).toBeGreaterThan(0);
     expect(cacheStats().inflight).toBe(0);
   });
+
+  it("answers with the stale value inside staleMs and refreshes behind it", async () => {
+    vi.useFakeTimers();
+    const key = uniqueKey();
+    let n = 0;
+    const loader = vi.fn(async () => ++n);
+    expect(await cached(key, 1_000, loader, { staleMs: 10_000 })).toBe(1);
+    vi.advanceTimersByTime(2_000);
+    expect(await cached(key, 1_000, loader, { staleMs: 10_000 })).toBe(1);
+    await vi.waitFor(() => expect(loader).toHaveBeenCalledTimes(2));
+    expect(await cached(key, 1_000, loader, { staleMs: 10_000 })).toBe(2);
+    // Past staleMs the caller waits for a fresh value.
+    vi.advanceTimersByTime(20_000);
+    expect(await cached(key, 1_000, loader, { staleMs: 10_000 })).toBe(3);
+  });
 });

@@ -12,6 +12,7 @@ import {
   nextBest,
   gridFor,
   jointProbability,
+  oddsOf,
   oneIn,
   parseForgeRequest,
   slipTotals,
@@ -113,6 +114,18 @@ describe("forge", () => {
     expect(total).toBeGreaterThan(3);
     expect(total).toBeLessThan(8);
     expect(new Set(legs.map((l) => l.matchId)).size).toBe(4);
+  });
+
+  it("aims at SportyBet's prices where the board lists them", () => {
+    // A board whose prices sit 12% under fair: built on fair odds the slip
+    // would land near 5 / 1.12^4 ≈ 3.2 on SportyBet; built on prices, near 5.
+    const priced = pool().map((e) => ({ ...e, candidates: e.candidates.map((c) => ({ ...c, price: c.fairOdds / 1.12 })) }));
+    const { legs } = forge(priced, settings, { locked: [], removed: [], avoid: [], seed: 1 });
+    const atPrices = legs.reduce((o, l) => o * (l.price ?? 0), 1);
+    expect(atPrices).toBeGreaterThan(3.8);
+    expect(atPrices).toBeLessThan(6.5);
+    expect(oddsOf({ price: null, fairOdds: 1.07 })).toBeCloseTo(1);
+    expect(oddsOf({ price: 1.5, fairOdds: 9 })).toBe(1.5);
   });
 
   it("keeps locked legs and never offers removed games", () => {

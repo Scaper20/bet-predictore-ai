@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { checkAdmin, logAdminAction } from "@/lib/admin";
+import { checkPermission, logAdminAction } from "@/lib/admin";
 import {
   deleteConnection,
   getConnection,
@@ -13,9 +13,9 @@ import {
 
 export type MailActionState = { error: string | null; message: string | null };
 
-/** Second, independent gate beyond checkAdmin() — see admin-mail.ts's own doc comment on why this feature holds every admin to a different standard than the rest of /admin. */
+/** Second, independent gate beyond the mail.send permission — see admin-mail.ts's own doc comment on why this feature holds every admin to a different standard than the rest of /admin. */
 async function requireMailAdmin() {
-  const gate = await checkAdmin();
+  const gate = await checkPermission("mail.send");
   if (!gate.ok) return { ok: false as const, error: gate.error };
   if (!isMailAdmin(gate.identity.email)) {
     return { ok: false as const, error: "This feature isn't available on your account." };

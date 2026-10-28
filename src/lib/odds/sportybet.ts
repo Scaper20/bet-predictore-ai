@@ -236,7 +236,16 @@ export interface ListedFixture {
  * `waitMs` to come back (the read carries on and is cached for next time), so
  * a page never waits long on SportyBet.
  */
-export async function listingsFor(fixtures: readonly ListedFixture[], waitMs = 3_000): Promise<Map<string, SportyBetEvent>> {
+export async function listingsFor(
+  fixtures: readonly ListedFixture[],
+  waitMs = 3_000,
+  /**
+   * Filled with the competitions whose answer is known: SportyBet doesn't
+   * carry them, or their board was read. A fixture missing from the result
+   * in one of these isn't listed; in any other, its board just wasn't read in time.
+   */
+  known?: Set<string>,
+): Promise<Map<string, SportyBetEvent>> {
   const out = new Map<string, SportyBetEvent>();
   const byLeague = new Map<string, ListedFixture[]>();
   for (const f of fixtures) {
@@ -250,7 +259,8 @@ export async function listingsFor(fixtures: readonly ListedFixture[], waitMs = 3
   const links = await storedEventLinks(fixtures.map((f) => f.id));
   await Promise.all(
     [...byLeague].map(async ([code, group]) => {
-      const tournamentId = leagueByCode(code) ? await sportyBetTournament(code).catch(() => null) : null;
+      const tournamentId = leagueByCode(code) ? await sportyBetTournament(code).catch(() => undefined) : null;
+      if (tournamentId === null) known?.add(code);
       if (!tournamentId) return;
       let timer: ReturnType<typeof setTimeout> | undefined;
       const late = new Promise<SportyBetEvent[]>((resolve) => {
@@ -259,6 +269,7 @@ export async function listingsFor(fixtures: readonly ListedFixture[], waitMs = 3
       const events = await Promise.race([sportyBetBoard(tournamentId).catch(() => [] as SportyBetEvent[]), late]);
       clearTimeout(timer);
       if (events.length === 0) return;
+      known?.add(code);
       const byId = new Map(events.map((e) => [e.eventId, e]));
       const unlinked = group.filter((f) => {
         const hit = byId.get(links.get(f.id)?.eventId ?? "");
