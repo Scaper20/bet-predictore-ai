@@ -20,6 +20,7 @@ import { LiveScoresProvider } from "@/components/match/pick-action";
 import { loadPicks, parsePickQuery } from "@/lib/pick-feed";
 import { PICK_BATCH } from "@/lib/pick-list";
 import { ProductIcon } from "@/components/icons/product-icon";
+import { LastMatchdayStat } from "@/components/match/matchday-stats";
 import { ENGINE_GROUPS, type EngineGroup } from "@/lib/model/headline-engine";
 
 /**
@@ -90,6 +91,11 @@ export default async function PredictionsPage({
         eyebrow="Predictions"
         title={def ? `${def.name} picks` : "Picks"}
         description="Data insights from analysed football matches."
+        actions={
+          <Suspense fallback={null}>
+            <LastMatchdayStat />
+          </Suspense>
+        }
       />
 
       <div className={`${containerClass()} space-y-7 py-4 sm:py-10`}>

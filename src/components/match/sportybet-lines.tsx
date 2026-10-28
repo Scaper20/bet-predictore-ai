@@ -14,12 +14,12 @@ export async function SportyBetLinesPanel({ prediction }: { prediction: Predicti
   if (groups.length === 0) return null;
 
   return (
-    <section className="card p-5 sm:p-7">
+    <section className="card p-4 sm:p-5">
       <div className="mb-1 flex items-baseline justify-between gap-3">
         <h2 className="font-sans text-sm font-semibold uppercase tracking-wider text-ink-muted">On SportyBet</h2>
         <span className="shrink-0 text-xs text-ink-dim">Our chance for each line they list</span>
       </div>
-      <p className="mb-5 text-xs text-ink-dim">
+      <p className="mb-3 text-xs text-ink-dim">
         A refund on a whole line (or half on a quarter line) does not cut a code, so it counts in the chance.
       </p>
       <div className="space-y-3">
@@ -55,8 +55,8 @@ export async function SportyBetLinesPanel({ prediction }: { prediction: Predicti
 
 export function SportyBetLinesSkeleton() {
   return (
-    <section className="card p-5 sm:p-7">
-      <div className="mb-5 flex items-baseline justify-between gap-3">
+    <section className="card p-4 sm:p-5">
+      <div className="mb-3 flex items-baseline justify-between gap-3">
         <h2 className="font-sans text-sm font-semibold uppercase tracking-wider text-ink-muted">On SportyBet</h2>
         <span className="shrink-0 text-xs text-ink-dim">Reading lines…</span>
       </div>

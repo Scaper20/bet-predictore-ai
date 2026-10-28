@@ -38,20 +38,23 @@ export function inTen(p: number): string {
 
 export function Chip({ p }: { p: number }) {
   const l = likelihood(p);
-  return <span className={`inline-flex shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${l.tone}`}>{l.word}</span>;
+  return <span className={`inline-flex w-[5.5rem] shrink-0 justify-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${l.tone}`}>{l.word}</span>;
 }
 
-/** One market as a question and its answer, on one line. */
+/**
+ * One market as a question and its answer, on one line: the chance and the
+ * word for it. The market's own name sits under the question, small.
+ */
 export function Ask({ q, sub, p }: { q: string; sub?: string; p: number }) {
   return (
-    <div className="flex items-center justify-between gap-3 py-1.5">
-      <div className="min-w-0">
-        <p className="text-sm leading-snug text-ink">{q}</p>
-        {sub && <p className="text-[10.5px] leading-tight text-ink-dim">{sub}</p>}
-      </div>
-      <div className="flex shrink-0 items-center gap-2.5 text-right">
-        <span className="tnum text-[11px] text-ink-dim" title={percent(p, 1)}>
-          {inTen(p)} <span className="hidden sm:inline">· {percent(p)}</span>
+    <div className="flex items-center justify-between gap-3 py-2">
+      <p className="min-w-0 text-sm leading-snug text-ink">
+        {q}
+        {sub && <span className="block text-[10.5px] leading-tight text-ink-dim">{sub}</span>}
+      </p>
+      <div className="flex shrink-0 items-center gap-2">
+        <span className="tnum w-10 text-right font-mono text-sm font-semibold text-ink" title={inTen(p)}>
+          {percent(p)}
         </span>
         <Chip p={p} />
       </div>

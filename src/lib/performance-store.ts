@@ -6,6 +6,7 @@ import { leagueByProviderName } from "@/lib/leagues";
 import { DEFAULT_SPORT, type SportId } from "@/lib/sports";
 import { summarise, tally, type SettledBreakdown, type SettledRecord, type SettledRow } from "@/lib/performance";
 import { isEngineGroup, type EngineGroup } from "@/lib/model/headline-engine";
+import { previousMatchday, type LoggedPick, type MatchdayRecord } from "@/lib/matchday";
 
 /**
  * Reads settled picks for the public performance surfaces.
@@ -149,5 +150,25 @@ export async function groupRecords(): Promise<Map<EngineGroup, SettledRecord>> {
     }
     for (const [g, rows] of by) out.set(g, tally(rows.map((r) => ({ league_code: null, market: g, model_id: null, result: r.result }))));
     return out;
+  });
+}
+
+/**
+ * How the last full day of published picks did (matchday.ts), from the
+ * public log. Ten minutes: grading runs off the live poll and the cron.
+ */
+export async function lastMatchday(sport: SportId = DEFAULT_SPORT): Promise<MatchdayRecord | null> {
+  return cached(`matchday:last:${sport}`, 10 * 60_000, async () => {
+    const supabase = supabasePublic();
+    if (!supabase) return null;
+    const { data, error } = await supabase
+      .from("predictions_log")
+      .select("kickoff, result")
+      .eq("sport", sport)
+      .gte("kickoff", new Date(Date.now() - 8 * 86_400_000).toISOString())
+      .lt("kickoff", new Date().toISOString())
+      .limit(3000);
+    if (error || !data) return null;
+    return previousMatchday(data as LoggedPick[]);
   });
 }
