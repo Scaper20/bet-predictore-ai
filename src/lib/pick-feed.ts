@@ -9,6 +9,8 @@ import { riskFor, type RiskLevel } from "@/lib/model/risk";
 import { pickSections } from "@/lib/pick-sections";
 import { toPickRow, type PickRowData } from "@/lib/pick-list";
 import type { FixtureFeed } from "@/lib/service";
+import { isEngineGroup, type EngineGroup } from "@/lib/model/headline-engine";
+import { engineAsPick } from "@/lib/engine-feed";
 
 /** Days of fixtures the Picks page covers, and the most games it models at once. */
 export const WINDOW_DAYS = 14;
@@ -21,10 +23,13 @@ export interface PickQuery {
   byChance: boolean;
   /** Leagues the viewer follows, which lead each day on the unfiltered view. */
   followed?: string[];
+  /** Show each game's best pick in this group (headline-engine.ts) instead of its headline. */
+  family?: EngineGroup;
 }
 
-export function parsePickQuery(p: { league?: string | null; tier?: string | null; risk?: string | null; sort?: string | null }): PickQuery {
+export function parsePickQuery(p: { league?: string | null; tier?: string | null; risk?: string | null; sort?: string | null; family?: string | null }): PickQuery {
   return {
+    family: p.family && isEngineGroup(p.family) ? p.family : undefined,
     league: p.league && leagueByCode(p.league) ? p.league : undefined,
     strongOnly: p.tier === "strong",
     risk: (["low", "medium", "high"] as RiskLevel[]).find((r) => r === p.risk),
@@ -60,7 +65,8 @@ export async function loadPicks(q: PickQuery, opts: { withBest?: boolean } = {})
     opts.withBest && !def ? bestBetOfDay().catch(() => null) : Promise.resolve(null),
     getViewer(),
   ]);
-  const predictions = raw.map((p) => viewPrediction(p, viewer));
+  const viewed = raw.map((p) => viewPrediction(p, viewer));
+  const predictions = q.family ? viewed.flatMap((p) => inGroup(p, q.family!) ?? []) : viewed;
 
   const publishable = predictions.filter(
     (p) =>
@@ -87,7 +93,7 @@ export async function loadPicks(q: PickQuery, opts: { withBest?: boolean } = {})
   // view, where the feed holds every competition.
   const counts = def
     ? undefined
-    : predictions.reduce<Record<string, number>>((acc, p) => {
+    : viewed.reduce<Record<string, number>>((acc, p) => {
         const code = p.match.league.code;
         if (code && p.sufficiency.publishable) acc[code] = (acc[code] ?? 0) + 1;
         return acc;
@@ -98,10 +104,28 @@ export async function loadPicks(q: PickQuery, opts: { withBest?: boolean } = {})
     feed,
     predictions,
     rows,
-    withheld: predictions.filter((p) => !p.sufficiency.publishable),
+    withheld: viewed.filter((p) => !p.sufficiency.publishable),
     bestBet: rawBest ? viewPrediction(rawBest, viewer) : null,
     counts,
-    proHeld: predictions.filter((p) => p.locked.proLeague).length,
+    proHeld: viewed.filter((p) => p.locked.proLeague).length,
     paid: viewer.paid,
   };
+}
+
+/**
+ * The game as the family filter lists it: its best pick in the group as the
+ * row's pick, locked where the viewer's plan holds that group back (one free
+ * per game, access.ts). Null where the engine has no pick in the group.
+ */
+function inGroup(p: ViewedPrediction, group: EngineGroup): ViewedPrediction | null {
+  if (!p.sufficiency.publishable) return null;
+  const open = p.engine?.groups.find((g) => g.group === group);
+  if (open) {
+    const pick = engineAsPick(p, open);
+    return { ...p, topPick: pick, sweetSpot: false, marketCheck: undefined };
+  }
+  if (!p.lockedGroups?.includes(group)) return null;
+  const label = group === "corners" ? "Corners" : group === "shots" ? "Shots" : group === "result" ? "Match Result" : "Goals";
+  const hidden = { market: "locked", label: "", group: label, probability: 0, fairOdds: 0, confidence: 0 } as const;
+  return { ...p, topPick: hidden, sweetSpot: false, marketCheck: undefined, locked: { ...p.locked, pick: true } };
 }

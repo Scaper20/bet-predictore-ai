@@ -4,7 +4,8 @@ import { supabasePublic } from "@/lib/supabase/public";
 import { cached } from "@/lib/providers/cache";
 import { leagueByProviderName } from "@/lib/leagues";
 import { DEFAULT_SPORT, type SportId } from "@/lib/sports";
-import { summarise, type SettledBreakdown, type SettledRow } from "@/lib/performance";
+import { summarise, tally, type SettledBreakdown, type SettledRecord, type SettledRow } from "@/lib/performance";
+import { isEngineGroup, type EngineGroup } from "@/lib/model/headline-engine";
 
 /**
  * Reads settled picks for the public performance surfaces.
@@ -120,5 +121,33 @@ export async function settledRecords(
         toSettledRow({ ...r, model_id: null }),
       ),
     );
+  });
+}
+
+/**
+ * The "More predictions" record: each group's settled picks (engine_picks,
+ * 0082/0083), tallied like the headline's. Football only; the engine runs
+ * on football alone.
+ */
+export async function groupRecords(): Promise<Map<EngineGroup, SettledRecord>> {
+  return cached("settled:groups", 10 * 60_000, async () => {
+    const out = new Map<EngineGroup, SettledRecord>();
+    const supabase = supabasePublic();
+    if (!supabase) return out;
+    const { data, error } = await supabase
+      .from("engine_picks")
+      .select("slot, result")
+      .neq("slot", "headline")
+      .not("result", "is", null)
+      .order("kickoff", { ascending: false })
+      .limit(20000);
+    if (error || !data) return out;
+    const by = new Map<EngineGroup, { result: "win" | "lose" | "push" }[]>();
+    for (const r of data as { slot: string; result: "win" | "lose" | "push" }[]) {
+      if (!isEngineGroup(r.slot)) continue;
+      by.set(r.slot, [...(by.get(r.slot) ?? []), { result: r.result }]);
+    }
+    for (const [g, rows] of by) out.set(g, tally(rows.map((r) => ({ league_code: null, market: g, model_id: null, result: r.result }))));
+    return out;
   });
 }

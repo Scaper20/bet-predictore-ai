@@ -69,6 +69,18 @@ const PICK_GROUP: Record<string, Pick["group"]> = {
   handicap: "Asian Handicap",
 };
 
+/** An engine pick in the shape every list and card takes, stated at its calibrated chance. */
+export function engineAsPick(p: { model: Prediction["model"] }, e: EnginePick): Pick {
+  return {
+    market: e.market,
+    label: e.label,
+    group: PICK_GROUP[e.family] ?? (e.group === "corners" ? "Corners" : e.group === "shots" ? "Shots" : "Goals"),
+    probability: e.calibrated,
+    fairOdds: fairOdds(e.calibrated),
+    confidence: confidenceFor(e.calibrated, p.model.dataQuality, p.model.uncertainty),
+  };
+}
+
 /**
  * The engine's headline as the prediction's top pick, for when it publishes
  * (app_switches.headline_engine). Stated at its calibrated chance, the one
@@ -77,13 +89,6 @@ const PICK_GROUP: Record<string, Pick["group"]> = {
 export function withEngineHeadline(p: Prediction): Prediction {
   const e = p.engine?.headline;
   if (!e || !p.topPick) return p;
-  const pick: Pick = {
-    market: e.market,
-    label: e.label,
-    group: PICK_GROUP[e.family] ?? (e.group === "corners" ? "Corners" : e.group === "shots" ? "Shots" : "Goals"),
-    probability: e.calibrated,
-    fairOdds: fairOdds(e.calibrated),
-    confidence: confidenceFor(e.calibrated, p.model.dataQuality, p.model.uncertainty),
-  };
+  const pick = engineAsPick(p, e);
   return { ...p, topPick: pick, picks: [pick, ...p.picks.filter((x) => x.market !== pick.market)], sweetSpot: false, marketCheck: undefined };
 }

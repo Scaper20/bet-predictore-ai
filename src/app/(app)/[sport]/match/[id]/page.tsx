@@ -22,6 +22,7 @@ import type { Outcome } from "@/lib/stats/compute";
 import { AskAboutMatch, AskPageContext } from "@/components/ask/ask-page-context";
 import { PricesPanel, PricesPanelSkeleton } from "@/components/match/prices-panel";
 import { TopPicks } from "@/components/match/top-picks";
+import { MorePredictions } from "@/components/match/more-predictions";
 import { LiveWinProbabilityPanel } from "@/components/match/live-win-probability-panel";
 import { LiveMatchProvider, LiveProgress, LiveScore, LiveStatusBadge } from "@/components/match/live-scoreboard";
 import { Gate } from "@/components/entitlements/gate";
@@ -419,6 +420,7 @@ function Markets({
       {/* Free and server-rendered: the 1X2 split is what search indexes and
           what earns the click, so it never sits behind a wall (lib/gating.ts). */}
       <TopPicks prediction={prediction} corners={extra?.stats.corners} />
+      <MorePredictions prediction={prediction} />
       <OutcomePanel prediction={prediction} />
       {/* The only numbers here a bookmaker produced; streamed, because two
           metered providers sit behind it. DepthGate is a conversion wall:

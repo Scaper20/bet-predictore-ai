@@ -108,3 +108,36 @@ describe("Pro leagues", () => {
     expect(v.locked.proLeague).toBe(true);
   });
 });
+
+describe("More predictions", () => {
+  const NOW = Date.parse("2026-10-18T12:00:00Z");
+  const g = (group: string, market: string) => ({ group, market, label: market, family: "x", probability: 0.77, calibrated: 0.77, score: 0.77, marketChance: 0.77, price: 1.25, loadPrice: 1.25 });
+  const game = (code: string) =>
+    ({
+      match: { id: "m1", kickoff: "2026-10-18T18:45:00Z", league: { code, name: code } },
+      markets: { home: 0.34, draw: 0.3, away: 0.36, over: {}, halves: {} },
+      asianHandicap: [],
+      picks: [pick("1x2:away", 50)],
+      topPick: pick("1x2:away", 50),
+      engine: {
+        headline: g("team-goals", "tg:home:over:0.5"),
+        groups: [g("corners", "corners:home:under:5.5"), g("team-goals", "tg:home:over:0.5"), g("goals", "ou:over:1.5")],
+      },
+    }) as unknown as Prediction;
+
+  it("gives a free viewer the strongest group's pick and names the rest, never the engine's headline", () => {
+    const v = viewPrediction(game("premier-league"), free, NOW);
+    expect(v.engine?.groups.map((x) => x.market)).toEqual(["corners:home:under:5.5"]);
+    expect(v.lockedGroups).toEqual(["team-goals", "goals"]);
+    expect(v.engine?.headline).toBeNull();
+    expect(JSON.stringify(v)).not.toContain("tg:home:over:0.5");
+  });
+
+  it("gives Pro every group, and a locked Pro-league game none", () => {
+    expect(viewPrediction(game("premier-league"), paid, NOW).engine?.groups).toHaveLength(3);
+    const locked = viewPrediction(game("serie-a"), free, NOW);
+    expect(locked.engine?.groups).toEqual([]);
+    expect(locked.lockedGroups).toEqual(["corners", "team-goals", "goals"]);
+    expect(toolView(game("premier-league"), free, NOW).engine?.groups).toEqual([]);
+  });
+});

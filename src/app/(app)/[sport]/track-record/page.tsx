@@ -12,8 +12,10 @@ import {
 import { TierRecords } from "@/components/track-record/tier-records";
 import { LeaguePerformance } from "@/components/track-record/league-performance";
 import type { TrackRecordMatch } from "@/components/track-record/record-detail-modal";
-import { settledRecords } from "@/lib/performance-store";
-import { EMPTY_RECORD, isPublishable } from "@/lib/performance";
+import { groupRecords, settledRecords } from "@/lib/performance-store";
+import { GroupRecords } from "@/components/track-record/group-records";
+import type { EngineGroup } from "@/lib/model/headline-engine";
+import { EMPTY_RECORD, isPublishable, type SettledRecord } from "@/lib/performance";
 import { allModels } from "@/lib/model/registry";
 import { leagueByCode } from "@/lib/leagues";
 import { isSportId, type SportId } from "@/lib/sports";
@@ -37,7 +39,7 @@ async function loadTrackRecord(sport: SportId) {
   const supabase = supabasePublic();
   if (!supabase) return null;
 
-  const [{ data: rows }, breakdown] = await Promise.all([
+  const [{ data: rows }, breakdown, groups] = await Promise.all([
     supabase
       .from("predictions_log")
       .select("*")
@@ -46,9 +48,10 @@ async function loadTrackRecord(sport: SportId) {
       .order("kickoff", { ascending: false })
       .limit(50),
     settledRecords({ sport }),
+    sport === "football" ? groupRecords() : Promise.resolve(new Map<EngineGroup, SettledRecord>()),
   ]);
 
-  return { rows: (rows ?? []) as TrackRecordMatch[], breakdown };
+  return { rows: (rows ?? []) as TrackRecordMatch[], breakdown, groups };
 }
 
 /** Real per-model performance, with the roadmap entries carrying no numbers. */
@@ -111,7 +114,7 @@ export default async function TrackRecordPage({ params }: PageProps<"/[sport]/tr
     );
   }
 
-  const { rows, breakdown } = record;
+  const { rows, breakdown, groups } = record;
 
   if (rows.length === 0) {
     return (
@@ -144,6 +147,8 @@ export default async function TrackRecordPage({ params }: PageProps<"/[sport]/tr
          * market and league.
          */}
         <TierRecords strong={breakdown.strong} overall={breakdown.overall} />
+
+        <GroupRecords records={groups} />
 
         <ScalableModelPerformance rows={modelRows(breakdown)} />
 
