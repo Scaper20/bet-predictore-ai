@@ -9,6 +9,7 @@
 
 import type { Pick as ModelPick, Prediction } from "@/lib/model/predict";
 import { isPausedPick } from "@/lib/model/paused";
+import type { Surface } from "@/lib/model/selections";
 import { isStatMarket, SWEET_SPOT_FILLERS, SWEET_SPOT_MAX, SWEET_SPOTS, sweetSpotLabel } from "@/lib/model/sweet-spots";
 import { scoreMatrix } from "@/lib/model/poisson";
 import { halfGrids, halfRates, SITE_FIRST_HALF_SHARE, SITE_HALF_TILT, SITE_SECOND_HALF_TILT } from "@/lib/model/halves";
@@ -220,6 +221,8 @@ export interface CandidateOptions {
    * on every game that has the data).
    */
   statLines?: "tested" | "all";
+  /** Whose pauses apply (model/selections.ts): the Code Hub has its own switches. */
+  surface?: Surface;
 }
 
 export interface Candidate {
@@ -345,7 +348,7 @@ export function candidatesFor(p: Prediction, opts: CandidateOptions, stats?: Rea
     if (!fm || !allowed.has(fm)) return false;
     // Whole and quarter handicap lines can push or half-win; keep the slip binary.
     if (fm === "handicap" && Math.abs((Number(pk.market.split(":")[2]) * 2) % 2) !== 1) return false;
-    if (isPausedPick(pk.market)) return false;
+    if (isPausedPick(pk.market, opts.surface)) return false;
     return pk.probability >= 0.12 && pk.fairOdds >= 1.04;
   });
 

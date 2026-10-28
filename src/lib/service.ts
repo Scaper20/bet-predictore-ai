@@ -19,7 +19,10 @@ import { boardChecked } from "@/lib/market-check";
 import { engineRead, withEngineHeadline } from "@/lib/engine-feed";
 import { switchOn } from "@/lib/switches";
 import { listingsFor, type SportyBetEvent } from "@/lib/odds/sportybet";
-import { buildPrediction, HEADLINE_EXCLUDED, type ModelOptions, type Prediction } from "@/lib/model/predict";
+import { buildPrediction, HEADLINE_EXCLUDED, HEADLINE_MAX_PROBABILITY, type ModelOptions, type Prediction } from "@/lib/model/predict";
+import { applySelectionPolicy } from "@/lib/selection-policy";
+import { extraPicks } from "@/lib/selection-extras";
+import { listedOn } from "@/lib/board-pick";
 import { clubKeys, hostGuard, TOP_FIVE_LEAGUES, UEFA_CUP_CODES } from "@/lib/cup-guard";
 import { after } from "next/server";
 import { archivedResults, storeResults } from "@/lib/archive/history-store";
@@ -276,6 +279,7 @@ function mergeResults(a: ResultRow[], b: ResultRow[]): ResultRow[] {
 }
 
 export async function matchDetail(id: string): Promise<MatchDetail | null> {
+  await applySelectionPolicy();
   // The match page renders per request, and generateMetadata plus the page
   // both ask for this: a minute in memory serves both and any quick revisit.
   return cached(`detail:${id}`, 60_000, async () => {
@@ -307,6 +311,7 @@ export async function matchDetail(id: string): Promise<MatchDetail | null> {
  * same match several times in a row.
  */
 export async function matchPrediction(id: string): Promise<Prediction | null> {
+  await applySelectionPolicy();
   return cached(`prediction:${id}`, 10 * 60_000, async () => {
     const match = await getMatch(id);
     if (!match) return null;
@@ -330,6 +335,7 @@ export async function matchPrediction(id: string): Promise<Prediction | null> {
  * app_switches.headline_engine is on.
  */
 async function marketChecked(built: { prediction: Prediction; options: ModelOptions }[]): Promise<Prediction[]> {
+  await applySelectionPolicy();
   const toCheck = built.filter((b) => b.prediction.topPick).map((b) => b.prediction.match);
   const known = new Set<string>();
   const [listings, engineOn] = await Promise.all([
@@ -348,11 +354,28 @@ async function marketChecked(built: { prediction: Prediction; options: ModelOpti
         markets?.length && sweetSpotLeague(prediction.match.league.code)
           ? await pricedListedLines(prediction.match, prediction, markets)
           : [];
-      const checked = boardChecked(prediction, markets, lines, options.excludeHeadline ?? HEADLINE_EXCLUDED);
+      const checked = withExtras(boardChecked(prediction, markets, lines, options.excludeHeadline ?? HEADLINE_EXCLUDED), markets);
       const withEngine = { ...checked, engine: engineRead(prediction, markets, lines, true) };
       return engineOn ? withEngineHeadline(withEngine) : withEngine;
     }),
   );
+}
+
+/**
+ * The extra selections switched on for the headline (the halves, the goal
+ * bounds: model/selections.ts), listed among the game's picks. One heads
+ * the prediction when it is likelier than the current headline, still under
+ * the headline's cap, and SportyBet lists it where its board was read.
+ */
+function withExtras(p: Prediction, markets: SportyBetEvent["markets"] | undefined): Prediction {
+  const extras = extraPicks(p, "headline").filter((x) => !markets?.length || listedOn(x.market, markets));
+  if (extras.length === 0) return p;
+  const picks = [...p.picks.filter((x) => !extras.some((e) => e.market === x.market)), ...extras];
+  const best = extras.filter((x) => x.probability <= HEADLINE_MAX_PROBABILITY).sort((a, b) => b.probability - a.probability)[0];
+  const lead = best && p.topPick && best.probability > p.topPick.probability;
+  return lead
+    ? { ...p, topPick: best, picks: [best, ...picks.filter((x) => x !== best)], sweetSpot: false }
+    : { ...p, picks };
 }
 
 export interface LiveProbability {
@@ -437,6 +460,8 @@ export async function predictBatch(matches: Match[], limit = 12): Promise<Predic
 }
 
 async function predictSlice(slice: Match[]): Promise<Prediction[]> {
+  // The owner's selection switches decide what may head a prediction (model/selections.ts).
+  await applySelectionPolicy();
   const byLeague = new Map<string, Match[]>();
   for (const m of slice) {
     const key = m.league.code ?? `raw:${m.league.id}`;

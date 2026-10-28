@@ -3,11 +3,13 @@ import "server-only";
 import { after } from "next/server";
 import { cached } from "@/lib/providers/cache";
 import { predictBatch, upcomingFeed } from "@/lib/service";
-import { candidatesFor, friendlyLabel, gridFor, type ForgeLeg } from "@/lib/forge";
+import { candidatesFor, friendlyLabel, gridFor, halvesFor, type ForgeLeg } from "@/lib/forge";
 import { bookLeg, keepOnBoard } from "@/lib/board-candidates";
 import { LEG_MARKET_GAP } from "@/lib/market-check";
 import { dispatchHubCodes } from "@/lib/push/events";
 import { priceLeg } from "@/lib/leg-pricing";
+import { applySelectionPolicy } from "@/lib/selection-policy";
+import { extraPicks } from "@/lib/selection-extras";
 import { appDayBounds } from "@/lib/format";
 import { priceQuotes } from "@/lib/odds";
 import { bookingAvailable, bookingCodeFor } from "@/lib/odds/booking-code";
@@ -138,6 +140,8 @@ async function priceLegs(legs: ForgeLeg[]): Promise<ForgeLeg[]> {
  * first opens the page.
  */
 async function buildToday(day: string): Promise<HubCodeRow[]> {
+  // The owner's selection switches decide what a code may carry (model/selections.ts).
+  await applySelectionPolicy();
   const now = new Date();
   const soon = now.getTime() + LEAD_MS;
   const todayEnd = appDayBounds(now).end.getTime();
@@ -164,7 +168,11 @@ async function buildToday(day: string): Promise<HubCodeRow[]> {
   );
   const boardRead = events.some((e) => (e?.markets.length ?? 0) > 0);
   const today = predictions.flatMap((prediction, i) => {
-    const candidates = candidatesFor(prediction, { markets: HUB_FORGE_MARKETS, picksPerGame: 1, allowHandicap: true });
+    // The hub's own pauses and switches, then any extra selection switched on for it.
+    const candidates = [
+      ...candidatesFor(prediction, { markets: [...HUB_FORGE_MARKETS, "btts"], picksPerGame: 1, allowHandicap: true, surface: "codeHub" }),
+      ...extraPicks(prediction, "codeHub").map((x) => ({ picks: [{ market: x.market, label: x.label }], market: x.market, label: x.label, probability: x.probability, fairOdds: x.fairOdds })),
+    ].filter((c) => hubMarketAllowed(c.market));
     if (!boardRead) return [{ prediction, candidates }];
     const markets = events[i]?.markets ?? [];
     if (markets.length === 0) return [];
@@ -173,7 +181,7 @@ async function buildToday(day: string): Promise<HubCodeRow[]> {
       home: prediction.match.home.name,
       away: prediction.match.away.name,
       // Re-line only to lines the hub may carry, so a swap isn't dropped later.
-      price: (m) => (hubMarketAllowed(m) ? (priceLeg(m, { goals })?.survive ?? null) : null),
+      price: (m) => (hubMarketAllowed(m) ? (priceLeg(m, { goals, halves: halvesFor(prediction) })?.survive ?? null) : null),
       floor: () => HUB_LEG_MIN_PROBABILITY,
       marketGap: LEG_MARKET_GAP,
     });

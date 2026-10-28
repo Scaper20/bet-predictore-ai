@@ -14,7 +14,8 @@
 import { forge, oddsOf, toLeg, type ForgeLeg, type ForgeMarket, type ForgeRisk, type ForgeSettings, type PoolEntry } from "@/lib/forge";
 import { isQuotable } from "@/lib/odds/markets";
 import { twinsOf } from "@/lib/odds/bookable";
-import { isPausedPick } from "@/lib/model/paused";
+import { pausedByRule } from "@/lib/model/paused";
+import { override } from "@/lib/model/selections";
 import { COMBO_PREFIX, gradeMarket } from "@/lib/slip-tracker";
 
 /* ------------------------------------------------------------------ tiers */
@@ -167,13 +168,21 @@ export const HUB_FORGE_MARKETS: ForgeMarket[] = ["result", "double_chance", "goa
  * others. Unders are paused everywhere for now (model/paused.ts).
  */
 export function hubMarketAllowed(market: string): boolean {
+  // Switched by the owner (model/selections.ts) before the rules below.
+  const o = override(market, "codeHub");
+  if (o !== undefined) return o;
+  return hubByRule(market);
+}
+
+/** Whether the rules in code let a code carry this market, whatever the owner has switched. */
+export function hubByRule(market: string): boolean {
   const [family, side, line] = market.split(":");
   if (family === "1x2" || family === "dc") return true;
   // The three-way handicap SportyBet lists in place of a big Asian line wins
   // on exactly the same results (odds/bookable.ts), so it follows that line.
   if (family === "eh") return twinsOf(market).some((t) => t.market.startsWith("ah:") && hubMarketAllowed(t.market));
   // Only +-0.5 while the goal-or-more lines are paused (model/paused.ts).
-  if (family === "ah") return Math.abs((Number(line) * 2) % 2) === 1 && !isPausedPick(market);
+  if (family === "ah") return Math.abs((Number(line) * 2) % 2) === 1 && !pausedByRule(market);
   return family === "ou" && side === "over" && line === "1.5";
 }
 

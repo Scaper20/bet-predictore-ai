@@ -10,7 +10,8 @@
 
 import { calibrateResult, type ResultCalibration } from "./result-calibration";
 import { sweetSpotPick } from "./sweet-spots";
-import { isPausedPick, PAUSED_PICK_MARKETS } from "./paused";
+import { pausedByRule, PAUSED_PICK_MARKETS } from "./paused";
+import { override } from "./selections";
 import type { EngineRead } from "./headline-engine";
 import type { Match, ResultRow } from "@/lib/types";
 import { leagueByCode, type LeagueDef } from "@/lib/leagues";
@@ -627,9 +628,17 @@ export const HEADLINE_MIN_PROBABILITY: Readonly<Record<string, number>> = {
 
 export function headlineEligible(p: Pick): boolean {
   if (p.probability > HEADLINE_MAX_PROBABILITY) return false;
+  // Switched by the owner (model/selections.ts): on is eligible under the same cap, off never.
+  const o = override(p.market, "headline");
+  if (o !== undefined) return o;
   if (p.probability < (HEADLINE_MIN_PROBABILITY[p.market] ?? 0)) return false;
-  if (isPausedPick(p.market)) return false;
-  const [family, , line] = p.market.split(":");
+  return headlineByRule(p.market);
+}
+
+/** Whether the rules in code let this market head a prediction, whatever the owner has switched. */
+export function headlineByRule(market: string): boolean {
+  if (pausedByRule(market)) return false;
+  const [family, , line] = market.split(":");
   if (family === "1x2" || family === "dc") return true;
   return family === "ou" && (line === "1.5" || line === "2.5" || line === "3.5");
 }
