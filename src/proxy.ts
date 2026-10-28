@@ -1,6 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { type NextFetchEvent, type NextRequest, NextResponse } from "next/server";
-import { FIRST_SEEN_COOKIE } from "@/lib/day-pass";
+import { FIRST_SEEN_COOKIE } from "@/lib/offers";
 import { PICKS_PATH, pickSegment } from "@/lib/pick-query";
 import { FIRST_TOUCH_COOKIE, type FirstTouch, trimFirstTouchValue } from "@/lib/first-touch";
 import { PARTNER_REF_COOKIE, PARTNER_REF_DAYS, cleanRefParam, encodePartnerRef } from "@/lib/partner-ref";
@@ -247,7 +247,7 @@ async function isAdmin(supabase: SupabaseClient, userId: string): Promise<boolea
 
 /**
  * When this browser first came, for the VIP day-pass offer window
- * (lib/day-pass.ts). Readable by the page, which counts down from it. A
+ * (lib/offers.ts). Readable by the page, which counts down from it. A
  * browser already holding the first-touch cookie was here before this
  * existed, so it is stamped "0": a returning visitor, with no window.
  * Navigations only, like first-touch, and written once.

@@ -17,7 +17,7 @@ export async function GET(request: Request) {
   const ent = await getEntitlement();
   if (!ent.userId) return NextResponse.redirect(new URL("/account/login?next=/vip", request.url));
   // A day pass is VIP on the site only, not a seat in the chat.
-  if (!meets(ent.tier, "vip") || ent.dayPassOnly) return back();
+  if (!meets(ent.tier, "vip") || ent.passOnly) return back();
 
   const [member, settings] = await Promise.all([vipChatMember(ent.userId), vipChatSettings()]);
   if (!member) return back();

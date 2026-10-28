@@ -10,7 +10,7 @@ import { signOut } from "@/app/actions/auth";
 import { signOutAllDevices } from "@/app/actions/account";
 import { ButtonLink, SectionHeading } from "@/components/ui/primitives";
 import { PlanCard } from "@/components/account/plan-card";
-import { dayPassState } from "@/lib/day-pass-server";
+import { offerStateFor } from "@/lib/offers-server";
 import { sportPath } from "@/lib/routes";
 import { Container } from "@/components/ui/container";
 import { StatCard } from "@/components/ui/stat-card";
@@ -80,11 +80,11 @@ export default async function AccountPage() {
   if (!user) redirect("/account/login?next=/account");
 
   const entitlement = await getEntitlement();
-  const [subscription, profileResult, preferences, dayPass] = await Promise.all([
+  const [subscription, profileResult, preferences, offerState] = await Promise.all([
     getSubscriptionRow(supabase, user.id),
     supabase.from("profiles").select("display_name, created_at").eq("id", user.id).maybeSingle(),
     getPreferencesFor(supabase, user.id),
-    dayPassState(entitlement),
+    offerStateFor(entitlement),
   ]);
 
 
@@ -120,7 +120,7 @@ export default async function AccountPage() {
           </div>
         </div>
 
-        <PlanCard tier={entitlement.tier} dayPass={dayPass} dayPassOnly={Boolean(entitlement.dayPassOnly)} />
+        <PlanCard tier={entitlement.tier} offer={offerState} passOnly={Boolean(entitlement.passOnly)} />
       </div>
 
       <nav aria-label="Shortcuts" className="mt-4 grid grid-cols-4 gap-2 sm:gap-3">

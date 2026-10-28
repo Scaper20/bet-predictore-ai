@@ -26,7 +26,7 @@ type Step = { targets: string[]; title: string; body: string };
 /**
  * Short on purpose: five stops, one line each. It shows where the value is
  * (a card, a combo, the Code Hub, Forge) and ends by naming what VIP adds,
- * because the day-pass offer (components/day-pass) opens straight after it
+ * because the popup offer (components/offers) opens straight after it
  * closes, finished or skipped.
  */
 const STEPS: Step[] = [
@@ -147,8 +147,8 @@ export function TourOverlay() {
   if (!open || !step) return null;
 
   const last = index === steps.length - 1;
-  // Set by the day-pass offer while it is open to this visitor; it opens as this closes.
-  const offerLive = typeof document !== "undefined" && document.documentElement.dataset.dayPass === "offer";
+  // Set by the popup offer while one is open to this visitor; it opens as this closes.
+  const offerLive = typeof document !== "undefined" && document.documentElement.dataset.offer === "offer";
   const next = () => (last ? close() : setIndex((i) => i + 1));
   const back = () => setIndex((i) => Math.max(0, i - 1));
 
@@ -231,7 +231,7 @@ export function TourOverlay() {
                 last && offerLive ? "bg-gold text-gold-ink hover:bg-gold-strong" : "bg-brand text-brand-ink hover:bg-brand-strong"
               }`}
             >
-              {index === 0 ? "Show me" : last ? (offerLive ? "See the VIP offer" : "Got it") : "Next"}
+              {index === 0 ? "Show me" : last ? (offerLive ? "See your offer" : "Got it") : "Next"}
             </button>
           </div>
         </div>

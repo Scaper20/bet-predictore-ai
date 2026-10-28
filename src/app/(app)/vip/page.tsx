@@ -41,7 +41,7 @@ const COMPARE: { label: string; free: string; vip: string }[] = [
 export default async function VipPage() {
   const ent = await getEntitlement();
   // A day pass is VIP on the site only; the chat comes with the plan.
-  const vip = meets(ent.tier, "vip") && !ent.dayPassOnly;
+  const vip = meets(ent.tier, "vip") && !ent.passOnly;
   const [member, settings, settled] = await Promise.all([
     vip && ent.userId ? vipChatMember(ent.userId) : null,
     vip ? vipChatSettings() : null,
@@ -122,7 +122,7 @@ export default async function VipPage() {
             ) : !vip ? (
               <div className="mt-5 space-y-3">
                 <p className="text-sm leading-relaxed text-ink-muted">
-                  {ent.dayPassOnly ? "Your day pass covers VIP on the site. The chat comes with the VIP plan. " : "The chat is for VIP members. "}Upgrade and you can join straight away: daily Strong picks and 2 to 10
+                  {ent.passOnly ? "Your day pass covers VIP on the site. The chat comes with the VIP plan. " : "The chat is for VIP members. "}Upgrade and you can join straight away: daily Strong picks and 2 to 10
                   combos in the chat, plus live win probability, 100 Ask KiqStat questions a day and priority support.
                 </p>
                 <ButtonLink href="/account/billing?plan=vip" className="w-full">Go VIP</ButtonLink>

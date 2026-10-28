@@ -3,7 +3,7 @@ import "server-only";
 import { supabaseServer, supabaseConfigured } from "@/lib/supabase/server";
 import { activeGiftsFor } from "@/lib/subscription-gifts-feed";
 import { bestGiftTier, effectiveEntitlement } from "@/lib/subscription-gifts";
-import { dayPassFor } from "@/lib/day-pass-server";
+import { livePassFor } from "@/lib/offers-server";
 
 export type Tier = "free" | "pass" | "pro" | "vip";
 
@@ -49,13 +49,13 @@ export interface Entitlement {
    */
   userId: string | null;
   /**
-   * End of a running VIP day pass (lib/day-pass.ts), or absent. When the
-   * pass is the only thing giving VIP, `dayPassOnly` is set: a day pass
-   * unlocks VIP on the site, not the members' WhatsApp chat.
+   * End of a running pass from an offer (lib/offers.ts), or absent. When the
+   * pass is what lifts the tier, `passOnly` is set: a pass unlocks the site,
+   * not the members' WhatsApp chat.
    */
-  dayPassUntil?: string | null;
-  dayPassOnly?: boolean;
-  /** With dayPassOnly: the tier the account has on its own, for billing (the plan they can buy is not "current"). */
+  passUntil?: string | null;
+  passOnly?: boolean;
+  /** With passOnly: the tier the account has on its own, for billing (the plan they can buy is not "current"). */
   planTier?: Tier;
 }
 
@@ -137,7 +137,7 @@ export async function getEntitlement(): Promise<Entitlement> {
     userId = user.id;
     email = user.email ?? null;
 
-    const [{ data }, { data: profile }, gifts, dayPass] = await Promise.all([
+    const [{ data }, { data: profile }, gifts, pass] = await Promise.all([
       supabase
         .from("subscriptions")
         .select("tier, status, current_period_end, pass_expires_at")
@@ -145,26 +145,25 @@ export async function getEntitlement(): Promise<Entitlement> {
         .maybeSingle(),
       supabase.from("profiles").select("display_name").eq("id", user.id).maybeSingle(),
       activeGiftsFor(user.id),
-      dayPassFor(user.id).catch(() => null),
+      livePassFor(user.id).catch(() => null),
     ]);
     displayName = profile?.display_name ?? null;
 
     const resolved = effectiveEntitlement(resolveSubscriptionTier(data), bestGiftTier(gifts));
-    const passLive = dayPass && Date.parse(dayPass.expiresAt) > Date.now() ? dayPass.expiresAt : null;
-    if (passLive && !meets(resolved.tier, "vip")) {
+    if (pass && !meets(resolved.tier, pass.tier)) {
       return {
-        tier: "vip",
+        tier: pass.tier,
         status: "active",
         signedIn: true,
         email,
         displayName,
         userId: user.id,
-        dayPassUntil: passLive,
-        dayPassOnly: true,
+        passUntil: pass.expiresAt,
+        passOnly: true,
         planTier: resolved.tier,
       };
     }
-    return { ...resolved, signedIn: true, email, displayName, userId: user.id, dayPassUntil: passLive };
+    return { ...resolved, signedIn: true, email, displayName, userId: user.id, passUntil: pass?.expiresAt ?? null };
   } catch {
     return userId ? signedInFree(userId, email, displayName) : ANON;
   }

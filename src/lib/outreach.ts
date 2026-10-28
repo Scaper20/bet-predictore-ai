@@ -10,7 +10,11 @@ export type CampaignType =
   | "announce_pay_once"
   | "vip_chat_launch"
   | "vip_chat_reminder"
-  | "vip_chat_free";
+  | "vip_chat_free"
+  | OfferCampaign;
+/** An email-only offer's campaign (lib/offers.ts): "offer:<slug>". */
+export type OfferCampaign = `offer:${string}`;
+export const isOfferCampaign = (c: string): c is OfferCampaign => /^offer:[a-z0-9-]{2,40}$/.test(c);
 /** The VIP chat campaigns, which pick their audience by live plan (vipChatAudience). */
 export const VIP_CHAT_CAMPAIGNS = ["vip_chat_launch", "vip_chat_reminder", "vip_chat_free"] as const;
 export type VipChatCampaign = (typeof VIP_CHAT_CAMPAIGNS)[number];

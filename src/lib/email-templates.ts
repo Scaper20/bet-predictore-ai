@@ -498,3 +498,56 @@ export function vipChatFreeEmail(opts: { record: string | null; unsubscribeUrl: 
     `),
   };
 }
+
+/** HTML-escapes text typed in admin (offer copy) before it goes into an email. */
+function esc(s: string): string {
+  return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
+}
+
+/**
+ * An email-only offer (lib/offers.ts audience "email") to a free member:
+ * the pass, its price, what it opens, and a link that only works on their
+ * account (offer page ?r=<recipient id>) until `expires`.
+ */
+export function offerEmail(opts: {
+  tierLabel: string;
+  duration: string;
+  priceText: string;
+  compareText: string | null;
+  headline: string;
+  subline: string | null;
+  perks: string[];
+  cta: string;
+  claimUrl: string;
+  /** "Friday 31 October, 9:00 pm WAT", or null when the link doesn't expire. */
+  expires: string | null;
+  record: string | null;
+  unsubscribeUrl: string;
+}): { subject: string; html: string } {
+  const perks = opts.perks.length
+    ? `<ul style="margin:12px 0 0;padding-left:20px;">${opts.perks.map((p) => `<li style="margin:6px 0;">${esc(p)}</li>`).join("")}</ul>`
+    : "";
+  return {
+    subject: `${opts.headline}: ${opts.tierLabel} for ${opts.duration}, ${opts.priceText}`,
+    html: emailLayout(`
+      <p style="margin:0 0 16px;">Hi there,</p>
+      <p style="margin:0 0 6px;font-size:20px;font-weight:800;">${esc(opts.headline)}</p>
+      ${opts.subline ? `<p style="margin:0 0 16px;color:#4c5650;">${esc(opts.subline)}</p>` : ""}
+      <p style="margin:0;">You've had KiqStat's free picks. Now try <strong>${opts.tierLabel} for ${opts.duration}</strong>
+      for <strong>${opts.priceText}</strong>${opts.compareText ? ` (the plan is ${opts.compareText} a month)` : ""}. It opens:</p>
+      ${perks}
+      ${vipRecord(opts.record)}
+      <p style="margin:20px 0 8px;font-weight:700;">What the model got right lately</p>
+      <a href="${SITE_URL}${sportPath("trackRecord")}" style="text-decoration:none;">
+        <img src="${SITE_URL}/api/og/recent-wins" width="496" alt="KiqStat's most recent winning picks" style="display:block;width:100%;max-width:496px;height:auto;border:0;border-radius:10px;">
+      </a>
+      ${button(opts.claimUrl, `${esc(opts.cta)} · ${opts.priceText}`)}
+      <p style="margin:12px 0 0;font-size:13px;color:#4c5650;">This link is yours: it works on the account this email
+      came to${opts.expires ? `, until <strong>${opts.expires}</strong>` : ""}. Pay by transfer, OPay, PalmPay, USSD or
+      card. One payment, nothing renews.</p>
+      <p style="margin:24px 0 0;">— Scaper, Founder &amp; CEO, KiqStat</p>
+      ${VIP_CHAT_SMALL_PRINT}
+      ${unsubscribeFooter(opts.unsubscribeUrl)}
+    `),
+  };
+}

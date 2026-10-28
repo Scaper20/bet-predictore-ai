@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { Tier } from "@/lib/entitlements";
-import { DAY_PASS_PATH, DAY_PASS_PRICE_NAIRA, formatLeft, type DayPassState } from "@/lib/day-pass";
+import { durationLabel, formatLeft, naira, offerPath, tierName, type OfferState } from "@/lib/offers";
 
 const TIER_LABEL: Record<Tier, string> = { free: "Free", pass: "Pass", pro: "Pro", vip: "VIP" };
 
@@ -23,38 +23,53 @@ function useNow(): number | null {
 
 /**
  * The account page's plan at a glance, in whichever of four states applies:
- * a running day pass (with its clock), the day-pass offer (with its clock),
+ * a running pass (with its clock), an offer open to them (lib/offers.ts),
  * a paid plan, or Free. One line of what it means and one button for what
  * to do next.
  */
-export function PlanCard({ tier, dayPass, dayPassOnly }: { tier: Tier; dayPass: DayPassState; dayPassOnly: boolean }) {
+export function PlanCard({ tier, offer, passOnly }: { tier: Tier; offer: OfferState; passOnly: boolean }) {
   const now = useNow();
   const left = (iso: string) => (now === null ? null : formatLeft(Date.parse(iso) - now));
 
-  if (dayPass.state === "active" && dayPassOnly) {
+  if (offer.state === "active" && passOnly) {
     return (
       <Shell
         tone="gold"
-        label="VIP day pass"
-        value={left(dayPass.until) ?? "VIP"}
+        label={`${tierName(offer.tier)} pass`}
+        value={left(offer.until) ?? tierName(offer.tier)}
         unit={now !== null ? "left" : undefined}
-        note={<p className="text-xs text-ink-muted">Everything on the site is open. Keep it going after today:</p>}
-        action={<Cta href="/account/billing?plan=vip" tone="gold">Keep VIP</Cta>}
+        note={<p className="text-xs text-ink-muted">Everything it covers is open. Keep it going after it ends:</p>}
+        action={
+          <Cta href={`/account/billing?plan=${offer.tier}`} tone="gold">
+            Keep {tierName(offer.tier)}
+          </Cta>
+        }
       />
     );
   }
-  if (dayPass.state === "offer") {
+  if (offer.state === "offer") {
+    const o = offer.offer;
+    const ends = offer.deadline ? left(offer.deadline) : null;
     return (
       <Shell
         tone="gold"
-        label="New member offer"
-        value={`VIP 24h · ₦${DAY_PASS_PRICE_NAIRA}`}
+        label={o.audience === "new_visitors" ? "New member offer" : "Members' offer"}
+        value={`${tierName(o.tier)} ${durationLabel(o.hours)} · ${naira(o.priceNaira)}`}
         note={
           <p className="text-xs text-ink-muted">
-            Once, for your first day{left(dayPass.deadline) && <> · ends in <span className="tnum">{left(dayPass.deadline)}</span></>}
+            {o.subline ?? o.headline}
+            {ends && (
+              <>
+                {" "}· ends in <span className="tnum">{ends}</span>
+              </>
+            )}
           </p>
         }
-        action={<Cta href={DAY_PASS_PATH} tone="gold">Get it</Cta>}
+        action={
+          <Cta href={offerPath(o.slug)} tone="gold">
+            {o.cta}
+          </Cta>
+        }
       />
     );
   }

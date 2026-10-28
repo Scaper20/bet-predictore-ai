@@ -1,14 +1,13 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { DAY_PASS_PRICE_NAIRA } from "@/lib/day-pass";
 
 /**
  * The frame every auth page sits in: a pitch drawn faintly behind a single
  * card, a sign-up / sign-in switch on top, and one line of small talk.
  * Words kept to the minimum; the form does the talking.
  *
- * `next` decides the strip above the card: someone on their way to the day
- * pass or a plan is told that is where this goes, so the account step reads
+ * `next` decides the strip above the card: someone on their way to an
+ * offer or a plan is told that is where this goes, so the account step reads
  * as part of the checkout rather than a detour from it.
  */
 export function AuthShell({
@@ -73,8 +72,8 @@ export function AuthShell({
 
 function headingFor(next: string | undefined): { icon: string; text: string; tone: string } | null {
   const path = next?.split("?")[0];
-  if (path === "/vip/day-pass") {
-    return { icon: "★", text: `VIP for 24 hours · ₦${DAY_PASS_PRICE_NAIRA} — checkout is next`, tone: "border-gold/40 bg-gold/10 text-gold" };
+  if (path?.startsWith("/offer/")) {
+    return { icon: "★", text: "Your offer — checkout is next", tone: "border-gold/40 bg-gold/10 text-gold" };
   }
   if (path === "/account/billing") {
     const vip = next?.includes("plan=vip");

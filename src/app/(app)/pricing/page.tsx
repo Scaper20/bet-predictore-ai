@@ -10,7 +10,8 @@ import { PlanMatrixMobile } from "@/components/pricing/plan-matrix-mobile";
 import { IntervalToggle } from "@/components/pricing/interval-toggle";
 import { sportPath } from "@/lib/routes";
 import { headers } from "next/headers";
-import { planById, priceSaving, type BillingCycle } from "@/lib/pricing";
+import { priceSaving, type BillingCycle } from "@/lib/pricing";
+import { getPlans } from "@/lib/plan-prices";
 import { flutterwaveConfigured } from "@/lib/flutterwave/client";
 import { weeklyCodeAllowance } from "@/lib/code-hub-plans";
 import { formatMoney, marketFor, NIGERIA } from "@/lib/payments/markets";
@@ -71,7 +72,8 @@ export default async function PricingPage({ searchParams }: PageProps<"/pricing"
   const sellsAbroad = flutterwaveConfigured();
   const country = sellsAbroad ? ((await headers()).get("x-vercel-ip-country") ?? NIGERIA.country) : NIGERIA.country;
   const market = sellsAbroad ? marketFor(country) : NIGERIA;
-  const proPrices = market.provider === "flutterwave" ? (market.prices?.pro ?? {}) : planById("pro").price;
+  const plans = await getPlans();
+  const proPrices = market.provider === "flutterwave" ? (market.prices?.pro ?? {}) : (plans.find((p) => p.id === "pro")?.price ?? {});
   const proSaving = priceSaving(proPrices, interval);
   const FAQS = faqs(sellsAbroad);
 
@@ -98,6 +100,7 @@ export default async function PricingPage({ searchParams }: PageProps<"/pricing"
             interval={interval}
             sellsAbroad={sellsAbroad}
             country={country}
+            plans={plans}
             hrefFor={(plan) =>
               plan.id === "free"
                 ? "/account/sign-up"

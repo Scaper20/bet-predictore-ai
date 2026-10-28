@@ -8,13 +8,13 @@ export function openTour() {
   window.dispatchEvent(new Event(OPEN_TOUR_EVENT));
 }
 
-/** Fired when the walkthrough closes, finished or skipped: the day-pass offer follows it. */
+/** Fired when the walkthrough closes, finished or skipped: the popup offer follows it. */
 export const TOUR_CLOSED_EVENT = "kiqstat-tour-closed";
-/** Asks the day-pass offer (components/day-pass) to open. */
-export const OPEN_DAY_PASS_EVENT = "kiqstat-open-day-pass";
+/** Asks the popup offer (components/offers) to open. */
+export const OPEN_OFFER_EVENT = "kiqstat-open-offer";
 
-export function openDayPassOffer() {
-  window.dispatchEvent(new Event(OPEN_DAY_PASS_EVENT));
+export function openOffer() {
+  window.dispatchEvent(new Event(OPEN_OFFER_EVENT));
 }
 
 /** Pages with prediction cards to point at, where the walkthrough starts on its own. */

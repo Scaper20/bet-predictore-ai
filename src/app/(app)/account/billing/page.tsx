@@ -14,6 +14,7 @@ import { BillingHistory, type PaymentRow } from "@/components/billing/billing-hi
 import { ButtonLink, SectionHeading } from "@/components/ui/primitives";
 import { availableCycles } from "@/lib/paystack/plan-codes";
 import type { BillingCycle } from "@/lib/pricing";
+import { getPlans } from "@/lib/plan-prices";
 
 export const metadata: Metadata = { title: "Plans & billing" };
 
@@ -22,6 +23,9 @@ export default async function BillingPage({ searchParams }: PageProps<"/account/
   const rawCycle = Array.isArray(params.cycle) ? params.cycle[0] : params.cycle;
   const initialCycle: BillingCycle = rawCycle === "quarterly" || rawCycle === "yearly" ? rawCycle : "monthly";
   const rawCountry = Array.isArray(params.country) ? params.country[0] : params.country;
+  // The plan they tapped on the pricing page or an offer, carried through sign-up.
+  const rawPlan = Array.isArray(params.plan) ? params.plan[0] : params.plan;
+  const chosen = rawPlan === "pro" || rawPlan === "vip" ? rawPlan : null;
   if (!supabaseConfigured) {
     return (
       <div className="mx-auto max-w-lg px-4 py-10 sm:py-16 text-center sm:px-6">
@@ -102,7 +106,7 @@ export default async function BillingPage({ searchParams }: PageProps<"/account/
           </div>
         )}
       </div>
-      {entitlement.tier === "vip" && !entitlement.dayPassOnly && (
+      {entitlement.tier === "vip" && !entitlement.passOnly && (
         <div className="card mx-auto mt-8 flex max-w-2xl flex-col items-start gap-4 border-brand/30 p-5 sm:flex-row sm:items-center">
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-ink">Your VIP chat is waiting</p>
@@ -119,6 +123,8 @@ export default async function BillingPage({ searchParams }: PageProps<"/account/
           initialCycle={initialCycle}
           market={market}
           prepaid={prepaid}
+          plans={await getPlans()}
+          chosen={chosen}
         />
       </div>
 

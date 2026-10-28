@@ -89,12 +89,12 @@ export function sportFromPathname(pathname: string): SportId {
 }
 
 /**
- * A `next` that is a checkout: the day pass or a plan. Someone on their way
+ * A `next` that is a checkout: an offer or a plan. Someone on their way
  * to pay goes straight there after signing up or in; the feed questions wait
  * (the account page offers them later), since three questions between a
  * person and the thing they chose to buy cost more than the answers are worth.
  */
 export function isCheckoutPath(next: string): boolean {
   const path = next.split("?")[0];
-  return path === "/vip/day-pass" || path === "/account/billing";
+  return path.startsWith("/offer/") || path === "/account/billing";
 }
