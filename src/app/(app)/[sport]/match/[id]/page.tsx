@@ -353,8 +353,19 @@ function Overview({
   );
 }
 
-/** Why the pick isn't the model's own first choice: SportyBet rated that one well below us. */
+/**
+ * Why the pick isn't the model's own first choice: SportyBet rated that one
+ * well below us, or doesn't offer its line on this game.
+ */
 function MarketCheckNote({ check }: { check: NonNullable<ViewedPrediction["marketCheck"]> }) {
+  if (check.reason === "unlisted" || check.marketChance === null) {
+    return (
+      <p className="mt-2 text-xs leading-relaxed text-ink-dim">
+        Our first lean was {check.setAside.label} at {percent(check.setAside.probability)}, but SportyBet doesn&apos;t
+        offer that line on this game, so the pick is one you can load.
+      </p>
+    );
+  }
   return (
     <p className="mt-2 text-xs leading-relaxed text-ink-dim">
       Our first lean was {check.setAside.label} at {percent(check.setAside.probability)}, but SportyBet rates it{" "}

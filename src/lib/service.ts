@@ -7,14 +7,17 @@
 
 import "server-only";
 import type { Match, ResultRow } from "@/lib/types";
-import { statChances } from "@/lib/stat-markets-service";
+import { statChances, statGridsFor } from "@/lib/stat-markets-service";
+import { listedStatLines, type ListedLine } from "@/lib/board-pick";
+import { priceLeg } from "@/lib/leg-pricing";
+import { gridFor } from "@/lib/forge";
 import { sweetSpotLeague } from "@/lib/model/sweet-spots";
 import {
   getLive, getMatch, getTrainingResults, getH2H, getUpcoming,
   providerHealth, hasFullCoverage,
 } from "@/lib/providers";
 import { cached } from "@/lib/providers/cache";
-import { checkPicks } from "@/lib/market-check";
+import { boardChecked } from "@/lib/market-check";
 import { listingsFor, type SportyBetEvent } from "@/lib/odds/sportybet";
 import { buildPrediction, HEADLINE_EXCLUDED, type ModelOptions, type Prediction } from "@/lib/model/predict";
 import { clubKeys, hostGuard, TOP_FIVE_LEAGUES, UEFA_CUP_CODES } from "@/lib/cup-guard";
@@ -280,7 +283,9 @@ export async function matchDetail(id: string): Promise<MatchDetail | null> {
     if (!match) return null;
 
     const [training, h2h, stats] = await Promise.all([trainingRows(match), getH2H(match), sweetSpotStats(match)]);
-    const prediction = buildPrediction(match, training.rows, h2h, modelOptions(match, training, stats));
+    const options = modelOptions(match, training, stats);
+    // The same check the predictions list runs, so the page and the list agree.
+    const [prediction] = await marketChecked([{ prediction: buildPrediction(match, training.rows, h2h, options), options }]);
 
     return {
       match,
@@ -313,16 +318,39 @@ export async function matchPrediction(id: string): Promise<Prediction | null> {
 }
 
 /**
- * Each headline pick checked against SportyBet's price for it (market-check.ts):
- * one the market rates well below the model gives way to the game's next pick.
- * Where SportyBet can't be read, the picks stand as the model made them.
+ * Each headline pick checked against SportyBet's board (market-check.ts
+ * boardChecked): a pick on a line SportyBet doesn't list, or any corners or
+ * shots pick, becomes the strongest line it does list; a listed pick the
+ * market rates well below the model gives way to the game's next pick.
+ * Where the game isn't on SportyBet, corners, shots and handicap picks give
+ * way to a goals or result pick.
  */
 async function marketChecked(built: { prediction: Prediction; options: ModelOptions }[]): Promise<Prediction[]> {
   const toCheck = built.filter((b) => b.prediction.topPick).map((b) => b.prediction.match);
-  const listings = toCheck.length ? await listingsFor(toCheck).catch(() => new Map<string, SportyBetEvent>()) : new Map<string, SportyBetEvent>();
-  return built.map(({ prediction, options }) =>
-    checkPicks(prediction, listings.get(prediction.match.id)?.markets, options.excludeHeadline ?? HEADLINE_EXCLUDED),
+  const known = new Set<string>();
+  const listings = toCheck.length ? await listingsFor(toCheck, undefined, known).catch(() => new Map<string, SportyBetEvent>()) : new Map<string, SportyBetEvent>();
+  return Promise.all(
+    built.map(async ({ prediction, options }) => {
+      const markets = listings.get(prediction.match.id)?.markets;
+      // A competition whose board wasn't read in time says nothing about the
+      // game: its picks stand as the model made them, as they always did.
+      if (!markets && !known.has(prediction.match.league.code ?? "")) return prediction;
+      const lines = prediction.topPick && markets?.length ? await statLines(prediction, markets) : [];
+      return boardChecked(prediction, markets, lines, options.excludeHeadline ?? HEADLINE_EXCLUDED);
+    }),
   );
+}
+
+/**
+ * The board's corners and shots lines priced by the count model, only in the
+ * divisions those picks were tested in (sweet-spots.ts); none elsewhere.
+ */
+async function statLines(prediction: Prediction, markets: SportyBetEvent["markets"]): Promise<ListedLine[]> {
+  if (!sweetSpotLeague(prediction.match.league.code)) return [];
+  const stats = await statGridsFor(prediction.match).catch(() => ({}));
+  if (Object.keys(stats).length === 0) return [];
+  const ctx = { goals: gridFor(prediction), stats };
+  return listedStatLines(markets, (m) => priceLeg(m, ctx)?.survive ?? null);
 }
 
 export interface LiveProbability {

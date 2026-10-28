@@ -60,20 +60,21 @@ export const SWEET_SPOTS: readonly SweetSpot[] = [
   { market: "ou:over:1.5", min: 0.8, record: 0.82 },
 ];
 
-/** Only for a game no rule in SWEET_SPOTS covers. */
+/**
+ * Only for a game no rule in SWEET_SPOTS covers. The shots handicaps and
+ * "level or more" rules were removed on 28 Oct 2026: SportyBet has neither
+ * market on any game, so those picks could never be loaded
+ * (docs/sportybet-lines.md). A corners or shots rule that fires is then
+ * moved to a line SportyBet lists (market-check.ts boardChecked).
+ */
 export const SWEET_SPOT_FILLERS: readonly SweetSpot[] = [
-  { market: "sot:hcp:home:-1.5", min: 0.77, record: 0.88 },
   { market: "sot:home:over:3.5", min: 0.81, record: 0.869 },
   { market: "sot:most:home", min: 0.8, record: 0.845 },
   { market: "shots:away:under:12.5", min: 0.81, record: 0.845 },
   { market: "shots:home:over:12.5", min: 0.82, record: 0.843 },
-  { market: "shots:most:home-or-level", min: 0.82, record: 0.843 },
   { market: "sot:away:under:5.5", min: 0.81, record: 0.841 },
-  { market: "sot:most:home-or-level", min: 0.8, record: 0.84 },
   { market: "sot:away:under:4.5", min: 0.8, record: 0.838 },
-  { market: "sot:hcp:away:+3.5", min: 0.82, record: 0.838 },
   { market: "sot:home:under:5.5", min: 0.78, record: 0.837 },
-  { market: "shots:hcp:home:-4.5", min: 0.77, record: 0.837 },
 ];
 
 /** Shorter than fair odds of 1.18 a pick is near-certain and not worth publishing. */

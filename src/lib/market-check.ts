@@ -25,9 +25,12 @@
  *
  * Pure: the caller brings the event's listed markets (odds/sportybet.ts).
  */
-import { headlineEligible, HEADLINE_EXCLUDED, type Pick, type Prediction } from "@/lib/model/predict";
+import { confidenceFor, headlineEligible, HEADLINE_EXCLUDED, type Pick, type Prediction } from "@/lib/model/predict";
+import { fairOdds } from "@/lib/model/odds";
+import { isStatMarket } from "@/lib/model/sweet-spots";
 import { fairChanceOn } from "@/lib/odds/market-prob";
 import type { RawMarket } from "@/lib/odds/sportybet-api";
+import { bestListedLine, listedOn, type ListedLine } from "@/lib/board-pick";
 
 /** A published pick gives way when SportyBet rates it this far or more below the model. */
 export const PICK_MARKET_GAP = 0.03;
@@ -87,6 +90,76 @@ export function checkPicks(
     picks: next ? [next, ...p.picks.filter((x) => x !== next)] : p.picks,
     topPick: next,
     sweetSpot: false,
-    marketCheck: { setAside: top, marketChance: Math.round(marketChance * 10_000) / 10_000 },
+    marketCheck: { setAside: top, marketChance: Math.round(marketChance * 10_000) / 10_000, reason: "market" },
+  };
+}
+
+/**
+ * The headline pick, kept to what SportyBet lets someone load (board-pick.ts).
+ *
+ * With the game on SportyBet's board:
+ *   - a corners or shots pick is replaced by the strongest corners or shots
+ *     line SportyBet actually lists (bestListedLine), and so is any pick whose
+ *     line SportyBet doesn't list; with no such line, the game's next headline
+ *     pick SportyBet lists and doesn't rate well below us;
+ *   - a listed pick goes through the market check as before (checkPicks).
+ * With no board for the game (SportyBet doesn't carry it, or couldn't be
+ * read), a corners, shots or handicap pick gives way to the next goals or
+ * result pick; anything else stands.
+ *
+ * `lines` are the board's corners and shots lines priced by the model
+ * (listedStatLines), empty where stat picks aren't offered.
+ */
+export function boardChecked(
+  p: Prediction,
+  markets: readonly RawMarket[] | undefined,
+  lines: readonly ListedLine[] = [],
+  excluded: readonly string[] = HEADLINE_EXCLUDED,
+): Prediction {
+  const top = p.topPick;
+  if (!top) return p;
+  const exotic = isStatMarket(top.market) || top.market.startsWith("ah:");
+  if (!markets?.length) {
+    if (!exotic) return p;
+    const next = p.picks.find((x) => x !== top && headlineEligible(x) && !excluded.includes(x.market)) ?? null;
+    return setAside(p, top, next, null, false);
+  }
+  if (!isStatMarket(top.market) && listedOn(top.market, markets)) return checkPicks(p, markets, excluded);
+
+  const line = bestListedLine(lines, { gap: PICK_MARKET_GAP });
+  // The model's own stat pick is already the best listed line: nothing to set aside.
+  if (line && line.market === top.market) return p;
+  const statPick: Pick | null = line
+    ? {
+        market: line.market,
+        label: line.label,
+        group: line.market.startsWith("corners:") ? "Corners" : "Shots",
+        probability: line.probability,
+        fairOdds: fairOdds(line.probability),
+        confidence: confidenceFor(line.probability, p.model.dataQuality, p.model.uncertainty),
+      }
+    : null;
+  const next =
+    statPick ??
+    p.picks.find(
+      (x) =>
+        x !== top &&
+        headlineEligible(x) &&
+        !excluded.includes(x.market) &&
+        x.probability >= MIN_REPLACEMENT &&
+        listedOn(x.market, markets) &&
+        !marketDissents(x.market, x.probability, markets, PICK_MARKET_GAP),
+    ) ??
+    null;
+  return setAside(p, top, next, null, Boolean(statPick));
+}
+
+function setAside(p: Prediction, top: Pick, next: Pick | null, marketChance: number | null, sweetSpot: boolean): Prediction {
+  return {
+    ...p,
+    picks: next ? [next, ...p.picks.filter((x) => x !== next && x.market !== next.market)] : p.picks,
+    topPick: next,
+    sweetSpot,
+    marketCheck: { setAside: top, marketChance, reason: "unlisted" },
   };
 }

@@ -11,6 +11,8 @@ import type { StatMarkets } from "@/lib/model/match-stats";
 import { evaluatePick } from "@/lib/settlement";
 import { sweetSpotLabel } from "@/lib/model/sweet-spots";
 import { isPausedPick } from "@/lib/model/paused";
+import { bestListedLine, type ListedLine } from "@/lib/board-pick";
+import { LEG_MARKET_GAP } from "@/lib/market-check";
 
 export interface Variation {
   label: string;
@@ -47,6 +49,12 @@ export interface TopPicksInput {
   prediction: Prediction;
   /** Corners and the other count markets; Pro only, absent otherwise. */
   corners?: StatMarkets | null;
+  /**
+   * The stat lines SportyBet lists on the game, priced by the model
+   * (sportybet-lines.ts listedLinesFor): the corners pick is chosen among
+   * them. Null when the game isn't on SportyBet; absent when not looked up.
+   */
+  listed?: ListedLine[] | null;
 }
 
 const MAX_PICKS = 3;
@@ -215,8 +223,17 @@ function variationsFor(p: Pick, pr: Prediction, corners: StatMarkets | null | un
  */
 const CORNER_REACH = 3;
 
-/** The best count-market line: likely enough to lead with, not a near-certainty, and near the game's projected count. */
-function cornersPick(c: StatMarkets): Pick | null {
+/**
+ * The best corners total: likely enough to lead with, not a near-certainty,
+ * and, where SportyBet lists the game, one of the totals it lists (it sets
+ * them near the middle, so often none qualifies and the slot stays empty).
+ */
+function cornersPick(c: StatMarkets, listed?: ListedLine[] | null): Pick | null {
+  if (listed) {
+    const totals = listed.filter((l) => /^corners:(over|under):/.test(l.market));
+    const best = bestListedLine(totals, { gap: LEG_MARKET_GAP, floor: 0.72, cap: MAX_EXTRA });
+    return best ? { market: best.market, label: best.label, group: "Corners", probability: best.probability, fairOdds: 1 / best.probability, confidence: 0 } : null;
+  }
   let best: { market: string; label: string; p: number } | null = null;
   for (const [l, over] of Object.entries(c.over)) {
     if (Math.abs(Number(l) - c.expected.total) > CORNER_REACH) continue;
@@ -230,7 +247,7 @@ function cornersPick(c: StatMarkets): Pick | null {
   return best ? { market: best.market, label: best.label, group: "Corners", probability: best.p, fairOdds: 1 / best.p, confidence: 0 } : null;
 }
 
-export function buildTopPicks({ prediction: pr, corners }: TopPicksInput): TopPick[] {
+export function buildTopPicks({ prediction: pr, corners, listed }: TopPicksInput): TopPick[] {
   const head = pr.topPick;
   if (!head || head.market === "locked" || !pr.sufficiency.publishable) return [];
 
@@ -244,7 +261,7 @@ export function buildTopPicks({ prediction: pr, corners }: TopPicksInput): TopPi
     .filter((x) => !isPausedPick(x.market) && !/^ou:(over|under):(0\.5|4\.5)$/.test(x.market))
     .filter((x) => x.market !== "dc:home-away" || head.market === "dc:home-away")
     .sort((x, y) => y.confidence - x.confidence);
-  const stat = corners ? cornersPick(corners) : null;
+  const stat = corners ? cornersPick(corners, listed) : null;
   // Corners compete on probability alone, so it gets one slot at most, after a goal pick.
   for (const x of candidates) {
     if (chosen.length >= MAX_PICKS) break;

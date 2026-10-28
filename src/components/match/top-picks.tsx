@@ -5,6 +5,7 @@ import { isStrong } from "@/lib/model/tiers";
 import type { ViewedPrediction } from "@/lib/access";
 import type { StatMarkets } from "@/lib/model/match-stats";
 import { buildTopPicks, type TopPick } from "@/lib/top-picks";
+import { listedLinesFor } from "@/lib/sportybet-lines";
 import { withStatOutcomes } from "@/lib/stat-results";
 import { SharePicksButton } from "@/components/match/share-picks-button";
 
@@ -16,7 +17,9 @@ import { SharePicksButton } from "@/components/match/share-picks-button";
  */
 export async function TopPicks({ prediction, corners }: { prediction: ViewedPrediction; corners?: StatMarkets | null }) {
   // Corners and shots grade from ESPN minutes after full time, not days later.
-  const picks = await withStatOutcomes(buildTopPicks({ prediction, corners }), prediction.match);
+  // Only Pro sees the corners slot, so only then is SportyBet's board read for it.
+  const listed = corners ? await listedLinesFor(prediction.match, prediction).catch(() => null) : undefined;
+  const picks = await withStatOutcomes(buildTopPicks({ prediction, corners, listed }), prediction.match);
   if (picks.length === 0) return null;
   const strong = isStrong(prediction.topPick, prediction.match.league.code);
 

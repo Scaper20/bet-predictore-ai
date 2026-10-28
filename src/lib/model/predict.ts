@@ -88,8 +88,12 @@ export interface Prediction {
   topPick: Pick | null;
   /** True when topPick came from a sweet spot (sweet-spots.ts) rather than the usual ranking. */
   sweetSpot?: boolean;
-  /** The model's own top pick, set aside because SportyBet rated it well below the model (market-check.ts). */
-  marketCheck?: { setAside: Pick; marketChance: number };
+  /**
+   * The model's own top pick, set aside (market-check.ts): SportyBet rated it
+   * well below the model ("market", with SportyBet's chance), or SportyBet
+   * doesn't list its line on this game ("unlisted").
+   */
+  marketCheck?: { setAside: Pick; marketChance: number | null; reason?: "market" | "unlisted" };
   /** What in the data the model is reacting to; see insights.ts. */
   insights: Insight[];
   /** Whether there is enough real history to stand behind this prediction. */
@@ -378,7 +382,7 @@ export function inflateDraws(grid: number[][], factor: number): number[][] {
  * much evidence sits behind it. A 70% probability off six matches of history
  * should not read the same as a 70% probability off two full seasons.
  */
-function confidenceFor(probability: number, dataQuality: number, uncertainty: number): number {
+export function confidenceFor(probability: number, dataQuality: number, uncertainty: number): number {
   // Probability contributes most, but is discounted when the 1X2 spread is
   // near-uniform and when the underlying sample is thin.
   const evidence = 0.55 + 0.45 * (dataQuality / 100);

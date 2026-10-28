@@ -7,6 +7,7 @@ import { priceLeg, statFamilyOf, type LegPrice, type StatFamily } from "@/lib/le
 import { fromSportyBet, readOdds } from "@/lib/odds/markets";
 import { findOnBoard } from "@/lib/odds/sportybet";
 import { statGridsFor } from "@/lib/stat-markets-service";
+import { listedStatLines, type ListedLine } from "@/lib/board-pick";
 
 /**
  * The lines SportyBet lists on a game beyond the main markets, each with the
@@ -57,6 +58,22 @@ const lineOf = (market: string) => {
   const last = market.split(":").pop() ?? "";
   return /^[+-]?\d+(\.\d+)?$/.test(last) ? Number(last) : 0;
 };
+
+/**
+ * The corners and shots lines SportyBet lists on this game, priced by the
+ * model (board-pick.ts), for choosing a pick among them. Null when the game
+ * isn't on SportyBet's board.
+ */
+export async function listedLinesFor(match: Match, prediction: Prediction): Promise<ListedLine[] | null> {
+  const event = await findOnBoard(
+    { homeName: match.home.name, awayName: match.away.name, kickoff: Date.parse(match.kickoff) },
+    { leagueCode: match.league.code, matchId: match.id },
+  ).catch(() => null);
+  if (!event?.markets.length) return null;
+  const stats = await statGridsFor(match).catch(() => ({}));
+  const ctx = { goals: gridFor(prediction), stats };
+  return listedStatLines(event.markets, (m) => priceLeg(m, ctx)?.survive ?? null);
+}
 
 export async function sportyBetLines(match: Match, prediction: Prediction): Promise<LineGroup[]> {
   const event = await findOnBoard(

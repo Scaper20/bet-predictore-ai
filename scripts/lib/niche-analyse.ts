@@ -7,6 +7,7 @@
  */
 
 import { scoreMatrix } from "../../src/lib/model/poisson";
+import { toSportyBet } from "../../src/lib/odds/markets";
 import { statGrid, statMarkets, STAT_LINES, type StatKind } from "../../src/lib/model/match-stats";
 import type { Pred } from "../niche-lab";
 
@@ -809,7 +810,10 @@ function shippable(preds: Pred[], dc: Model, grids: Grid[], nbs: Model[], wins: 
   };
   const rulesFor = (m: Model, keys: string[], target: number, all: boolean) => keys.map((key) => ruleOn(m, preds, m.keys.indexOf(key), target, 100, all)).filter((r): r is ShipRule => r !== null);
   const goalRules = (target: number, all = false) => [...rulesFor(dc, SHIP_GOAL_KEYS, target, all), ...rulesFor(ah, ah.keys, target, all)];
-  const statRules = (prefix: string, target: number, all = false) => nbs.filter((m) => m.keys[0].startsWith(prefix)).flatMap((m) => rulesFor(m, m.keys, target, all));
+  // Only markets SportyBet has at all: it lists no shots handicap and no
+  // "level or more" market, so a rule on one could never be loaded.
+  const statRules = (prefix: string, target: number, all = false) =>
+    nbs.filter((m) => m.keys[0].startsWith(prefix)).flatMap((m) => rulesFor(m, m.keys.filter((k) => toSportyBet(k) !== null), target, all));
   const groupOf = (key: string) => (key.startsWith("corners") ? "corners" : key.startsWith("shots") ? "shots" : key.startsWith("sot") ? "shots on target" : group(key));
 
   type Picked = { i: number; p: number; w: number; key: string; fallback: boolean };
