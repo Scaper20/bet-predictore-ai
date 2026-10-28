@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useState } from "react";
 import { useOverlay } from "@/components/ui/use-overlay";
 import { useClaimsPriorityPopup, usePriorityPopupActive } from "@/components/ui/popup-priority";
-import { OPEN_TOUR_EVENT, TOUR_DONE_KEY } from "@/lib/tour";
+import { OPEN_TOUR_EVENT, TOUR_CLOSED_EVENT, TOUR_DONE_KEY, tourDone, tourStartsOn } from "@/lib/tour";
 
 /**
  * A first-visit walkthrough: a dimmed page with a spotlight on one real
@@ -23,56 +23,45 @@ import { OPEN_TOUR_EVENT, TOUR_DONE_KEY } from "@/lib/tour";
 
 type Step = { targets: string[]; title: string; body: string };
 
+/**
+ * Short on purpose: five stops, one line each. It shows where the value is
+ * (a card, a combo, the Code Hub, Forge) and ends by naming what VIP adds,
+ * because the day-pass offer (components/day-pass) opens straight after it
+ * closes, finished or skipped.
+ */
 const STEPS: Step[] = [
   {
     targets: [],
     title: "Welcome to KiqStat",
-    body: "A 30-second tour of how to read the predictions and what you can do with them.",
+    body: "Every match, read by a model that shows its record. A 20-second look around.",
   },
   {
     targets: ['[data-tour="card"]'],
-    title: "Every match, a probability",
-    body: "Each card shows the model's read on a match and its strongest pick. Tap it for form, stats, head-to-head and every prediction type.",
+    title: "Tap any match",
+    body: "The pick, the chance it lands, and the stats behind it.",
   },
   {
     targets: ['[data-tour="pick"]'],
-    title: "Add picks to a combo",
-    body: "Like a pick? Add it to your combo. We show the real chance of every pick in it landing together.",
-  },
-  {
-    targets: ['[data-tour="combo"]', '[data-tour="combos"]'],
-    title: "My combos",
-    body: "Track a combo and it lives here: every game followed live, and the result once the final whistle goes.",
-  },
-  {
-    targets: ['[data-tour="scores"]'],
-    title: "Live, fixtures and results",
-    body: "One place for every game: what's on now, what's coming up and how it finished, with how our picks did.",
-  },
-  {
-    targets: ['[data-tour="forge"]'],
-    title: "Let Forge build one",
-    body: "Pick the price you want. Forge takes the strongest picks on the card first, then the next strongest, until it gets there.",
+    title: "Build a combo",
+    body: "Add picks and see the real chance of them all landing together.",
   },
   {
     targets: ['[data-tour="code-hub"]'],
-    title: "Code Hub",
-    body: "Ready-made codes every day from 2 to 20 odds, each with a SportyBet code. Paste any code to check it or make it safer.",
+    title: "Codes, ready to play",
+    body: "Daily combos from 2 to 20 odds, each with a SportyBet code.",
   },
   {
-    targets: ['[data-tour="ask"]'],
-    title: "Ask anything",
-    body: "Ask about any match in plain words, like “Is Arsenal v Chelsea a high-scoring game?” Answers come from the same model.",
+    targets: ['[data-tour="forge"]'],
+    title: "Or let Forge build it",
+    body: "Name your odds. Forge stacks the strongest picks to get there.",
   },
   {
     targets: [],
-    title: "You're set",
-    body: "Picks in 27 competitions are free. In the 15 Pro leagues, Pro members get the pick before kick-off and everyone sees it once the game starts. Every pick is graded on the track record. Replay this tour any time from Help.",
+    title: "Free covers 27 competitions",
+    body: "VIP opens the rest: Pro-league picks before kick-off, every combo and every prediction type.",
   },
 ];
 
-/** Pages with prediction cards to point at. */
-const AUTO_PATHS = [/^\/$/, /^\/[a-z]+\/predictions\/?$/];
 const AUTO_DELAY_MS = 1500;
 const PAD = 8;
 
@@ -92,14 +81,6 @@ function hasTarget(step: Step) {
   return step.targets.length === 0 || findTarget(step) !== null;
 }
 
-function done(): boolean {
-  try {
-    return localStorage.getItem(TOUR_DONE_KEY) === "1";
-  } catch {
-    return true; // storage blocked: never nag on every visit
-  }
-}
-
 function markDone() {
   try {
     localStorage.setItem(TOUR_DONE_KEY, "1");
@@ -116,6 +97,7 @@ export function TourOverlay() {
   const close = useCallback(() => {
     markDone();
     setOpen(false);
+    window.dispatchEvent(new Event(TOUR_CLOSED_EVENT));
   }, []);
   const { containerRef, initialFocusRef } = useOverlay<HTMLDivElement, HTMLButtonElement>(open, close);
   useClaimsPriorityPopup(open);
@@ -135,7 +117,7 @@ export function TourOverlay() {
   }, [start]);
 
   useEffect(() => {
-    if (open || priorityHeld || done() || !AUTO_PATHS.some((re) => re.test(pathname))) return;
+    if (open || priorityHeld || tourDone() || !tourStartsOn(pathname)) return;
     const t = window.setTimeout(start, AUTO_DELAY_MS);
     return () => window.clearTimeout(t);
     // priorityHeld is read once: a gift showing first simply means the tour
@@ -165,6 +147,8 @@ export function TourOverlay() {
   if (!open || !step) return null;
 
   const last = index === steps.length - 1;
+  // Set by the day-pass offer while it is open to this visitor; it opens as this closes.
+  const offerLive = typeof document !== "undefined" && document.documentElement.dataset.dayPass === "offer";
   const next = () => (last ? close() : setIndex((i) => i + 1));
   const back = () => setIndex((i) => Math.max(0, i - 1));
 
@@ -207,28 +191,34 @@ export function TourOverlay() {
       {/* Catches taps on the dimmed page so nothing behind is clicked by accident. */}
       <div className="absolute inset-0" onClick={(e) => e.stopPropagation()} />
 
-      <div className="absolute rounded-2xl border border-line bg-shell p-5 shadow-2xl" style={cardStyle}>
-        <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-brand">
-          {index + 1} of {steps.length}
-        </p>
-        <h2 id="tour-title" className="mt-2 font-display text-lg font-bold text-ink">
+      <div className="absolute overflow-hidden rounded-2xl border border-line bg-shell p-5 shadow-2xl" style={cardStyle}>
+        <div className="flex items-center gap-1.5" aria-label={`Step ${index + 1} of ${steps.length}`}>
+          {steps.map((_, i) => (
+            <span
+              key={i}
+              aria-hidden
+              className={`h-1 rounded-full transition-all ${i === index ? "w-5 bg-brand" : i < index ? "w-1.5 bg-brand/50" : "w-1.5 bg-line-strong"}`}
+            />
+          ))}
+        </div>
+        <h2 id="tour-title" className="mt-3 font-display text-lg font-bold text-ink">
           {step.title}
         </h2>
-        <p className="mt-1.5 text-sm leading-relaxed text-ink-muted">{step.body}</p>
+        <p className="mt-1 text-sm leading-relaxed text-ink-muted">{step.body}</p>
         <div className="mt-4 flex items-center justify-between gap-3">
           {last ? (
             <span />
           ) : (
-            <button type="button" onClick={close} className="text-xs font-medium text-ink-dim hover:text-ink">
-              Skip tour
+            <button type="button" onClick={close} className="min-h-10 text-xs font-medium text-ink-dim hover:text-ink">
+              Skip
             </button>
           )}
           <div className="flex gap-2">
-            {index > 0 && (
+            {index > 0 && !last && (
               <button
                 type="button"
                 onClick={back}
-                className="rounded-lg border border-line px-3.5 py-2 text-sm font-semibold text-ink-muted hover:text-ink"
+                className="min-h-10 rounded-lg border border-line px-3.5 text-sm font-semibold text-ink-muted hover:text-ink"
               >
                 Back
               </button>
@@ -237,9 +227,11 @@ export function TourOverlay() {
               ref={initialFocusRef}
               type="button"
               onClick={next}
-              className="rounded-lg bg-brand px-4 py-2 text-sm font-bold text-brand-ink hover:bg-brand-strong"
+              className={`min-h-10 rounded-lg px-4 text-sm font-bold ${
+                last && offerLive ? "bg-gold text-gold-ink hover:bg-gold-strong" : "bg-brand text-brand-ink hover:bg-brand-strong"
+              }`}
             >
-              {index === 0 ? "Show me" : last ? "Got it" : "Next"}
+              {index === 0 ? "Show me" : last ? (offerLive ? "See the VIP offer" : "Got it") : "Next"}
             </button>
           </div>
         </div>

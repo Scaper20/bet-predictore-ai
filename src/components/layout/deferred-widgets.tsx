@@ -18,6 +18,7 @@ const NotificationPrompt = dynamic(
 const SlipSheet = dynamic(() => import("@/components/slip/slip-sheet").then((m) => m.SlipSheet), { ssr: false });
 const AskPanel = dynamic(() => import("@/components/ask/ask-panel").then((m) => m.AskPanel), { ssr: false });
 const TourOverlay = dynamic(() => import("@/components/tour/tour-overlay").then((m) => m.TourOverlay), { ssr: false });
+const DayPassOffer = dynamic(() => import("@/components/day-pass/day-pass-offer").then((m) => m.DayPassOffer), { ssr: false });
 const ScrollToTop = dynamic(() => import("@/components/ui/scroll-to-top").then((m) => m.ScrollToTop), { ssr: false });
 
 export function DeferredWidgets() {
@@ -31,6 +32,7 @@ export function DeferredWidgets() {
       <ScrollToTop />
       <AskPanel />
       <TourOverlay />
+      <DayPassOffer />
     </>
   );
 }

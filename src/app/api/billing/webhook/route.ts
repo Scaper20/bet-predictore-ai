@@ -8,6 +8,7 @@ import { receiptEmail, subscriptionCanceledEmail } from "@/lib/email-templates";
 import type { Tier } from "@/lib/entitlements";
 import { recordCommission } from "@/lib/partner-commission";
 import { grantPaystackOnce } from "@/lib/paystack/once";
+import { grantDayPass } from "@/lib/day-pass-server";
 
 // Node's crypto module, not Edge-safe — Proxy (formerly middleware) already
 // excludes this route from its matcher (see src/proxy.ts) so no session
@@ -102,6 +103,11 @@ export async function POST(request: Request) {
       // had already run).
       if (reference && metadata?.once === "1") {
         await grantPaystackOnce(reference);
+        break;
+      }
+      // The VIP day pass: the same re-verified, once-only grant (lib/day-pass-server.ts).
+      if (reference && metadata?.dayPass === "1") {
+        await grantDayPass(reference);
         break;
       }
 

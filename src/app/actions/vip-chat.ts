@@ -15,7 +15,7 @@ export type VipNumberState = { status: "idle" | "saved" | "error"; message: stri
 export async function saveVipNumber(_prev: VipNumberState, formData: FormData): Promise<VipNumberState> {
   const ent = await getEntitlement();
   if (!ent.userId) return { status: "error", message: "Sign in first." };
-  if (!meets(ent.tier, "vip")) return { status: "error", message: "The VIP chat comes with the VIP plan." };
+  if (!meets(ent.tier, "vip") || ent.dayPassOnly) return { status: "error", message: "The VIP chat comes with the VIP plan." };
 
   const number = normaliseWhatsAppNumber(String(formData.get("number") ?? ""));
   if (!number) {

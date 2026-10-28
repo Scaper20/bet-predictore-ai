@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 export default async function ResetPasswordPage({ searchParams }: { searchParams?: Promise<{ token?: string }> }) {
   const token = (await searchParams)?.token;
   return (
-    <AuthCard title="Choose a new password" intro="Pick something you haven't used here before. At least 8 characters.">
+    <AuthCard title="Choose a new password" intro="Something new, 8+ characters.">
       {plausibleResetToken(token) ? <ResetPasswordForm token={token} /> : <ExpiredLink />}
     </AuthCard>
   );

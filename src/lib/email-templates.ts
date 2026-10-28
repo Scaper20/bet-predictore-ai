@@ -123,13 +123,17 @@ export function receiptEmail(opts: {
   amountText?: string;
   /** Prepaid plans (Flutterwave): the date access now runs to. */
   accessUntil?: string;
+  /** Names the purchase in place of the tier ("VIP day pass"); access-until then carries the time too. */
+  planLabel?: string;
   reference: string;
   date: string;
 }): { subject: string; html: string } {
-  const label = opts.tier ? TIER_LABEL[opts.tier] : undefined;
+  const label = opts.planLabel ?? (opts.tier ? TIER_LABEL[opts.tier] : undefined);
   const amount = opts.amountText ?? naira(opts.amountKobo / 100);
   const until = opts.accessUntil
-    ? new Date(opts.accessUntil).toLocaleDateString("en-GB", { year: "numeric", month: "long", day: "numeric" })
+    ? opts.planLabel
+      ? `${new Date(opts.accessUntil).toLocaleString("en-GB", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", timeZone: "Africa/Lagos" })} WAT`
+      : new Date(opts.accessUntil).toLocaleDateString("en-GB", { year: "numeric", month: "long", day: "numeric" })
     : undefined;
   const when = new Date(opts.date).toLocaleDateString("en-NG", { year: "numeric", month: "long", day: "numeric" });
 
@@ -138,7 +142,7 @@ export function receiptEmail(opts: {
     html: emailLayout(`
       <p style="margin:0 0 12px;font-size:17px;font-weight:700;">Payment received</p>
       <p style="margin:0 0 20px;">${
-        label ? `Thanks for subscribing to ${label}.` : "Thanks for your payment."
+        opts.planLabel ? `Your ${opts.planLabel} is on.` : label ? `Thanks for subscribing to ${label}.` : "Thanks for your payment."
       } Here's your receipt.</p>
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;">
         <tr><td style="padding:6px 0;color:#6b7670;">Amount</td><td style="padding:6px 0;text-align:right;font-weight:700;">${amount}</td></tr>

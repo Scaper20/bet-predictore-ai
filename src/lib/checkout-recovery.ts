@@ -1,6 +1,7 @@
 import "server-only";
 
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { DAY_PASS_PLAN } from "@/lib/day-pass";
 import { sendEmail } from "@/lib/email";
 import { unfinishedCheckoutEmail } from "@/lib/email-templates";
 
@@ -44,6 +45,8 @@ export async function sendCheckoutReminders(lookbackHours = 48, now = new Date()
     .gte("created_at", from)
     .lte("created_at", to)
     .not("user_id", "is", null)
+    // A missed day pass isn't chased with a plan email; its own offer is still on the site while it lasts.
+    .neq("plan", DAY_PASS_PLAN)
     .order("created_at", { ascending: false });
   if (error || !attempts?.length) return { candidates: 0, sent: 0 };
 

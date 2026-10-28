@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { type NextFetchEvent, type NextRequest, NextResponse } from "next/server";
+import { FIRST_SEEN_COOKIE } from "@/lib/day-pass";
 import { FIRST_TOUCH_COOKIE, type FirstTouch, trimFirstTouchValue } from "@/lib/first-touch";
 import { PARTNER_REF_COOKIE, PARTNER_REF_DAYS, cleanRefParam, encodePartnerRef } from "@/lib/partner-ref";
 import { MAINTENANCE_BYPASS_COOKIE, isMaintenanceExempt, maintenanceHtml } from "@/lib/maintenance";
@@ -106,6 +107,8 @@ export async function proxy(request: NextRequest, event: NextFetchEvent) {
     });
   }
 
+  // Before captureFirstTouch: a browser without the first-touch cookie is new.
+  stampFirstSeen(request, response);
   captureFirstTouch(request, response);
   capturePartnerRef(request, response);
 
@@ -221,6 +224,27 @@ async function readMaintenance(supabase: SupabaseClient): Promise<MaintenanceSta
 async function isAdmin(supabase: SupabaseClient, userId: string): Promise<boolean> {
   const { data } = await supabase.from("admin_users").select("id").eq("id", userId).maybeSingle();
   return Boolean(data);
+}
+
+/**
+ * When this browser first came, for the VIP day-pass offer window
+ * (lib/day-pass.ts). Readable by the page, which counts down from it. A
+ * browser already holding the first-touch cookie was here before this
+ * existed, so it is stamped "0": a returning visitor, with no window.
+ * Navigations only, like first-touch, and written once.
+ */
+function stampFirstSeen(request: NextRequest, response: NextResponse) {
+  if (request.cookies.get(FIRST_SEEN_COOKIE)) return;
+  const mode = request.headers.get("sec-fetch-mode");
+  if (mode && mode !== "navigate") return;
+  const returning = Boolean(request.cookies.get(FIRST_TOUCH_COOKIE));
+  response.cookies.set(FIRST_SEEN_COOKIE, returning ? "0" : String(Date.now()), {
+    httpOnly: false,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 365,
+  });
 }
 
 /**
