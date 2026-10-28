@@ -204,7 +204,7 @@ async function closingFor(matchId: string, kickoff: string, market: string) {
 export async function settleShadowPicks(admin: SupabaseClient): Promise<number> {
   const { data: rows } = await admin
     .from("shadow_picks")
-    .select("match_id, market, kickoff")
+    .select("match_id, market, kickoff, league_code, home_name, away_name")
     .is("settled_at", null)
     .lt("kickoff", new Date().toISOString())
     .limit(500);
@@ -230,18 +230,26 @@ export async function settleShadowPicks(admin: SupabaseClient): Promise<number> 
   }
 
   let n = 0;
+  const archive = new Map<string, ArchiveHalf[]>();
   for (const row of rows) {
     const s = scores.get(row.match_id as string);
     if (typeof s?.home_goals !== "number" || typeof s?.away_goals !== "number") continue;
     const market = row.market as string;
+    // Provider ids (sdb:, fd:) have no row in matches; the archive's goal
+    // timelines (ESPN, nightly) carry their half-time score.
+    const ht = isRawMarket(market)
+      ? (halves.get(row.match_id as string) ??
+        (await archiveHalfTime(admin, { league_code: row.league_code, home_name: row.home_name, away_name: row.away_name, kickoff: row.kickoff, hg: s.home_goals, ag: s.away_goals }, archive)))
+      : null;
     const graded = isRawMarket(market)
-      ? gradeLegFull(market, { home: s.home_goals, away: s.away_goals }, halves.get(row.match_id as string) ?? null)
+      ? gradeLegFull(market, { home: s.home_goals, away: s.away_goals }, ht)
       : evaluatePick(market, s.home_goals, s.away_goals);
     const result = graded === "win" || graded === "lose" || graded === "push" ? graded : null;
     if (!result) {
       // A halves market whose half-time score never came: closed ungraded after
-      // three days, so it doesn't hold a place in this queue for ever.
-      if (isRawMarket(market) && Date.parse(row.kickoff as string) < Date.now() - 3 * 86_400_000) {
+      // five days (the timelines land nightly), so it doesn't hold a place in
+      // this queue for ever.
+      if (isRawMarket(market) && Date.parse(row.kickoff as string) < Date.now() - 5 * 86_400_000) {
         await admin
           .from("shadow_picks")
           .update({ actual_home_goals: s.home_goals, actual_away_goals: s.away_goals, settled_at: new Date().toISOString() })
@@ -315,6 +323,54 @@ export async function settleEnginePicks(admin: SupabaseClient, opts: { maxAgeHou
     if (!error) n++;
   }
   return n;
+}
+
+interface ArchiveHalf {
+  home: string;
+  away: string;
+  hg: number;
+  ag: number;
+  ht: { home: number; away: number };
+}
+
+/**
+ * A finished game's half-time score from the results archive's goal
+ * timelines (goal_timelines, filled nightly from ESPN), matched like the
+ * corners and shots grading: same competition, within a day and a half of
+ * kick-off, same two clubs by the competition's name book, same final score.
+ */
+async function archiveHalfTime(
+  admin: SupabaseClient,
+  row: Pick<StatRow, "league_code" | "home_name" | "away_name" | "kickoff" | "hg" | "ag">,
+  cache: Map<string, ArchiveHalf[]>,
+): Promise<{ home: number; away: number } | null> {
+  const code = row.league_code;
+  if (!code) return null;
+  const at = Date.parse(row.kickoff);
+  const key = `${code}|${new Date(at).toISOString().slice(0, 10)}`;
+  if (!cache.has(key)) {
+    const { data } = await admin
+      .from("historical_results")
+      .select("home_name, away_name, home_goals, away_goals, goal_timelines!inner(ht_home, ht_away)")
+      .eq("league_code", code)
+      .gte("kickoff", new Date(at - 36 * 3_600_000).toISOString())
+      .lte("kickoff", new Date(at + 36 * 3_600_000).toISOString());
+    cache.set(
+      key,
+      (data ?? []).flatMap((r) => {
+        const t = (Array.isArray(r.goal_timelines) ? r.goal_timelines[0] : r.goal_timelines) as { ht_home: number | null; ht_away: number | null } | undefined;
+        return t && typeof t.ht_home === "number" && typeof t.ht_away === "number"
+          ? [{ home: r.home_name as string, away: r.away_name as string, hg: r.home_goals as number, ag: r.away_goals as number, ht: { home: t.ht_home, away: t.ht_away } }]
+          : [];
+      }),
+    );
+  }
+  const def = leagueByCode(code);
+  const scope = def ? nameScope(def) : null;
+  const book = scope ? await nameBook(scope) : null;
+  const canon = (n: string) => looseKey(book?.canonical.get(looseKey(n)) ?? n);
+  const game = cache.get(key)!.find((g) => canon(g.home) === canon(row.home_name) && canon(g.away) === canon(row.away_name) && g.hg === row.hg && g.ag === row.ag);
+  return game?.ht ?? null;
 }
 
 /* ------------------------------------------------- corners and shots picks */
