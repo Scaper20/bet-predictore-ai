@@ -109,6 +109,7 @@ export async function runSettlementPass(
   if (error) throw error;
   if (!pending || pending.length === 0) {
     await settleShadowPicks(admin).catch(() => 0);
+    await settleEnginePicks(admin, opts).catch(() => 0);
     await settlePosts();
     return 0;
   }
@@ -173,6 +174,7 @@ export async function runSettlementPass(
     if (!updateError) settledCount++;
   }
   await settleShadowPicks(admin).catch(() => 0);
+  await settleEnginePicks(admin, opts).catch(() => 0);
   await settlePosts();
   return settledCount;
 }
@@ -254,6 +256,62 @@ export async function settleShadowPicks(admin: SupabaseClient): Promise<number> 
       .update({ result, actual_home_goals: s.home_goals, actual_away_goals: s.away_goals, settled_at: new Date().toISOString(), ...closing })
       .eq("match_id", row.match_id as string)
       .eq("market", row.market as string);
+    if (!error) n++;
+  }
+  return n;
+}
+
+/**
+ * Grades the headline engine's log (engine_picks, 0082): goals picks from the
+ * final score in match_results, corners and shots picks the way the
+ * published ones are (gradeFromStats). Its games are the logged ones, so the
+ * score is normally cached already; a game without one waits for the pass
+ * that settles its predictions_log row. Corners and shots are graded only by
+ * the daily sweep, so a live poll never waits on ESPN for them.
+ */
+export async function settleEnginePicks(admin: SupabaseClient, opts: { maxAgeHours?: number } = {}): Promise<number> {
+  const { data: rows } = await admin
+    .from("engine_picks")
+    .select("match_id, slot, market, league_code, home_name, away_name, kickoff")
+    .is("settled_at", null)
+    .lt("kickoff", new Date().toISOString())
+    .order("kickoff", { ascending: true })
+    .limit(800);
+  if (!rows || rows.length === 0) return 0;
+
+  const ids = [...new Set(rows.map((r) => r.match_id as string))];
+  const { data: results } = await admin
+    .from("match_results")
+    .select("match_id, home_goals, away_goals")
+    .in("match_id", ids)
+    .eq("status", "finished");
+  const scores = new Map((results ?? []).map((r) => [r.match_id as string, r]));
+
+  const statCache = new Map<string, StatGame[]>();
+  // Inside the cron's 120 s, after the published picks have had theirs.
+  const espnCache: EspnCache = { games: new Map(), until: Date.now() + 2 * ESPN_QUICK_BUDGET_MS };
+  let n = 0;
+  for (const row of rows) {
+    const s = scores.get(row.match_id as string);
+    if (typeof s?.home_goals !== "number" || typeof s?.away_goals !== "number") continue;
+    const market = row.market as string;
+    const stat = statKindOf(market);
+    // Corners and shots wait for the daily sweep: the pass behind a live poll stays quick.
+    if (stat && (opts.maxAgeHours || Date.now() - Date.parse(row.kickoff as string) < STAT_READY_MS)) continue;
+    const result = stat
+      ? await gradeFromStats(
+          admin,
+          { market, league_code: row.league_code, home_name: row.home_name, away_name: row.away_name, kickoff: row.kickoff, hg: s.home_goals, ag: s.away_goals },
+          statCache,
+          espnCache,
+        )
+      : evaluatePick(market, s.home_goals, s.away_goals);
+    if (!result) continue;
+    const { error } = await admin
+      .from("engine_picks")
+      .update({ result, actual_home_goals: s.home_goals, actual_away_goals: s.away_goals, settled_at: new Date().toISOString() })
+      .eq("match_id", row.match_id as string)
+      .eq("slot", row.slot as string);
     if (!error) n++;
   }
   return n;

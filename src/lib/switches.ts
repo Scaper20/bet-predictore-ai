@@ -15,9 +15,12 @@ import { cached } from "@/lib/providers/cache";
  * calling SportyBet directly costs nothing, and "off" there means no prices
  * and no booking codes at all. It is a brake for when SportyBet objects, not
  * a guard on spending.
+ *
+ * headline_engine publishes the headline engine's pick (engine-feed.ts) in
+ * place of the model's own; off, the engine is only logged beside it.
  */
 
-export type SwitchKey = "parsebot_live" | "code_hub_open" | "sportybet_direct";
+export type SwitchKey = "parsebot_live" | "code_hub_open" | "sportybet_direct" | "headline_engine";
 
 export const SWITCH_TTL_MS = 15_000;
 
@@ -31,6 +34,7 @@ async function readAll(): Promise<Record<SwitchKey, SwitchState>> {
     parsebot_live: { enabled: false, updatedAt: null },
     code_hub_open: { enabled: false, updatedAt: null },
     sportybet_direct: { enabled: true, updatedAt: null },
+    headline_engine: { enabled: false, updatedAt: null },
   };
   try {
     const { supabaseAdmin } = await import("@/lib/supabase/admin");

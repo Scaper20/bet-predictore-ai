@@ -5,12 +5,17 @@ import { EmptyState } from "@/components/ui/primitives";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { pairedLogLoss, priceSkill, type PriceSkill, type PricedOutcome } from "@/lib/odds/price-skill";
 import { requirePermission } from "@/lib/admin";
+import { can } from "@/lib/admin-access";
+import { switchesFresh } from "@/lib/switches";
+import { summariseEngine, type EngineLogRow, type EngineRecord, type PublishedLogRow } from "@/lib/engine-record";
+import { EngineSection } from "@/components/admin/engine-section";
 
 export const metadata: Metadata = { title: "Model performance" };
 
 export default async function ModelPerformancePage() {
-  await requirePermission("model.view");
-  const [perf, shadow, prices] = await Promise.all([getModelPerformance(), getShadowRecord(), getPriceRecord()]);
+  const identity = await requirePermission("model.view");
+  const [perf, shadow, prices, engine, sw] = await Promise.all([getModelPerformance(), getShadowRecord(), getPriceRecord(), getEngineRecord(), switchesFresh()]);
+  const engineSection = <EngineSection record={engine} enabled={sw.headline_engine.enabled} canSwitch={can(identity.roles, "model.manage")} />;
   const totalSettled = perf.overall.wins + perf.overall.losses + perf.overall.pushes;
 
   if (totalSettled === 0) {
@@ -20,6 +25,7 @@ export default async function ModelPerformancePage() {
           <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-brand">Product</p>
           <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight sm:text-[28px]">Model performance</h1>
         </div>
+        {engineSection}
         <EmptyState
           icon="📊"
           title="No settled picks yet"
@@ -35,6 +41,8 @@ export default async function ModelPerformancePage() {
         <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-brand">Product</p>
         <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight sm:text-[28px]">Model performance</h1>
       </div>
+
+      {engineSection}
 
       <PricesSection data={prices} />
 
@@ -79,6 +87,43 @@ export default async function ModelPerformancePage() {
       </section>
     </div>
   );
+}
+
+/** The engine's log and the published headlines on the same games, newest 3,000. */
+async function getEngineRecord(): Promise<EngineRecord> {
+  try {
+    const db = supabaseAdmin();
+    const { data: rows } = await db
+      .from("engine_picks")
+      .select("match_id, slot, market, family, calibrated, load_price, result, logged_at")
+      .order("kickoff", { ascending: false })
+      .limit(3000);
+    const engineRows: EngineLogRow[] = (rows ?? []).map((r) => ({
+      ...(r as Omit<EngineLogRow, "calibrated" | "load_price">),
+      calibrated: Number(r.calibrated),
+      load_price: Number(r.load_price),
+    }));
+    const ids = [...new Set(engineRows.filter((r) => r.slot === "headline").map((r) => r.match_id))];
+    const published: PublishedLogRow[] = [];
+    for (let i = 0; i < ids.length; i += 300) {
+      const { data } = await db
+        .from("predictions_log")
+        .select("match_id, market, probability, price_at_publish, result")
+        .in("match_id", ids.slice(i, i + 300));
+      for (const p of data ?? []) {
+        published.push({
+          match_id: p.match_id as string,
+          market: p.market as string,
+          probability: Number(p.probability),
+          price_at_publish: p.price_at_publish === null ? null : Number(p.price_at_publish),
+          result: p.result as PublishedLogRow["result"],
+        });
+      }
+    }
+    return summariseEngine(engineRows, published);
+  } catch {
+    return summariseEngine([], []);
+  }
 }
 
 interface ShadowRow {

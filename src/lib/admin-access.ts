@@ -45,6 +45,7 @@ export type Permission =
   | "mail.send"
   // Product and platform
   | "model.view"
+  | "model.manage"
   | "data.view"
   | "data.manage"
   | "codehub.manage"
@@ -79,6 +80,7 @@ export const PERMISSIONS: Record<Permission, PermissionInfo> = {
   "feedback.view": { group: "Customers", label: "View feedback", detail: "Ratings and comments from the site" },
   "mail.send": { group: "Customers", label: "Send mail", detail: "Write from the support inbox (one named account)" },
   "model.view": { group: "Product", label: "Model performance", detail: "Hit rates, calibration and markets" },
+  "model.manage": { group: "Product", label: "Headline engine", detail: "Choose which engine publishes the headline" },
   "data.view": { group: "Product", label: "View data health", detail: "Ingest runs, sources and coverage" },
   "data.manage": { group: "Product", label: "Manage data sources", detail: "Data layer switch, turn sources on and off" },
   "codehub.manage": { group: "Product", label: "Code Hub", detail: "Feature switches, parse.bot budget, remove posts" },
@@ -99,8 +101,9 @@ export interface RoleInfo {
 
 /*
  * Least privilege. The owner holds everything. The others get what their job
- * needs and no more: money movement, team changes and the audit trail stay
- * with the owner; product owns the model, data and switches; marketing owns
+ * needs and no more: money movement, team changes, the audit trail and
+ * which engine publishes the headline stay with the owner; product owns the
+ * model's numbers, data and operational switches; marketing owns
  * acquisition and the partner programme; support owns the inbox.
  */
 export const ROLES: Record<Role, RoleInfo> = {

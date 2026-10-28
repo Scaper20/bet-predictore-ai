@@ -15,7 +15,9 @@ import {
   providerHealth, hasFullCoverage,
 } from "@/lib/providers";
 import { cached } from "@/lib/providers/cache";
-import { boardChecked, needsListedLines } from "@/lib/market-check";
+import { boardChecked } from "@/lib/market-check";
+import { engineRead, withEngineHeadline } from "@/lib/engine-feed";
+import { switchOn } from "@/lib/switches";
 import { listingsFor, type SportyBetEvent } from "@/lib/odds/sportybet";
 import { buildPrediction, HEADLINE_EXCLUDED, type ModelOptions, type Prediction } from "@/lib/model/predict";
 import { clubKeys, hostGuard, TOP_FIVE_LEAGUES, UEFA_CUP_CODES } from "@/lib/cup-guard";
@@ -322,11 +324,18 @@ export async function matchPrediction(id: string): Promise<Prediction | null> {
  * market rates well below the model gives way to the game's next pick.
  * Where the game isn't on SportyBet, corners, shots and handicap picks give
  * way to a goals or result pick.
+ *
+ * The headline engine reads every checked game too (engine-feed.ts); its
+ * headline is logged beside this one (shadow) and replaces it only while
+ * app_switches.headline_engine is on.
  */
 async function marketChecked(built: { prediction: Prediction; options: ModelOptions }[]): Promise<Prediction[]> {
   const toCheck = built.filter((b) => b.prediction.topPick).map((b) => b.prediction.match);
   const known = new Set<string>();
-  const listings = toCheck.length ? await listingsFor(toCheck, undefined, known).catch(() => new Map<string, SportyBetEvent>()) : new Map<string, SportyBetEvent>();
+  const [listings, engineOn] = await Promise.all([
+    toCheck.length ? listingsFor(toCheck, undefined, known).catch(() => new Map<string, SportyBetEvent>()) : new Map<string, SportyBetEvent>(),
+    switchOn("headline_engine").catch(() => false),
+  ]);
   return Promise.all(
     built.map(async ({ prediction, options }) => {
       const markets = listings.get(prediction.match.id)?.markets;
@@ -334,12 +343,14 @@ async function marketChecked(built: { prediction: Prediction; options: ModelOpti
       // game: its picks stand as the model made them, as they always did.
       if (!markets && !known.has(prediction.match.league.code ?? "")) return prediction;
       // The lines are priced only in the divisions those picks were tested in
-      // (sweet-spots.ts), and only when the headline would read them.
+      // (sweet-spots.ts), where the headline engine reads them too.
       const lines =
-        markets && needsListedLines(prediction, markets) && sweetSpotLeague(prediction.match.league.code)
+        markets?.length && sweetSpotLeague(prediction.match.league.code)
           ? await pricedListedLines(prediction.match, prediction, markets)
           : [];
-      return boardChecked(prediction, markets, lines, options.excludeHeadline ?? HEADLINE_EXCLUDED);
+      const checked = boardChecked(prediction, markets, lines, options.excludeHeadline ?? HEADLINE_EXCLUDED);
+      const withEngine = { ...checked, engine: engineRead(prediction, markets, lines, true) };
+      return engineOn ? withEngineHeadline(withEngine) : withEngine;
     }),
   );
 }

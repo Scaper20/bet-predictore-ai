@@ -11,6 +11,7 @@
 import { calibrateResult, type ResultCalibration } from "./result-calibration";
 import { sweetSpotPick } from "./sweet-spots";
 import { isPausedPick, PAUSED_PICK_MARKETS } from "./paused";
+import type { EngineRead } from "./headline-engine";
 import type { Match, ResultRow } from "@/lib/types";
 import { leagueByCode, type LeagueDef } from "@/lib/leagues";
 import {
@@ -94,6 +95,12 @@ export interface Prediction {
    * doesn't list its line on this game ("unlisted").
    */
   marketCheck?: { setAside: Pick; marketChance: number | null; reason?: "market" | "unlisted" };
+  /**
+   * The headline engine's read (headline-engine.ts): its own headline and the
+   * best pick in each group. Set wherever the game was checked against
+   * SportyBet's board (service.ts marketChecked).
+   */
+  engine?: EngineRead;
   /** What in the data the model is reacting to; see insights.ts. */
   insights: Insight[];
   /** Whether there is enough real history to stand behind this prediction. */
