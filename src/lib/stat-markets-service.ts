@@ -118,15 +118,24 @@ const GRID_KINDS: Record<StatFamily, StatKind> = { corners: "corners", shots: "s
 /**
  * The fixture's joint count grids for corners, shots, shots on target and
  * bookings, for pricing any line SportyBet lists (leg-pricing.ts). A family
- * is missing where the competition has too little history for it.
+ * is missing where the competition has too little history for it, or when
+ * the caller leaves it out of `families`.
  */
-export async function statGridsFor(match: Match): Promise<Partial<Record<StatFamily, number[][]>>> {
+export async function statGridsFor(
+  match: Match,
+  families: readonly StatFamily[] = Object.keys(GRID_KINDS) as StatFamily[],
+): Promise<Partial<Record<StatFamily, number[][]>>> {
   const code = match.league.code;
   if (!code) return {};
   try {
-    const [{ fits, canon }, referee] = await Promise.all([leagueFits(code), refereeFor(match).catch(() => null)]);
+    // The referee only moves bookings; skip the lookup when they aren't asked for.
+    const [{ fits, canon }, referee] = await Promise.all([
+      leagueFits(code),
+      families.includes("bookings") ? refereeFor(match).catch(() => null) : null,
+    ]);
     const out: Partial<Record<StatFamily, number[][]>> = {};
     for (const [family, kind] of Object.entries(GRID_KINDS) as [StatFamily, StatKind][]) {
+      if (!families.includes(family)) continue;
       const fit = fits[kind];
       if (!fit) continue;
       const withReferee = kind === "bookings" ? referee ?? undefined : undefined;

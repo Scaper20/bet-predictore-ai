@@ -7,6 +7,8 @@
  * burst of users hits a cold key at once.
  */
 
+import { after } from "next/server";
+
 interface Entry<T> {
   value: T;
   expiresAt: number;
@@ -32,14 +34,25 @@ export async function cached<T>(
   key: string,
   ttlMs: number,
   loader: () => Promise<T>,
+  opts: { staleMs?: number } = {},
 ): Promise<T> {
   const now = Date.now();
   const hit = store.get(key) as Entry<T> | undefined;
   if (hit && hit.expiresAt > now) return hit.value;
 
   const pending = inflight.get(key) as Promise<T> | undefined;
+  // Stale-while-revalidate: within staleMs of expiry, answer with the old
+  // value at once and refresh it after the response, so no visitor waits
+  // on a recompute that one before them already paid for.
+  if (hit && opts.staleMs && now - hit.expiresAt < opts.staleMs) {
+    if (!pending) inBackground(() => load(key, ttlMs, loader, hit).catch(() => undefined));
+    return hit.value;
+  }
   if (pending) return pending;
+  return load(key, ttlMs, loader, hit);
+}
 
+function load<T>(key: string, ttlMs: number, loader: () => Promise<T>, hit: Entry<T> | undefined): Promise<T> {
   const task = (async () => {
     try {
       const value = await loader();
@@ -61,6 +74,15 @@ export async function cached<T>(
 
   inflight.set(key, task);
   return task;
+}
+
+/** After the response where there is one; just fired outside a request (scripts, tests). */
+function inBackground(work: () => Promise<unknown>) {
+  try {
+    after(work);
+  } catch {
+    void work();
+  }
 }
 
 function sweep() {

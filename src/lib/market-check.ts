@@ -110,6 +110,18 @@ export function checkPicks(
  * `lines` are the board's corners and shots lines priced by the model
  * (listedStatLines), empty where stat picks aren't offered.
  */
+/**
+ * Whether boardChecked reads the board's priced corners and shots lines for
+ * this prediction: only when its headline is a stat pick or a line SportyBet
+ * doesn't list. Pricing them costs real work per game, so callers skip it
+ * when it can't matter.
+ */
+export function needsListedLines(p: Prediction, markets: readonly RawMarket[] | undefined): boolean {
+  const top = p.topPick;
+  if (!top || !markets?.length) return false;
+  return isStatMarket(top.market) || !listedOn(top.market, markets);
+}
+
 export function boardChecked(
   p: Prediction,
   markets: readonly RawMarket[] | undefined,

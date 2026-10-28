@@ -15,7 +15,7 @@
  * Bookings are priced on the site but never picked.
  *
  * Pure: the caller brings the board (odds/sportybet.ts) and a pricer
- * (leg-pricing.ts priceLeg over the fixture's count grids).
+ * (leg-pricing.ts statLegPricer over the fixture's count grids).
  */
 import { fromSportyBet, priceOn, readOdds, toSportyBet } from "@/lib/odds/markets";
 import { fairChanceOn } from "@/lib/odds/market-prob";
@@ -60,8 +60,9 @@ export function listedStatLines(markets: readonly RawMarket[] | undefined, price
       if (!market || seen.has(market) || !isStatMarket(market)) continue;
       seen.add(market);
       const price = readOdds(o.odds);
+      if (price === undefined) continue;
       const probability = priceStat(market);
-      if (price === undefined || probability === null) continue;
+      if (probability === null) continue;
       out.push({ market, label: sweetSpotLabel(market), probability, marketChance: fairChanceOn(market, markets), price });
     }
   }

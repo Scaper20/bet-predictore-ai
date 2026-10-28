@@ -7,17 +7,15 @@
 
 import "server-only";
 import type { Match, ResultRow } from "@/lib/types";
-import { statChances, statGridsFor } from "@/lib/stat-markets-service";
-import { listedStatLines, type ListedLine } from "@/lib/board-pick";
-import { priceLeg } from "@/lib/leg-pricing";
-import { gridFor } from "@/lib/forge";
+import { statChances } from "@/lib/stat-markets-service";
+import { pricedListedLines } from "@/lib/sportybet-lines";
 import { sweetSpotLeague } from "@/lib/model/sweet-spots";
 import {
   getLive, getMatch, getTrainingResults, getH2H, getUpcoming,
   providerHealth, hasFullCoverage,
 } from "@/lib/providers";
 import { cached } from "@/lib/providers/cache";
-import { boardChecked } from "@/lib/market-check";
+import { boardChecked, needsListedLines } from "@/lib/market-check";
 import { listingsFor, type SportyBetEvent } from "@/lib/odds/sportybet";
 import { buildPrediction, HEADLINE_EXCLUDED, type ModelOptions, type Prediction } from "@/lib/model/predict";
 import { clubKeys, hostGuard, TOP_FIVE_LEAGUES, UEFA_CUP_CODES } from "@/lib/cup-guard";
@@ -335,22 +333,15 @@ async function marketChecked(built: { prediction: Prediction; options: ModelOpti
       // A competition whose board wasn't read in time says nothing about the
       // game: its picks stand as the model made them, as they always did.
       if (!markets && !known.has(prediction.match.league.code ?? "")) return prediction;
-      const lines = prediction.topPick && markets?.length ? await statLines(prediction, markets) : [];
+      // The lines are priced only in the divisions those picks were tested in
+      // (sweet-spots.ts), and only when the headline would read them.
+      const lines =
+        markets && needsListedLines(prediction, markets) && sweetSpotLeague(prediction.match.league.code)
+          ? await pricedListedLines(prediction.match, prediction, markets)
+          : [];
       return boardChecked(prediction, markets, lines, options.excludeHeadline ?? HEADLINE_EXCLUDED);
     }),
   );
-}
-
-/**
- * The board's corners and shots lines priced by the count model, only in the
- * divisions those picks were tested in (sweet-spots.ts); none elsewhere.
- */
-async function statLines(prediction: Prediction, markets: SportyBetEvent["markets"]): Promise<ListedLine[]> {
-  if (!sweetSpotLeague(prediction.match.league.code)) return [];
-  const stats = await statGridsFor(prediction.match).catch(() => ({}));
-  if (Object.keys(stats).length === 0) return [];
-  const ctx = { goals: gridFor(prediction), stats };
-  return listedStatLines(markets, (m) => priceLeg(m, ctx)?.survive ?? null);
 }
 
 export interface LiveProbability {
@@ -429,7 +420,9 @@ export async function predictBatch(matches: Match[], limit = 12): Promise<Predic
   const slice = matches.slice(0, limit);
   // The same slate is asked for by every visitor to a page; five minutes
   // keeps picks steady while scores and new fixtures still come through.
-  return cached(`batch:${slice.map((m) => m.id).join(",")}`, 5 * 60_000, () => predictSlice(slice));
+  // For half an hour past that a visitor gets the last slate at once while
+  // it is rebuilt behind them.
+  return cached(`batch:${slice.map((m) => m.id).join(",")}`, 5 * 60_000, () => predictSlice(slice), { staleMs: 30 * 60_000 });
 }
 
 async function predictSlice(slice: Match[]): Promise<Prediction[]> {

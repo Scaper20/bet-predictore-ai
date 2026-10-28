@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { gradeLeg, priceLeg, refundShare } from "./leg-pricing";
+import { gradeLeg, priceLeg, refundShare, statLegPricer } from "./leg-pricing";
+import { statGrid } from "@/lib/model/match-stats";
 import { scoreMatrix } from "@/lib/model/poisson";
 
 /** A grid where every listed (home, away) result has the given chance. */
@@ -95,5 +96,29 @@ describe("priceLeg", () => {
     const p = priceLeg("combo:1x2:home+ou:over:1.5", { goals })!;
     close(p.win, 0.15 + 0.05 + 0.15);
     expect(priceLeg("combo:1x2:home+corners:over:8.5", { goals })).toBeNull();
+  });
+});
+
+describe("statLegPricer", () => {
+  it("prices every stat leg exactly as priceLeg does", () => {
+    const ctx = {
+      stats: {
+        corners: statGrid({ home: 5.6, away: 4.1 }, { kTotal: 18, rho: 0.1 }, 30),
+        shots: statGrid({ home: 13.2, away: 9.8 }, { kTotal: 25, rho: 0.15 }, 70),
+      },
+    };
+    const fast = statLegPricer(ctx);
+    const legs = [
+      "corners:over:9.5", "corners:under:10", "corners:over:10.25", "corners:home:over:4.5", "corners:away:under:3.5",
+      "corners:most:home", "corners:most:away-or-level", "corners:hcp:home:-1.5", "corners:hcp:away:+0.75",
+      "shots:over:22.5", "shots:home:over:11.5", "shots:most:away", "shots:hcp:home:+2",
+    ];
+    for (const leg of legs) {
+      const a = fast(leg)!;
+      const b = priceLeg(leg, ctx)!;
+      expect(a, leg).not.toBeNull();
+      for (const k of ["win", "halfWin", "push", "halfLose", "lose", "survive"] as const) expect(a[k], `${leg} ${k}`).toBeCloseTo(b[k], 10);
+    }
+    expect(fast("sot:over:8.5")).toBeNull();
   });
 });

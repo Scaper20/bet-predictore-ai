@@ -3,11 +3,13 @@ import "server-only";
 import type { Match } from "@/lib/types";
 import type { Prediction } from "@/lib/model/predict";
 import { friendlyLabel, gridFor } from "@/lib/forge";
-import { priceLeg, statFamilyOf, type LegPrice, type StatFamily } from "@/lib/leg-pricing";
+import { priceLeg, statFamilyOf, statLegPricer, type LegPrice, type StatFamily } from "@/lib/leg-pricing";
 import { fromSportyBet, readOdds } from "@/lib/odds/markets";
 import { findOnBoard } from "@/lib/odds/sportybet";
 import { statGridsFor } from "@/lib/stat-markets-service";
 import { listedStatLines, type ListedLine } from "@/lib/board-pick";
+import { cached } from "@/lib/providers/cache";
+import type { RawMarket } from "@/lib/odds/sportybet-api";
 
 /**
  * The lines SportyBet lists on a game beyond the main markets, each with the
@@ -70,9 +72,28 @@ export async function listedLinesFor(match: Match, prediction: Prediction): Prom
     { leagueCode: match.league.code, matchId: match.id },
   ).catch(() => null);
   if (!event?.markets.length) return null;
-  const stats = await statGridsFor(match).catch(() => ({}));
-  const ctx = { goals: gridFor(prediction), stats };
-  return listedStatLines(event.markets, (m) => priceLeg(m, ctx)?.survive ?? null);
+  return pricedListedLines(match, prediction, event.markets);
+}
+
+/** The families a listed-line pick is chosen from; bookings are priced on the page but never picked. */
+const PICK_FAMILIES: readonly StatFamily[] = ["corners", "shots", "sot"];
+
+/**
+ * The board's corners and shots lines priced by the count model. The grids
+ * depend only on the two clubs and the league's fit, so they are kept for
+ * half an hour per game; pricing the lines off them is cheap
+ * (leg-pricing.ts statLegPricer). Empty where the league has no stats fit.
+ */
+export async function pricedListedLines(match: Match, prediction: Prediction, markets: readonly RawMarket[]): Promise<ListedLine[]> {
+  const stats = await cached(`statgrids:${match.id}`, 30 * 60_000, async () => {
+    const grids = await statGridsFor(match, PICK_FAMILIES);
+    // Not cached: a failed or empty read is retried on the next request.
+    if (Object.keys(grids).length === 0) throw new Error("no stat grids");
+    return grids;
+  }).catch(() => null);
+  if (!stats) return [];
+  const price = statLegPricer({ goals: gridFor(prediction), stats });
+  return listedStatLines(markets, (m) => price(m)?.survive ?? null);
 }
 
 export async function sportyBetLines(match: Match, prediction: Prediction): Promise<LineGroup[]> {
@@ -83,7 +104,7 @@ export async function sportyBetLines(match: Match, prediction: Prediction): Prom
   if (!event?.markets.length) return [];
 
   const goals = gridFor(prediction);
-  let stats: Partial<Record<StatFamily, number[][]>> | null = null;
+  let pricer: ((market: string) => LegPrice | null) | null = null;
   const seen = new Set<string>();
   const byGroup = new Map<string, LineRow[]>();
 
@@ -94,8 +115,8 @@ export async function sportyBetLines(match: Match, prediction: Prediction): Prom
       const group = GROUPS.find((g) => g.test(market));
       if (!group) continue;
       seen.add(market);
-      if (statFamilyOf(market) && !stats) stats = await statGridsFor(match).catch(() => ({}));
-      const price = priceLeg(market, { goals, stats: stats ?? {} });
+      if (statFamilyOf(market) && !pricer) pricer = statLegPricer({ goals, stats: await statGridsFor(match).catch(() => ({})) });
+      const price = pricer ? pricer(market) : priceLeg(market, { goals });
       if (!price) continue;
       const row: LineRow = {
         market,
