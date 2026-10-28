@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { type NextFetchEvent, type NextRequest, NextResponse } from "next/server";
 import { FIRST_SEEN_COOKIE } from "@/lib/day-pass";
+import { PICKS_PATH, pickSegment } from "@/lib/pick-query";
 import { FIRST_TOUCH_COOKIE, type FirstTouch, trimFirstTouchValue } from "@/lib/first-touch";
 import { PARTNER_REF_COOKIE, PARTNER_REF_DAYS, cleanRefParam, encodePartnerRef } from "@/lib/partner-ref";
 import { MAINTENANCE_BYPASS_COOKIE, isMaintenanceExempt, maintenanceHtml } from "@/lib/maintenance";
@@ -179,6 +180,24 @@ export async function proxy(request: NextRequest, event: NextFetchEvent) {
           .or(`last_seen_at.is.null,last_seen_at.lt.${cutoff}`),
       ).catch(() => {}), // best-effort — a missed activity ping isn't worth failing over
     );
+  }
+
+  // Signed out on the Picks page: the cached copy, built before they arrived
+  // (predictions/s/[filters]). The address bar doesn't change, and the
+  // cookies this proxy set above go out with it.
+  const picks = request.nextUrl.pathname.match(PICKS_PATH);
+  if (!user && picks && request.method === "GET") {
+    const target = new URL(`/${picks[1]}/predictions/s/${pickSegment(request.nextUrl.searchParams)}`, request.url);
+    const rewritten = NextResponse.rewrite(target);
+    for (const cookie of response.cookies.getAll()) rewritten.cookies.set(cookie);
+    return rewritten;
+  }
+  // And the rows it loads as they scroll, cached by the CDN (api/picks/public).
+  if (!user && request.nextUrl.pathname === "/api/picks" && request.method === "GET") {
+    const target = new URL(`/api/picks/public${request.nextUrl.search}`, request.url);
+    const rewritten = NextResponse.rewrite(target);
+    for (const cookie of response.cookies.getAll()) rewritten.cookies.set(cookie);
+    return rewritten;
   }
 
   return response;

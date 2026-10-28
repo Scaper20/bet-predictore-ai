@@ -29,8 +29,18 @@ const FEATURED = 5;
  *
  * `proTags` marks the Pro leagues, for a free viewer.
  */
-export function LeagueFilter({ proTags = false, counts }: { proTags?: boolean; counts?: Record<string, number> }) {
-  const pathname = usePathname();
+export function LeagueFilter({
+  proTags = false,
+  counts,
+  basePath,
+}: {
+  proTags?: boolean;
+  counts?: Record<string, number>;
+  /** The page's public path, for a page served through a rewrite (the cached Picks page). */
+  basePath?: string;
+}) {
+  const current = usePathname();
+  const pathname = basePath ?? current;
   const params = useSearchParams();
   const active = params.get("league");
   const [open, setOpen] = useState(false);
