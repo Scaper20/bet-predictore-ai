@@ -4,6 +4,7 @@ import { getOutreachOverview } from "@/app/actions/admin/outreach";
 import { OutreachCampaignPanel } from "@/components/admin/outreach-campaign-panel";
 import { Badge, ButtonLink } from "@/components/ui/primitives";
 import type { CampaignType, VipChatCampaign } from "@/lib/outreach";
+import { requirePermission } from "@/lib/admin";
 
 export const metadata: Metadata = { title: "Outreach" };
 
@@ -79,6 +80,7 @@ const CAMPAIGNS: { type: CampaignType; label: string; description: string }[] = 
 ];
 
 export default async function AdminOutreachPage() {
+  await requirePermission("outreach.manage");
   const overview = await getOutreachOverview();
 
   if ("error" in overview) {
@@ -89,7 +91,8 @@ export default async function AdminOutreachPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-bold">Outreach</h1>
+          <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-brand">Growth</p>
+          <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight sm:text-[28px]">Outreach</h1>
           <p className="mt-1 max-w-2xl text-sm text-ink-muted">
             One-time emails to the whole user base — a personal check-in, plus segmented surveys. Every send is from
             Scaper personally, carries an unsubscribe link, and skips anyone who&rsquo;s opted out. Nothing here sends

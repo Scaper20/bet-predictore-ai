@@ -13,6 +13,7 @@ import { shareLink } from "@/lib/odds/sportybet-api";
 import { matchPath } from "@/lib/routes";
 import { switchesFresh } from "@/lib/switches";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { requirePermission } from "@/lib/admin";
 
 export const metadata: Metadata = { title: "SportyBet matching" };
 export const dynamic = "force-dynamic";
@@ -180,6 +181,7 @@ async function proof() {
 const pct = (n: number, d: number) => (d > 0 ? `${Math.round((n / d) * 100)}%` : "–");
 
 export default async function AdminSportyBetPage() {
+  await requirePermission("sportybet.manage");
   const [sw, data, rows, p, launch, posts] = await Promise.all([
     switchesFresh(),
     load(),
@@ -196,7 +198,8 @@ export default async function AdminSportyBetPage() {
   return (
     <div className="max-w-4xl space-y-8">
       <div>
-        <h1 className="font-display text-2xl font-bold">SportyBet matching</h1>
+        <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-brand">Product</p>
+        <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight sm:text-[28px]">SportyBet matching</h1>
         <p className="mt-1 text-sm text-ink-muted">
           Prices and booking codes come straight from SportyBet. Each of our fixtures is matched to SportyBet&rsquo;s
           event once and remembered. Clubs are learned by their Sportradar id, so a club matched once is never matched

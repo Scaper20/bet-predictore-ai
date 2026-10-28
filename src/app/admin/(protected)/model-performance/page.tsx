@@ -4,17 +4,22 @@ import { StatCard } from "@/components/admin/stat-card";
 import { EmptyState } from "@/components/ui/primitives";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { pairedLogLoss, priceSkill, type PriceSkill, type PricedOutcome } from "@/lib/odds/price-skill";
+import { requirePermission } from "@/lib/admin";
 
 export const metadata: Metadata = { title: "Model performance" };
 
 export default async function ModelPerformancePage() {
+  await requirePermission("model.view");
   const [perf, shadow, prices] = await Promise.all([getModelPerformance(), getShadowRecord(), getPriceRecord()]);
   const totalSettled = perf.overall.wins + perf.overall.losses + perf.overall.pushes;
 
   if (totalSettled === 0) {
     return (
       <div className="space-y-6">
-        <h1 className="font-display text-2xl font-bold">Model performance</h1>
+        <div>
+          <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-brand">Product</p>
+          <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight sm:text-[28px]">Model performance</h1>
+        </div>
         <EmptyState
           icon="📊"
           title="No settled picks yet"
@@ -26,7 +31,10 @@ export default async function ModelPerformancePage() {
 
   return (
     <div className="space-y-8">
-      <h1 className="font-display text-2xl font-bold">Model performance</h1>
+      <div>
+        <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-brand">Product</p>
+        <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight sm:text-[28px]">Model performance</h1>
+      </div>
 
       <PricesSection data={prices} />
 

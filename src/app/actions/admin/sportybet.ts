@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { checkAdmin, logAdminAction } from "@/lib/admin";
+import { checkPermission, logAdminAction } from "@/lib/admin";
 import { LEAGUES } from "@/lib/leagues";
 import { normaliseKey } from "@/lib/model/fit";
 import type { Candidate } from "@/lib/odds/sportybet-match";
@@ -21,7 +21,7 @@ const PATH = "/admin/sportybet";
 
 /** Links an unresolved fixture to one of its candidate events, and teaches both clubs' ids. */
 export async function linkFixture(_prev: SportyBetActionState, formData: FormData): Promise<SportyBetActionState> {
-  const gate = await checkAdmin();
+  const gate = await checkPermission("sportybet.manage");
   if (!gate.ok) return { error: gate.error, message: null };
   const matchId = String(formData.get("matchId") ?? "");
   const eventId = String(formData.get("eventId") ?? "");
@@ -90,7 +90,7 @@ export async function linkFixture(_prev: SportyBetActionState, formData: FormDat
 
 /** Approves (trusts) or rejects one learned club link. */
 export async function judgeLink(_prev: SportyBetActionState, formData: FormData): Promise<SportyBetActionState> {
-  const gate = await checkAdmin();
+  const gate = await checkPermission("sportybet.manage");
   if (!gate.ok) return { error: gate.error, message: null };
   const league = String(formData.get("league") ?? "");
   const teamKey = String(formData.get("teamKey") ?? "");
@@ -124,7 +124,7 @@ export async function judgeLink(_prev: SportyBetActionState, formData: FormData)
 
 /** Runs the sync now, for every competition or one. */
 export async function runSync(_prev: SportyBetActionState, formData: FormData): Promise<SportyBetActionState> {
-  const gate = await checkAdmin();
+  const gate = await checkPermission("sportybet.manage");
   if (!gate.ok) return { error: gate.error, message: null };
   const league = String(formData.get("league") ?? "");
   const only = league && LEAGUES.some((l) => l.code === league) ? [league] : undefined;
@@ -143,7 +143,7 @@ export async function runSync(_prev: SportyBetActionState, formData: FormData): 
 
 /** Checks finished games' links against their results now, rather than at the next hourly run. */
 export async function runVerify(_prev: SportyBetActionState, _formData: FormData): Promise<SportyBetActionState> {
-  const gate = await checkAdmin();
+  const gate = await checkPermission("sportybet.manage");
   if (!gate.ok) return { error: gate.error, message: null };
   const report = await verifyFinished();
   if (!report) return { error: "SportyBet direct is switched off.", message: null };
@@ -163,7 +163,7 @@ export async function runVerify(_prev: SportyBetActionState, _formData: FormData
  * the club ids it relied on, so the next sync learns them afresh.
  */
 export async function unlinkFixture(_prev: SportyBetActionState, formData: FormData): Promise<SportyBetActionState> {
-  const gate = await checkAdmin();
+  const gate = await checkPermission("sportybet.manage");
   if (!gate.ok) return { error: gate.error, message: null };
   const matchId = String(formData.get("matchId") ?? "");
   const db = supabaseAdmin();
@@ -192,7 +192,7 @@ export async function unlinkFixture(_prev: SportyBetActionState, formData: FormD
 
 /** Finds SportyBet tournaments for every competition without a hand-set id, now. */
 export async function runDiscover(_prev: SportyBetActionState, _formData: FormData): Promise<SportyBetActionState> {
-  const gate = await checkAdmin();
+  const gate = await checkPermission("sportybet.manage");
   if (!gate.ok) return { error: gate.error, message: null };
   const reports = await discoverTournaments();
   if (!reports) return { error: "SportyBet didn't answer, or direct is switched off.", message: null };
@@ -208,7 +208,7 @@ export async function runDiscover(_prev: SportyBetActionState, _formData: FormDa
 
 /** Accepts or rejects a discovered tournament for one competition. */
 export async function judgeTournament(_prev: SportyBetActionState, formData: FormData): Promise<SportyBetActionState> {
-  const gate = await checkAdmin();
+  const gate = await checkPermission("sportybet.manage");
   if (!gate.ok) return { error: gate.error, message: null };
   const league = String(formData.get("league") ?? "");
   const intent = String(formData.get("intent") ?? "");
@@ -232,7 +232,7 @@ export async function judgeTournament(_prev: SportyBetActionState, formData: For
 
 /** Takes a community code off the Code Hub (code_hub_posts). */
 export async function removePost(_prev: SportyBetActionState, formData: FormData): Promise<SportyBetActionState> {
-  const gate = await checkAdmin();
+  const gate = await checkPermission("codehub.manage");
   if (!gate.ok) return { error: gate.error, message: null };
   const id = Number(formData.get("postId"));
   if (!Number.isInteger(id)) return { error: "Unknown post.", message: null };

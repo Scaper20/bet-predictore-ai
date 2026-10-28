@@ -2,16 +2,19 @@ import type { Metadata } from "next";
 import { getSiteSettings } from "@/lib/site-settings";
 import { MaintenanceForm } from "@/components/admin/maintenance-form";
 import { Badge } from "@/components/ui/primitives";
+import { requirePermission } from "@/lib/admin";
 
 export const metadata: Metadata = { title: "Maintenance" };
 
 export default async function AdminMaintenancePage() {
+  await requirePermission("site.maintenance");
   const settings = await getSiteSettings();
 
   return (
     <div className="max-w-2xl space-y-8">
       <div>
-        <h1 className="font-display text-2xl font-bold">Maintenance mode</h1>
+        <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-brand">Product</p>
+        <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight sm:text-[28px]">Maintenance mode</h1>
         <p className="mt-1 text-sm text-ink-muted">
           Blocks the public site with a &ldquo;we&rsquo;ll be back soon&rdquo; page while you make major
           changes. Signed-in admins still see the real site, and the admin portal,

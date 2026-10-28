@@ -4,10 +4,12 @@ import { CopyButton } from "@/components/admin/copy-button";
 import { RegenerateDigestButton } from "@/components/admin/regenerate-digest-button";
 import { Badge, EmptyState } from "@/components/ui/primitives";
 import { APP_TIMEZONE } from "@/lib/format";
+import { requirePermission } from "@/lib/admin";
 
 export const metadata: Metadata = { title: "WhatsApp digest" };
 
 export default async function AdminWhatsappDigestPage() {
+  await requirePermission("whatsapp.manage");
   const digests = await getWhatsappDigests();
   const today = new Date().toLocaleDateString("en-CA", { timeZone: APP_TIMEZONE });
   const todays = digests.find((d) => d.digestDate === today);
@@ -17,7 +19,8 @@ export default async function AdminWhatsappDigestPage() {
     <div className="space-y-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-bold">WhatsApp digest</h1>
+          <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-brand">Growth</p>
+          <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight sm:text-[28px]">WhatsApp digest</h1>
           <p className="mt-1 max-w-2xl text-sm text-ink-muted">
             Computed once a day, early morning. Copy each message below and paste it into the
             KiqStat Picks community — nothing here posts to WhatsApp automatically.

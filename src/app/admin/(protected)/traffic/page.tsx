@@ -3,17 +3,20 @@ import { getTrafficSources } from "@/lib/admin-analytics";
 import { StatCard } from "@/components/admin/stat-card";
 import { AdminTable, AdminTableHead, AdminTableRow, AdminTableCell } from "@/components/admin/admin-table";
 import { EmptyState } from "@/components/ui/primitives";
+import { requirePermission } from "@/lib/admin";
 
 export const metadata: Metadata = { title: "Traffic sources" };
 
 export default async function AdminTrafficPage() {
+  await requirePermission("growth.view");
   const traffic = await getTrafficSources();
   const total = traffic.trackedCount + traffic.untrackedCount;
 
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="font-display text-2xl font-bold">Traffic sources</h1>
+        <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-brand">Growth</p>
+        <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight sm:text-[28px]">Traffic sources</h1>
         <p className="mt-1 max-w-2xl text-sm text-ink-muted">
           Where every account actually came from — captured on their first visit to the site
           (referrer + any <code className="text-xs">utm_</code> link tags) and never overwritten by a

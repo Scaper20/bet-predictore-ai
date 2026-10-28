@@ -1,6 +1,6 @@
 "use server";
 
-import { checkAdmin, logAdminAction } from "@/lib/admin";
+import { checkPermission, logAdminAction } from "@/lib/admin";
 import { enqueueCampaign, sendNextBatch, campaignProgress, segmentCounts, vipChatAudienceCounts } from "@/lib/outreach-feed";
 import type { CampaignType, VipChatCampaign } from "@/lib/outreach";
 
@@ -38,7 +38,7 @@ function isCampaign(v: FormDataEntryValue | null): v is CampaignType {
 /** Queues everyone currently eligible for `campaign` who isn't already
  * queued for it — safe to click again later to pick up new sign-ups. */
 export async function enqueueOutreach(_prev: OutreachState, formData: FormData): Promise<OutreachState> {
-  const gate = await checkAdmin();
+  const gate = await checkPermission("outreach.manage");
   if (!gate.ok) return { error: gate.error, message: null, enqueued: null };
 
   const campaign = formData.get("campaign");
@@ -61,7 +61,7 @@ export type BatchState = { sent: number; failed: number; remaining: number; erro
 /** Sends the next small batch of pending recipients for `campaign`. The
  * client panel calls this repeatedly while `remaining > 0`. */
 export async function sendOutreachBatch(_prev: BatchState, formData: FormData): Promise<BatchState> {
-  const gate = await checkAdmin();
+  const gate = await checkPermission("outreach.manage");
   if (!gate.ok) return { sent: 0, failed: 0, remaining: 0, error: gate.error };
 
   const campaign = formData.get("campaign");
@@ -84,7 +84,7 @@ export interface OutreachOverview {
 /** Server Component data load, not a form action — used by /admin/outreach
  * to render current counts without a client round trip on first paint. */
 export async function getOutreachOverview(): Promise<OutreachOverview | { error: string }> {
-  const gate = await checkAdmin();
+  const gate = await checkPermission("outreach.manage");
   if (!gate.ok) return { error: gate.error };
 
   const all = [...CAMPAIGNS];

@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { checkAdmin, logAdminAction } from "@/lib/admin";
+import { checkPermission, logAdminAction } from "@/lib/admin";
 import { exchangeCodeForConnection, isMailAdmin, saveConnection } from "@/lib/admin-mail";
 import { OAUTH_STATE_COOKIE } from "../connect/route";
 
@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
   const url = new URL(request.url);
   const to = (query: string) => NextResponse.redirect(new URL(`/admin/mail?${query}`, url.origin));
 
-  const gate = await checkAdmin();
+  const gate = await checkPermission("mail.send");
   if (!gate.ok || !isMailAdmin(gate.identity.email)) return to("error=forbidden");
 
   const code = url.searchParams.get("code");

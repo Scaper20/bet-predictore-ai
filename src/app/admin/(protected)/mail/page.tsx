@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { requireAdmin } from "@/lib/admin";
+import { requirePermission } from "@/lib/admin";
 import { adminMailAllowedEmail, getConnection, isMailAdmin, mailOAuthConfigured, supportFromAddress } from "@/lib/admin-mail";
 import { MailComposeForm } from "@/components/admin/mail-compose-form";
 import { MailConnectCard, MailConnectPrompt } from "@/components/admin/mail-connect-card";
@@ -14,7 +14,7 @@ const ERROR_COPY: Record<string, string> = {
 };
 
 export default async function AdminMailPage({ searchParams }: PageProps<"/admin/mail">) {
-  const identity = await requireAdmin();
+  const identity = await requirePermission("mail.send");
   const params = await searchParams;
   const error = typeof params.error === "string" ? params.error : undefined;
   const justConnected = params.connected === "1";
@@ -22,7 +22,10 @@ export default async function AdminMailPage({ searchParams }: PageProps<"/admin/
   if (!mailOAuthConfigured() || !adminMailAllowedEmail()) {
     return (
       <div className="space-y-8">
-        <h1 className="font-display text-2xl font-bold">Mail</h1>
+        <div>
+          <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-brand">Customers</p>
+          <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight sm:text-[28px]">Mail</h1>
+        </div>
         <p className="max-w-2xl text-sm text-ink-muted">
           Not set up yet. This needs a Google OAuth client (
           <code className="rounded bg-surface-2 px-1.5 py-0.5 text-xs">GOOGLE_MAIL_CLIENT_ID</code> /{" "}
@@ -37,7 +40,10 @@ export default async function AdminMailPage({ searchParams }: PageProps<"/admin/
   if (!isMailAdmin(identity.email)) {
     return (
       <div className="space-y-8">
-        <h1 className="font-display text-2xl font-bold">Mail</h1>
+        <div>
+          <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-brand">Customers</p>
+          <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight sm:text-[28px]">Mail</h1>
+        </div>
         <p className="max-w-2xl text-sm text-ink-muted">This feature isn&apos;t available on your account.</p>
       </div>
     );
@@ -47,7 +53,10 @@ export default async function AdminMailPage({ searchParams }: PageProps<"/admin/
 
   return (
     <div className="space-y-8">
-      <h1 className="font-display text-2xl font-bold">Mail</h1>
+      <div>
+        <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-brand">Customers</p>
+        <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight sm:text-[28px]">Mail</h1>
+      </div>
 
       {justConnected && (
         <p className="rounded-lg border border-brand/25 bg-brand/5 px-4 py-3 text-sm text-brand">

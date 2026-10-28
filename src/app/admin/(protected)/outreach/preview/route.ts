@@ -1,4 +1,4 @@
-import { checkAdmin } from "@/lib/admin";
+import { checkPermission } from "@/lib/admin";
 import { previewCampaignEmail } from "@/lib/outreach-feed";
 import type { CampaignType } from "@/lib/outreach";
 
@@ -11,7 +11,7 @@ const escape = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").rep
  * recipient would get it, with its subject above. Nothing is queued or sent.
  */
 export async function GET(request: Request) {
-  const gate = await checkAdmin();
+  const gate = await checkPermission("outreach.manage");
   if (!gate.ok) return new Response(gate.error, { status: gate.status });
 
   const url = new URL(request.url);

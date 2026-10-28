@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { checkAdmin, logAdminAction } from "@/lib/admin";
+import { checkPermission, logAdminAction } from "@/lib/admin";
 import { grantSubscriptionGift } from "@/lib/subscription-gifts-feed";
 import { sendEmail } from "@/lib/email";
 import { giftSubscriptionEmail } from "@/lib/email-templates";
@@ -18,7 +18,7 @@ const MONTH_OPTIONS = new Set([1, 3, 6, 12]);
  * temporary tier boost. See subscription_gifts migration for why.
  */
 export async function grantGift(_prev: GiftActionState, formData: FormData): Promise<GiftActionState> {
-  const gate = await checkAdmin();
+  const gate = await checkPermission("users.gift");
   if (!gate.ok) return { error: gate.error, message: null };
 
   const userId = String(formData.get("userId") ?? "");

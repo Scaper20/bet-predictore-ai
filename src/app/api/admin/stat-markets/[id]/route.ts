@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { checkAdmin } from "@/lib/admin";
+import { checkPermission } from "@/lib/admin";
 import { matchDetail } from "@/lib/service";
 import { fixtureStatMarkets } from "@/lib/stat-markets-service";
 
@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
  * checking the numbers before the markets go live (docs/stats-markets.md).
  */
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const gate = await checkAdmin();
+  const gate = await checkPermission("model.view");
   if (!gate.ok) return NextResponse.json({ error: gate.error }, { status: gate.status });
   const { id } = await params;
   const detail = await matchDetail(decodeURIComponent(id)).catch(() => null);

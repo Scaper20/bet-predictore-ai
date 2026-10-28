@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { checkAdmin, logAdminAction } from "@/lib/admin";
+import { checkPermission, logAdminAction } from "@/lib/admin";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import type { SwitchKey } from "@/lib/switches";
 
@@ -23,7 +23,7 @@ const DONE: Record<SwitchKey, [string, string]> = {
 
 /** Flips one operator switch (public.app_switches). Instances pick it up within SWITCH_TTL_MS. */
 export async function setSwitch(_prev: SwitchActionState, formData: FormData): Promise<SwitchActionState> {
-  const gate = await checkAdmin();
+  const gate = await checkPermission("codehub.manage");
   if (!gate.ok) return { error: gate.error, message: null };
 
   const key = String(formData.get("key") ?? "") as SwitchKey;

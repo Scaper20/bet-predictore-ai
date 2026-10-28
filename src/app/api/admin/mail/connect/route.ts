@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { checkAdmin } from "@/lib/admin";
+import { checkPermission } from "@/lib/admin";
 import { buildAuthUrl, isMailAdmin, mailOAuthConfigured } from "@/lib/admin-mail";
 
 export const dynamic = "force-dynamic";
@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export const OAUTH_STATE_COOKIE = "admin_mail_oauth_state";
 
 export async function GET(request: NextRequest) {
-  const gate = await checkAdmin();
+  const gate = await checkPermission("mail.send");
   if (!gate.ok || !isMailAdmin(gate.identity.email) || !mailOAuthConfigured()) {
     return NextResponse.redirect(new URL("/admin/mail", request.url));
   }

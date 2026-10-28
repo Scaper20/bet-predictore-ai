@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { getFeedback } from "@/lib/admin-analytics";
 import { StatCard } from "@/components/admin/stat-card";
 import { EmptyState } from "@/components/ui/primitives";
+import { requirePermission } from "@/lib/admin";
+import { emailView } from "@/lib/admin-access";
 
 export const metadata: Metadata = { title: "Feedback" };
 
@@ -10,6 +12,8 @@ export default async function AdminFeedbackPage({
 }: {
   searchParams: Promise<{ page?: string }>;
 }) {
+  const me = await requirePermission("feedback.view");
+  const showEmail = emailView(me.roles);
   const { page: pageParam } = await searchParams;
   const page = Math.max(1, Number(pageParam) || 1);
   const { rows, hasMore, averageScore } = await getFeedback(page);
@@ -17,7 +21,8 @@ export default async function AdminFeedbackPage({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-display text-2xl font-bold">Feedback</h1>
+        <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-brand">Customers</p>
+        <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight sm:text-[28px]">Feedback</h1>
         <p className="mt-1 text-sm text-ink-muted">Submitted through the feedback tab on the live site — signed in or anonymous.</p>
       </div>
 
@@ -41,7 +46,7 @@ export default async function AdminFeedbackPage({
                     </span>
                   )}
                   <div>
-                    <p className="text-sm font-medium text-ink">{r.email ?? "Anonymous"}</p>
+                    <p className="text-sm font-medium text-ink">{showEmail(r.email) ?? "Anonymous"}</p>
                     <p className="text-xs text-ink-dim">{r.pagePath ?? "—"}</p>
                   </div>
                 </div>

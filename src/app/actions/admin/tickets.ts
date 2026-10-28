@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { checkAdmin, logAdminAction } from "@/lib/admin";
+import { checkPermission, logAdminAction } from "@/lib/admin";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
 import { ticketReplyNotificationEmail } from "@/lib/email-templates";
@@ -12,7 +12,7 @@ export async function replyToTicket(
   _prev: TicketActionState,
   formData: FormData,
 ): Promise<TicketActionState> {
-  const gate = await checkAdmin();
+  const gate = await checkPermission("support.reply");
   if (!gate.ok) return { error: gate.error };
 
   const ticketId = String(formData.get("ticketId") ?? "");
@@ -54,7 +54,7 @@ export async function closeTicket(
   _prev: TicketActionState,
   formData: FormData,
 ): Promise<TicketActionState> {
-  const gate = await checkAdmin();
+  const gate = await checkPermission("support.reply");
   if (!gate.ok) return { error: gate.error };
 
   const ticketId = String(formData.get("ticketId") ?? "");

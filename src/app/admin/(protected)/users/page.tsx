@@ -3,6 +3,8 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { AdminTable, AdminTableHead, AdminTableRow, AdminTableCell } from "@/components/admin/admin-table";
 import { GiftSubscriptionButton } from "@/components/admin/gift-subscription-button";
 import { Badge, EmptyState } from "@/components/ui/primitives";
+import { requirePermission } from "@/lib/admin";
+import { can, emailView } from "@/lib/admin-access";
 
 export const metadata: Metadata = { title: "Users" };
 
@@ -29,6 +31,9 @@ export default async function AdminUsersPage({
 }: {
   searchParams: Promise<{ q?: string; page?: string; tier?: string }>;
 }) {
+  const me = await requirePermission("users.view");
+  const showEmail = emailView(me.roles);
+  const canGift = can(me.roles, "users.gift");
   const { q, page: pageParam, tier: tierParam } = await searchParams;
   const tier = isTierFilter(tierParam) ? tierParam : undefined;
   const page = Math.max(1, Number(pageParam) || 1);
@@ -77,7 +82,8 @@ export default async function AdminUsersPage({
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="font-display text-2xl font-bold">Users</h1>
+        <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-brand">Customers</p>
+        <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight sm:text-[28px]">Users</h1>
         <form className="flex w-full gap-2 sm:w-auto">
           <input
             type="search"
@@ -121,7 +127,7 @@ export default async function AdminUsersPage({
                 <div key={u.id} className="card p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-ink">{u.email}</p>
+                      <p className="truncate text-sm font-medium text-ink">{showEmail(u.email)}</p>
                       {u.display_name && <p className="truncate text-xs text-ink-dim">{u.display_name}</p>}
                     </div>
                     <Badge tone={!sub || sub.tier === "free" ? "neutral" : "brand"} className="shrink-0">
@@ -138,7 +144,7 @@ export default async function AdminUsersPage({
                         : "Never seen"}
                     </span>
                   </div>
-                  {u.email && (
+                  {canGift && u.email && (
                     <div className="mt-3 border-t border-line pt-3">
                       <GiftSubscriptionButton userId={u.id} userEmail={u.email} />
                     </div>
@@ -156,7 +162,7 @@ export default async function AdminUsersPage({
                   const sub = Array.isArray(u.subscriptions) ? u.subscriptions[0] : u.subscriptions;
                   return (
                     <AdminTableRow key={u.id}>
-                      <AdminTableCell>{u.email}</AdminTableCell>
+                      <AdminTableCell>{showEmail(u.email)}</AdminTableCell>
                       <AdminTableCell className="text-ink-muted">{u.display_name || "—"}</AdminTableCell>
                       <AdminTableCell>
                         <Badge tone={!sub || sub.tier === "free" ? "neutral" : "brand"}>
@@ -171,7 +177,7 @@ export default async function AdminUsersPage({
                           ? new Date(u.last_seen_at).toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" })
                           : "Never"}
                       </AdminTableCell>
-                      <AdminTableCell>{u.email && <GiftSubscriptionButton userId={u.id} userEmail={u.email} />}</AdminTableCell>
+                      <AdminTableCell>{canGift && u.email && <GiftSubscriptionButton userId={u.id} userEmail={u.email} />}</AdminTableCell>
                     </AdminTableRow>
                   );
                 })}

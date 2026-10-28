@@ -1,7 +1,9 @@
 import { requireAdmin } from "@/lib/admin";
+import { can } from "@/lib/admin-access";
 import { isMailAdmin } from "@/lib/admin-mail";
-import { AdminShell } from "@/components/admin/admin-shell";
+import { AdminShell, type AdminEnv } from "@/components/admin/admin-shell";
 import { getSiteSettings } from "@/lib/site-settings";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 /**
  * Unlike (app)/layout.tsx, this layout SHOULD resolve identity server-side
@@ -17,18 +19,41 @@ import { getSiteSettings } from "@/lib/site-settings";
  * group that call supabaseAdmin() directly (tickets, users, ...) exposed to
  * static prerendering at build time — the same class of crash this layout's
  * own comment says can't happen here.
+ *
+ * This layout only proves the visitor is staff. What they may open is
+ * checked by each page (requirePermission), so a page is never protected by
+ * the nav alone.
  */
 export const dynamic = "force-dynamic";
 
+const ENV: AdminEnv =
+  process.env.VERCEL_ENV === "production" ? "production" : process.env.VERCEL_ENV === "preview" ? "preview" : "development";
+
 export default async function ProtectedAdminLayout({ children }: LayoutProps<"/admin">) {
   const identity = await requireAdmin(); // redirects to /admin/login[?denied=1] on failure
-  const { maintenanceEnabled } = await getSiteSettings();
-  // Computed here, not in the client-side AdminShell: ADMIN_MAIL_ALLOWED_EMAIL
-  // is server-only, and unlike every other admin feature this one is
-  // deliberately invisible to admins it isn't meant for, not just gated —
-  // see admin-mail.ts's own doc comment on why.
+  const [{ maintenanceEnabled }, openTickets] = await Promise.all([
+    getSiteSettings(),
+    can(identity.roles, "support.view")
+      ? supabaseAdmin()
+          .from("support_tickets")
+          .select("*", { count: "exact", head: true })
+          .eq("status", "open")
+          .then((r) => r.count ?? 0, () => 0)
+      : Promise.resolve(0),
+  ]);
+  // Mail is limited to one named account on top of its permission, and is
+  // invisible to everyone else rather than shown and refused: see
+  // admin-mail.ts on why. ADMIN_MAIL_ALLOWED_EMAIL is server-only, so this is
+  // decided here.
+  const hiddenNav = isMailAdmin(identity.email) ? [] : ["/admin/mail"];
   return (
-    <AdminShell identity={identity} showMailNav={isMailAdmin(identity.email)} maintenanceOn={maintenanceEnabled}>
+    <AdminShell
+      identity={identity}
+      hiddenNav={hiddenNav}
+      counts={{ "/admin/tickets": openTickets }}
+      maintenanceOn={maintenanceEnabled}
+      env={ENV}
+    >
       {children}
     </AdminShell>
   );

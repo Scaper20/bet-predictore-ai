@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { checkAdmin, logAdminAction } from "@/lib/admin";
+import { checkPermission, logAdminAction } from "@/lib/admin";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export type DataLayerActionState = { error: string | null; message: string | null };
@@ -14,7 +14,7 @@ const MODES = ["live", "db_fallback", "db"] as const;
  * click away if the scheduled data looks wrong.
  */
 export async function setDataLayer(_prev: DataLayerActionState, formData: FormData): Promise<DataLayerActionState> {
-  const gate = await checkAdmin();
+  const gate = await checkPermission("data.manage");
   if (!gate.ok) return { error: gate.error, message: null };
   const mode = String(formData.get("mode") ?? "");
   if (!(MODES as readonly string[]).includes(mode)) return { error: "Unknown mode.", message: null };
@@ -39,7 +39,7 @@ export async function setDataLayer(_prev: DataLayerActionState, formData: FormDa
 
 /** Switches one upstream source on or off; jobs skip a disabled source without calling it. */
 export async function setSourceEnabled(_prev: DataLayerActionState, formData: FormData): Promise<DataLayerActionState> {
-  const gate = await checkAdmin();
+  const gate = await checkPermission("data.manage");
   if (!gate.ok) return { error: gate.error, message: null };
   const id = String(formData.get("source") ?? "");
   const enabled = String(formData.get("enabled") ?? "") === "true";

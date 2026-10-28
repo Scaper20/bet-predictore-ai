@@ -13,6 +13,12 @@
  *   npx tsx scripts/create-admin.ts --email=you@example.com --create
  *   npx tsx scripts/create-admin.ts --email=you@example.com
  *   ADMIN_PASSWORD='...' npx tsx scripts/create-admin.ts --email=you@example.com --create
+ *   npx tsx scripts/create-admin.ts --email=pm@example.com --role=product
+ *
+ * --role sets the staff role (owner, product, marketing, support; see
+ * src/lib/admin-access.ts). It defaults to owner, since this script is how
+ * the first account gets in; everyone after that is better added from the
+ * Team page, which records who added them.
  *
  * --create makes a brand-new login (a dedicated admin-only credential, not
  * tied to any existing site account). By default it sets a random password
@@ -43,16 +49,21 @@ function parseArgs() {
   const get = (flag: string) => args.find((a) => a.startsWith(`--${flag}=`))?.split("=")[1];
   const email = get("email");
   const create = args.includes("--create");
-
-  if (!email) {
-    console.error("Usage: tsx scripts/create-admin.ts --email=you@example.com [--create]");
+  const role = get("role") ?? "owner";
+  if (!["owner", "product", "marketing", "support"].includes(role)) {
+    console.error("--role must be one of owner, product, marketing, support.");
     process.exit(1);
   }
-  return { email, create };
+
+  if (!email) {
+    console.error("Usage: tsx scripts/create-admin.ts --email=you@example.com [--create] [--role=owner|product|marketing|support]");
+    process.exit(1);
+  }
+  return { email, create, role };
 }
 
 async function main() {
-  const { email, create } = parseArgs();
+  const { email, create, role } = parseArgs();
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const secretKey = process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -95,7 +106,7 @@ async function main() {
     userId = profile.id as string;
   }
 
-  const { error: upsertError } = await admin.from("admin_users").upsert({ id: userId }, { onConflict: "id" });
+  const { error: upsertError } = await admin.from("admin_users").upsert({ id: userId, roles: [role] }, { onConflict: "id" });
   if (upsertError) {
     console.error("Failed to grant admin access:", upsertError.message);
     process.exit(1);
