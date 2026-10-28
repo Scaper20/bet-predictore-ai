@@ -109,7 +109,7 @@ function GoogleSection({ result }: { result: SourceResult<GoogleTraffic> }) {
         result={result}
         name="Google Analytics"
         steps={[
-          <>In Google Analytics, open Admin → Data streams → your web stream and copy the measurement ID (starts with {code("G-")}). Set it as {code("NEXT_PUBLIC_GA_MEASUREMENT_ID")} in Vercel; this turns the tracking tag on.</>,
+          <>The tracking tag ({code("G-HEZ1TWLR83")}) is already on every page of the live site; this tab reads its numbers back.</>,
           <>From Admin → Property details, copy the numeric property ID into {code("GA4_PROPERTY_ID")}.</>,
           <>In Google Cloud, enable the Google Analytics Data API, create a service account and download a JSON key. Put its {code("client_email")} in {code("GA4_SERVICE_ACCOUNT_EMAIL")} and its {code("private_key")} in {code("GA4_SERVICE_ACCOUNT_KEY")}.</>,
           <>Back in Analytics, Admin → Property access management: add that service-account email as a Viewer. Redeploy.</>,

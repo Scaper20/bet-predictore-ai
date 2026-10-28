@@ -154,14 +154,14 @@ twq('config','ri02j');
 `;
 
 /**
- * Google Analytics 4: on only when NEXT_PUBLIC_GA_MEASUREMENT_ID (G-XXXXXXX)
- * is set, and only on the production host, so previews and local runs don't
- * count as visits. Page views on client-side navigation are sent by GA's
- * enhanced measurement (history changes), on by default for a web stream.
+ * Google Analytics 4 (property "KiqStat", stream G-HEZ1TWLR83). Loaded only
+ * on production deployments, so previews and local runs don't count as
+ * visits. NEXT_PUBLIC_GA_MEASUREMENT_ID overrides the ID. Page views on
+ * client-side navigation are sent by GA's enhanced measurement (history
+ * changes), on by default for a web stream.
  */
-const GA_ID = /^G-[A-Z0-9]+$/.test(process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID ?? "") && process.env.NEXT_PUBLIC_VERCEL_ENV !== "preview"
-  ? process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID!
-  : null;
+const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || "G-HEZ1TWLR83";
+const GA_ID = /^G-[A-Z0-9]+$/.test(GA_MEASUREMENT_ID) && process.env.VERCEL_ENV === "production" ? GA_MEASUREMENT_ID : null;
 
 const gaInit = (id: string) => `
 window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}
