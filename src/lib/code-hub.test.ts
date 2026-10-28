@@ -13,6 +13,7 @@ import {
   HUB_TIERS,
   bookablePool,
   buildHub,
+  buildOdds,
   hubMarketAllowed,
   hubTotals,
   codeState,
@@ -98,15 +99,36 @@ describe("buildHub", () => {
       expect(code.legs.length).toBeGreaterThanOrEqual(fewest);
       expect(code.legs.length).toBeLessThanOrEqual(most);
       expect(new Set(code.legs.map((l) => l.matchId)).size).toBe(code.legs.length);
-      const total = code.legs.reduce((o, l) => o * l.fairOdds, 1);
+      const total = buildOdds(code.legs);
       expect(total).toBeGreaterThan(tier.target * HUB_MIN_TARGET_SHARE);
       expect(total).toBeLessThan(tier.target * 2.5);
     }
   });
 
+  it("builds to SportyBet's prices where the board has them, not the model's fair odds", () => {
+    // SportyBet's margin takes 7-12% off every pick: built on fair odds, a
+    // "10" used to load at about 6 once these prices were attached.
+    const priced = pool().map((e, k) => ({
+      ...e,
+      candidates: e.candidates.map((c) => ({ ...c, price: Math.round((c.fairOdds / (1.07 + (k % 3) * 0.025)) * 100) / 100 })),
+    }));
+    const hub = buildHub(priced, "2026-10-16");
+    expect(hub.length).toBeGreaterThan(0);
+    for (const code of hub) {
+      const tier = HUB_TIERS.find((t) => t.id === code.tier)!;
+      expect(code.legs.every((l) => l.price !== null)).toBe(true);
+      expect(hubTotals(code.legs).odds).toBeGreaterThanOrEqual(tier.target * HUB_MIN_TARGET_SHARE);
+    }
+  });
+
+  it("counts an unpriced leg at its fair odds less a typical margin while building", () => {
+    expect(buildOdds([{ price: null, fairOdds: 2.14 }])).toBeCloseTo(2);
+    expect(buildOdds([{ price: 1.9, fairOdds: 2.14 }, { price: null, fairOdds: 1.07 }])).toBeCloseTo(1.9);
+  });
+
   it("lets a 2-odds code run from two to four games, and keeps a 20 near its count", () => {
     expect(hubGameRange(HUB_TIERS.find((t) => t.id === "2")!)).toEqual([2, 4]);
-    expect(hubGameRange(HUB_TIERS.find((t) => t.id === "20")!)).toEqual([7, 9]);
+    expect(hubGameRange(HUB_TIERS.find((t) => t.id === "20")!)).toEqual([7, 11]);
   });
 
   it("publishes nothing from an empty pool", () => {

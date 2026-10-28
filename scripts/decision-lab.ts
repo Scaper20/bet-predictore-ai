@@ -440,6 +440,13 @@ interface HubVariant {
   sweetOnly?: boolean;
   /** Drop a leg the closing market rates this far or more below the model. */
   check?: number;
+  /**
+   * What the builder aims at: "fair", the model's fair odds (the hub before
+   * 28 Oct 2026), or "closing", the closing price standing in for SportyBet's
+   * (forge.ts oddsOf; fair odds less a typical margin where none). Absent is
+   * "closing".
+   */
+  pricing?: "fair" | "closing";
 }
 
 const HUB_VARIANTS: HubVariant[] = [
@@ -460,7 +467,20 @@ const HUB_VARIANTS: HubVariant[] = [
   { name: "best legs first, scaled to 10 legs", allow: hubMarketAllowed, options: { strategy: "best", scaled: true, maxLegs: 10 } },
   { name: "as shipped, legs the market rates 3pt+ lower dropped", allow: hubMarketAllowed, check: 0.03 },
   { name: "as shipped, legs the market rates 5pt+ lower dropped", allow: hubMarketAllowed, check: 0.05 },
+  { name: "before 28 Oct: built on the model's fair odds, market check 5pt", allow: hubMarketAllowed, check: 0.05, pricing: "fair" },
+  { name: "built on bookmaker prices (closing), market check 5pt", allow: hubMarketAllowed, check: 0.05, pricing: "closing" },
+  { name: "bookmaker prices, counted tiers may add 4 games", allow: hubMarketAllowed, check: 0.05, pricing: "closing", options: { extraGames: 4 } },
+  { name: "bookmaker prices, best legs first scaled to 11 legs", allow: hubMarketAllowed, check: 0.05, pricing: "closing", options: { strategy: "best", scaled: true, maxLegs: 11 } },
 ];
+
+/** The closing price of a selection or of a same-bet twin, when the source has one. */
+function closingPrice(market: string, r: Row): number | undefined {
+  for (const m of [market, ...twinsOf(market).map((t) => t.market)]) {
+    const p = priceFor(m, r).price;
+    if (p !== undefined && p > 1) return p;
+  }
+  return undefined;
+}
 
 /**
  * The closing market's chance for a selection: 1X2, double chance and over/under
@@ -545,7 +565,7 @@ function hub(all: Graded[]): { day: number; tier: string; odds: number; chance: 
   // --hub=0,6,7 replays only those variants (by position in HUB_VARIANTS).
   const pick = arg("hub")?.split(",").map(Number);
   for (const v of HUB_VARIANTS.filter((_, i) => !pick || pick.includes(i))) {
-    const stats = new Map(HUB_TIERS.map((t) => [t.id, { built: 0, landed: 0, expected: 0, legs: 0, legN: 0, legWins: 0, legProb: 0, span: 0 }]));
+    const stats = new Map(HUB_TIERS.map((t) => [t.id, { built: 0, landed: 0, expected: 0, legs: 0, legN: 0, legWins: 0, legProb: 0, span: 0, loads: 0 }]));
     const mix = new Map<string, number>();
     let anyDays = 0, builtDays = 0, dailyAny = 0;
     for (const day of days) {
@@ -553,7 +573,8 @@ function hub(all: Graded[]): { day: number; tier: string; odds: number; chance: 
         prediction: g.p,
         candidates: candidatesFor(g.p, { markets: HUB_FORGE_MARKETS, picksPerGame: 1, allowHandicap: true })
           .filter((c) => !v.sweetOnly || (g.p.sweetSpot && c.market === g.p.topPick?.market))
-          .filter((c) => v.check === undefined || !dissents(c.market, c.probability, g.row, v.check)),
+          .filter((c) => v.check === undefined || !dissents(c.market, c.probability, g.row, v.check))
+          .map((c) => ({ ...c, price: v.pricing === "fair" ? c.fairOdds : (closingPrice(c.market, g.row) ?? null) })),
       }));
       const today = toPool(byDay.get(day)!);
       const ahead = toPool(days.filter((d) => d >= day && d < day + 4 * DAY).flatMap((d) => byDay.get(d)!));
@@ -566,6 +587,8 @@ function hub(all: Graded[]): { day: number; tier: string; odds: number; chance: 
         const s = stats.get(c.tier)!;
         s.built++;
         s.expected += c.legs.reduce((a, l) => a * l.probability, 1);
+        // What the code would load at: closing prices, else fair less a margin.
+        s.loads += c.legs.reduce((a, l) => a * (closingPrice(l.market, rows.get(l.matchId)!) ?? l.fairOdds / 1.07), 1);
         s.legs += c.legs.length;
         const ks = c.legs.map((l) => Date.parse(l.kickoff));
         s.span += (Math.max(...ks) - Math.min(...ks)) / DAY;
@@ -606,12 +629,12 @@ function hub(all: Graded[]): { day: number; tier: string; odds: number; chance: 
     console.log(`\n  ${v.name}`);
     console.log(`    at least one daily code (2-20) landed on ${((100 * dailyAny) / Math.max(1, builtDays)).toFixed(0)}% of ${builtDays} days; any code incl. 50/100 on ${((100 * anyDays) / Math.max(1, builtDays)).toFixed(0)}%`);
     console.log(`    legs: ${[...mix].map(([k, n]) => `${k} ${((100 * n) / totalLegs).toFixed(0)}%`).join(", ")}`);
-    console.log("    target   built  landed  expected  avg legs  leg landed  leg stated  span (days)");
+    console.log("    target   built  landed  expected  avg legs  leg landed  leg stated  span (days)  loads at");
     for (const t of HUB_TIERS) {
       const s = stats.get(t.id)!;
       if (!s.built) continue;
       console.log(
-        `    ${t.id.padStart(5)}   ${String(s.built).padStart(5)}  ${((100 * s.landed) / s.built).toFixed(1).padStart(5)}%   ${((100 * s.expected) / s.built).toFixed(1).padStart(5)}%    ${(s.legs / s.built).toFixed(1).padStart(4)}      ${((100 * s.legWins) / s.legN).toFixed(1).padStart(5)}%     ${((100 * s.legProb) / s.legN).toFixed(1).padStart(5)}%      ${(s.span / s.built).toFixed(1)}`,
+        `    ${t.id.padStart(5)}   ${String(s.built).padStart(5)}  ${((100 * s.landed) / s.built).toFixed(1).padStart(5)}%   ${((100 * s.expected) / s.built).toFixed(1).padStart(5)}%    ${(s.legs / s.built).toFixed(1).padStart(4)}      ${((100 * s.legWins) / s.legN).toFixed(1).padStart(5)}%     ${((100 * s.legProb) / s.legN).toFixed(1).padStart(5)}%      ${(s.span / s.built).toFixed(1).padStart(4)}        ${(s.loads / s.built).toFixed(2)}`,
       );
     }
   }

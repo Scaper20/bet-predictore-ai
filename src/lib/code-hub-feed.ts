@@ -12,6 +12,8 @@ import { appDayBounds } from "@/lib/format";
 import { priceQuotes } from "@/lib/odds";
 import { bookingAvailable, bookingCodeFor } from "@/lib/odds/booking-code";
 import { findOnBoard } from "@/lib/odds/sportybet";
+import { priceOn, toSportyBet } from "@/lib/odds/markets";
+import type { RawMarket } from "@/lib/odds/sportybet-api";
 import { allSportyBetTournaments, logBooking } from "@/lib/odds/sportybet-links";
 import type { BookingLeg } from "@/lib/odds/booking";
 import {
@@ -93,8 +95,19 @@ const LEAD_MS = 30 * 60_000;
 /** How long the hub waits for SportyBet prices before publishing the missing ones at fair odds. */
 const PRICE_BUDGET_MS = 10_000;
 
-/** SportyBet's price on each leg, where its board has one, within a fixed budget. */
+/** SportyBet's own price on one pick, read off the game's board; undefined when it isn't listed. */
+function boardPrice(market: string, markets: readonly RawMarket[] | undefined): number | undefined {
+  const sel = markets?.length ? toSportyBet(market) : null;
+  const odds = sel && markets ? priceOn(sel, markets) : undefined;
+  return odds !== undefined && odds > 1 ? odds : undefined;
+}
+
+/**
+ * SportyBet's price on each leg the build couldn't price off the board,
+ * within a fixed budget. Legs priced at build time keep theirs.
+ */
 async function priceLegs(legs: ForgeLeg[]): Promise<ForgeLeg[]> {
+  if (legs.every((l) => l.price !== null)) return legs;
   let timer: ReturnType<typeof setTimeout> | undefined;
   const deadline = new Promise<null>((resolve) => {
     timer = setTimeout(() => resolve(null), PRICE_BUDGET_MS);
@@ -113,7 +126,7 @@ async function priceLegs(legs: ForgeLeg[]): Promise<ForgeLeg[]> {
   ).catch(() => null);
   const priced = await Promise.race([lookup, deadline]);
   clearTimeout(timer);
-  return legs.map((l, i) => ({ ...l, price: priced?.[i]?.local ?? null }));
+  return legs.map((l, i) => ({ ...l, price: l.price ?? priced?.[i]?.local ?? null }));
 }
 
 /**
@@ -164,7 +177,9 @@ async function buildToday(day: string): Promise<HubCodeRow[]> {
       floor: () => HUB_LEG_MIN_PROBABILITY,
       marketGap: LEG_MARKET_GAP,
     });
-    return kept.length ? [{ prediction, candidates: kept }] : [];
+    // SportyBet's own price on every kept pick, so each code is built to the
+    // total it will load at (forge.ts oddsOf), not the model's fair odds.
+    return kept.length ? [{ prediction, candidates: kept.map((c) => ({ ...c, price: boardPrice(c.market, markets) ?? null })) }] : [];
   });
 
   const built = buildHub(today, day);
@@ -217,7 +232,7 @@ function bookMissing(rows: HubCodeRow[]) {
       let failed: { match: string; market: string; reason: string } | null = null;
       // A leg whose line was pulled since the build goes on as its same-chance
       // twin (Home +0.5 as Home or Draw); the stored combo is relabelled to match.
-      const swapped = new Map<number, string>();
+      const swapped = new Map<number, { market: string; price: number | null }>();
       for (const [i, leg] of row.legs.entries()) {
         const kickoff = Date.parse(leg.kickoff);
         const event = await findOnBoard(
@@ -229,7 +244,7 @@ function bookMissing(rows: HubCodeRow[]) {
           failed = { match: `${leg.homeName} v ${leg.awayName}`, market: leg.market, reason: b.ok ? "not-listed" : b.reason };
           break;
         }
-        if (b.twin) swapped.set(i, b.market);
+        if (b.twin) swapped.set(i, { market: b.market, price: boardPrice(b.market, event.markets) ?? null });
         legs.push({ market: b.market, eventId: event.eventId, kickoff });
       }
       if (failed || legs.length !== row.legs.length) {
@@ -252,10 +267,14 @@ function bookMissing(rows: HubCodeRow[]) {
       if (!booked.ok) continue;
       try {
         const db = await admin();
+        // A twin is the same bet but not always the same price: the stored
+        // total follows what the code now loads at.
         const relabelled = swapped.size
           ? row.legs.map((l, i) => {
-              const market = swapped.get(i);
-              return market ? { ...l, market, label: friendlyLabel(market, l.homeName, l.awayName, l.label) } : l;
+              const twin = swapped.get(i);
+              return twin
+                ? { ...l, market: twin.market, label: friendlyLabel(twin.market, l.homeName, l.awayName, l.label), price: twin.price ?? l.price }
+                : l;
             })
           : null;
         await db
@@ -264,7 +283,7 @@ function bookMissing(rows: HubCodeRow[]) {
             booking_code: booked.bookingCode,
             booking_deadline: new Date(booked.deadline).toISOString(),
             booked_at: new Date().toISOString(),
-            ...(relabelled ? { legs: relabelled } : {}),
+            ...(relabelled ? { legs: relabelled, odds: Math.round(hubTotals(relabelled).odds * 100) / 100 } : {}),
           })
           .eq("day", row.day)
           .eq("tier", row.tier)

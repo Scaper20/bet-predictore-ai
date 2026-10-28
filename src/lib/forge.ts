@@ -56,7 +56,7 @@ export const RISK_PRESETS: Record<ForgeRisk, { targetOdds: number; games: number
   risky: { targetOdds: 20, games: 5, label: "Risky", blurb: "Bigger prices, lands less often" },
 };
 
-/** Per-leg fair-odds bounds and the least likely leg each style will take. */
+/** Per-leg price bounds (oddsOf) and the least likely leg each style will take. */
 const RISK_BOUNDS: Record<ForgeRisk, { min: number; max: number; minProb: number }> = {
   safe: { min: 1.1, max: 1.8, minProb: 0.55 },
   balanced: { min: 1.18, max: 2.6, minProb: 0.38 },
@@ -462,6 +462,24 @@ export interface ForgeResult {
   notes?: string[];
 }
 
+/** A typical SportyBet margin on one pick, for a pick whose own price we can't read. */
+export const ESTIMATED_MARGIN = 1.07;
+
+/**
+ * The price a pick counts at while a combo is being built: SportyBet's own
+ * where its board lists it, else the model's fair odds less a typical
+ * margin. Building on fair odds alone published codes well short of their
+ * names once SportyBet's prices were attached (a "10" loaded at 6.22).
+ */
+export function oddsOf(c: { price?: number | null; fairOdds: number }): number {
+  return c.price && c.price > 1 ? c.price : c.fairOdds / ESTIMATED_MARGIN;
+}
+
+/**
+ * The Code Hub's builder: fits every leg to an even share of the target, at
+ * the prices the code will load at (oddsOf). Forge itself builds with
+ * forge-solve.ts.
+ */
 export function forge(pool: PoolEntry[], settings: ForgeSettings, state: ForgeRequestState): ForgeResult {
   const bounds = RISK_BOUNDS[settings.risk];
   const rand = seededRandom(state.seed);
@@ -483,12 +501,12 @@ export function forge(pool: PoolEntry[], settings: ForgeSettings, state: ForgeRe
   // Twelve for a person's combo (parseSettings); the hub's longest code may take thirteen.
   const wanted = Math.max(1, Math.min(13, Math.round(settings.games)));
   const target = Math.max(1.05, settings.targetOdds);
-  const lockedOdds = legs.reduce((o, l) => o * l.fairOdds, 1);
+  const lockedOdds = legs.reduce((o, l) => o * oddsOf(l), 1);
   const open = Math.max(0, wanted - legs.length);
   const legTarget = open > 0 ? clamp(Math.pow(target / lockedOdds, 1 / open), bounds.min, bounds.max) : bounds.min;
 
   const eligible = (c: Candidate) =>
-    c.fairOdds >= bounds.min * 0.97 && c.fairOdds <= bounds.max * 1.03 && c.probability >= bounds.minProb;
+    oddsOf(c) >= bounds.min * 0.97 && oddsOf(c) <= bounds.max * 1.03 && c.probability >= bounds.minProb;
 
   // Each fixture's best fit for the per-leg target. Jitter only breaks
   // near-ties, so a regenerated slip changes without getting worse.
@@ -502,7 +520,7 @@ export function forge(pool: PoolEntry[], settings: ForgeSettings, state: ForgeRe
         .map((c) => ({
           c,
           cost:
-            Math.abs(Math.log(c.fairOdds) - Math.log(legTarget)) +
+            Math.abs(Math.log(oddsOf(c)) - Math.log(legTarget)) +
             0.35 * (1 - dq) +
             (avoid.has(entry.prediction.match.id) ? 0.3 : 0) +
             rand() * 0.06,
@@ -539,11 +557,11 @@ export function forge(pool: PoolEntry[], settings: ForgeSettings, state: ForgeRe
   for (let pass = 0; pass < 3; pass++) {
     for (const slot of chosen) {
       const others =
-        lockedOdds * chosen.reduce((o, s) => (s === slot ? o : o * s.c.fairOdds), 1);
+        lockedOdds * chosen.reduce((o, s) => (s === slot ? o : o * oddsOf(s.c)), 1);
       let best = slot.c;
-      let bestGap = Math.abs(Math.log(others * slot.c.fairOdds) - Math.log(target));
+      let bestGap = Math.abs(Math.log(others * oddsOf(slot.c)) - Math.log(target));
       for (const c of slot.entry.candidates.filter(eligible)) {
-        const gap = Math.abs(Math.log(others * c.fairOdds) - Math.log(target));
+        const gap = Math.abs(Math.log(others * oddsOf(c)) - Math.log(target));
         if (gap < bestGap - 0.01) {
           best = c;
           bestGap = gap;
