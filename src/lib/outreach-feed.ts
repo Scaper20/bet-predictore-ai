@@ -432,7 +432,7 @@ export async function sendNextBatch(campaign: CampaignType, batchSize: number): 
       const email = await buildCampaignEmail(admin, campaign, recipient, unsubscribeUrl);
       if (!email) throw new Error("Nothing to send anymore (no survey row or checkout, or already in the VIP chat).");
 
-      await sendEmail({ to: recipient.email, subject: email.subject, html: email.html, from: outreachFrom() });
+      await sendEmail({ to: recipient.email, subject: email.subject, html: email.html, from: outreachFrom(), unsubscribeUrl });
       await admin
         .from("email_campaign_recipients")
         .update({ status: "sent", sent_at: new Date().toISOString() })
