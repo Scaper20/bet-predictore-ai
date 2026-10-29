@@ -23,6 +23,7 @@ import { buildPrediction, HEADLINE_EXCLUDED, HEADLINE_MAX_PROBABILITY, type Mode
 import { applySelectionPolicy } from "@/lib/selection-policy";
 import { extraPicks } from "@/lib/selection-extras";
 import { listedOn } from "@/lib/board-pick";
+import { holdPublished, type LoggedPick } from "@/lib/published-hold";
 import { clubKeys, hostGuard, TOP_FIVE_LEAGUES, UEFA_CUP_CODES } from "@/lib/cup-guard";
 import { after } from "next/server";
 import { archivedResults, storeResults } from "@/lib/archive/history-store";
@@ -333,14 +334,18 @@ export async function matchPrediction(id: string): Promise<Prediction | null> {
  * The headline engine reads every checked game too (engine-feed.ts); its
  * headline is logged beside this one (shadow) and replaces it only while
  * app_switches.headline_engine is on.
+ *
+ * A game whose pick is already on the record keeps that pick, whatever this
+ * read says now (published-hold.ts).
  */
 async function marketChecked(built: { prediction: Prediction; options: ModelOptions }[]): Promise<Prediction[]> {
   await applySelectionPolicy();
   const toCheck = built.filter((b) => b.prediction.topPick).map((b) => b.prediction.match);
   const known = new Set<string>();
-  const [listings, engineOn] = await Promise.all([
+  const [listings, engineOn, logged] = await Promise.all([
     toCheck.length ? listingsFor(toCheck, undefined, known).catch(() => new Map<string, SportyBetEvent>()) : new Map<string, SportyBetEvent>(),
     switchOn("headline_engine").catch(() => false),
+    publishedPicks(built.map((b) => b.prediction.match.id)),
   ]);
   return Promise.all(
     built.map(async ({ prediction, options }) => {
@@ -358,7 +363,30 @@ async function marketChecked(built: { prediction: Prediction; options: ModelOpti
       const withEngine = { ...checked, engine: engineRead(prediction, markets, lines, true) };
       return engineOn ? withEngineHeadline(withEngine) : withEngine;
     }),
-  );
+  ).then((out) => out.map((p) => holdPublished(p, logged.get(p.match.id))));
+}
+
+/**
+ * The picks already on the record for these games (predictions_log), so a
+ * published headline never changes under the people who booked it
+ * (published-hold.ts). Briefly cached per slate; a failed read holds nothing.
+ */
+async function publishedPicks(ids: string[]): Promise<Map<string, LoggedPick>> {
+  if (ids.length === 0) return new Map();
+  const key = [...ids].sort().join(",");
+  return cached(`published:${key}`, 60_000, async () => {
+    const out = new Map<string, LoggedPick>();
+    const c = supabaseAdmin();
+    for (let i = 0; i < ids.length; i += 100) {
+      const { data, error } = await c
+        .from("predictions_log")
+        .select("match_id, market, label, probability, fair_odds, confidence")
+        .in("match_id", ids.slice(i, i + 100));
+      if (error) throw error;
+      for (const r of data ?? []) out.set(r.match_id as string, r as LoggedPick);
+    }
+    return out;
+  }).catch(() => new Map<string, LoggedPick>());
 }
 
 /**

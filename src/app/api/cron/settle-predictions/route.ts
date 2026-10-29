@@ -53,9 +53,10 @@ export async function GET(request: Request) {
 
 async function logUpcomingPicks(admin: ReturnType<typeof supabaseAdmin>): Promise<number> {
   const { matches: feed } = await upcomingFeed(2);
-  // Only games that have not started. The upsert below overwrites by match
-  // id, so a game already under way must never be re-logged: its pick and
-  // tier are frozen at the last pre-kickoff run.
+  // Only games that have not started. A game is logged once: the first run
+  // that publishes its pick freezes pick, tier and price, and every page
+  // serves that pick from then on (published-hold.ts), so what people book is
+  // what the record grades.
   const now = Date.now();
   const matches = feed.filter((m) => m.status === "scheduled" && Date.parse(m.kickoff) > now);
   if (matches.length === 0) return 0;
@@ -92,8 +93,8 @@ async function logUpcomingPicks(admin: ReturnType<typeof supabaseAdmin>): Promis
 
   if (rows.length === 0) return 0;
 
-  // SportyBet's price beside each pick, as it stood at this (last pre-kickoff)
-  // log run, with the market's fair probability. Closing prices are stamped
+  // SportyBet's price beside each pick, as it stood at the run that published
+  // it, with the market's fair probability. Closing prices are stamped
   // at settlement; the pair is what closing line value is measured from.
   // Where no snapshot was taken, the competition's stored board carries the
   // same prices (and every market, so handicaps and stat legs too).
@@ -116,7 +117,7 @@ async function logUpcomingPicks(admin: ReturnType<typeof supabaseAdmin>): Promis
   };
   for (const row of rows) Object.assign(row, priced(row.match_id, row.market));
 
-  const { error } = await admin.from("predictions_log").upsert(rows, { onConflict: "match_id" });
+  const { error } = await admin.from("predictions_log").upsert(rows, { onConflict: "match_id", ignoreDuplicates: true });
   if (error) throw error;
 
   // Watched, not published: the paused handicaps and GG/NG. Best effort, so a
