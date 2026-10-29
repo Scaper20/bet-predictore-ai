@@ -723,7 +723,7 @@ export function bestSwap(leg: ForgeLeg, bench: ForgeLeg[], onSlip: Set<string>):
 
 export const FORGE_GUEST_TOTAL = 2;
 export const FORGE_FREE_DAILY = 5;
-/** Fair-use ceiling behind "unlimited" on paid plans. */
+/** Combos a day on paid plans, shown as they are. */
 export const FORGE_PAID_DAILY = 100;
 
 export interface ForgeRequest {

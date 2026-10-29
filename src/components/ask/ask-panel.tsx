@@ -8,7 +8,7 @@ import { useSlip } from "@/lib/slip";
 import { useEntitlement } from "@/components/entitlements/entitlement-provider";
 import { LocalTime } from "@/components/ui/local-time";
 import type { AskEvent, AskPickCard, AskTurn } from "@/lib/ask/request";
-import { ASK_FREE_DAILY, ASK_GUEST_TOTAL, ASK_MAX_QUESTION } from "@/lib/ask/request";
+import { ASK_FREE_DAILY, ASK_GUEST_TOTAL, ASK_MAX_QUESTION, ASK_PAID_DAILY } from "@/lib/ask/request";
 import { AskAvatar } from "@/components/ask/ask-avatar";
 
 /* ------------------------------------------------------------------ types */
@@ -461,7 +461,11 @@ function AskPanelInner({ page }: { page: { matchId: string; label: string } | nu
             </form>
             <p className="mt-2 text-center text-[11px] text-ink-dim">
               {allowance?.paid ? (
-                "Unlimited with your plan · Never invents injuries or news"
+                remaining !== null && allowance.limit !== null ? (
+                  `${remaining} of ${allowance.limit} questions left today · Never invents injuries or news`
+                ) : (
+                  "Never invents injuries or news"
+                )
               ) : !signedIn ? (
                 <>
                   {remaining !== null
@@ -477,7 +481,7 @@ function AskPanelInner({ page }: { page: { matchId: string; label: string } | nu
                   {remaining !== null ? `${remaining} of ${ASK_FREE_DAILY} free questions left today` : `Free: ${ASK_FREE_DAILY} questions a day`}
                   {" · "}
                   <Link href="/pricing" className="underline-offset-2 hover:text-ink hover:underline">
-                    Pro: unlimited
+                    Pro: {ASK_PAID_DAILY} a day
                   </Link>
                 </>
               )}
@@ -544,7 +548,7 @@ function GuestGate({ pathname }: { pathname: string }) {
             I already have an account
           </Link>
         </div>
-        <p className="mt-4 text-[11px] text-ink-dim">Takes a minute. Pro: unlimited questions.</p>
+        <p className="mt-4 text-[11px] text-ink-dim">Takes a minute. Pro: {ASK_PAID_DAILY} questions a day.</p>
       </div>
     </div>
   );

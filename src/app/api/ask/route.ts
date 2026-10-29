@@ -1,12 +1,14 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { getEntitlement, meets } from "@/lib/entitlements";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { aiEnabled } from "@/lib/ai/enabled";
-import { ASK_SYSTEM_PROMPT } from "@/lib/ask/prompt";
+import { aiEnabled, askApiKey } from "@/lib/ai/enabled";
 import { APP_TIMEZONE } from "@/lib/format";
-import { ASK_TOOLS, runTool, toolStatus, type AskTier } from "@/lib/ask/tools";
+import type { AskTier } from "@/lib/ask/tools";
 import { claimGuest, guestIdentity, guestUsed, refundGuest } from "@/lib/ask/guest";
 import { viewerForTier } from "@/lib/viewer";
+import { askConfig, type AskPlan } from "@/lib/ask/config";
+import { runAsk, type AskRunResult } from "@/lib/ask/engine";
+import { checkAlerts, logQuestion, reserveSpend, settleSpend } from "@/lib/ask/ledger";
 import {
   ASK_FREE_DAILY,
   ASK_GUEST_TOTAL,
@@ -25,21 +27,28 @@ export const dynamic = "force-dynamic";
  */
 export const maxDuration = 120;
 
-/**
- * Claude Haiku 5.5: the cheapest current model ($0.10 / $0.50 per million for
- * prompts under 100K tokens), about a twentieth of Sonnet 5.5 per question
- * (docs/pricing.md). The work here is chat over numbers the tools compute.
- */
-const MODEL = "claude-haiku-5-5";
-/** Tool rounds per question before the assistant must answer with what it has. */
-const MAX_ROUNDS = 6;
-
 const NO_STORE = { "Cache-Control": "no-store" };
+
+/** Which allowance and spending cap applies: a pass is counted as its own plan. */
+function planOf(entitlement: Awaited<ReturnType<typeof getEntitlement>>): AskPlan {
+  if (!entitlement.signedIn) return "guest";
+  if (entitlement.passOnly || entitlement.tier === "pass") return "pass";
+  if (entitlement.tier === "vip") return "vip";
+  if (entitlement.tier === "pro") return "pro";
+  return "free";
+}
+
+/** Questions a day on each plan. A pass gets ASK_PASS_DAILY when set, else its plan's own allowance, as before. */
+function dailyLimit(plan: AskPlan, tier: string, passDaily: number | null): number {
+  if (plan === "pass") return passDaily ?? (tier === "vip" ? ASK_VIP_DAILY : ASK_PAID_DAILY);
+  return plan === "vip" ? ASK_VIP_DAILY : plan === "pro" ? ASK_PAID_DAILY : ASK_FREE_DAILY;
+}
 
 /** The panel's header line: whether it works here, and the allowance left. */
 export async function GET(request: Request) {
   const entitlement = await getEntitlement();
   const paid = meets(entitlement.tier, "pass");
+  const plan = planOf(entitlement);
   let used: number | null = null;
   let setCookie: string | null = null;
   if (entitlement.userId) {
@@ -58,7 +67,7 @@ export async function GET(request: Request) {
       signedIn: entitlement.signedIn,
       paid,
       used,
-      limit: entitlement.signedIn ? (paid ? null : ASK_FREE_DAILY) : ASK_GUEST_TOTAL,
+      limit: entitlement.signedIn ? dailyLimit(plan, entitlement.tier, askConfig().passDaily) : ASK_GUEST_TOTAL,
     },
     { headers },
   );
@@ -76,9 +85,13 @@ function fail(event: Extract<AskEvent, { type: "error" }>, status: number, setCo
  * (AskEvent): text deltas as they're written, a status line while tools
  * run, pick cards from show_picks, then done.
  *
- * Allowances are claimed in the database before the model is called and
- * handed back if no answer arrives: accounts get a daily allowance by tier,
- * visitors without one get ASK_GUEST_TOTAL questions per browser (lib/ask/guest.ts).
+ * Before the model is called: a question is claimed from the daily allowance
+ * (handed back if no answer arrives), and its cost ceiling is reserved against
+ * the asker's daily spending cap and Ask's daily budget (lib/ask/ledger.ts).
+ * The model and tool rounds run in lib/ask/engine.ts; afterwards the
+ * reservation settles to the real cost, the question is logged and the alerts
+ * are checked. With ASK_GUARD=observe (the default) the money controls record
+ * what they would have stopped without stopping anything.
  */
 export async function POST(request: Request) {
   if (!aiEnabled()) {
@@ -88,8 +101,10 @@ export async function POST(request: Request) {
   const parsed = parseAskRequest(await request.json().catch(() => null));
   if (typeof parsed === "string") return fail({ type: "error", message: parsed }, 400);
 
+  const config = askConfig();
   const entitlement = await getEntitlement();
   const paid = meets(entitlement.tier, "pass");
+  const plan = planOf(entitlement);
   const tier: AskTier = paid ? "paid" : "free";
   const viewer = await viewerForTier(entitlement.tier);
   const unavailable = { type: "error", code: "unavailable", message: "Ask KiqStat isn't available right now. Try again shortly." } as const;
@@ -98,10 +113,12 @@ export async function POST(request: Request) {
   let limit: number | null;
   let refund: () => Promise<void>;
   let setCookie: string | null = null;
+  let subject: string;
 
   if (entitlement.userId) {
     const userId = entitlement.userId;
-    limit = meets(entitlement.tier, "vip") ? ASK_VIP_DAILY : paid ? ASK_PAID_DAILY : ASK_FREE_DAILY;
+    subject = `user:${userId}`;
+    limit = dailyLimit(plan, entitlement.tier, config.passDaily);
     const supabase = supabaseAdmin();
     const { data: claim, error: claimError } = await supabase.rpc("ask_claim", { p_user: userId, p_limit: limit });
     const row = Array.isArray(claim) ? (claim[0] as { allowed: boolean; used: number } | undefined) : undefined;
@@ -112,8 +129,8 @@ export async function POST(request: Request) {
           type: "error",
           code: "limit",
           message: paid
-            ? "You've hit today's fair-use limit. Ask again tomorrow."
-            : `That's your ${ASK_FREE_DAILY} free questions for today. Pro makes it unlimited.`,
+            ? `That's your ${limit} questions for today. They reset at midnight, Lagos time.`
+            : `That's your ${ASK_FREE_DAILY} free questions for today. Pro gives you ${ASK_PAID_DAILY} a day.`,
         },
         429,
       );
@@ -125,11 +142,10 @@ export async function POST(request: Request) {
         () => undefined,
       );
     };
-    // Paid plans are advertised as unlimited; the fair-use cap isn't shown.
-    if (paid) limit = null;
   } else {
     const guest = guestIdentity(request);
     setCookie = guest.setCookie;
+    subject = `guest:${guest.deviceKey.slice(0, 40)}`;
     const claim = await claimGuest(guest);
     if (!claim) return fail(unavailable, 503, setCookie);
     if (!claim.allowed) {
@@ -148,6 +164,31 @@ export async function POST(request: Request) {
     refund = () => refundGuest(guest);
   }
 
+  // Money: reserve this question's ceiling before any model call.
+  const reserved = config.guard === "off" ? null : await reserveSpend(subject, plan, config);
+  if (reserved && !reserved.ok) {
+    await refund();
+    void logQuestion({
+      userId: entitlement.userId,
+      guest: !entitlement.signedIn,
+      plan,
+      source: "live",
+      config,
+      result: null,
+      blocked: true,
+      guard: `blocked:${reserved.over ?? "books"}`,
+      questionChars: parsed.turns.at(-1)?.text.length ?? 0,
+    });
+    void checkAlerts({ result: null, config, globalSpentAfter: null, blockedBy: reserved.over });
+    return fail(
+      reserved.over === "subject"
+        ? { type: "error", code: "limit", message: "You've used today's Ask KiqStat allowance. It resets at midnight, Lagos time." }
+        : unavailable,
+      reserved.over === "subject" ? 429 : 503,
+      setCookie,
+    );
+  }
+
   const messages: Anthropic.Beta.BetaMessageParam[] = parsed.turns.map((t, i) =>
     i === parsed.turns.length - 1
       ? { role: "user", content: `${contextPreamble(parsed.context, new Date())}\n\n${t.text}` }
@@ -155,7 +196,7 @@ export async function POST(request: Request) {
   );
 
   const encoder = new TextEncoder();
-  const client = new Anthropic();
+  const client = new Anthropic({ apiKey: askApiKey() });
 
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
@@ -163,121 +204,62 @@ export async function POST(request: Request) {
         try {
           controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
         } catch {
-          // The browser went away; the loop notices via the abort signal.
+          // The browser went away; the engine notices via the abort signal.
         }
       };
 
-      let answered = false;
+      let result: AskRunResult | null = null;
       try {
-        let jsonRetries = 0;
-        for (let round = 0; round < MAX_ROUNDS; round++) {
-          const turn = client.beta.messages.stream(
-            {
-              model: MODEL,
-              max_tokens: 8000,
-              // Chat over numbers the tools already computed; medium (Haiku
-              // 5.5's default, set explicitly) keeps the tool choices careful
-              // without slow, long turns.
-              output_config: { effort: "medium" },
-              // Tools + system are identical on every request, so they're cached;
-              // the top-level breakpoint also caches the growing conversation
-              // across this question's tool rounds.
-              system: [{ type: "text", text: ASK_SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
-              cache_control: { type: "ephemeral" },
-              tools: ASK_TOOLS,
-              // No server-side refusal fallback on Haiku 5.5; a decline is
-              // answered below (stop_reason "refusal").
-              messages,
-            },
-            { signal: request.signal },
-          );
-          turn.on("text", (delta) => {
-            answered = true;
-            send({ type: "text", delta });
-          });
+        result = await runAsk({
+          client,
+          config,
+          messages,
+          toolContext: { tier, viewer, timeZone: parsed.context.timeZone ?? APP_TIMEZONE },
+          emit: send,
+          signal: request.signal,
+          // Enforcing, the question runs under what its reservation was granted
+          // (less than the full ceiling near the end of a day).
+          ceilingMicros: config.guard === "off" ? null : config.guard === "enforce" && reserved ? reserved.grantedMicros : config.requestCeilingMicros,
+          enforce: config.guard === "enforce",
+        });
 
-          let message: Anthropic.Beta.BetaMessage;
-          try {
-            message = await turn.finalMessage();
-            jsonRetries = 0;
-          } catch (err) {
-            // Only an unparseable tool input is worth re-issuing; API errors
-            // and aborts go to the outer handler.
-            if (err instanceof Anthropic.APIError || request.signal.aborted || jsonRetries++ >= 2) throw err;
-            continue;
-          }
-
-          if (message.stop_reason === "refusal") {
-            if (!answered) send({ type: "text", delta: "I can't help with that one. Ask me about a match or your picks." });
-            answered = true;
-            break;
-          }
-          if (message.stop_reason === "pause_turn") {
-            messages.push({ role: "assistant", content: message.content });
-            continue;
-          }
-
-          const toolUses = message.content.filter(
-            (b): b is Anthropic.Beta.BetaToolUseBlock => b.type === "tool_use",
-          );
-          if (toolUses.length === 0) break;
-          if (message.stop_reason === "max_tokens") break; // never run a truncated tool call
-
-          messages.push({ role: "assistant", content: message.content });
-          for (const use of toolUses) {
-            send({ type: "status", label: toolStatus(use.name, (use.input ?? {}) as Record<string, unknown>) });
-          }
-          const results = await Promise.all(
-            toolUses.map(async (use): Promise<Anthropic.Beta.BetaToolResultBlockParam> => {
-              const outcome = await runTool(use.name, use.input, {
-                tier,
-                viewer,
-                timeZone: parsed.context.timeZone ?? APP_TIMEZONE,
-                onPicks: (picks) => {
-                  answered = true;
-                  send({ type: "picks", picks });
-                },
-              });
-              return {
-                type: "tool_result",
-                tool_use_id: use.id,
-                content: outcome.content,
-                ...(outcome.isError ? { is_error: true } : {}),
-              };
-            }),
-          );
-          messages.push({ role: "user", content: results });
-
-          if (round === MAX_ROUNDS - 2) {
-            messages.push({
-              role: "user",
-              content: "[Context — not from the user] Answer now with what you have; no more lookups.",
-            });
-          }
+        if (result.outcome === "error") {
+          // The user sees a plain line; the log says what failed (bad key, no credit, rate limit) without echoing anything secret.
+          console.error("ask: failed", result.error);
         }
-
-        if (!answered) {
+        if (!result.answered) {
+          // The allowance is handed back; the money it cost is still booked below.
           await refund();
-          send({ type: "error", message: "I couldn't put an answer together. Try asking another way." });
+          send({
+            type: "error",
+            ...(result.billing ? { code: "unavailable" as const } : {}),
+            message: result.billing
+              ? "Ask KiqStat is unavailable right now. Your question wasn't counted."
+              : result.outcome === "budget_stop"
+                ? "That question needed more lookups than one question allows. Try one match at a time. It wasn't counted."
+                : result.outcome === "error"
+                  ? "Ask KiqStat is busy right now. Your question wasn't counted. Try again in a moment."
+                  : "I couldn't put an answer together. Try asking another way.",
+          });
+        } else if (result.outcome === "error" || result.outcome === "aborted") {
+          send({ type: "error", message: "The answer was cut off. Ask again to finish it." });
         } else {
           send({ type: "done", used, limit });
         }
-      } catch (err) {
-        // The user sees a generic line; the log says what actually failed
-        // (bad key, no credit, rate limit) without echoing anything secret.
-        if (err instanceof Anthropic.APIError) {
-          console.error("ask: anthropic error", err.status, err.type ?? err.name, err.message.slice(0, 300));
-        } else if (!request.signal.aborted) {
-          console.error("ask: failed", err instanceof Error ? err.message.slice(0, 300) : String(err));
-        }
-        if (!answered) await refund();
-        send({
-          type: "error",
-          message: answered
-            ? "The answer was cut off. Ask again to finish it."
-            : "Ask KiqStat is busy right now. Your question wasn't counted. Try again in a moment.",
-        });
       } finally {
+        const actual = result?.costMicros ?? 0;
+        const globalSpentAfter = reserved ? await settleSpend(reserved.reservation, actual) : null;
+        await logQuestion({
+          userId: entitlement.userId,
+          guest: !entitlement.signedIn,
+          plan,
+          source: "live",
+          config,
+          result,
+          guard: [config.guard, reserved?.over ? `over:${reserved.over}` : null, result?.wouldStop ? "would_stop" : null].filter(Boolean).join(","),
+          questionChars: parsed.turns.at(-1)?.text.length ?? 0,
+        });
+        await checkAlerts({ result, config, globalSpentAfter, blockedBy: null });
         try {
           controller.close();
         } catch {

@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react
 import {
   DEFAULT_SETTINGS,
   FORGE_FREE_DAILY,
+  FORGE_PAID_DAILY,
   FORGE_GUEST_TOTAL,
   FORGE_MARKETS,
   FORGE_WHEN,
@@ -581,7 +582,7 @@ function AllowanceLine({ allowance, remaining }: { allowance: Allowance | null; 
   return (
     <p className="mt-2.5 text-center text-[11px] text-ink-dim">
       {allowance.paid
-        ? "Unlimited combos with your plan"
+        ? `Up to ${FORGE_PAID_DAILY} combos a day with your plan`
         : !allowance.signedIn
           ? `${remaining ?? FORGE_GUEST_TOTAL} of ${FORGE_GUEST_TOTAL} free combos without an account`
           : `${remaining ?? FORGE_FREE_DAILY} of ${FORGE_FREE_DAILY} combos left today`}
@@ -589,7 +590,7 @@ function AllowanceLine({ allowance, remaining }: { allowance: Allowance | null; 
         <>
           {" · "}
           <Link href={allowance.signedIn ? "/pricing" : "/account/sign-up?next=/football/forge"} className="hover:text-ink hover:underline">
-            {allowance.signedIn ? "Pro: unlimited" : `Sign up free for ${FORGE_FREE_DAILY} a day`}
+            {allowance.signedIn ? `Pro: ${FORGE_PAID_DAILY} a day` : `Sign up free for ${FORGE_FREE_DAILY} a day`}
           </Link>
         </>
       )}

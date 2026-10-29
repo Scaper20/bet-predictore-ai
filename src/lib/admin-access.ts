@@ -250,6 +250,7 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: "/admin/model-performance", label: "Model performance", icon: "target", permission: "model.view" },
       { href: "/admin/publishing", label: "Publishing", icon: "power", permission: "model.view" },
+      { href: "/admin/ask-lab", label: "Ask lab", icon: "chat", permission: "model.view" },
       { href: "/admin/data-health", label: "Data health", icon: "pulse", permission: "data.view" },
       { href: "/admin/parsebot", label: "Code Hub & parse.bot", icon: "code", permission: "codehub.manage" },
       { href: "/admin/sportybet", label: "SportyBet matching", icon: "link", permission: "sportybet.manage" },
