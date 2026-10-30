@@ -24,19 +24,71 @@ import {
   type ForgeResult,
   type ForgeSettings,
   type ForgeWhen,
+  forgeDates,
+  forgeWindow,
 } from "@/lib/forge";
 import { balancedByLeague, forgeSolve } from "@/lib/forge-solve";
 
-/** Every modelled fixture kicking off in a window, predicted once and shared for five minutes. */
-export async function predictionsFor(when: ForgeWhen): Promise<Prediction[]> {
-  return cached(`forge:pool:${when}`, 5 * 60_000, async () => {
+/** A build's window: its day range, else its named window ("today", "weekend"). */
+export interface PoolWindow {
+  key: string;
+  from: number;
+  to: number;
+}
+export function poolWindow(settings: Pick<ForgeSettings, "days" | "when">): PoolWindow {
+  const range = forgeWindow(settings);
+  if (range) return range;
+  const [from, to] = windowFor(settings.when);
+  return { key: settings.when, from, to };
+}
+
+/**
+ * Every modelled fixture kicking off in a window, predicted once and shared
+ * for five minutes. With leagues chosen, the pool is drawn from those leagues
+ * alone before it is balanced, so a small league isn't crowded out of a
+ * week-long window by the big ones.
+ */
+export async function predictionsFor(window: PoolWindow | ForgeWhen, leagueCodes: string[] | null = null): Promise<Prediction[]> {
+  const w = typeof window === "string" ? poolWindow({ when: window, days: null }) : window;
+  const leagues = leagueCodes?.length ? [...leagueCodes].sort() : null;
+  return cached(`forge:pool:${w.key}:${leagues?.join(",") ?? "all"}`, 5 * 60_000, async () => {
     const { matches } = await upcomingFeed(7);
-    const [from, to] = windowFor(when);
     const inWindow = matches.filter((m) => {
       const t = Date.parse(m.kickoff);
-      return m.status === "scheduled" && Boolean(m.league.code) && t >= from && t < to;
+      return (
+        m.status === "scheduled" &&
+        Boolean(m.league.code) &&
+        t >= w.from &&
+        t < w.to &&
+        (!leagues || leagues.includes(m.league.code ?? ""))
+      );
     });
     return predictBatch(balancedByLeague(inWindow, POOL_SIZE), POOL_SIZE);
+  });
+}
+
+export interface ForgeMatchday {
+  /** Lagos date. */
+  date: string;
+  /** Games still to kick off that day, by league code. */
+  leagues: Record<string, number>;
+  count: number;
+}
+
+/** The days the picker offers and what each one holds, shared for five minutes. */
+export async function forgeMatchdays(): Promise<ForgeMatchday[]> {
+  return cached("forge:matchdays", 5 * 60_000, async () => {
+    const { matches } = await upcomingFeed(7);
+    const days = new Map(forgeDates().map((d) => [d, { date: d, leagues: {} as Record<string, number>, count: 0 }]));
+    const soon = Date.now() + 10 * 60_000;
+    for (const m of matches) {
+      if (m.status !== "scheduled" || !m.league.code || Date.parse(m.kickoff) <= soon) continue;
+      const day = days.get(new Date(m.kickoff).toLocaleDateString("en-CA", { timeZone: "Africa/Lagos" }));
+      if (!day) continue;
+      day.count++;
+      day.leagues[m.league.code] = (day.leagues[m.league.code] ?? 0) + 1;
+    }
+    return [...days.values()];
   });
 }
 
@@ -48,8 +100,8 @@ const POOL_SIZE = 160;
  * stored boards once and shared for five minutes like the pool. A fixture
  * missing here isn't on SportyBet's board (or the board has no markets).
  */
-async function forgeListings(when: ForgeWhen, predictions: readonly Prediction[]): Promise<Map<string, BoardMarket[]>> {
-  return cached(`forge:boards:${when}`, 5 * 60_000, async () => {
+async function forgeListings(key: string, predictions: readonly Prediction[]): Promise<Map<string, BoardMarket[]>> {
+  return cached(`forge:boards:${key}`, 5 * 60_000, async () => {
     const out = new Map<string, BoardMarket[]>();
     const events = await listingsFor(predictions.map((p) => p.match), 8_000);
     for (const [id, event] of events) if (event.markets.length) out.set(id, event.markets);
@@ -73,7 +125,9 @@ export async function buildForgeSlip(
   opts: { allowHandicap: boolean; leagueCodes: string[] | null; viewer?: Viewer | null },
 ): Promise<ForgeResponse> {
   const soon = Date.now() + 10 * 60_000;
-  const eligible = (await predictionsFor(settings.when)).filter(
+  const window = poolWindow(settings);
+  const windowPool = await predictionsFor(window, opts.leagueCodes);
+  const eligible = windowPool.filter(
     (p) =>
       p.sufficiency.publishable &&
       Date.parse(p.match.kickoff) > soon &&
@@ -87,7 +141,7 @@ export async function buildForgeSlip(
   const [stats, grids, listings] = await Promise.all([
     wantsStats ? Promise.all(predictions.map((p) => statChances(p.match).catch(() => undefined))) : [],
     wantsStats ? Promise.all(predictions.map((p) => statGridsFor(p.match).catch(() => ({})))) : [],
-    forgeListings(settings.when, await predictionsFor(settings.when)).catch(() => new Map<string, BoardMarket[]>()),
+    forgeListings(`${window.key}:${opts.leagueCodes?.slice().sort().join(",") ?? "all"}`, windowPool).catch(() => new Map<string, BoardMarket[]>()),
   ]);
 
   // Board first: on a game SportyBet lists, a leg it doesn't carry becomes its
