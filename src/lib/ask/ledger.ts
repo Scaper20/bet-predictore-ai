@@ -36,22 +36,42 @@ export interface ReserveResult {
   globalSpent: number;
 }
 
+/**
+ * Whose money a question spends: an account's (or browser's) day, or a
+ * pass's whole window. `day` pins the booking to one date, which is how a
+ * pass is booked (the Lagos date it started), so its cap covers the pass
+ * however many midnights it crosses; without it the day is today in Lagos.
+ */
+export interface SpendBucket {
+  key: string;
+  capMicros: number;
+  day?: string;
+}
+
+/** An account's or browser's daily bucket. */
+export function dailyBucket(key: string, capMicros: number): SpendBucket {
+  return { key, capMicros };
+}
+
 type Row = { allowed: boolean; granted: number; spent: number; reserved: number; spend_day: string };
 
-async function hold(key: string, amount: number, min: number, cap: number, enforce: boolean): Promise<Row | null> {
-  const { data, error } = await supabaseAdmin().rpc("ask_spend_reserve", { p_key: key, p_amount: amount, p_min: min, p_cap: cap, p_enforce: enforce });
+async function hold(key: string, amount: number, min: number, cap: number, enforce: boolean, day?: string): Promise<Row | null> {
+  const args = { p_key: key, p_amount: amount, p_min: min, p_cap: cap, p_enforce: enforce };
+  const { data, error } = day
+    ? await supabaseAdmin().rpc("ask_spend_reserve_on", { ...args, p_day: day })
+    : await supabaseAdmin().rpc("ask_spend_reserve", args);
   const row = Array.isArray(data) ? (data[0] as Row | undefined) : undefined;
   return error || !row ? null : { ...row, granted: Number(row.granted), spent: Number(row.spent), reserved: Number(row.reserved) };
 }
 
 /**
  * Reserves one question's ceiling against Ask's daily budget, then the
- * asker's daily cap. Observing, it reserves regardless and reports which cap
+ * asker's bucket (a daily cap, or a pass's whole-window cap). Observing, it reserves regardless and reports which cap
  * would have stopped it. If the books can't be reached it lets the question
  * through when observing and stops it when enforcing: a broken meter must not
  * mean unmetered spend.
  */
-export async function reserveSpend(subject: string, plan: AskPlan, config: AskConfig): Promise<ReserveResult> {
+export async function reserveSpend(bucket: SpendBucket, config: AskConfig): Promise<ReserveResult> {
   const enforce = config.guard === "enforce";
   const amount = config.requestCeilingMicros;
   const min = Math.min(amount, minQuestionMicros(config.model));
@@ -69,7 +89,7 @@ export async function reserveSpend(subject: string, plan: AskPlan, config: AskCo
     if (enforce && global.granted === 0) return refused("budget", global.spent);
     holds.push({ key: "global", day: global.spend_day, amount: global.granted });
 
-    const own = await hold(subject, global.granted, Math.min(min, global.granted), config.dailyCapMicros[plan], enforce);
+    const own = await hold(bucket.key, global.granted, Math.min(min, global.granted), bucket.capMicros, enforce, bucket.day);
     if (!own) {
       if (enforce) {
         await settleSpend({ holds }, 0);
@@ -86,7 +106,7 @@ export async function reserveSpend(subject: string, plan: AskPlan, config: AskCo
       await settleSpend({ holds: [{ ...holds[0], amount: global.granted - own.granted }] }, 0);
       holds[0] = { ...holds[0], amount: own.granted };
     }
-    holds.push({ key: subject, day: own.spend_day, amount: own.granted });
+    holds.push({ key: bucket.key, day: own.spend_day, amount: own.granted });
     const over = !global.allowed ? "budget" : !own.allowed ? "subject" : null;
     return { ok: true, over, reservation: { holds }, grantedMicros: own.granted, globalSpent: global.spent };
   } catch {

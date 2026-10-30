@@ -5,6 +5,7 @@ import { askConfig } from "@/lib/ask/config";
 import { PRESETS, labKey, labRuns, liveByTier, type Stats } from "@/lib/ask/lab";
 import { getPlans } from "@/lib/plan-prices";
 import { allOffers } from "@/lib/offers-server";
+import { runPreflight } from "@/lib/ask/preflight";
 import { ASK_FREE_DAILY, ASK_PAID_DAILY, ASK_VIP_DAILY } from "@/lib/ask/request";
 import { KpiTile, PageHeader, Panel, SectionLabel, StatusPill } from "@/components/admin/kit";
 import { AdminTable, AdminTableCell, AdminTableHead, AdminTableRow } from "@/components/admin/admin-table";
@@ -29,13 +30,13 @@ export default async function AskLabPage() {
   const me = await requirePermission("model.view");
   const canRun = can(me.roles, "model.manage");
   const config = askConfig();
-  const [{ runs, rows }, tiers, plans, offers] = await Promise.all([labRuns(), liveByTier(30), getPlans(), allOffers().catch(() => [])]);
+  const [{ runs, rows }, tiers, plans, offers, preflight] = await Promise.all([labRuns(), liveByTier(30), getPlans(), allOffers().catch(() => []), runPreflight()]);
   const price = {
     pro: plans.find((p) => p.id === "pro")?.price.monthly ?? 0,
     vip: plans.find((p) => p.id === "vip")?.price.monthly ?? 0,
     pass: offers.find((o) => o.audience === "new_visitors")?.priceNaira ?? 500,
   };
-  const allowance = { free: ASK_FREE_DAILY * 30, pro: ASK_PAID_DAILY * 30, vip: ASK_VIP_DAILY * 30, pass: config.passDaily ?? ASK_VIP_DAILY };
+  const allowance = { free: ASK_FREE_DAILY * 30, pro: ASK_PAID_DAILY * 30, vip: ASK_VIP_DAILY * 30, pass: config.passDaily };
   const recentRuns = runs.slice(0, 3);
   const cases = [...new Set(rows.filter((r) => recentRuns.some((x) => x.runId === r.runId)).map((r) => r.caseId))];
 
@@ -46,6 +47,26 @@ export default async function AskLabPage() {
         title="Ask lab"
         description="What Ask KiqStat really costs: live questions by plan, and side-by-side tests of cheaper settings on a separate key before anything changes in production."
       />
+
+      <section className="mb-8">
+        <SectionLabel>Before Ask answers again · docs/ask-activation.md</SectionLabel>
+        <Panel flush>
+          <AdminTable>
+            <AdminTableHead columns={["Check", "State", "Detail"]} />
+            <tbody>
+              {preflight.map((c) => (
+                <AdminTableRow key={c.id}>
+                  <AdminTableCell>{c.label}</AdminTableCell>
+                  <AdminTableCell>
+                    <StatusPill tone={c.state === "ok" ? "brand" : c.state === "warn" ? "amber" : "rose"}>{c.state === "ok" ? "Ready" : c.state === "warn" ? "Check" : "Blocked"}</StatusPill>
+                  </AdminTableCell>
+                  <AdminTableCell className="text-xs text-ink-muted">{c.detail}</AdminTableCell>
+                </AdminTableRow>
+              ))}
+            </tbody>
+          </AdminTable>
+        </Panel>
+      </section>
 
       <section className="mb-8">
         <SectionLabel>Production settings</SectionLabel>

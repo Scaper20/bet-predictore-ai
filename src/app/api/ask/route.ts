@@ -10,6 +10,7 @@ import { viewerForTier } from "@/lib/viewer";
 import { askConfig, type AskPlan } from "@/lib/ask/config";
 import { runAsk, type AskRunResult } from "@/lib/ask/engine";
 import { checkAlerts, logQuestion, reserveSpend, settleSpend } from "@/lib/ask/ledger";
+import { askBucketFor, passQuestionsUsed } from "@/lib/ask/bucket";
 import {
   ASK_FREE_DAILY,
   ASK_GUEST_TOTAL,
@@ -39,9 +40,9 @@ function planOf(entitlement: Awaited<ReturnType<typeof getEntitlement>>): AskPla
   return "free";
 }
 
-/** Questions a day on each plan. A pass gets ASK_PASS_DAILY when set, else its plan's own allowance, as before. */
-function dailyLimit(plan: AskPlan, tier: string, passDaily: number | null): number {
-  if (plan === "pass") return passDaily ?? (tier === "vip" ? ASK_VIP_DAILY : ASK_PAID_DAILY);
+/** Questions a day on each plan. A pass counts over its whole window instead (lib/ask/bucket.ts); this is its daily backstop. */
+function dailyLimit(plan: AskPlan, passLimit: number | null): number {
+  if (plan === "pass") return passLimit ?? ASK_PAID_DAILY;
   return plan === "vip" ? ASK_VIP_DAILY : plan === "pro" ? ASK_PAID_DAILY : ASK_FREE_DAILY;
 }
 
@@ -52,7 +53,12 @@ export async function GET(request: Request) {
   const plan = planOf(entitlement);
   let used: number | null = null;
   let setCookie: string | null = null;
-  if (entitlement.userId) {
+  let passLimit: number | null = null;
+  if (entitlement.userId && plan === "pass") {
+    const { pass } = await askBucketFor({ plan, subject: `user:${entitlement.userId}`, userId: entitlement.userId, config: askConfig() });
+    passLimit = pass?.limit ?? null;
+    used = pass ? await passQuestionsUsed(entitlement.userId, pass.since) : null;
+  } else if (entitlement.userId) {
     const { data } = await supabaseAdmin().rpc("ask_used_today", { p_user: entitlement.userId });
     used = typeof data === "number" ? data : null;
   } else {
@@ -68,7 +74,7 @@ export async function GET(request: Request) {
       signedIn: entitlement.signedIn,
       paid,
       used,
-      limit: entitlement.signedIn ? dailyLimit(plan, entitlement.tier, askConfig().passDaily) : ASK_GUEST_TOTAL,
+      limit: entitlement.signedIn ? dailyLimit(plan, passLimit) : ASK_GUEST_TOTAL,
     },
     { headers },
   );
@@ -116,11 +122,20 @@ export async function POST(request: Request) {
   let refund: () => Promise<void>;
   let setCookie: string | null = null;
   let subject: string;
+  let bucket: Awaited<ReturnType<typeof askBucketFor>> | null = null;
 
   if (entitlement.userId) {
     const userId = entitlement.userId;
     subject = `user:${userId}`;
-    limit = dailyLimit(plan, entitlement.tier, config.passDaily);
+    bucket = await askBucketFor({ plan, subject, userId, config });
+    // A pass's questions count over the whole pass, not per Lagos day.
+    if (bucket.pass) {
+      const passUsed = await passQuestionsUsed(userId, bucket.pass.since);
+      if (passUsed >= bucket.pass.limit) {
+        return fail({ type: "error", code: "limit", message: `That's the ${bucket.pass.limit} questions your pass includes.` }, 429);
+      }
+    }
+    limit = dailyLimit(plan, bucket.pass?.limit ?? null);
     const supabase = supabaseAdmin();
     const { data: claim, error: claimError } = await supabase.rpc("ask_claim", { p_user: userId, p_limit: limit });
     const row = Array.isArray(claim) ? (claim[0] as { allowed: boolean; used: number } | undefined) : undefined;
@@ -167,7 +182,8 @@ export async function POST(request: Request) {
   }
 
   // Money: reserve this question's ceiling before any model call.
-  const reserved = config.guard === "off" ? null : await reserveSpend(subject, plan, config);
+  const spendFrom = bucket?.bucket ?? { key: subject, capMicros: config.dailyCapMicros[plan] };
+  const reserved = config.guard === "off" ? null : await reserveSpend(spendFrom, config);
   if (reserved && !reserved.ok) {
     await refund();
     void logQuestion({
@@ -184,7 +200,13 @@ export async function POST(request: Request) {
     void checkAlerts({ result: null, config, globalSpentAfter: null, blockedBy: reserved.over });
     return fail(
       reserved.over === "subject"
-        ? { type: "error", code: "limit", message: "You've used today's Ask KiqStat allowance. It resets at midnight, Lagos time." }
+        ? {
+            type: "error",
+            code: "limit",
+            message: bucket?.pass
+              ? "You've used this pass's Ask KiqStat allowance."
+              : "You've used today's Ask KiqStat allowance. It resets at midnight, Lagos time.",
+          }
         : unavailable,
       reserved.over === "subject" ? 429 : 503,
       setCookie,

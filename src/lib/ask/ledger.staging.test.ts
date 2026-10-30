@@ -25,6 +25,9 @@ vi.mock("@/lib/ask/tools", () => ({
 
 const { reserveSpend, settleSpend, logQuestion, checkAlerts } = await import("./ledger");
 const { askConfig } = await import("./config");
+type Config = ReturnType<typeof askConfig>;
+/** A daily bucket at the plan's cap, as the route books Guest, Free, and monthly Pro and VIP. */
+const reserve = (key: string, plan: "guest" | "free" | "pro" | "vip" | "pass", config: Config) => reserveSpend({ key, capMicros: config.dailyCapMicros[plan] }, config);
 const { runAsk } = await import("./engine");
 const { supabaseAdmin } = await import("@/lib/supabase/admin");
 
@@ -81,7 +84,7 @@ describe.skipIf(!staging)("Ask books on a development database (0088)", () => {
 
   it("books the day in Lagos time", async () => {
     const key = `test:${randomUUID()}`;
-    const r = await reserveSpend(key, "pro", enforce());
+    const r = await reserve(key, "pro", enforce());
     const lagos = new Date().toLocaleDateString("en-CA", { timeZone: "Africa/Lagos" });
     expect(r.reservation.holds.map((h) => h.day)).toEqual([lagos, lagos]);
     await settleSpend(r.reservation, 0);
@@ -90,9 +93,9 @@ describe.skipIf(!staging)("Ask books on a development database (0088)", () => {
   it("stops a Pro account at its $0.04 day cap, then settles to what was spent", async () => {
     const key = `test:${randomUUID()}`;
     const config = enforce();
-    const a = await reserveSpend(key, "pro", config);
-    const b = await reserveSpend(key, "pro", config);
-    const c = await reserveSpend(key, "pro", config);
+    const a = await reserve(key, "pro", config);
+    const b = await reserve(key, "pro", config);
+    const c = await reserve(key, "pro", config);
     expect([a.ok, b.ok, c.ok]).toEqual([true, true, false]);
     expect(c.over).toBe("subject");
     expect(a.grantedMicros + b.grantedMicros).toBe(0.04 * USD);
@@ -102,7 +105,7 @@ describe.skipIf(!staging)("Ask books on a development database (0088)", () => {
     await settleSpend(b.reservation, 900);
     expect(await spendRow(key)).toMatchObject({ spent_micros: 2_100, reserved_micros: 0 });
     // The room the cheap answers left is available again.
-    const d = await reserveSpend(key, "pro", config);
+    const d = await reserve(key, "pro", config);
     expect(d.ok).toBe(true);
     await settleSpend(d.reservation, 0);
   });
@@ -110,31 +113,31 @@ describe.skipIf(!staging)("Ask books on a development database (0088)", () => {
   it("lets 40 parallel requests from one account use no more than its cap", async () => {
     const key = `test:${randomUUID()}`;
     const config = enforce();
-    const results = await Promise.all(Array.from({ length: 40 }, () => reserveSpend(key, "vip", config)));
+    const results = await Promise.all(Array.from({ length: 40 }, () => reserve(key, "vip", config)));
     const granted = results.reduce((s, r) => s + r.grantedMicros, 0);
     expect(granted).toBeLessThanOrEqual(config.dailyCapMicros.vip);
     expect(results.filter((r) => r.ok).length).toBe(config.dailyCapMicros.vip / config.requestCeilingMicros);
     // Every granted question spends its whole grant: the account lands exactly on its cap.
     await Promise.all(results.filter((r) => r.ok).map((r) => settleSpend(r.reservation, r.grantedMicros)));
     expect(await spendRow(key)).toMatchObject({ spent_micros: config.dailyCapMicros.vip, reserved_micros: 0 });
-    expect((await reserveSpend(key, "vip", config)).ok).toBe(false);
+    expect((await reserve(key, "vip", config)).ok).toBe(false);
   });
 
   it("near the cap grants what's left if it covers a short answer, and refuses below that", async () => {
     const key = `test:${randomUUID()}`;
     const config = enforce();
-    const first = await reserveSpend(key, "pro", config);
+    const first = await reserve(key, "pro", config);
     await settleSpend(first.reservation, 0.04 * USD - 5_000); // $0.005 left
-    const near = await reserveSpend(key, "pro", config);
+    const near = await reserve(key, "pro", config);
     expect(near).toMatchObject({ ok: true, grantedMicros: 5_000 });
     await settleSpend(near.reservation, 4_900); // $0.0001 left
-    expect(await reserveSpend(key, "pro", config)).toMatchObject({ ok: false, over: "subject" });
+    expect(await reserve(key, "pro", config)).toMatchObject({ ok: false, over: "subject" });
   });
 
   it("observing, lets everything through and reports which cap it would have hit", async () => {
     const key = `test:${randomUUID()}`;
-    const config = { ...askConfig({}), guard: "observe" as const };
-    const rs = await Promise.all(Array.from({ length: 4 }, () => reserveSpend(key, "pro", config)));
+    const config = { ...askConfig({ ASK_GUARD: "observe" }), guard: "observe" as const };
+    const rs = await Promise.all(Array.from({ length: 4 }, () => reserve(key, "pro", config)));
     expect(rs.every((r) => r.ok)).toBe(true);
     expect(rs.some((r) => r.over === "subject")).toBe(true);
     await Promise.all(rs.map((r) => settleSpend(r.reservation, 0)));
@@ -143,7 +146,7 @@ describe.skipIf(!staging)("Ask books on a development database (0088)", () => {
   it("books a cancelled question for the tokens it streamed, and logs it with its calls", async () => {
     const key = `test:${randomUUID()}`;
     const config = enforce();
-    const r = await reserveSpend(key, "pro", config);
+    const r = await reserve(key, "pro", config);
     const ac = new AbortController();
     const result = await runAsk({
       client: fakeClient(100, 50, (i) => i === 9 && ac.abort()),
@@ -171,13 +174,13 @@ describe.skipIf(!staging)("Ask books on a development database (0088)", () => {
 
   it("closes Ask for everyone at the daily budget and sends the alerts once", async () => {
     // The global key is shared, so this runs on a budget just above what is already booked today.
-    const probe = await reserveSpend(`test:${randomUUID()}`, "vip", enforce());
+    const probe = await reserve(`test:${randomUUID()}`, "vip", enforce());
     await settleSpend(probe.reservation, 0);
     const budget = (probe.globalSpent + 0.03 * USD) / USD;
     const config = enforce({ ASK_DAILY_BUDGET_USD: String(budget) });
     sent.length = 0;
     const users = Array.from({ length: 4 }, () => `test:${randomUUID()}`);
-    const rs = await Promise.all(users.map((u) => reserveSpend(u, "vip", config)));
+    const rs = await Promise.all(users.map((u) => reserve(u, "vip", config)));
     const ok = rs.filter((r) => r.ok);
     expect(ok.reduce((s, r) => s + r.grantedMicros, 0)).toBeLessThanOrEqual(0.03 * USD);
     expect(rs.find((r) => !r.ok)?.over).toBe("budget");
@@ -188,14 +191,42 @@ describe.skipIf(!staging)("Ask books on a development database (0088)", () => {
     await supabaseAdmin().from("ask_alerts").delete().like("key", "budget:%");
   });
 
+  it("books a pass to one bucket over its whole window, whatever the day (0089)", async () => {
+    const config = enforce();
+    const key = `pass:${randomUUID()}`;
+    // A pass that started yesterday, Lagos time: its holds still land on its start date.
+    const started = new Date(Date.now() - 20 * 3_600_000).toLocaleDateString("en-CA", { timeZone: "Africa/Lagos" });
+    const bucket = { key, capMicros: 0.14 * USD, day: started };
+    const rs = await Promise.all(Array.from({ length: 12 }, () => reserveSpend(bucket, config)));
+    const ok = rs.filter((r) => r.ok);
+    expect(ok.reduce((s, r) => s + r.grantedMicros, 0)).toBeLessThanOrEqual(0.14 * USD);
+    expect(rs.some((r) => !r.ok && r.over === "subject")).toBe(true);
+    expect(ok.every((r) => r.reservation.holds.find((h) => h.key === key)?.day === started)).toBe(true);
+    await Promise.all(ok.map((r) => settleSpend(r.reservation, r.grantedMicros)));
+    const { data: rows } = await supabaseAdmin().from("ask_spend").select("day, spent_micros, reserved_micros").eq("key", key);
+    expect(rows).toEqual([{ day: started, spent_micros: 0.14 * USD, reserved_micros: 0 }]);
+    // The same pass the next day is still out of room: no fresh day of cap.
+    expect((await reserveSpend(bucket, config)).ok).toBe(false);
+  });
+
+  it("refuses ask_spend_reserve_on from the browser", async () => {
+    const anon = process.env.SUPABASE_ANON_KEY ?? "";
+    const r = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/rpc/ask_spend_reserve_on`, {
+      method: "POST",
+      headers: { apikey: anon, Authorization: `Bearer ${anon}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ p_key: "x", p_day: "2026-10-30", p_amount: 1, p_min: 1, p_cap: 1, p_enforce: true }),
+    });
+    expect(r.ok).toBe(false);
+  });
+
   it("fails closed when enforcing and the books can't be reached, open when observing", async () => {
     vi.resetModules();
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
     process.env.NEXT_PUBLIC_SUPABASE_URL = "http://127.0.0.1:9";
     try {
       const fresh = await import("./ledger");
-      expect(await fresh.reserveSpend("test:down", "pro", enforce())).toMatchObject({ ok: false, grantedMicros: 0 });
-      expect((await fresh.reserveSpend("test:down", "pro", { ...askConfig({}), guard: "observe" })).ok).toBe(true);
+      expect(await fresh.reserveSpend({ key: "test:down", capMicros: 40_000 }, enforce())).toMatchObject({ ok: false, grantedMicros: 0 });
+      expect((await fresh.reserveSpend({ key: "test:down", capMicros: 40_000 }, { ...askConfig({}), guard: "observe" })).ok).toBe(true);
     } finally {
       process.env.NEXT_PUBLIC_SUPABASE_URL = url;
       vi.resetModules();
