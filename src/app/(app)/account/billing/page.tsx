@@ -12,7 +12,7 @@ import { MarketPicker } from "@/components/billing/market-picker";
 import { ManageSubscriptionButton } from "@/components/billing/manage-subscription-button";
 import { BillingHistory, type PaymentRow } from "@/components/billing/billing-history";
 import { ButtonLink, SectionHeading } from "@/components/ui/primitives";
-import { availableCycles } from "@/lib/paystack/plan-codes";
+import { renewableCycles } from "@/lib/paystack/renewable";
 import type { BillingCycle } from "@/lib/pricing";
 import { getPlans } from "@/lib/plan-prices";
 
@@ -69,6 +69,9 @@ export default async function BillingPage({ searchParams }: PageProps<"/account/
   const market = sellsAbroad
     ? marketFor(rawCountry ?? (await headers()).get("x-vercel-ip-country") ?? NIGERIA.country)
     : NIGERIA;
+  const plans = await getPlans();
+  // Card auto-renew only where the Paystack plan charges the price shown.
+  const renewable = market.provider === "flutterwave" ? { pro: [], vip: [] } : await renewableCycles(plans);
   const prepaidEnd = prepaidUntil(subscription);
   const prepaid =
     prepaidEnd && (subscription?.tier === "pro" || subscription?.tier === "vip")
@@ -119,11 +122,11 @@ export default async function BillingPage({ searchParams }: PageProps<"/account/
         <BillingPlans
           currentTier={entitlement.planTier ?? entitlement.tier}
           hasActiveSubscription={hasActiveSubscription}
-          available={availableCycles()}
+          available={renewable}
           initialCycle={initialCycle}
           market={market}
           prepaid={prepaid}
-          plans={await getPlans()}
+          plans={plans}
           chosen={chosen}
         />
       </div>
