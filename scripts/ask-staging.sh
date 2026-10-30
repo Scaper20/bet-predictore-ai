@@ -28,10 +28,6 @@ open(p, "w").write(s)
 PY
 rm -f supabase/migrations/*.sql
 cp "$ROOT"/supabase/migrations/*.sql supabase/migrations/
-# Production has public.rls_auto_enable() from outside the migrations (0015
-# revokes it), so a fresh database needs it first.
-sed -i '1i create or replace function public.rls_auto_enable() returns void language sql as $$ select $$;' \
-  supabase/migrations/0015_security_hardening.sql
 
 $CLI stop --no-backup >/dev/null 2>&1 || true
 $CLI start >/dev/null

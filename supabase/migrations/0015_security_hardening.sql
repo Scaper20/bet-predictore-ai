@@ -33,7 +33,17 @@
 -- grant, so this doesn't affect the triggers these functions back.
 revoke execute on function public.handle_new_user() from public;
 revoke execute on function public.handle_user_email_updated() from public;
-revoke execute on function public.rls_auto_enable() from public;
+-- rls_auto_enable() was created on the hosted project outside the migrations,
+-- so a fresh database built from this folder doesn't have it: revoke only
+-- where it exists. Same effect in production, and a clean build no longer
+-- stops here.
+do $$
+begin
+  if to_regprocedure('public.rls_auto_enable()') is not null then
+    revoke execute on function public.rls_auto_enable() from public;
+  end if;
+end
+$$;
 
 -- ---------------------------------------------------------------------------
 -- 2. RLS initplan fix — wrap auth.uid() so it's evaluated once per query
