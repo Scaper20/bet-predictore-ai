@@ -38,11 +38,11 @@ const faqs = (sellsAbroad: boolean) => [
   },
   {
     q: "What do I get in the Code Hub?",
-    a: `Every day the Code Hub has combos from 2 to 20 odds, each with a SportyBet code. Free accounts get the 2-odds combo in full before kick-off; Pro and VIP get all of them. Anyone signed in can check any SportyBet code, make it safer and post their own codes. A new SportyBet code for your own picks or an edited code comes from your weekly allowance: ${weeklyCodeAllowance("pro")} a week on Pro and ${weeklyCodeAllowance("vip")} on VIP, each slot freeing up seven days after it was used.`,
+    a: `Every day the Code Hub has combos from about 2 odds upward (2, 3 and 5 most days, 10 and 20 on days with enough strong games), each with a SportyBet code. Free accounts get the 2-odds combo in full before kick-off; Pro and VIP get all of them. Anyone signed in can check any SportyBet code, make it safer and post their own codes. A new SportyBet code for your own picks or an edited code comes from your weekly allowance: ${weeklyCodeAllowance("pro")} a week on Pro and ${weeklyCodeAllowance("vip")} on VIP, each slot freeing up seven days after it was used.`,
   },
   {
-    q: "What happened to passes?",
-    a: "Passes are no longer sold; everything they unlocked is now in Pro. A pass you already bought keeps working until it runs out.",
+    q: "Is there a day pass?",
+    a: "New visitors can get a VIP day pass: 24 hours of everything VIP unlocks on the site, paid once, offered during your first day on KiqStat. It doesn't renew and there's nothing to cancel. The VIP WhatsApp chat comes with the VIP plan, not the pass. A pass bought before October keeps working until it runs out.",
   },
   {
     q: "Can I cancel?",

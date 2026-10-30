@@ -10,6 +10,7 @@ import { LocalTime } from "@/components/ui/local-time";
 import type { AskEvent, AskPickCard, AskTurn } from "@/lib/ask/request";
 import { ASK_FREE_DAILY, ASK_GUEST_TOTAL, ASK_MAX_QUESTION, ASK_PAID_DAILY } from "@/lib/ask/request";
 import { AskAvatar } from "@/components/ask/ask-avatar";
+import { ASK_PAUSED, ASK_PAUSED_MESSAGE } from "@/lib/ask/status";
 
 /* ------------------------------------------------------------------ types */
 
@@ -396,7 +397,7 @@ function AskPanelInner({ page }: { page: { matchId: string; label: string } | nu
       <div className="border-t border-line px-4 pb-3 pt-3 sm:px-5" style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}>
         {!enabled ? (
           <p className="rounded-xl border border-line bg-surface px-4 py-3 text-sm text-ink-muted">
-            Ask KiqStat isn&apos;t available right now. Check back soon.
+            {ASK_PAUSED ? ASK_PAUSED_MESSAGE : "Ask KiqStat isn't available right now. Check back soon."}
           </p>
         ) : (
           <>

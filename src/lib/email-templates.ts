@@ -41,7 +41,7 @@ export function codeHubWaitlistEmail(): { subject: string; html: string } {
     html: emailLayout(`
       <p style="margin:0 0 12px;font-size:17px;font-weight:700;">You're on the list</p>
       <p style="margin:0;">Thanks for joining the Code Hub waitlist. Each morning the model will build
-      five ready-made codes from 2 to 20 odds from the day's games. Each one comes with a SportyBet booking
+      ready-made codes from the day's games: about 2, 3 and 5 odds, and 10 and 20 when the games allow. Each one comes with a SportyBet booking
       code and the model's chance of it landing.</p>
       <p style="margin:12px 0 0;">We'll send you one more email, on the day it opens. Until then, today's
       predictions are free to read.</p>
@@ -68,7 +68,7 @@ export function unfinishedCheckoutEmail(opts: { tier: "pro" | "vip"; nigeria: bo
           "Picks before kick-off in the 15 Pro leagues, including the Champions League and Serie A",
           "Live win probability during every match",
           "Every prediction type, half-time and winning margin included",
-          "Forge with every prediction type and Ask KiqStat 100 times a day",
+          "Forge with every prediction type, 100 combos a day",
           "Priority support",
         ]
       : [
@@ -76,7 +76,6 @@ export function unfinishedCheckoutEmail(opts: { tier: "pro" | "vip"; nigeria: bo
           "Every prediction type, half-time and winning margin included",
           "The full match breakdown on every game",
           "Forge with every prediction type, 100 combos a day",
-          "Ask KiqStat 30 times a day",
         ];
   return {
     subject: `Your KiqStat ${name} upgrade is waiting`,

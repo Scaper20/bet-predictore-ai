@@ -171,7 +171,7 @@ export default async function AccountPage() {
             value={preferences.usageIntent ? INTENT_LABEL[preferences.usageIntent] : "—"}
             sublabel="Decides which numbers lead."
           />
-          <StatCard label="Plan" value={TIER_LABEL[entitlement.tier]} sublabel={paid ? "Billing, invoices and cancelling live under Manage plan." : "Every match and 27 competitions, free."} />
+          <StatCard label="Plan" value={TIER_LABEL[entitlement.tier]} sublabel={entitlement.passOnly ? "A one-off pass: nothing renews and there's nothing to cancel." : paid ? "Billing, invoices and cancelling live under Manage plan." : "Every match and 27 competitions, free."} />
         </div>
       </section>
 

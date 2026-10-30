@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { getEntitlement, meets } from "@/lib/entitlements";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { aiEnabled, askApiKey } from "@/lib/ai/enabled";
+import { ASK_PAUSED, ASK_PAUSED_MESSAGE } from "@/lib/ask/status";
 import { APP_TIMEZONE } from "@/lib/format";
 import type { AskTier } from "@/lib/ask/tools";
 import { claimGuest, guestIdentity, guestUsed, refundGuest } from "@/lib/ask/guest";
@@ -63,7 +64,7 @@ export async function GET(request: Request) {
   if (setCookie) headers.append("Set-Cookie", setCookie);
   return Response.json(
     {
-      enabled: aiEnabled(),
+      enabled: aiEnabled() && !ASK_PAUSED,
       signedIn: entitlement.signedIn,
       paid,
       used,
@@ -94,6 +95,7 @@ function fail(event: Extract<AskEvent, { type: "error" }>, status: number, setCo
  * what they would have stopped without stopping anything.
  */
 export async function POST(request: Request) {
+  if (ASK_PAUSED) return fail({ type: "error", code: "unavailable", message: ASK_PAUSED_MESSAGE }, 503);
   if (!aiEnabled()) {
     return fail({ type: "error", code: "unavailable", message: "Ask KiqStat isn't available right now." }, 503);
   }
