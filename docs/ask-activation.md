@@ -50,7 +50,7 @@ and how to back out.
 | Migration | Production | Rollback |
 | --- | --- | --- |
 | 0088 Ask books | Applied 30 Oct 2026. Checked: RLS on, no policies, anon and authenticated have no access, functions callable by the service role only | `supabase/rollback/0088_down.sql` (deletes the logs; back up first) |
-| 0089 pass ceilings | Not applied. Additive: one function, one nullable column | `supabase/rollback/0089_down.sql` |
+| 0089 pass ceilings | Applied 30 Oct 2026. Checked: caps 0.14 / 0.255 / 0.075 on the three offers; the function callable by the service role only | `supabase/rollback/0089_down.sql` |
 
 **Back up before a rollback.** The Free plan has no point-in-time restore, so copy the books out first:
 
@@ -63,7 +63,7 @@ pg_dump "$DATABASE_URL" --data-only \
 
 Or run `select * from ask_questions` and the other four tables in the SQL editor and download them as CSV.
 
-**Applying 0089:**
+**Re-applying 0089** (only after a rollback):
 1. Paste `supabase/migrations/0089_ask_pass_ceiling.sql` into the SQL editor and run it.
 2. Check it landed: `select slug, ask_cap_usd from offers;` shows 0.14, 0.255 and 0.075, and `select to_regprocedure('public.ask_spend_reserve_on(text,date,bigint,bigint,bigint,boolean)');` is not null.
 
@@ -76,7 +76,7 @@ Each step is safe alone. Ask stays off until step 6.
    - Add the key as `ANTHROPIC_ASK_API_KEY`.
    - Check `ASK_GUARD` is unset or `enforce`.
    - Check `SUPPORT_INBOX_EMAIL` or `ASK_ALERT_EMAIL` is set, and `RESEND_API_KEY`.
-3. **Database:** apply 0089 if it isn't yet (above).
+3. **Database:** 0088 and 0089 are both applied (30 Oct). Nothing to do unless one was rolled back.
 4. **Deploy:** merge dev into Main/Production.
 5. **Preflight:** open `/admin/ask-lab`. Every row of "Before Ask answers again" reads Ready except "Ask switched on". Anything Blocked stops here.
 6. **Switch on:**
