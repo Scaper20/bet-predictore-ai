@@ -2,6 +2,7 @@ import Link from "next/link";
 import { LeagueLogo } from "@/components/ui/league-logo";
 import { ButtonLink, SectionHeading } from "@/components/ui/primitives";
 import { PricingTable } from "@/components/pricing/pricing-table";
+import { getPlans } from "@/lib/plan-prices";
 import { flutterwaveConfigured } from "@/lib/flutterwave/client";
 import { Container, containerClass } from "@/components/ui/container";
 import { Reveal } from "@/components/ui/reveal";
@@ -254,7 +255,8 @@ export function Leagues() {
 
 /* ----------------------------------------------------------------- Pricing */
 
-export function Pricing() {
+export async function Pricing() {
+  const plans = await getPlans();
   return (
     <section className="border-y border-line bg-shell">
       <Container className="py-12 sm:py-20 lg:py-28">
@@ -270,6 +272,7 @@ export function Pricing() {
           <div className="mt-12">
             <PricingTable
               sellsAbroad={flutterwaveConfigured()}
+              plans={plans}
               hrefFor={(plan) =>
                 plan.id === "free" ? "/account/sign-up" : `/account/billing?plan=${plan.id}`
               }

@@ -1,7 +1,7 @@
 import "server-only";
 
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { verifyTransaction } from "@/lib/paystack/client";
+import { verifyTransaction, type VerifyTransactionResult } from "@/lib/paystack/client";
 import { nextPeriodEnd } from "@/lib/flutterwave/period";
 import { recordCommission } from "@/lib/partner-commission";
 import { sendEmail } from "@/lib/email";
@@ -30,43 +30,10 @@ export function isOncePlan(plan: string | null | undefined): boolean {
  * (flutterwave/period.ts).
  */
 export async function grantPaystackOnce(reference: string): Promise<OnceOutcome> {
+  const claim = await claimPaystackPayment(reference, isOncePlan);
+  if (claim.outcome !== "claimed") return claim.outcome;
+  const { payment, tx } = claim;
   const admin = supabaseAdmin();
-  const { data: payment } = await admin
-    .from("payments")
-    .select("id, user_id, plan, status, amount_kobo, provider")
-    .eq("paystack_reference", reference)
-    .maybeSingle();
-  if (!payment || payment.provider !== "paystack" || !isOncePlan(payment.plan)) return "unknown";
-  if (payment.status === "success") return "already";
-
-  let tx;
-  try {
-    tx = await verifyTransaction(reference);
-  } catch {
-    return "pending";
-  }
-  if (tx.status === "failed" || tx.status === "abandoned") {
-    // Abandoned can still be paid later on a bank transfer; only a hard failure is final.
-    if (tx.status === "failed") {
-      await admin.from("payments").update({ status: "failed", raw_event: tx }).eq("id", payment.id).neq("status", "success");
-      return "failed";
-    }
-    return "pending";
-  }
-  if (tx.status !== "success") return "pending";
-  if (tx.reference !== reference || !(tx.amount >= Number(payment.amount_kobo))) {
-    await admin.from("payments").update({ status: "failed", raw_event: { mismatch: true, tx } }).eq("id", payment.id).neq("status", "success");
-    return "failed";
-  }
-
-  // Only one of webhook / callback wins this update, so time is granted once.
-  const { data: claimed } = await admin
-    .from("payments")
-    .update({ status: "success", raw_event: tx })
-    .eq("id", payment.id)
-    .neq("status", "success")
-    .select("id");
-  if (!claimed || claimed.length === 0) return "already";
 
   const [tier, cycle] = String(payment.plan).split(":") as ["pro" | "vip", BillingCycle];
   const now = new Date();
@@ -109,4 +76,64 @@ export async function grantPaystackOnce(reference: string): Promise<OnceOutcome>
     });
   }
   return "granted";
+}
+
+interface ClaimedPayment {
+  id: string;
+  user_id: string;
+  plan: string;
+  amount_kobo: number;
+}
+
+/**
+ * The shared half of every one-off Paystack grant (a pay-once period, the
+ * VIP day pass): finds the payments row written at checkout, re-reads the
+ * transaction from Paystack by our own reference, checks the amount, and
+ * marks the row paid. Only one caller wins that update, so whoever gets
+ * "claimed" grants, and does so exactly once.
+ */
+export async function claimPaystackPayment(
+  reference: string,
+  accepts: (plan: string) => boolean,
+): Promise<
+  | { outcome: "claimed"; payment: ClaimedPayment; tx: VerifyTransactionResult }
+  | { outcome: Exclude<OnceOutcome, "granted"> }
+> {
+  const admin = supabaseAdmin();
+  const { data: payment } = await admin
+    .from("payments")
+    .select("id, user_id, plan, status, amount_kobo, provider")
+    .eq("paystack_reference", reference)
+    .maybeSingle();
+  if (!payment || payment.provider !== "paystack" || !accepts(String(payment.plan))) return { outcome: "unknown" };
+  if (payment.status === "success") return { outcome: "already" };
+
+  let tx: VerifyTransactionResult;
+  try {
+    tx = await verifyTransaction(reference);
+  } catch {
+    return { outcome: "pending" };
+  }
+  if (tx.status === "failed" || tx.status === "abandoned") {
+    // Abandoned can still be paid later on a bank transfer; only a hard failure is final.
+    if (tx.status === "failed") {
+      await admin.from("payments").update({ status: "failed", raw_event: tx }).eq("id", payment.id).neq("status", "success");
+      return { outcome: "failed" };
+    }
+    return { outcome: "pending" };
+  }
+  if (tx.status !== "success") return { outcome: "pending" };
+  if (tx.reference !== reference || !(tx.amount >= Number(payment.amount_kobo))) {
+    await admin.from("payments").update({ status: "failed", raw_event: { mismatch: true, tx } }).eq("id", payment.id).neq("status", "success");
+    return { outcome: "failed" };
+  }
+
+  const { data: claimed } = await admin
+    .from("payments")
+    .update({ status: "success", raw_event: tx })
+    .eq("id", payment.id)
+    .neq("status", "success")
+    .select("id");
+  if (!claimed || claimed.length === 0) return { outcome: "already" };
+  return { outcome: "claimed", payment: payment as ClaimedPayment, tx };
 }

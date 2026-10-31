@@ -6,18 +6,22 @@ export const metadata: Metadata = {
   alternates: { canonical: "/refunds" },
   title: "Refund Policy",
   description:
-    "When you can get your money back on KiqStat: 7 days on a first payment, 48 hours on a renewal, " +
+    "When you can get your money back on KiqStat: 7 days on a first payment, 48 hours on a renewal, passes if they didn't unlock, " +
     "and how to ask.",
 };
 
 const RULES = [
   {
     title: "First payment: 7 days",
-    body: "If you pay for a plan for the first time and it is not for you, ask within 7 days of paying and you get that payment back in full. This also covers a plan paid once for a fixed period.",
+    body: "If you pay for a plan for the first time and it is not for you, ask within 7 days of paying and you get that payment back in full. This also covers a plan paid once for a fixed period. Passes have their own rule below.",
   },
   {
     title: "Renewals: 48 hours",
     body: "If a plan renews and you did not mean it to, ask within 48 hours of the charge and you get that renewal back in full.",
+  },
+  {
+    title: "Passes",
+    body: "A pass starts the moment you pay and runs for its hours, so a pass that unlocked isn't refunded. If it didn't unlock, or you were charged twice, tell us and we refund it in full.",
   },
   {
     title: "After that: no refund",
@@ -37,7 +41,7 @@ export default function RefundsPage() {
       <PageHeader eyebrow="Billing" title="Refund policy" description="Plain rules, so you know where you stand before you pay." />
 
       <article className="mx-auto max-w-3xl space-y-10 px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
-        <section className="grid gap-4 sm:grid-cols-3">
+        <section className="grid gap-4 sm:grid-cols-2">
           {RULES.map((r) => (
             <div key={r.title} className="card p-5">
               <h2 className="font-display text-base font-bold">{r.title}</h2>

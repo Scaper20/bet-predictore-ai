@@ -8,6 +8,8 @@ import { receiptEmail, subscriptionCanceledEmail } from "@/lib/email-templates";
 import type { Tier } from "@/lib/entitlements";
 import { recordCommission } from "@/lib/partner-commission";
 import { grantPaystackOnce } from "@/lib/paystack/once";
+import { grantPass } from "@/lib/offers-server";
+import { cycleFromInterval, renewedPeriodEnd } from "@/lib/paystack/renewal";
 
 // Node's crypto module, not Edge-safe — Proxy (formerly middleware) already
 // excludes this route from its matcher (see src/proxy.ts) so no session
@@ -104,6 +106,11 @@ export async function POST(request: Request) {
         await grantPaystackOnce(reference);
         break;
       }
+      // An offer's pass: the same re-verified, once-only grant (lib/offers-server.ts).
+      if (reference && typeof metadata?.offer === "string") {
+        await grantPass(reference);
+        break;
+      }
 
       if (reference) {
         // Idempotent by design: `paystack_reference` is unique, so a
@@ -194,20 +201,66 @@ export async function POST(request: Request) {
       // carry the metadata from the original transaction, so identity here
       // comes from customer_code (set on the row above during the first
       // charge) or, failing that, an email match against profiles.
+      let renewing: { user_id: string; current_period_end: string | null } | null = null;
       if (customerCode) {
-        await admin
+        const { data: sub } = await admin
           .from("subscriptions")
-          .update({ status: "active", updated_at: now })
-          .eq("paystack_customer_code", customerCode);
-      } else if (customerEmail) {
+          .select("user_id, current_period_end")
+          .eq("paystack_customer_code", customerCode)
+          .maybeSingle();
+        renewing = sub;
+      }
+      if (!renewing && customerEmail) {
         const { data: profile } = await admin
           .from("profiles")
           .select("id")
           .ilike("email", customerEmail)
           .maybeSingle();
         if (profile) {
-          await admin.from("subscriptions").update({ status: "active", updated_at: now }).eq("user_id", profile.id);
+          const { data: sub } = await admin
+            .from("subscriptions")
+            .select("user_id, current_period_end")
+            .eq("user_id", profile.id)
+            .maybeSingle();
+          renewing = sub;
         }
+      }
+
+      if (renewing) {
+        // The renewal pays for the next cycle: extend the paid-through date
+        // here, not only on invoice.update, whose fields are unverified (see
+        // the note at the top) and which left a renewing member without access
+        // in October 2026. Recorded once per reference, so a redelivered event
+        // neither extends twice nor duplicates the billing history.
+        const plan = asRecord(data.plan);
+        const tier = tierFromPlanCode(readPlanCode(data));
+        const cycle = cycleFromInterval(asString(plan?.interval));
+        const { data: seen } = reference
+          ? await admin.from("payments").select("id").eq("paystack_reference", reference).maybeSingle()
+          : { data: null };
+        const firstDelivery = !!reference && !seen;
+        if (firstDelivery) {
+          await admin.from("payments").insert({
+            user_id: renewing.user_id,
+            paystack_reference: reference,
+            amount_kobo: amount ?? 0,
+            plan: tier && cycle ? `${tier}:${cycle}` : "renewal",
+            status: "success",
+            raw_event: event,
+          });
+        }
+        const periodEnd =
+          firstDelivery && cycle
+            ? renewedPeriodEnd(
+                renewing.current_period_end ? new Date(renewing.current_period_end) : null,
+                new Date(now),
+                cycle,
+              ).toISOString()
+            : undefined;
+        await admin
+          .from("subscriptions")
+          .update({ status: "active", ...(periodEnd ? { current_period_end: periodEnd } : {}), updated_at: now })
+          .eq("user_id", renewing.user_id);
       }
 
       if (customerEmail && reference) {
@@ -293,6 +346,34 @@ export async function POST(request: Request) {
           .update({ status: "past_due", updated_at: now })
           .eq("paystack_subscription_code", subscriptionCode);
       }
+      break;
+    }
+
+    case "invoice.payment_failed": {
+      // Paystack's own failed-renewal event. Same grace as above: the paid
+      // period still runs out on its date, the status only says why.
+      const subscriptionCode = asString(asRecord(data.subscription)?.subscription_code) ?? asString(data.subscription_code);
+      if (subscriptionCode) {
+        await admin
+          .from("subscriptions")
+          .update({ status: "past_due", updated_at: now })
+          .eq("paystack_subscription_code", subscriptionCode);
+      }
+      break;
+    }
+
+    case "refund.processed": {
+      // A refund made from the Paystack dashboard. The payment stops counting
+      // as revenue, and a refunded pass ends now. A refunded plan period is
+      // ended by hand from /admin, since a refund can be partial.
+      const reference = asString(data.transaction_reference) ?? asString(asRecord(data.transaction)?.reference);
+      if (!reference) break;
+      await admin.from("payments").update({ status: "refunded" }).eq("paystack_reference", reference);
+      await admin
+        .from("passes")
+        .update({ expires_at: now })
+        .eq("paystack_reference", reference)
+        .gt("expires_at", now);
       break;
     }
 

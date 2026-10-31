@@ -5,6 +5,7 @@ import { getPreferencesFor, hasOnboarded } from "@/lib/preferences";
 import { PARTNER_REF_COOKIE } from "@/lib/partner-ref";
 import { recordSignupSource } from "@/lib/signup-source";
 import { FIRST_TOUCH_COOKIE } from "@/lib/first-touch";
+import { isCheckoutPath } from "@/lib/routes";
 
 /**
  * Where Supabase sends people back to after they click a link in an email,
@@ -53,7 +54,9 @@ export async function GET(request: NextRequest) {
         partnerRef: request.cookies.get(PARTNER_REF_COOKIE)?.value,
       });
 
-      return NextResponse.redirect(new URL(`/onboarding?next=${encodeURIComponent(requestedNext)}`, url.origin));
+      if (!isCheckoutPath(requestedNext)) {
+        return NextResponse.redirect(new URL(`/onboarding?next=${encodeURIComponent(requestedNext)}`, url.origin));
+      }
     }
   }
 

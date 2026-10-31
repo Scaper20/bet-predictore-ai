@@ -5,11 +5,13 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { initializeTransaction } from "@/lib/paystack/client";
 import { planCodeFor } from "@/lib/paystack/plan-codes";
 import { nairaToKobo } from "@/lib/paystack/money";
-import { cyclePrice, planById, type BillingCycle } from "@/lib/pricing";
+import { cyclePrice, type BillingCycle } from "@/lib/pricing";
+import { getPlan } from "@/lib/plan-prices";
 import { SITE_URL as SITE } from "@/lib/site-url";
 import { getSubscriptionRow, hasLivePaidSubscription, prepaidUntil } from "@/lib/subscriptions";
 import { canBuy } from "@/lib/flutterwave/period";
 import { ONCE_SUFFIX } from "@/lib/paystack/once";
+import { renewalMatches } from "@/lib/paystack/renewable";
 
 const CYCLES: BillingCycle[] = ["monthly", "quarterly", "yearly"];
 
@@ -68,11 +70,20 @@ export async function POST(request: Request) {
     );
   }
 
-  const plan = planById(tier);
+  const plan = await getPlan(tier);
   const amountNaira = cyclePrice(plan, cycle) ?? 0;
 
   if (amountNaira <= 0) {
     return NextResponse.json({ error: "This plan has no price configured." }, { status: 500 });
+  }
+
+  // A card subscription is charged its Paystack plan's amount. Where that
+  // differs from the price shown, only paying once is offered.
+  if (!once && !(await renewalMatches(plan, cycle))) {
+    return NextResponse.json(
+      { error: "Auto-renew isn't available on this plan right now. Choose Get plan to pay once at the price shown." },
+      { status: 409 }
+    );
   }
 
   const reference = `betrix_${user.id}_${randomUUID()}`;

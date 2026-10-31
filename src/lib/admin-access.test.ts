@@ -46,7 +46,7 @@ describe("roles", () => {
   it("leaves no permission unused outside the owner", () => {
     const used = new Set(ROLE_IDS.filter((r) => r !== "owner").flatMap((r) => ROLES[r].permissions));
     const ownerOnly = ALL_PERMISSIONS.filter((p) => !used.has(p)).sort();
-    expect(ownerOnly).toEqual(["audit.view", "finance.manage", "finance.view", "model.manage", "partners.payout", "team.manage"]);
+    expect(ownerOnly).toEqual(["audit.view", "finance.manage", "finance.view", "model.manage", "partners.payout", "pricing.manage", "team.manage"]);
   });
 });
 

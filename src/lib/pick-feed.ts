@@ -3,7 +3,7 @@ import "server-only";
 import { predictBatch, upcomingFeed, bestBetOfDay } from "@/lib/service";
 import { leagueByCode, type LeagueDef } from "@/lib/leagues";
 import { getViewer } from "@/lib/viewer";
-import { viewPrediction, type ViewedPrediction } from "@/lib/access";
+import { viewPrediction, type ViewedPrediction, type Viewer } from "@/lib/access";
 import { isStrong } from "@/lib/model/tiers";
 import { riskFor, type RiskLevel } from "@/lib/model/risk";
 import { pickSections } from "@/lib/pick-sections";
@@ -21,8 +21,11 @@ export interface PickQuery {
   strongOnly: boolean;
   risk?: RiskLevel;
   byChance: boolean;
-  /** Leagues the viewer follows, which lead each day on the unfiltered view. */
-  followed?: string[];
+  /**
+   * Leagues the viewer follows, which lead each day on the unfiltered view.
+   * May be a promise, so reading them runs alongside the modelling.
+   */
+  followed?: string[] | Promise<string[]>;
   /** Show each game's best pick in this group (headline-engine.ts) instead of its headline. */
   family?: EngineGroup;
 }
@@ -56,14 +59,15 @@ export interface PickFeed {
  * and the predictions behind it are cached for five minutes (predictBatch),
  * so a later batch costs no new modelling.
  */
-export async function loadPicks(q: PickQuery, opts: { withBest?: boolean } = {}): Promise<PickFeed> {
+export async function loadPicks(q: PickQuery, opts: { withBest?: boolean; viewer?: Viewer } = {}): Promise<PickFeed> {
   const def = q.league ? leagueByCode(q.league) : undefined;
   const feed = await upcomingFeed(WINDOW_DAYS, def ? q.league : undefined).catch(() => null);
   const [raw, rawBest, viewer] = await Promise.all([
     feed ? predictBatch(feed.matches, MAX_GAMES).catch(() => []) : Promise.resolve([]),
     // Slate-wide, so only pinned on the unfiltered view.
     opts.withBest && !def ? bestBetOfDay().catch(() => null) : Promise.resolve(null),
-    getViewer(),
+    // The cached copy for signed-out visitors passes the free viewer, so nothing here reads cookies.
+    opts.viewer ?? getViewer(),
   ]);
   const viewed = raw.map((p) => viewPrediction(p, viewer));
   const predictions = q.family ? viewed.flatMap((p) => inGroup(p, q.family!) ?? []) : viewed;
@@ -77,7 +81,8 @@ export async function loadPicks(q: PickQuery, opts: { withBest?: boolean } = {})
       (!q.risk || (!p.locked.pick && riskFor(p.topPick.probability) === q.risk)),
   );
 
-  const sections = pickSections(publishable, { followed: new Set(def ? [] : q.followed ?? []) });
+  const followed = def ? [] : ((await q.followed) ?? []);
+  const sections = pickSections(publishable, { followed: new Set(followed) });
   const rows: PickRowData[] = [];
   for (const s of sections) {
     const items = q.byChance

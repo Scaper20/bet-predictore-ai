@@ -3,7 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getPreferences } from "@/lib/preferences";
 import { leagueByCode } from "@/lib/leagues";
 import { claimGuest, guestIdentity, guestUsed, refundGuest } from "@/lib/ask/guest";
-import { buildForgeSlip } from "@/lib/forge-feed";
+import { buildForgeSlip, forgeMatchdays } from "@/lib/forge-feed";
 import { freeViewer } from "@/lib/service";
 import { FORGE_FREE_DAILY, FORGE_GUEST_TOTAL, FORGE_PAID_DAILY, marketsForPlan, parseForgeRequest } from "@/lib/forge";
 
@@ -26,6 +26,7 @@ export async function GET(request: Request) {
   let used: number | null = null;
   let setCookie: string | null = null;
   let myLeagues: { code: string; name: string }[] = [];
+  const matchdaysP = forgeMatchdays().catch(() => []);
 
   if (entitlement.userId) {
     const [{ data }, prefs] = await Promise.all([
@@ -50,6 +51,7 @@ export async function GET(request: Request) {
       used,
       limit: entitlement.signedIn ? (paid ? null : FORGE_FREE_DAILY) : FORGE_GUEST_TOTAL,
       myLeagues,
+      matchdays: await matchdaysP,
     },
     200,
     setCookie,
@@ -81,7 +83,7 @@ export async function POST(request: Request) {
         {
           error: paid
             ? "You've hit today's fair-use limit for Forge. Try again tomorrow."
-            : `That's your ${FORGE_FREE_DAILY} free combos for today. Pro makes Forge unlimited.`,
+            : `That's your ${FORGE_FREE_DAILY} free combos for today. Pro gives you ${FORGE_PAID_DAILY} a day.`,
           code: "limit",
         },
         429,
@@ -95,9 +97,9 @@ export async function POST(request: Request) {
         () => undefined,
       );
     };
-    if (settings.leagues === "mine") {
+    if (settings.leagues.includes("mine")) {
       const prefs = await getPreferences().catch(() => null);
-      leagueCodes = prefs?.leagues.length ? prefs.leagues : null;
+      leagueCodes = prefs?.leagues ?? [];
     }
   } else {
     const guest = guestIdentity(request, FEATURE);
@@ -119,9 +121,9 @@ export async function POST(request: Request) {
     refund = () => refundGuest(guest);
   }
 
-  if (settings.leagues !== "all" && settings.leagues !== "mine") {
-    leagueCodes = leagueByCode(settings.leagues) ? [settings.leagues] : null;
-  }
+  // Several leagues at once: every known code chosen, plus the user's own for "mine".
+  const chosen = [...new Set([...(leagueCodes ?? []), ...settings.leagues.filter((c) => c !== "mine" && leagueByCode(c))])];
+  leagueCodes = chosen.length ? chosen : null;
 
   try {
     // Free plan: 1X2 and double chance only, enforced here whatever the request asks for.

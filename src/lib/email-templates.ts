@@ -41,7 +41,7 @@ export function codeHubWaitlistEmail(): { subject: string; html: string } {
     html: emailLayout(`
       <p style="margin:0 0 12px;font-size:17px;font-weight:700;">You're on the list</p>
       <p style="margin:0;">Thanks for joining the Code Hub waitlist. Each morning the model will build
-      five ready-made codes from 2 to 20 odds from the day's games. Each one comes with a SportyBet booking
+      ready-made codes from the day's games: about 2, 3 and 5 odds, and 10 and 20 when the games allow. Each one comes with a SportyBet booking
       code and the model's chance of it landing.</p>
       <p style="margin:12px 0 0;">We'll send you one more email, on the day it opens. Until then, today's
       predictions are free to read.</p>
@@ -68,7 +68,7 @@ export function unfinishedCheckoutEmail(opts: { tier: "pro" | "vip"; nigeria: bo
           "Picks before kick-off in the 15 Pro leagues, including the Champions League and Serie A",
           "Live win probability during every match",
           "Every prediction type, half-time and winning margin included",
-          "Forge with every prediction type and Ask KiqStat 100 times a day",
+          "Forge with every prediction type, 100 combos a day",
           "Priority support",
         ]
       : [
@@ -76,7 +76,6 @@ export function unfinishedCheckoutEmail(opts: { tier: "pro" | "vip"; nigeria: bo
           "Every prediction type, half-time and winning margin included",
           "The full match breakdown on every game",
           "Forge with every prediction type, 100 combos a day",
-          "Ask KiqStat 30 times a day",
         ];
   return {
     subject: `Your KiqStat ${name} upgrade is waiting`,
@@ -123,13 +122,17 @@ export function receiptEmail(opts: {
   amountText?: string;
   /** Prepaid plans (Flutterwave): the date access now runs to. */
   accessUntil?: string;
+  /** Names the purchase in place of the tier ("VIP day pass"); access-until then carries the time too. */
+  planLabel?: string;
   reference: string;
   date: string;
 }): { subject: string; html: string } {
-  const label = opts.tier ? TIER_LABEL[opts.tier] : undefined;
+  const label = opts.planLabel ?? (opts.tier ? TIER_LABEL[opts.tier] : undefined);
   const amount = opts.amountText ?? naira(opts.amountKobo / 100);
   const until = opts.accessUntil
-    ? new Date(opts.accessUntil).toLocaleDateString("en-GB", { year: "numeric", month: "long", day: "numeric" })
+    ? opts.planLabel
+      ? `${new Date(opts.accessUntil).toLocaleString("en-GB", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", timeZone: "Africa/Lagos" })} WAT`
+      : new Date(opts.accessUntil).toLocaleDateString("en-GB", { year: "numeric", month: "long", day: "numeric" })
     : undefined;
   const when = new Date(opts.date).toLocaleDateString("en-NG", { year: "numeric", month: "long", day: "numeric" });
 
@@ -138,7 +141,7 @@ export function receiptEmail(opts: {
     html: emailLayout(`
       <p style="margin:0 0 12px;font-size:17px;font-weight:700;">Payment received</p>
       <p style="margin:0 0 20px;">${
-        label ? `Thanks for subscribing to ${label}.` : "Thanks for your payment."
+        opts.planLabel ? `Your ${opts.planLabel} is on.` : label ? `Thanks for subscribing to ${label}.` : "Thanks for your payment."
       } Here's your receipt.</p>
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;">
         <tr><td style="padding:6px 0;color:#6b7670;">Amount</td><td style="padding:6px 0;text-align:right;font-weight:700;">${amount}</td></tr>
@@ -488,6 +491,59 @@ export function vipChatFreeEmail(opts: { record: string | null; unsubscribeUrl: 
       <p style="margin:20px 0 0;">The chat comes with the VIP plan, and you can pay once for a month with nothing
       renewing. Everything you have for free stays free, the WhatsApp community included.</p>
       ${button(`${SITE_URL}/vip`, "See the VIP chat")}
+      <p style="margin:24px 0 0;">— Scaper, Founder &amp; CEO, KiqStat</p>
+      ${VIP_CHAT_SMALL_PRINT}
+      ${unsubscribeFooter(opts.unsubscribeUrl)}
+    `),
+  };
+}
+
+/** HTML-escapes text typed in admin (offer copy) before it goes into an email. */
+function esc(s: string): string {
+  return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
+}
+
+/**
+ * An email-only offer (lib/offers.ts audience "email") to a free member:
+ * the pass, its price, what it opens, and a link that only works on their
+ * account (offer page ?r=<recipient id>) until `expires`.
+ */
+export function offerEmail(opts: {
+  tierLabel: string;
+  duration: string;
+  priceText: string;
+  compareText: string | null;
+  headline: string;
+  subline: string | null;
+  perks: string[];
+  cta: string;
+  claimUrl: string;
+  /** "Friday 31 October, 9:00 pm WAT", or null when the link doesn't expire. */
+  expires: string | null;
+  record: string | null;
+  unsubscribeUrl: string;
+}): { subject: string; html: string } {
+  const perks = opts.perks.length
+    ? `<ul style="margin:12px 0 0;padding-left:20px;">${opts.perks.map((p) => `<li style="margin:6px 0;">${esc(p)}</li>`).join("")}</ul>`
+    : "";
+  return {
+    subject: `${opts.headline}: ${opts.tierLabel} for ${opts.duration}, ${opts.priceText}`,
+    html: emailLayout(`
+      <p style="margin:0 0 16px;">Hi there,</p>
+      <p style="margin:0 0 6px;font-size:20px;font-weight:800;">${esc(opts.headline)}</p>
+      ${opts.subline ? `<p style="margin:0 0 16px;color:#4c5650;">${esc(opts.subline)}</p>` : ""}
+      <p style="margin:0;">You've had KiqStat's free picks. Now try <strong>${opts.tierLabel} for ${opts.duration}</strong>
+      for <strong>${opts.priceText}</strong>${opts.compareText ? ` (the plan is ${opts.compareText} a month)` : ""}. It opens:</p>
+      ${perks}
+      ${vipRecord(opts.record)}
+      <p style="margin:20px 0 8px;font-weight:700;">What the model got right lately</p>
+      <a href="${SITE_URL}${sportPath("trackRecord")}" style="text-decoration:none;">
+        <img src="${SITE_URL}/api/og/recent-wins" width="496" alt="KiqStat's most recent winning picks" style="display:block;width:100%;max-width:496px;height:auto;border:0;border-radius:10px;">
+      </a>
+      ${button(opts.claimUrl, `${esc(opts.cta)} · ${opts.priceText}`)}
+      <p style="margin:12px 0 0;font-size:13px;color:#4c5650;">This link is yours: it works on the account this email
+      came to${opts.expires ? `, until <strong>${opts.expires}</strong>` : ""}. Pay by transfer, OPay, PalmPay, USSD or
+      card. One payment, nothing renews.</p>
       <p style="margin:24px 0 0;">— Scaper, Founder &amp; CEO, KiqStat</p>
       ${VIP_CHAT_SMALL_PRINT}
       ${unsubscribeFooter(opts.unsubscribeUrl)}

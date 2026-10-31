@@ -33,11 +33,13 @@ export type Permission =
   | "partners.view"
   | "partners.manage"
   | "partners.payout"
+  | "pricing.manage"
   // Growth
   | "growth.view"
   | "outreach.manage"
   | "whatsapp.manage"
   | "vip.manage"
+  | "offers.manage"
   // Customers
   | "support.view"
   | "support.reply"
@@ -71,10 +73,12 @@ export const PERMISSIONS: Record<Permission, PermissionInfo> = {
   "partners.view": { group: "Money", label: "View partners", detail: "Partner list, signups and commission owed" },
   "partners.manage": { group: "Money", label: "Manage partners", detail: "Add, edit, suspend partners, credit signups" },
   "partners.payout": { group: "Money", label: "Pay partners", detail: "Record payouts, reverse commission, export the sheet" },
+  "pricing.manage": { group: "Money", label: "Set plan prices", detail: "Change what Pro and VIP cost in Nigeria" },
   "growth.view": { group: "Growth", label: "View traffic", detail: "Channels, campaigns and signup attribution" },
   "outreach.manage": { group: "Growth", label: "Run email campaigns", detail: "Queue and send outreach, read survey answers" },
   "whatsapp.manage": { group: "Growth", label: "WhatsApp digest", detail: "Read and regenerate the daily digest" },
   "vip.manage": { group: "Growth", label: "VIP chat", detail: "Invite link and member list" },
+  "offers.manage": { group: "Growth", label: "Offers and passes", detail: "Create, price and switch on offers, send offer emails" },
   "support.view": { group: "Customers", label: "View tickets", detail: "Read support conversations" },
   "support.reply": { group: "Customers", label: "Answer tickets", detail: "Reply to and close tickets" },
   "feedback.view": { group: "Customers", label: "View feedback", detail: "Ratings and comments from the site" },
@@ -141,6 +145,7 @@ export const ROLES: Record<Role, RoleInfo> = {
       "outreach.manage",
       "whatsapp.manage",
       "vip.manage",
+      "offers.manage",
       "partners.view",
       "partners.manage",
       "feedback.view",
@@ -216,6 +221,7 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: "/admin/payments", label: "Payments", icon: "card", permission: "finance.view" },
       { href: "/admin/partners", label: "Partners", icon: "handshake", permission: "partners.view" },
+      { href: "/admin/offers", label: "Offers & pricing", icon: "star", permission: "offers.manage" },
     ],
   },
   {
@@ -244,6 +250,7 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: "/admin/model-performance", label: "Model performance", icon: "target", permission: "model.view" },
       { href: "/admin/publishing", label: "Publishing", icon: "power", permission: "model.view" },
+      { href: "/admin/ask-lab", label: "Ask lab", icon: "chat", permission: "model.view" },
       { href: "/admin/data-health", label: "Data health", icon: "pulse", permission: "data.view" },
       { href: "/admin/parsebot", label: "Code Hub & parse.bot", icon: "code", permission: "codehub.manage" },
       { href: "/admin/sportybet", label: "SportyBet matching", icon: "link", permission: "sportybet.manage" },

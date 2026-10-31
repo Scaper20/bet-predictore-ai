@@ -18,16 +18,56 @@ function client() {
  * succeed/ack even if RESEND_API_KEY is unset or Resend's API is down. This
  * function swallows every failure internally and never rejects.
  */
-export async function sendEmail(opts: { to: string; subject: string; html: string; from?: string }): Promise<void> {
+export async function sendEmail(opts: {
+  to: string;
+  subject: string;
+  html: string;
+  from?: string;
+  /** Campaign emails: named in a List-Unsubscribe header, which inbox providers expect of bulk mail. */
+  unsubscribeUrl?: string;
+}): Promise<void> {
   if (!apiKey) {
     console.error("sendEmail skipped — RESEND_API_KEY not configured:", opts.subject);
     return;
   }
   try {
-    await client().emails.send({ from: opts.from ?? FROM, to: opts.to, subject: opts.subject, html: opts.html });
+    await client().emails.send({
+      from: opts.from ?? FROM,
+      to: opts.to,
+      subject: opts.subject,
+      html: opts.html,
+      // A plain-text part beside the HTML: HTML-only mail scores worse with spam and tab filters.
+      text: htmlToText(opts.html),
+      ...(opts.unsubscribeUrl ? { headers: { "List-Unsubscribe": `<${opts.unsubscribeUrl}>` } } : {}),
+    });
   } catch (err) {
     console.error("sendEmail failed:", err);
   }
+}
+
+/** The readable text of an email's HTML, links kept as "label (url)". */
+export function htmlToText(html: string): string {
+  return html
+    .replace(/<(style|script|head)[\s\S]*?<\/\1>/gi, "")
+    .replace(/<!--[\s\S]*?-->/g, "")
+    .replace(/<img[^>]*alt="([^"]*)"[^>]*>/gi, "$1")
+    .replace(/<a[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi, (_, href: string, label: string) => {
+      const text = label.replace(/<[^>]+>/g, "").trim();
+      return text && text !== href ? `${text} (${href})` : href;
+    })
+    .replace(/<(br|\/p|\/li|\/tr|\/h\d|\/div)[^>]*>/gi, "\n")
+    .replace(/<li[^>]*>/gi, "- ")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/[ \t]+/g, " ")
+    .replace(/ *\n */g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
 
 /**
@@ -46,8 +86,10 @@ export function emailLayout(bodyHtml: string): string {
         <td align="center">
           <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e1e4da;">
             <tr>
-              <td style="background:#07090b;padding:24px 32px;">
-                <img src="${SITE_URL}/brand/lockup.png" width="150" height="41" alt="KiqStat" style="display:block;border:0;height:41px;width:150px;color:#f2f4ec;font-size:22px;font-weight:800;">
+              <td style="background:#07090b;padding:0;line-height:0;font-size:0;">
+                <!-- The dark bar is part of the image: Gmail's dark mode recolours backgrounds but never
+                     images, which turned the old light logo on a dark cell into light-on-light. -->
+                <img src="${SITE_URL}/brand/email-header.png" width="560" height="88" alt="KiqStat" style="display:block;border:0;width:100%;max-width:560px;height:auto;color:#f2f4ec;font-size:22px;font-weight:800;">
               </td>
             </tr>
             <tr>

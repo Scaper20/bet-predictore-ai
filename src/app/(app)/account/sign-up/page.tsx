@@ -6,7 +6,8 @@ import { getPreferencesFor, hasOnboarded } from "@/lib/preferences";
 import { safeNext } from "@/lib/safe-redirect";
 import { POST_AUTH_DESTINATION } from "@/lib/routes";
 import { SignUpForm } from "@/components/auth/sign-up-form";
-import { Container } from "@/components/ui/container";
+import { AuthShell } from "@/components/auth/auth-shell";
+import { ResponsibleNote } from "@/components/auth/responsible-note";
 
 export const metadata: Metadata = { title: "Create account - KiqStat" };
 
@@ -35,65 +36,16 @@ export default async function SignUpPage({
   }
 
   return (
-    <Container width="shell" className="py-8 sm:py-12 md:py-20">
-      <div className="mx-auto grid max-w-5xl items-center gap-12 lg:grid-cols-12">
-        {/* Left Hero Content */}
-        <div className="space-y-6 lg:col-span-6">
-          <div className="inline-flex items-center gap-2 rounded-full border border-brand/25 bg-brand/10 px-3.5 py-1 text-xs font-semibold text-brand">
-            <span className="relative flex size-2">
-              <span className="absolute inline-flex size-full animate-ping rounded-full bg-brand opacity-75" />
-              <span className="relative inline-flex size-2 rounded-full bg-brand" />
-            </span>
-            CREATE YOUR FREE ACCOUNT
-          </div>
-
-          <h1 className="font-display text-3xl font-extrabold tracking-tight sm:text-4xl lg:text-5xl">
-            Unlock Smarter Match <span className="text-gradient-brand">Predictions</span>
-          </h1>
-
-          <p className="text-base leading-relaxed text-ink-muted">
-            Join sports fans and data analysts using AI-driven insights to analyze matches and track performance.
-          </p>
-
-          <div className="card space-y-4 bg-grid p-6">
-            <div className="flex items-center gap-3.5">
-              <div className="grid size-8 shrink-0 place-items-center rounded-lg bg-brand/15 text-sm font-bold text-brand">
-                1
-              </div>
-              <span className="text-sm font-medium text-ink">Quick 30-second registration</span>
-            </div>
-            <div className="flex items-center gap-3.5">
-              <div className="grid size-8 shrink-0 place-items-center rounded-lg bg-brand/15 text-sm font-bold text-brand">
-                2
-              </div>
-              <span className="text-sm font-medium text-ink">Personalized feed & league preferences</span>
-            </div>
-            <div className="flex items-center gap-3.5">
-              <div className="grid size-8 shrink-0 place-items-center rounded-lg bg-brand/15 text-sm font-bold text-brand">
-                3
-              </div>
-              <span className="text-sm font-medium text-ink">Instant access to predictions & live scores</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Right Form Card */}
-        <div className="lg:col-span-6">
-          <div className="card glow-brand relative overflow-hidden p-8 sm:p-10">
-            <div className="mb-6 border-b border-line pb-6">
-              <h2 className="font-display text-2xl font-bold">Create your account</h2>
-              <p className="mt-1 text-xs text-ink-muted">
-                Free account — saved preferences and optional paid plans.
-              </p>
-            </div>
-
-            <Suspense fallback={<div className="skeleton h-48 rounded-lg" />}>
-              <SignUpForm defaultNext={next} />
-            </Suspense>
-          </div>
-        </div>
-      </div>
-    </Container>
+    <AuthShell
+      mode="sign-up"
+      next={params?.next}
+      title="Join KiqStat"
+      smallTalk="Free, no card. You'll be in before kick-off."
+      footer={<ResponsibleNote />}
+    >
+      <Suspense fallback={<div className="skeleton h-64 rounded-xl" />}>
+        <SignUpForm defaultNext={next} />
+      </Suspense>
+    </AuthShell>
   );
 }
-

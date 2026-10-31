@@ -6,13 +6,16 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react
 import {
   DEFAULT_SETTINGS,
   FORGE_FREE_DAILY,
+  FORGE_PAID_DAILY,
   FORGE_GUEST_TOTAL,
   FORGE_MARKETS,
-  FORGE_WHEN,
+  daysLabel,
+  forgeDates,
   legOdds,
   nextBest,
   oneIn,
   slipTotals,
+  validDays,
   type ForgeLeg,
   type ForgeMarket,
   type ForgeRisk,
@@ -30,6 +33,7 @@ import { BuildProgress, useBuildProgress } from "@/components/forge/build-progre
 import { openSlipSheet } from "@/components/layout/nav-actions";
 import { RiskBadge } from "@/components/ui/risk-badge";
 import { BookCodeButton } from "@/components/slip/book-code-button";
+import { LeagueLogo } from "@/components/ui/league-logo";
 
 /* ------------------------------------------------------------------ state */
 
@@ -39,6 +43,14 @@ interface Allowance {
   used: number | null;
   limit: number | null;
   myLeagues: { code: string; name: string }[];
+  /** The next seven Lagos days and the games each still has, by league. */
+  matchdays?: Matchday[];
+}
+
+interface Matchday {
+  date: string;
+  count: number;
+  leagues: Record<string, number>;
 }
 
 interface Slip {
@@ -85,7 +97,7 @@ function riskFor(target: number): ForgeRisk {
   return target <= 2.5 ? "safe" : target <= 8 ? "balanced" : "risky";
 }
 
-const SETTINGS_VERSION = 3;
+const SETTINGS_VERSION = 4;
 
 /* ----------------------------------------------------------------- studio */
 
@@ -111,7 +123,17 @@ export function ForgeStudio() {
     const t = window.setTimeout(() => {
       const s = load<ForgeSettings & { v?: number }>(SETTINGS_KEY);
       // Settings saved before best-first builds carried a fixed game count; keep the rest.
-      if (s) setSettings({ ...DEFAULT_SETTINGS, ...s, ...(s.v === SETTINGS_VERSION ? {} : { games: DEFAULT_SETTINGS.games }) });
+      // Older settings: one league as a string, a named window, a fixed game count.
+      if (s) {
+        const leagues = Array.isArray(s.leagues) ? s.leagues : typeof s.leagues === "string" && s.leagues !== "all" ? [s.leagues] : [];
+        setSettings({
+          ...DEFAULT_SETTINGS,
+          ...s,
+          leagues,
+          days: validDays(s.days),
+          ...((s.v ?? 0) >= 3 ? {} : { games: DEFAULT_SETTINGS.games }),
+        });
+      }
       const last = load<Slip>(SLIP_KEY);
       // A slip whose first game has kicked off is stale; start fresh.
       if (last?.legs.length && last.legs.every((l) => Date.parse(l.kickoff) > Date.now())) setSlip(last);
@@ -127,6 +149,13 @@ export function ForgeStudio() {
   useEffect(() => {
     if (restored) save(SETTINGS_KEY, { ...settings, v: SETTINGS_VERSION });
   }, [restored, settings]);
+  // No days chosen yet (or the saved ones have passed): start on the first day that still has games.
+  useEffect(() => {
+    if (!restored || settings.days || !allowance?.matchdays?.length) return;
+    const first = allowance.matchdays.find((m) => m.count > 0)?.date ?? allowance.matchdays[0].date;
+    const t = window.setTimeout(() => setSettings((s) => (s.days ? s : { ...s, days: { from: first, to: first } })), 0);
+    return () => window.clearTimeout(t);
+  }, [restored, settings.days, allowance]);
   useEffect(() => {
     if (restored) save(SLIP_KEY, slip);
   }, [restored, slip]);
@@ -465,46 +494,20 @@ function SettingsPanel({
           )}
         </Section>
 
-        <div className="grid grid-cols-2 gap-3">
-          <Section title="When">
-            <Select value={settings.when} onChange={(v) => patch({ when: v as ForgeSettings["when"] })} label="When">
-              {FORGE_WHEN.map((w) => (
-                <option key={w.id} value={w.id}>
-                  {w.label}
-                </option>
-              ))}
-            </Select>
-          </Section>
-          <Section title="Leagues">
-            <Select value={settings.leagues} onChange={(v) => patch({ leagues: v })} label="Leagues">
-              <option value="all">All leagues</option>
-              {allowance?.myLeagues.length ? <option value="mine">My leagues ({allowance.myLeagues.length})</option> : null}
-              <optgroup label="Clubs">
-                {CLUB_LEAGUES.filter((l) => paid || !isProLeague(l.code)).map((l) => (
-                  <option key={l.code} value={l.code}>
-                    {l.flag} {l.shortName}
-                  </option>
-                ))}
-              </optgroup>
-              <optgroup label="National teams">
-                {INTERNATIONAL_LEAGUES.map((l) => (
-                  <option key={l.code} value={l.code}>
-                    {l.flag} {l.shortName}
-                  </option>
-                ))}
-              </optgroup>
-              {!paid && (
-                <optgroup label="Pro leagues (open at kick-off on Free)">
-                  {CLUB_LEAGUES.filter((l) => isProLeague(l.code)).map((l) => (
-                    <option key={l.code} value={l.code}>
-                      {l.flag} {l.shortName} · Pro
-                    </option>
-                  ))}
-                </optgroup>
-              )}
-            </Select>
-          </Section>
-        </div>
+        <Section title="When">
+          <DayRangePicker matchdays={allowance?.matchdays} days={settings.days} onChange={(days) => patch({ days })} />
+        </Section>
+
+        <Section title="Leagues">
+          <LeaguePicker
+            chosen={settings.leagues}
+            onChange={(leagues) => patch({ leagues })}
+            matchdays={allowance?.matchdays}
+            days={settings.days}
+            myLeagues={allowance?.myLeagues ?? []}
+            paid={paid}
+          />
+        </Section>
 
         <details className="group rounded-xl border border-line">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-ink [&::-webkit-details-marker]:hidden">
@@ -553,7 +556,7 @@ function SettingsPanel({
         </details>
       </div>
 
-      {!paid && allowance && isProLeague(settings.leagues) && <ProLeagueNotice code={settings.leagues} />}
+      {!paid && allowance && settings.leagues.some(isProLeague) && <ProLeagueNotice code={settings.leagues.find(isProLeague)!} />}
 
       <div
         style={{ bottom: "calc(var(--bottom-nav-h, 0px) + env(safe-area-inset-bottom))" }}
@@ -581,7 +584,7 @@ function AllowanceLine({ allowance, remaining }: { allowance: Allowance | null; 
   return (
     <p className="mt-2.5 text-center text-[11px] text-ink-dim">
       {allowance.paid
-        ? "Unlimited combos with your plan"
+        ? `Up to ${FORGE_PAID_DAILY} combos a day with your plan`
         : !allowance.signedIn
           ? `${remaining ?? FORGE_GUEST_TOTAL} of ${FORGE_GUEST_TOTAL} free combos without an account`
           : `${remaining ?? FORGE_FREE_DAILY} of ${FORGE_FREE_DAILY} combos left today`}
@@ -589,11 +592,175 @@ function AllowanceLine({ allowance, remaining }: { allowance: Allowance | null; 
         <>
           {" · "}
           <Link href={allowance.signedIn ? "/pricing" : "/account/sign-up?next=/football/forge"} className="hover:text-ink hover:underline">
-            {allowance.signedIn ? "Pro: unlimited" : `Sign up free for ${FORGE_FREE_DAILY} a day`}
+            {allowance.signedIn ? `Pro: ${FORGE_PAID_DAILY} a day` : `Sign up free for ${FORGE_FREE_DAILY} a day`}
           </Link>
         </>
       )}
     </p>
+  );
+}
+
+/* ------------------------------------------------------- days and leagues */
+
+/** Short weekday, day of month and "Today"/"Tmrw" for a Lagos date. */
+function dayParts(date: string, i: number) {
+  const d = new Date(`${date}T12:00:00+01:00`);
+  const opts = { timeZone: "Africa/Lagos" } as const;
+  return {
+    top: i === 0 ? "Today" : i === 1 ? "Tmrw" : d.toLocaleDateString("en-GB", { ...opts, weekday: "short" }),
+    day: d.toLocaleDateString("en-GB", { ...opts, day: "numeric" }),
+    month: d.toLocaleDateString("en-GB", { ...opts, month: "short" }),
+  };
+}
+
+/**
+ * The next seven matchdays as a strip. Tap a day to build from it; tap a
+ * second day to take every day between the two. Each day shows how many
+ * games it still has, so empty days are visible before a build.
+ */
+function DayRangePicker({
+  matchdays,
+  days,
+  onChange,
+}: {
+  matchdays: Matchday[] | undefined;
+  days: { from: string; to: string } | null;
+  onChange: (days: { from: string; to: string }) => void;
+}) {
+  const dates = useMemo(() => matchdays?.map((m) => m.date) ?? forgeDates(), [matchdays]);
+  const range = days ?? { from: dates[0], to: dates[0] };
+  const counts = new Map(matchdays?.map((m) => [m.date, m.count]));
+  const inRange = dates.filter((d) => d >= range.from && d <= range.to);
+  const total = matchdays ? inRange.reduce((n, d) => n + (counts.get(d) ?? 0), 0) : null;
+
+  const tap = (date: string) => {
+    if (range.from === range.to && date !== range.from) {
+      onChange(date < range.from ? { from: date, to: range.from } : { from: range.from, to: date });
+    } else {
+      onChange({ from: date, to: date });
+    }
+  };
+
+  return (
+    <div>
+      <div className="grid grid-cols-7 gap-1" role="group" aria-label="Matchdays">
+        {dates.map((date, i) => {
+          const parts = dayParts(date, i);
+          const n = counts.get(date);
+          const edge = date === range.from || date === range.to;
+          const mid = !edge && date > range.from && date < range.to;
+          const empty = n === 0;
+          return (
+            <button
+              key={date}
+              type="button"
+              aria-pressed={edge || mid}
+              aria-label={`${parts.top} ${parts.day} ${parts.month}${n !== undefined ? `, ${n} games` : ""}`}
+              onClick={() => tap(date)}
+              className={`flex min-w-0 flex-col items-center rounded-xl border px-0.5 py-2 transition-colors ${
+                edge
+                  ? "border-brand bg-brand text-brand-ink"
+                  : mid
+                    ? "border-brand/30 bg-brand/12 text-ink"
+                    : empty
+                      ? "border-line text-ink-dim opacity-60"
+                      : "border-line text-ink-muted hover:border-line-strong hover:text-ink"
+              }`}
+            >
+              <span className={`text-[10px] font-semibold uppercase tracking-wide ${edge ? "" : "text-ink-dim"}`}>{parts.top}</span>
+              <span className="tnum mt-0.5 font-mono text-base font-bold leading-none">{parts.day}</span>
+              <span className={`tnum mt-1 text-[10px] ${edge ? "font-semibold" : "text-ink-dim"}`}>{n === undefined ? parts.month : n}</span>
+            </button>
+          );
+        })}
+      </div>
+      <p className="mt-2 text-xs text-ink-dim">
+        <span className="font-medium text-ink-muted">{daysLabel(range)}</span>
+        {total !== null && ` · ${total} ${total === 1 ? "game" : "games"}`}
+        {range.from === range.to ? " · tap another day for a range" : ""}
+      </p>
+    </div>
+  );
+}
+
+/**
+ * Leagues as chips with their badges, any number at once. "All" clears the
+ * choice; "My leagues" picks the user's own. Leagues with games in the chosen
+ * days come first, busiest first; the rest open under "More leagues".
+ */
+function LeaguePicker({
+  chosen,
+  onChange,
+  matchdays,
+  days,
+  myLeagues,
+  paid,
+}: {
+  chosen: string[];
+  onChange: (leagues: string[]) => void;
+  matchdays: Matchday[] | undefined;
+  days: { from: string; to: string } | null;
+  myLeagues: { code: string; name: string }[];
+  paid: boolean;
+}) {
+  const [more, setMore] = useState(false);
+  const range = days ?? (matchdays?.[0] ? { from: matchdays[0].date, to: matchdays[0].date } : null);
+  const counts = new Map<string, number>();
+  for (const m of matchdays ?? []) {
+    if (range && (m.date < range.from || m.date > range.to)) continue;
+    for (const [code, n] of Object.entries(m.leagues)) counts.set(code, (counts.get(code) ?? 0) + n);
+  }
+  const all = [...CLUB_LEAGUES, ...INTERNATIONAL_LEAGUES];
+  const playing = all.filter((l) => counts.has(l.code)).sort((a, b) => (counts.get(b.code) ?? 0) - (counts.get(a.code) ?? 0));
+  const rest = all.filter((l) => !counts.has(l.code));
+  // The twelve busiest first; the rest (and leagues without games) open under "More leagues".
+  const TOP = 12;
+  const hidden = matchdays ? [...playing.slice(TOP), ...rest] : [];
+  const shown = matchdays ? [...playing.slice(0, TOP), ...hidden.filter((l) => more || chosen.includes(l.code))] : all;
+  const mine = myLeagues.map((l) => l.code);
+  const isMine = mine.length > 0 && mine.length === chosen.length && mine.every((c) => chosen.includes(c));
+
+  const toggle = (code: string) => onChange(chosen.includes(code) ? chosen.filter((c) => c !== code) : [...chosen.filter((c) => c !== "mine"), code]);
+  const chip = (on: boolean) =>
+    `inline-flex max-w-full items-center gap-1.5 rounded-full border py-1 pl-1 pr-2.5 text-[12.5px] font-medium transition-colors ${
+      on ? "border-brand/50 bg-brand/12 text-ink" : "border-line text-ink-muted hover:border-line-strong hover:text-ink"
+    }`;
+
+  return (
+    <div>
+      <div className="flex flex-wrap gap-1.5">
+        <button type="button" aria-pressed={chosen.length === 0} onClick={() => onChange([])} className={`${chip(chosen.length === 0)} pl-2.5`}>
+          All leagues
+        </button>
+        {mine.length > 0 && (
+          <button type="button" aria-pressed={isMine} onClick={() => onChange(isMine ? [] : mine)} className={`${chip(isMine)} pl-2.5`}>
+            My leagues ({mine.length})
+          </button>
+        )}
+        {shown.map((l) => {
+          const on = chosen.includes(l.code);
+          const n = counts.get(l.code);
+          const pro = !paid && isProLeague(l.code);
+          return (
+            <button key={l.code} type="button" aria-pressed={on} onClick={() => toggle(l.code)} className={chip(on)} title={l.name}>
+              <LeagueLogo code={l.code} size={18} fallback={l.flag} />
+              <span className="truncate">{l.shortName}</span>
+              {n !== undefined && <span className={`tnum text-[10.5px] ${on ? "text-brand" : "text-ink-dim"}`}>{n}</span>}
+              {pro && <span className="rounded bg-violet/15 px-1 text-[9.5px] font-semibold text-violet">Pro</span>}
+              {on && <span aria-hidden className="text-[10px] text-brand">✓</span>}
+            </button>
+          );
+        })}
+      </div>
+      {hidden.length > 0 && (
+        <button type="button" onClick={() => setMore((m) => !m)} className="mt-2 text-xs font-medium text-ink-dim hover:text-ink">
+          {more ? "Fewer leagues" : `More leagues (${hidden.length})`}
+        </button>
+      )}
+      <p className="mt-1.5 text-xs text-ink-dim">
+        {chosen.length === 0 ? "Every league with games in your days." : `${chosen.filter((c) => c !== "mine").length || mine.length} chosen. Tap again to remove.`}
+      </p>
+    </div>
   );
 }
 
@@ -973,19 +1140,6 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
       <p className="mb-2 truncate text-sm font-semibold text-ink">{title}</p>
       {children}
     </div>
-  );
-}
-
-function Select({ value, onChange, label, children }: { value: string; onChange: (v: string) => void; label: string; children: ReactNode }) {
-  return (
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      aria-label={label}
-      className="w-full rounded-xl border border-line bg-surface-2 px-3.5 py-3 text-sm font-medium text-ink outline-none focus:border-brand/50"
-    >
-      {children}
-    </select>
   );
 }
 

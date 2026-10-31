@@ -7,7 +7,7 @@ import { getPreferencesFor, hasOnboarded } from "@/lib/preferences";
 import { sendEmail } from "@/lib/email";
 import { welcomeEmail } from "@/lib/email-templates";
 import { safeNext } from "@/lib/safe-redirect";
-import { POST_AUTH_DESTINATION } from "@/lib/routes";
+import { POST_AUTH_DESTINATION, isCheckoutPath } from "@/lib/routes";
 import { FIRST_TOUCH_COOKIE } from "@/lib/first-touch";
 import { PARTNER_REF_COOKIE } from "@/lib/partner-ref";
 import { recordSignupSource } from "@/lib/signup-source";
@@ -35,7 +35,7 @@ export async function signIn(_prev: AuthActionState, formData: FormData): Promis
 
   await markAuthChange(true);
 
-  if (data?.user) {
+  if (data?.user && !isCheckoutPath(next)) {
     const prefs = await getPreferencesFor(supabase, data.user.id);
     if (!hasOnboarded(prefs)) {
       redirect(`/onboarding?next=${encodeURIComponent(next)}`);
@@ -108,8 +108,9 @@ export async function signUp(_prev: AuthActionState, formData: FormData): Promis
   await markAuthChange(true);
 
   // Straight into onboarding, carrying the original destination so whatever
-  // they were trying to reach still happens once the questions are answered.
-  redirect(`/onboarding?next=${encodeURIComponent(next)}`);
+  // they were trying to reach still happens once the questions are answered;
+  // straight to the checkout when that is where they were going.
+  redirect(isCheckoutPath(next) ? next : `/onboarding?next=${encodeURIComponent(next)}`);
 }
 
 export async function signOut() {

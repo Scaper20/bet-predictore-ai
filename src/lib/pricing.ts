@@ -1,5 +1,6 @@
 import type { Tier } from "@/lib/entitlements";
 import { weeklyCodeAllowance } from "@/lib/code-hub-plans";
+import { askAllowance } from "@/lib/ask/status";
 
 const PRO_CODES = weeklyCodeAllowance("pro");
 const VIP_CODES = weeklyCodeAllowance("vip");
@@ -62,7 +63,7 @@ export const PLANS: PlanDefinition[] = [
       "Forge: 5 combos a day, match result and two results",
       "Code Hub: the daily 2-odds combo with its SportyBet code",
       "Check any SportyBet code, make it safer, and post yours to the Code Hub",
-      "Ask KiqStat: 3 questions a day",
+      askAllowance("Ask KiqStat: 3 questions a day"),
     ],
     price: {},
     cadence: "forever",
@@ -81,9 +82,9 @@ export const PLANS: PlanDefinition[] = [
       "Winning margin lines",
       "Half-time predictions and half-by-half goals",
       "Forge with every prediction type, 100 combos a day",
-      "Code Hub: every daily combo from 2 to 20 odds before kick-off, each with a SportyBet code",
+      "Code Hub: every daily combo before kick-off (2 to 5 odds most days, up to 20 when the games allow), each with a SportyBet code",
       `${PRO_CODES} SportyBet codes a week from your own slip, Forge combos or the code editor`,
-      "Ask KiqStat: 30 questions a day",
+      askAllowance("Ask KiqStat: 30 questions a day"),
       "Full match breakdown and value against the market price",
       "Pay monthly, every 3 months (save 10%) or yearly (save 20%)",
     ],
@@ -103,7 +104,7 @@ export const PLANS: PlanDefinition[] = [
       "Live calls in the big games, and your questions answered first",
       "Live in-play win probability, updating as the match unfolds",
       `${VIP_CODES} SportyBet codes a week from your own picks`,
-      "Ask KiqStat: 100 questions a day",
+      askAllowance("Ask KiqStat: 100 questions a day"),
       "Priority support: your messages go to the front of the queue",
       "Pay monthly, every 3 months (save 10%) or yearly (save 20%)",
     ],
@@ -171,7 +172,7 @@ export const PLAN_MATRIX: MatrixGroup[] = [
     group: "Tools",
     rows: [
       { label: "Forge combo builder", values: { free: "5 a day, match result + two results", pro: "100 a day", vip: "100 a day" } },
-      { label: "Ask KiqStat", values: { free: "3 a day", pro: "30 a day", vip: "100 a day" } },
+      { label: askAllowance("Ask KiqStat"), values: { free: "3 a day", pro: "30 a day", vip: "100 a day" } },
       { label: "Selection builder and combo tracking", values: { free: true, pro: true, vip: true } },
       { label: "Shareable combo image", values: { free: false, pro: true, vip: true } },
     ],

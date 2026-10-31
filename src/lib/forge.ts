@@ -71,8 +71,13 @@ export interface ForgeSettings {
   picksPerGame: 1 | 2 | 3;
   markets: ForgeMarket[];
   when: ForgeWhen;
-  /** "all", "mine" (the user's onboarding leagues) or one league code. */
-  leagues: string;
+  /**
+   * Matchdays to build from, Lagos dates, first to last inclusive. Set by the
+   * day picker; null falls back to `when` (older saved settings, Ask).
+   */
+  days: { from: string; to: string } | null;
+  /** League codes to build from; empty means every league. "mine" stands for the user's own leagues. */
+  leagues: string[];
   stake: number;
 }
 
@@ -84,9 +89,56 @@ export const DEFAULT_SETTINGS: ForgeSettings = {
   picksPerGame: 2,
   markets: ["result", "double_chance", "goals", "btts"],
   when: "today",
-  leagues: "all",
+  days: null,
+  leagues: [],
   stake: 1000,
 };
+
+/** How far ahead the day picker reaches: today and the next six days. */
+export const FORGE_DAYS_AHEAD = 7;
+
+const DATE = /^\d{4}-\d{2}-\d{2}$/;
+const lagosDate = (d: Date) => d.toLocaleDateString("en-CA", { timeZone: "Africa/Lagos" });
+/** Midnight at the start of a Lagos date, in epoch ms. */
+const lagosMidnight = (date: string) => Date.parse(`${date}T00:00:00+01:00`);
+
+/** The Lagos dates the day picker offers, today first. */
+export function forgeDates(now = new Date()): string[] {
+  const today = lagosMidnight(lagosDate(now));
+  return Array.from({ length: FORGE_DAYS_AHEAD }, (_, i) => lagosDate(new Date(today + i * 86_400_000 + 3_600_000)));
+}
+
+/** A day range kept only when both ends are offered dates, in order. */
+export function validDays(days: unknown, now = new Date()): { from: string; to: string } | null {
+  const d = days as { from?: unknown; to?: unknown } | null;
+  if (!d || typeof d.from !== "string" || typeof d.to !== "string" || !DATE.test(d.from) || !DATE.test(d.to)) return null;
+  const offered = forgeDates(now);
+  if (!offered.includes(d.from) || !offered.includes(d.to) || d.from > d.to) return null;
+  return { from: d.from, to: d.to };
+}
+
+/**
+ * The kickoff window a build draws from, [from, to) in epoch ms, and a key
+ * naming it for the shared pool. A range starting today reaches back three
+ * hours so games in play still count, as "today" always has.
+ */
+export function forgeWindow(settings: Pick<ForgeSettings, "days" | "when">, now = new Date()): { key: string; from: number; to: number } | null {
+  if (!settings.days) return null;
+  const { from, to } = settings.days;
+  const start = from === lagosDate(now) ? now.getTime() - 3 * 3_600_000 : lagosMidnight(from);
+  return { key: `days:${from}:${to}`, from: start, to: lagosMidnight(to) + 86_400_000 };
+}
+
+/** "Today", "Sat 1 Nov", or "Today – Sun 2 Nov": what a day range is called. */
+export function daysLabel(days: { from: string; to: string }, now = new Date()): string {
+  const name = (date: string) => {
+    const today = lagosDate(now);
+    if (date === today) return "Today";
+    if (date === lagosDate(new Date(lagosMidnight(today) + 86_400_000 + 3_600_000))) return "Tomorrow";
+    return new Date(lagosMidnight(date) + 12 * 3_600_000).toLocaleDateString("en-GB", { timeZone: "Africa/Lagos", weekday: "short", day: "numeric", month: "short" });
+  };
+  return days.from === days.to ? name(days.from) : `${name(days.from)} – ${name(days.to)}`;
+}
 
 export interface ForgePick {
   market: string;
@@ -723,7 +775,7 @@ export function bestSwap(leg: ForgeLeg, bench: ForgeLeg[], onSlip: Set<string>):
 
 export const FORGE_GUEST_TOTAL = 2;
 export const FORGE_FREE_DAILY = 5;
-/** Fair-use ceiling behind "unlimited" on paid plans. */
+/** Combos a day on paid plans, shown as they are. */
 export const FORGE_PAID_DAILY = 100;
 
 export interface ForgeRequest {
@@ -748,7 +800,13 @@ export function parseForgeRequest(body: unknown): ForgeRequest {
     : DEFAULT_SETTINGS.markets;
   const picks = s.picksPerGame === 1 || s.picksPerGame === 2 || s.picksPerGame === 3 ? s.picksPerGame : DEFAULT_SETTINGS.picksPerGame;
   const when = FORGE_WHEN.some((w) => w.id === s.when) ? (s.when as ForgeWhen) : DEFAULT_SETTINGS.when;
-  const leagues = typeof s.leagues === "string" && /^(all|mine|[a-z0-9-]{2,40})$/.test(s.leagues) ? s.leagues : "all";
+  // Leagues: a list of codes (empty = all), or the single string older settings sent.
+  const code = (v: unknown): v is string => typeof v === "string" && v !== "all" && /^(mine|[a-z0-9-]{2,40})$/.test(v);
+  const leagues = Array.isArray(s.leagues)
+    ? [...new Set(s.leagues.filter(code))].slice(0, 40)
+    : code(s.leagues)
+      ? [s.leagues]
+      : [];
 
   const st = (b.state && typeof b.state === "object" ? b.state : {}) as Record<string, unknown>;
   const locked = Array.isArray(st.locked)
@@ -770,6 +828,7 @@ export function parseForgeRequest(body: unknown): ForgeRequest {
       picksPerGame: picks,
       markets: markets.length ? markets : DEFAULT_SETTINGS.markets,
       when,
+      days: validDays(s.days),
       leagues,
       stake: Math.round(num(s.stake, 0, 10_000_000, DEFAULT_SETTINGS.stake)),
     },

@@ -12,8 +12,9 @@ import { MarketPicker } from "@/components/billing/market-picker";
 import { ManageSubscriptionButton } from "@/components/billing/manage-subscription-button";
 import { BillingHistory, type PaymentRow } from "@/components/billing/billing-history";
 import { ButtonLink, SectionHeading } from "@/components/ui/primitives";
-import { availableCycles } from "@/lib/paystack/plan-codes";
+import { renewableCycles } from "@/lib/paystack/renewable";
 import type { BillingCycle } from "@/lib/pricing";
+import { getPlans } from "@/lib/plan-prices";
 
 export const metadata: Metadata = { title: "Plans & billing" };
 
@@ -22,6 +23,9 @@ export default async function BillingPage({ searchParams }: PageProps<"/account/
   const rawCycle = Array.isArray(params.cycle) ? params.cycle[0] : params.cycle;
   const initialCycle: BillingCycle = rawCycle === "quarterly" || rawCycle === "yearly" ? rawCycle : "monthly";
   const rawCountry = Array.isArray(params.country) ? params.country[0] : params.country;
+  // The plan they tapped on the pricing page or an offer, carried through sign-up.
+  const rawPlan = Array.isArray(params.plan) ? params.plan[0] : params.plan;
+  const chosen = rawPlan === "pro" || rawPlan === "vip" ? rawPlan : null;
   if (!supabaseConfigured) {
     return (
       <div className="mx-auto max-w-lg px-4 py-10 sm:py-16 text-center sm:px-6">
@@ -37,7 +41,15 @@ export default async function BillingPage({ searchParams }: PageProps<"/account/
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) redirect("/account/login?next=/account/billing");
+  // Signed out (a plan button on the static pricing page): an account first,
+  // then straight back here with the plan they picked. The sign-up page
+  // switches to sign-in for anyone who already has one.
+  if (!user) {
+    const query = new URLSearchParams();
+    for (const [k, v] of Object.entries(params)) if (typeof v === "string") query.set(k, v);
+    const back = `/account/billing${query.size ? `?${query}` : ""}`;
+    redirect(`/account/sign-up?next=${encodeURIComponent(back)}`);
+  }
 
   const entitlement = await getEntitlement();
   const subscription = await getSubscriptionRow(supabase, user.id);
@@ -57,6 +69,9 @@ export default async function BillingPage({ searchParams }: PageProps<"/account/
   const market = sellsAbroad
     ? marketFor(rawCountry ?? (await headers()).get("x-vercel-ip-country") ?? NIGERIA.country)
     : NIGERIA;
+  const plans = await getPlans();
+  // Card auto-renew only where the Paystack plan charges the price shown.
+  const renewable = market.provider === "flutterwave" ? { pro: [], vip: [] } : await renewableCycles(plans);
   const prepaidEnd = prepaidUntil(subscription);
   const prepaid =
     prepaidEnd && (subscription?.tier === "pro" || subscription?.tier === "vip")
@@ -94,7 +109,7 @@ export default async function BillingPage({ searchParams }: PageProps<"/account/
           </div>
         )}
       </div>
-      {entitlement.tier === "vip" && (
+      {entitlement.tier === "vip" && !entitlement.passOnly && (
         <div className="card mx-auto mt-8 flex max-w-2xl flex-col items-start gap-4 border-brand/30 p-5 sm:flex-row sm:items-center">
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-ink">Your VIP chat is waiting</p>
@@ -105,12 +120,14 @@ export default async function BillingPage({ searchParams }: PageProps<"/account/
       )}
       <div className="mt-10">
         <BillingPlans
-          currentTier={entitlement.tier}
+          currentTier={entitlement.planTier ?? entitlement.tier}
           hasActiveSubscription={hasActiveSubscription}
-          available={availableCycles()}
+          available={renewable}
           initialCycle={initialCycle}
           market={market}
           prepaid={prepaid}
+          plans={plans}
+          chosen={chosen}
         />
       </div>
 
