@@ -5,7 +5,7 @@
  * say "back soon" beside the allowance instead of selling it. Set to false to
  * bring it back everywhere at once.
  */
-export const ASK_PAUSED = true;
+export const ASK_PAUSED = false;
 
 /** The line the panel and the API show while Ask is paused. */
 export const ASK_PAUSED_MESSAGE =
