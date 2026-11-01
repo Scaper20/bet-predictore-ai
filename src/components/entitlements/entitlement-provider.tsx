@@ -3,7 +3,6 @@
 import { createContext, useContext, useEffect, useRef, useState, useCallback, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import type { Entitlement, Tier } from "@/lib/entitlements";
-import { supabaseBrowser } from "@/lib/supabase/client";
 import { clearSlip } from "@/lib/slip";
 import { AUTH_HINT_EVENT, readAuthHintCookie } from "@/components/entitlements/use-auth-hint";
 
@@ -108,30 +107,45 @@ export function EntitlementProvider({
         });
     }
 
-    // Subscribe to client-side auth state changes for instant UI synchronization
+    // Client-side auth events (a token refresh that fails, a sign-out in another tab) only matter
+    // to a signed-in visitor. The Supabase browser client is about a fifth of every page's script,
+    // so it loads on demand, after the page is idle, and never for a signed-out visitor: their
+    // sign-in runs as a server action, which the bx_auth cookie check above already catches.
     let subscription: { unsubscribe: () => void } | null = null;
-    try {
-      const supabase = supabaseBrowser();
-      const authRes = supabase.auth.onAuthStateChange((event) => {
-        if (event === "SIGNED_OUT") {
-          clearSlip();
-        }
-        if (!cancelled) {
+    const signedIn = initial?.signedIn ?? readAuthHintCookie() === "1";
+    const listen = async () => {
+      try {
+        const { supabaseBrowser } = await import("@/lib/supabase/client");
+        if (cancelled) return;
+        const authRes = supabaseBrowser().auth.onAuthStateChange((event) => {
+          if (event === "SIGNED_OUT") clearSlip();
+          if (event === "INITIAL_SESSION" || cancelled) return;
           fetch("/api/entitlements", { cache: "no-store" })
             .then((r) => r.json())
             .then((data: Entitlement) => {
               if (!cancelled) setEntitlement(data);
             })
             .catch(() => {});
-        }
-      });
-      subscription = authRes.data.subscription;
-    } catch {
-      // If Supabase client is unconfigured, fallback gracefully
+        });
+        subscription = authRes.data.subscription;
+      } catch {
+        // Supabase unconfigured or the chunk failed to load: the cookie check still covers sign-in and out.
+      }
+    };
+    let stopWaiting: (() => void) | null = null;
+    if (signedIn) {
+      if ("requestIdleCallback" in window) {
+        const id = window.requestIdleCallback(() => void listen(), { timeout: 4000 });
+        stopWaiting = () => window.cancelIdleCallback(id);
+      } else {
+        const id = globalThis.setTimeout(() => void listen(), 2000);
+        stopWaiting = () => globalThis.clearTimeout(id);
+      }
     }
 
     return () => {
       cancelled = true;
+      stopWaiting?.();
       subscription?.unsubscribe();
     };
   }, [initial]);

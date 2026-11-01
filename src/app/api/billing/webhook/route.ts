@@ -171,6 +171,7 @@ export async function POST(request: Request) {
         if (customerEmail && reference) {
           void sendEmail({
             to: customerEmail,
+            idempotencyKey: `receipt:paystack:${reference}`,
             ...receiptEmail({ tier: "pass", amountKobo: amount ?? 0, reference, date: now }),
           });
         }
@@ -190,6 +191,7 @@ export async function POST(request: Request) {
         if (customerEmail && reference) {
           void sendEmail({
             to: customerEmail,
+            idempotencyKey: `receipt:paystack:${reference}`,
             ...receiptEmail({ tier: metaTier, amountKobo: amount ?? 0, reference, date: now }),
           });
         }
@@ -266,6 +268,7 @@ export async function POST(request: Request) {
       if (customerEmail && reference) {
         void sendEmail({
           to: customerEmail,
+          idempotencyKey: `receipt:paystack:${reference}`,
           ...receiptEmail({ amountKobo: amount ?? 0, reference, date: now }),
         });
       }

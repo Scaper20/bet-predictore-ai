@@ -181,7 +181,16 @@ to about 45 MB, and the database to about 370 MB.
 The other large tables are real data and grow slowly: `odds_snapshots` 98 MB,
 `elo_ratings` 61 MB, `historical_results` 59 MB, `matches` 45 MB.
 
-## Compute and plan: the decision to take
+## Compute and plan: taken (1 November 2026)
+
+The organization is on **Supabase Pro with Small compute** (2 GB memory, 2-core
+shared ARM CPU). Monthly: $25 plan + about $15 Small compute (730 hours at
+$0.0206) - $10 compute credit = **about $30 (₦46,500)**. That lifts the 500 MB
+read-only cap (8 GB disk included), adds daily backups for 7 days, and gives
+four times the memory the Nano instance had at 80%. The section below is the
+reasoning as it stood before the upgrade.
+
+## Compute and plan: the decision (before the upgrade)
 
 Supabase says that in a paid organization the Nano size is billed the same as
 Micro and recommends moving to Micro. The same page prices Micro at about $10 a

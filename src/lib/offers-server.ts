@@ -83,6 +83,11 @@ export async function offerBySlug(slug: string): Promise<Offer | null> {
   return data ? fromRow(data) : null;
 }
 
+/** Live offers anyone can land on (not the per-email ones), for the sitemap. */
+export async function publicLiveOffers(now = Date.now()): Promise<Offer[]> {
+  return (await liveOffers()).filter((o) => o.audience !== "email" && offerLive(o, now));
+}
+
 /* ------------------------------------------------------------------ passes */
 
 export interface PassRow {

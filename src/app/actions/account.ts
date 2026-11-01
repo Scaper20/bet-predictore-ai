@@ -27,6 +27,11 @@ export async function updateProfile(
   } = await supabase.auth.getUser();
   if (!user) return { error: "Sign in again to continue.", message: null };
 
+  const { data: current } = await supabase.from("profiles").select("display_name").eq("id", user.id).maybeSingle();
+  if (current && (current.display_name ?? "") === displayName) {
+    return { error: null, message: "Nothing changed: your display name is already saved as it is." };
+  }
+
   const { error } = await supabase
     .from("profiles")
     .update({ display_name: displayName || null })
@@ -182,18 +187,26 @@ export async function updatePreferences(
 
   const intent = String(formData.get("usageIntent") ?? "");
   const digest = String(formData.get("digest") ?? "");
+  const usageIntent = USAGE_INTENTS.includes(intent as (typeof USAGE_INTENTS)[number]) ? intent : null;
+  const digestChoice = DIGEST_CHOICES.includes(digest as (typeof DIGEST_CHOICES)[number]) ? digest : "none";
+
+  const { data: current } = await supabase
+    .from("user_preferences")
+    .select("leagues, usage_intent, digest")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  const sameLeagues = (a: string[], b: string[]) => a.length === b.length && [...a].sort().join() === [...b].sort().join();
+  if (current && sameLeagues((current.leagues as string[] | null) ?? [], leagues) && current.usage_intent === usageIntent && current.digest === digestChoice) {
+    return { error: null, message: "Nothing changed: these are already your saved preferences." };
+  }
 
   const { error } = await supabase.from("user_preferences").upsert(
     {
       user_id: user.id,
       leagues,
       sports: [...new Set(leagues.map((code) => leagueByCode(code)?.sport ?? DEFAULT_SPORT))],
-      usage_intent: USAGE_INTENTS.includes(intent as (typeof USAGE_INTENTS)[number])
-        ? intent
-        : null,
-      digest: DIGEST_CHOICES.includes(digest as (typeof DIGEST_CHOICES)[number])
-        ? digest
-        : "none",
+      usage_intent: usageIntent,
+      digest: digestChoice,
       // Only rendered (and so only sent) for VIP members — see PreferencesForm.
       // An unchecked checkbox sends nothing, hence the separate marker field.
       updated_at: new Date().toISOString(),

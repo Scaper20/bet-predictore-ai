@@ -18,7 +18,7 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 /**
  * Step one: email a reset link.
  *
- * The link is generated with the admin API and sent through Resend, not
+ * The link is generated with the admin API and sent through Sendbyte (Resend as backup), not
  * Supabase's resetPasswordForEmail(). Supabase's built-in mailer only
  * delivers to the project's own team unless a custom SMTP server is set up,
  * and its PKCE link only works in the browser that asked for it — opening the

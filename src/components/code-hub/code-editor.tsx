@@ -270,6 +270,24 @@ function EditedCard({ result: full, before, mode }: { result: EditResult; before
     (g) => !(g.matchId && (kept.has(g.matchId) || taken.has(g.matchId))) && !kept.has(g.eventId) && !taken.has(g.eventId),
   );
   const dropped = left.length + taken.size;
+  // Nothing to re-pick: say so plainly instead of a "new" code that is the old one.
+  const unchanged = changedGames.length === 0 && dropped === 0 && removed.size === 0;
+  if (unchanged) {
+    return (
+      <div className="min-w-0 rounded-xl border border-brand/30 bg-brand/5 p-4" role="status">
+        <p className="font-display text-base font-bold">
+          <span aria-hidden className="mr-1.5 text-brand">✓</span>
+          {mode === "safer" ? "Your code is already as safe as we'd make it" : "Your code already fits these odds"}
+        </p>
+        <p className="mt-1 text-sm text-ink-muted">
+          {mode === "safer"
+            ? `We checked all ${result.games.length} games and none has a safer pick we'd swap in that SportyBet will take. Nothing changed, so there's no new code: keep using ${before.code}.`
+            : `We checked all ${result.games.length} games and swapping any pick would move you further from the odds you asked for. Nothing changed: keep using ${before.code}.`}
+        </p>
+        <Totals chance={before.chance} oddsValue={before.odds} label="As it is" />
+      </div>
+    );
+  }
   return (
     <div className="min-w-0 overflow-hidden rounded-xl border border-brand/30 bg-brand/5">
       <div className="space-y-3 p-4">

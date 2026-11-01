@@ -14,11 +14,18 @@ is capped at ₦2,000).
 | Item | $ | ₦ |
 |---|---|---|
 | Vercel Pro (the free Hobby plan doesn't allow commercial use) | 20 | 31,000 |
-| Supabase Pro (the free tier pauses and caps the database) | 25 | 38,750 |
+| Supabase Pro, Small compute (paid from November 2026: $25 plan + $15 Small compute - $10 compute credit) | 30 | 46,500 |
 | TheSportsDB premium (the only paid sports feed) | 9 | 13,950 |
-| Resend (free up to 3,000 emails a month; Pro is $20 after) | 0-20 | 0-31,000 |
+| Sendbyte (main email sender; ₦2,000 to ₦15,000 a month by volume) | ~1.3-9.7 | 2,000-15,000 |
+| Resend (backup sender only; free up to 3,000 emails a month) | 0 | 0 |
 | Domain (.com.ng) | ~1 | ~1,500 |
-| **Total** | **~55-75** | **~₦85,000-116,000** |
+| **Total** | **~61-70** | **~₦95,000-108,000** |
+
+Supabase compute is billed by the hour ($0.0206 an hour for Small, about $15 for
+a 730-hour month) and is not covered by the spend cap, so the $30 is the floor:
+a bigger compute size, extra disk past the 8 GB included, a custom domain ($10)
+or an IPv4 address ($4) each add to it. Small gives 2 GB of memory against the
+0.5 GB the Free plan's Nano had (see `docs/database-load.md`).
 
 Everything else (GitHub Actions on a public repo, Supabase cron and edge
 functions, The Odds API free tier) is inside free limits; see

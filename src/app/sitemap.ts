@@ -3,6 +3,8 @@ import { LEAGUES } from "@/lib/leagues";
 import { SITE_URL as SITE } from "@/lib/site-url";
 import { matchPath, sportPath, scoresPath } from "@/lib/routes";
 import { upcomingFeed } from "@/lib/service";
+import { publicLiveOffers } from "@/lib/offers-server";
+import { offerPath } from "@/lib/offers";
 
 /**
  * Static routes, a landing page per league, and the next few days of match
@@ -52,10 +54,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE}/responsible-use`, changeFrequency: "monthly", priority: 0.5 },
   ];
 
-  const [leagueFeed, matchFeed] = await Promise.all([
+  const [leagueFeed, matchFeed, liveOffers] = await Promise.all([
     upcomingFeed(FIXTURES_WINDOW_DAYS).catch(() => null),
     upcomingFeed(MATCH_WINDOW_DAYS).catch(() => null),
+    publicLiveOffers().catch(() => []),
   ]);
+  // Public offers (the day pass) only while they run; a closed one drops out within the hour.
+  const offers: MetadataRoute.Sitemap = liveOffers.map((o) => ({
+    url: `${SITE}${offerPath(o.slug)}`,
+    changeFrequency: "weekly" as const,
+    priority: 0.7,
+  }));
   const upcoming = (leagueFeed?.matches ?? []).filter((m) => m.league.code);
   const codesIn = (days: number) => {
     const until = now.getTime() + days * DAY_MS;
@@ -112,5 +121,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   // Next writes <loc> verbatim, and the scores page's URLs carry two query
   // parameters: a bare & would make the whole sitemap invalid XML.
-  return [...core, ...leagues, ...matches].map((e) => ({ ...e, url: e.url.replace(/&/g, "&amp;") }));
+  return [...core, ...offers, ...leagues, ...matches].map((e) => ({ ...e, url: e.url.replace(/&/g, "&amp;") }));
 }
