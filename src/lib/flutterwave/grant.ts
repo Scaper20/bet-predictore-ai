@@ -98,6 +98,7 @@ export async function grantFlutterwavePayment(txRef: string): Promise<GrantOutco
   if (email) {
     void sendEmail({
       to: email,
+      idempotencyKey: `receipt:flutterwave:${txRef}`,
       ...receiptEmail({
         tier,
         amountKobo: 0,

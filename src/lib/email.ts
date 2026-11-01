@@ -3,46 +3,137 @@ import "server-only";
 import { Resend } from "resend";
 import { SITE_URL } from "@/lib/site-url";
 
-const apiKey = process.env.RESEND_API_KEY;
 const FROM = process.env.EMAIL_FROM ?? "KiqStat <hello@kiqstat.app>";
+const SENDBYTE_URL = "https://api.sendbyte.africa/v1/emails";
+/** Sendbyte answers in under 100 ms; a send that hangs this long goes to Resend instead. */
+const SENDBYTE_TIMEOUT_MS = 8_000;
 
-function client() {
-  if (!apiKey) throw new Error("Resend requires RESEND_API_KEY.");
-  return new Resend(apiKey);
-}
+export type EmailProvider = "sendbyte" | "resend";
+export type SendResult =
+  | { ok: true; provider: EmailProvider; id?: string }
+  | { ok: false; reason: string };
 
-/**
- * Fire-and-forget by design — every call site does `void sendEmail(...)`,
- * never awaits or wraps it in its own try/catch. Transactional email is
- * additive: a payment, a signup, or an admin's ticket reply must all
- * succeed/ack even if RESEND_API_KEY is unset or Resend's API is down. This
- * function swallows every failure internally and never rejects.
- */
-export async function sendEmail(opts: {
+type Message = {
   to: string;
   subject: string;
   html: string;
   from?: string;
   /** Campaign emails: named in a List-Unsubscribe header, which inbox providers expect of bulk mail. */
   unsubscribeUrl?: string;
-}): Promise<void> {
-  if (!apiKey) {
-    console.error("sendEmail skipped — RESEND_API_KEY not configured:", opts.subject);
-    return;
+  /**
+   * The same key never sends twice on Sendbyte, so a retried receipt can't land twice. Derive it
+   * from the business event (payment reference + email kind), never from the time.
+   */
+  idempotencyKey?: string;
+};
+
+/** Sendbyte errors where another provider would do no better, or would do harm. */
+const FINAL_SENDBYTE_CODES = new Set([
+  // The address bounced or complained before: sending it through Resend would hurt both senders.
+  "suppressed_recipient",
+]);
+
+class ProviderError extends Error {
+  constructor(
+    message: string,
+    readonly code: string,
+  ) {
+    super(message);
   }
-  try {
-    await client().emails.send({
-      from: opts.from ?? FROM,
-      to: opts.to,
-      subject: opts.subject,
-      html: opts.html,
-      // A plain-text part beside the HTML: HTML-only mail scores worse with spam and tab filters.
-      text: htmlToText(opts.html),
-      ...(opts.unsubscribeUrl ? { headers: { "List-Unsubscribe": `<${opts.unsubscribeUrl}>` } } : {}),
-    });
-  } catch (err) {
-    console.error("sendEmail failed:", err);
+}
+
+function sendbyteKey(): string | undefined {
+  return process.env.SENDBYTE_API_KEY?.trim() || undefined;
+}
+function resendKey(): string | undefined {
+  return process.env.RESEND_API_KEY?.trim() || undefined;
+}
+
+/** True when at least one provider is configured, so alerts and receipts can go out. */
+export function canSendEmail(): boolean {
+  return Boolean(sendbyteKey() || resendKey());
+}
+
+/** The configured providers, in the order a send tries them. */
+export function emailProviders(): EmailProvider[] {
+  const order: EmailProvider[] = [];
+  if (sendbyteKey()) order.push("sendbyte");
+  if (resendKey()) order.push("resend");
+  return order;
+}
+
+async function viaSendbyte(key: string, m: Message): Promise<string | undefined> {
+  const res = await fetch(SENDBYTE_URL, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      from: m.from ?? process.env.SENDBYTE_FROM ?? FROM,
+      to: m.to,
+      subject: m.subject,
+      html: m.html,
+      text: htmlToText(m.html),
+      ...(m.unsubscribeUrl ? { headers: { "List-Unsubscribe": `<${m.unsubscribeUrl}>` } } : {}),
+      ...(m.idempotencyKey ? { idempotency_key: m.idempotencyKey.slice(0, 256) } : {}),
+      // Receipts and password links are not tracked: rewritten links look like phishing to some filters.
+      tracking: { opens: false, clicks: false },
+    }),
+    signal: AbortSignal.timeout(SENDBYTE_TIMEOUT_MS),
+    cache: "no-store",
+  });
+  const body = (await res.json().catch(() => null)) as
+    | { id?: string; error?: { code?: string; message?: string } }
+    | null;
+  if (!res.ok) {
+    const code = body?.error?.code ?? `http_${res.status}`;
+    throw new ProviderError(`${code}: ${body?.error?.message ?? res.statusText} (x-request-id ${res.headers.get("x-request-id") ?? "-"})`, code);
   }
+  return body?.id;
+}
+
+async function viaResend(key: string, m: Message): Promise<string | undefined> {
+  const { data, error } = await new Resend(key).emails.send({
+    from: m.from ?? FROM,
+    to: m.to,
+    subject: m.subject,
+    html: m.html,
+    // A plain-text part beside the HTML: HTML-only mail scores worse with spam and tab filters.
+    text: htmlToText(m.html),
+    ...(m.unsubscribeUrl ? { headers: { "List-Unsubscribe": `<${m.unsubscribeUrl}>` } } : {}),
+  });
+  if (error) throw new ProviderError(`${error.name}: ${error.message}`, error.name);
+  return data?.id;
+}
+
+/**
+ * Sends through Sendbyte first and Resend when Sendbyte isn't configured or fails (timeout, outage,
+ * quota, an unverified domain, a revoked key). A suppressed recipient stops there.
+ *
+ * Fire-and-forget by design: most call sites do `void sendEmail(...)` and never wrap it. Email is
+ * additive: a payment, a signup or an admin's ticket reply must all succeed even with no provider
+ * set or both down, so this never rejects. Read the result only where the email is the whole point
+ * (password reset).
+ */
+export async function sendEmail(m: Message): Promise<SendResult> {
+  const providers = emailProviders();
+  if (providers.length === 0) {
+    console.error("sendEmail skipped: neither SENDBYTE_API_KEY nor RESEND_API_KEY is set:", m.subject);
+    return { ok: false, reason: "no-provider" };
+  }
+  let last = "unknown";
+  for (const provider of providers) {
+    try {
+      const id = provider === "sendbyte" ? await viaSendbyte(sendbyteKey()!, m) : await viaResend(resendKey()!, m);
+      if (provider !== providers[0]) console.warn(`sendEmail: delivered by ${provider} after ${providers[0]} failed:`, m.subject);
+      return { ok: true, provider, id };
+    } catch (err) {
+      last = err instanceof Error ? err.message : String(err);
+      console.error(`sendEmail via ${provider} failed:`, last);
+      if (err instanceof ProviderError && provider === "sendbyte" && FINAL_SENDBYTE_CODES.has(err.code)) {
+        return { ok: false, reason: err.code };
+      }
+    }
+  }
+  return { ok: false, reason: last };
 }
 
 /** The readable text of an email's HTML, links kept as "label (url)". */

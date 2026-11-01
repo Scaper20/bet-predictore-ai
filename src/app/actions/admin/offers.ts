@@ -45,6 +45,20 @@ export async function saveOffer(_prev: OfferActionState, formData: FormData): Pr
     updated_at: new Date().toISOString(),
     updated_by: gate.identity.id,
   };
+  if (id) {
+    const { data } = await supabaseAdmin().from("offers").select(Object.keys(row).filter((k) => k !== "updated_at" && k !== "updated_by").join(", ")).eq("id", id).maybeSingle();
+    const current = data as unknown as Record<string, unknown> | null;
+    const same = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+    const sameTime = (a: unknown, b: unknown) => (a == null || b == null ? a == b : Date.parse(String(a)) === Date.parse(String(b)));
+    if (
+      current &&
+      Object.entries(row).every(([k, v]) =>
+        k === "updated_at" || k === "updated_by" ? true : k === "starts_at" || k === "ends_at" ? sameTime(current[k], v) : same(current[k], v),
+      )
+    ) {
+      return { error: null, message: "Nothing changed: the offer is already saved like this." };
+    }
+  }
   const db = supabaseAdmin().from("offers");
   const { error } = id ? await db.update(row).eq("id", id) : await db.insert({ ...row, active: false });
   if (error) {

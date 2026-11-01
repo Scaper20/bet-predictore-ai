@@ -69,7 +69,7 @@ export function preflightChecks(i: PreflightInput): PreflightCheck[] {
       id: "alerts",
       label: "Alerts can be delivered",
       state: i.alertTo && i.canEmail ? "ok" : "fail",
-      detail: i.alertTo && i.canEmail ? `Billing, error and budget alerts go to ${i.alertTo}.` : "Set RESEND_API_KEY and ASK_ALERT_EMAIL (or SUPPORT_INBOX_EMAIL).",
+      detail: i.alertTo && i.canEmail ? `Billing, error and budget alerts go to ${i.alertTo}.` : "Set SENDBYTE_API_KEY (or RESEND_API_KEY) and ASK_ALERT_EMAIL (or SUPPORT_INBOX_EMAIL).",
     },
     {
       id: "key",
@@ -111,7 +111,7 @@ export async function runPreflight(): Promise<PreflightCheck[]> {
     hasKey: Boolean(askApiKey()),
     hasOwnKey: Boolean(process.env.ANTHROPIC_ASK_API_KEY?.trim()),
     alertTo,
-    canEmail: Boolean(process.env.RESEND_API_KEY?.trim()),
+    canEmail: Boolean(process.env.SENDBYTE_API_KEY?.trim() || process.env.RESEND_API_KEY?.trim()),
     books,
     passWindow,
     offerCaps,

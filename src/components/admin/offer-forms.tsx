@@ -140,7 +140,7 @@ export function PriceForm({ tier, cycle, value, placeholder }: { tier: "pro" | "
       <Button type="submit" variant="secondary" disabled={pending} className="h-9 px-3 text-xs">
         {pending ? <Spinner className="size-3.5" /> : "Set"}
       </Button>
-      {(state.error || state.message) && <span className={`text-[11px] ${state.error ? "text-rose" : "text-brand"}`}>{state.error ?? "Saved"}</span>}
+      {(state.error || state.message) && <span className={`text-[11px] ${state.error ? "text-rose" : "text-brand"}`}>{state.error ?? state.message ?? "Saved"}</span>}
     </form>
   );
 }

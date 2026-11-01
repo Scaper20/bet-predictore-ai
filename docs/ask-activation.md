@@ -75,7 +75,7 @@ Each step is safe alone. Ask stays off until step 6.
 2. **Vercel, Production:**
    - Add the key as `ANTHROPIC_ASK_API_KEY`.
    - Check `ASK_GUARD` is unset or `enforce`.
-   - Check `SUPPORT_INBOX_EMAIL` or `ASK_ALERT_EMAIL` is set, and `RESEND_API_KEY`.
+   - Check `SUPPORT_INBOX_EMAIL` or `ASK_ALERT_EMAIL` is set, and `SENDBYTE_API_KEY` (or `RESEND_API_KEY`).
 3. **Database:** 0088 and 0089 are both applied (30 Oct). Nothing to do unless one was rolled back.
 4. **Deploy:** merge dev into Main/Production.
 5. **Preflight:** open `/admin/ask-lab`. Every row of "Before Ask answers again" reads Ready except "Ask switched on". Anything Blocked stops here.
