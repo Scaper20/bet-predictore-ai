@@ -2,7 +2,9 @@
  * Offers: a pass (Pro or VIP for a number of hours) at a price, aimed at one
  * audience, all edited from /admin/offers (table `offers`, 0087).
  *
- *   new_visitors  the popup for a visitor's first window_hours: the window
+ *   new_visitors  the popup for a visitor's first window_hours (its link,
+ *                 /offer/<slug>, sells to any account not on a plan,
+ *                 once each, whatever its window): the window
  *                 opens at the earlier of this browser's first visit
  *                 (FIRST_SEEN_COOKIE, set by src/proxy.ts) and the account's
  *                 creation. A browser that was here before the cookie

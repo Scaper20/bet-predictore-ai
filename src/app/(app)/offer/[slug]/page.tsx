@@ -155,7 +155,7 @@ function SignedOutOffer({ offer }: { offer: Offer }) {
             <Link href={`/account/login?next=${next}`} className="underline underline-offset-2">Sign in</Link>
           </p>
           <p className="mt-4 text-xs leading-relaxed text-ink-dim">
-            One payment, starts the moment you pay and doesn&apos;t renew. Offered to new accounts; 18+.
+            One payment, starts the moment you pay and doesn&apos;t renew. One per account; 18+.
           </p>
         </div>
       </div>

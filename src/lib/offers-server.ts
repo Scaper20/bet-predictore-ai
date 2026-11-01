@@ -157,8 +157,8 @@ export async function offerStateFor(ent: Entitlement, now = Date.now()): Promise
 }
 
 /**
- * Whether this account may buy this offer now, and until when. Popup offers
- * follow offerStateFor; an email offer needs the recipient row its link
+ * Whether this account may buy this offer now, and until when. A popup offer
+ * is open to any account not on a plan, once each, while it runs; an email offer needs the recipient row its link
  * carries, belonging to this account, sent within the offer's window.
  */
 export async function eligibility(
@@ -189,9 +189,11 @@ export async function eligibility(
     return { ok: true, deadline: deadline === null ? null : new Date(deadline).toISOString() };
   }
 
-  const state = await offerStateFor(ent, now);
-  if (state.state === "offer" && state.offer.slug === offer.slug) return { ok: true, deadline: state.deadline };
-  return closed;
+  if (ent.passOnly && (await livePassFor(ent.userId))) return { ok: false, reason: "Your pass is already running." };
+  // A popup offer reached through its own link (a shared post, an ad, search) is open to anyone
+  // not on a plan, once per account, while it runs. The new-visitor window only decides who sees
+  // the popup (offerStateFor); it never turns away someone who followed the link.
+  return { ok: true, deadline: offer.endsAt };
 }
 
 /* --------------------------------------------------------- checkout, grant */
