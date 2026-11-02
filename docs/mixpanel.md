@@ -32,6 +32,7 @@ Code: `src/lib/mixpanel/` (catalogue, browser and server wrappers), `src/compone
 
 ## Before relying on it
 
-- Confirm the project's data residency. The default host is US; for an EU or India project set
-  `NEXT_PUBLIC_MIXPANEL_API_HOST` and `MIXPANEL_API_HOST` (the CSP already allows all three hosts).
+- The project is in Mixpanel's **EU data centre**, so the default host is `api-eu.mixpanel.com` (browser and server). A
+  mismatched host drops events silently. To use another region set `NEXT_PUBLIC_MIXPANEL_API_HOST` and `MIXPANEL_API_HOST`
+  (the CSP allows all three hosts).
 - Set Lexicon descriptions for the nine events and an owner for the tracking plan.

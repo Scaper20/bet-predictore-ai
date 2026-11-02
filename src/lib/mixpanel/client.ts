@@ -31,7 +31,7 @@ export function initMixpanel(): Promise<Sdk | null> {
   loading ??= import("mixpanel-browser")
     .then(({ default: mixpanel }) => {
       mixpanel.init(MIXPANEL_TOKEN, {
-        api_host: process.env.NEXT_PUBLIC_MIXPANEL_API_HOST || "https://api.mixpanel.com",
+        api_host: process.env.NEXT_PUBLIC_MIXPANEL_API_HOST || "https://api-eu.mixpanel.com",
         autocapture: false,
         track_pageview: false,
         persistence: "localStorage",
