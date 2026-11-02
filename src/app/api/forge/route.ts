@@ -5,6 +5,7 @@ import { leagueByCode } from "@/lib/leagues";
 import { claimGuest, guestIdentity, guestUsed, refundGuest } from "@/lib/ask/guest";
 import { buildForgeSlip, forgeMatchdays } from "@/lib/forge-feed";
 import { freeViewer } from "@/lib/service";
+import { requestContext, trackLater } from "@/lib/mixpanel/server";
 import { FORGE_FREE_DAILY, FORGE_GUEST_TOTAL, FORGE_PAID_DAILY, marketsForPlan, parseForgeRequest } from "@/lib/forge";
 
 export const dynamic = "force-dynamic";
@@ -163,6 +164,17 @@ export async function POST(request: Request) {
         setCookie,
       );
     }
+    const ctx = await requestContext();
+    trackLater(
+      "forge_combo_created",
+      {
+        match_count: result.legs.length,
+        combo_type: result.legs.length > 1 ? "accumulator" : "single",
+        session_number: ctx.sessionNumber,
+        current_tier: entitlement.tier,
+      },
+      { userId: entitlement.userId, anonId: ctx.anonId, country: ctx.country },
+    );
     return json({ ...result, used, limit }, 200, setCookie);
   } catch {
     await refund();

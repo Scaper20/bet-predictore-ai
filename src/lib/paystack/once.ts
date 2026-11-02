@@ -1,3 +1,4 @@
+import { trackVipCompleted } from "@/lib/mixpanel/billing-events";
 import "server-only";
 
 import { supabaseAdmin } from "@/lib/supabase/admin";
@@ -67,6 +68,10 @@ export async function grantPaystackOnce(reference: string): Promise<OnceOutcome>
     feeMinor: typeof tx.fees === "number" ? tx.fees : null,
     paidAt: now,
   });
+
+  if (tier === "vip") {
+    trackVipCompleted({ userId: payment.user_id, fromTier: current?.tier, cycle, paymentMethod: "paystack_pay_once", reference, at: now });
+  }
 
   const email = tx.customer?.email;
   if (email) {

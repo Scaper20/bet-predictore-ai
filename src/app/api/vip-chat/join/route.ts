@@ -1,3 +1,4 @@
+import { trackVipChatOpened } from "@/lib/mixpanel/whatsapp-events";
 import { NextResponse } from "next/server";
 import { getEntitlement, meets } from "@/lib/entitlements";
 import { markVipChatOpened, vipChatMember, vipChatSettings } from "@/lib/vip-chat-store";
@@ -24,5 +25,6 @@ export async function GET(request: Request) {
   if (!settings.inviteUrl) return back();
 
   await markVipChatOpened(ent.userId, member);
+  await trackVipChatOpened({ userId: ent.userId, tier: ent.tier, firstOpenedAt: member.firstOpenedAt });
   return NextResponse.redirect(settings.inviteUrl, { headers: { "Cache-Control": "private, no-store", "Referrer-Policy": "no-referrer" } });
 }

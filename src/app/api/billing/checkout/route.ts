@@ -1,3 +1,4 @@
+import { trackProStarted } from "@/lib/mixpanel/billing-events";
 import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 import { supabaseServer } from "@/lib/supabase/server";
@@ -120,5 +121,11 @@ export async function POST(request: Request) {
       status: "pending",
     });
 
+  await trackProStarted({
+    userId: user.id,
+    tier,
+    cycle,
+    paymentMethod: once ? "paystack_pay_once" : "paystack_card_subscription",
+  });
   return NextResponse.json({ authorization_url: init.authorization_url });
 }

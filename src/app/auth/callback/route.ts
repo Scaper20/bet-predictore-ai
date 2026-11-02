@@ -6,6 +6,7 @@ import { PARTNER_REF_COOKIE } from "@/lib/partner-ref";
 import { recordSignupSource } from "@/lib/signup-source";
 import { FIRST_TOUCH_COOKIE } from "@/lib/first-touch";
 import { isCheckoutPath } from "@/lib/routes";
+import { trackLoggedIn, trackSignedUp } from "@/lib/mixpanel/auth-events";
 
 /**
  * Where Supabase sends people back to after they click a link in an email,
@@ -46,6 +47,18 @@ export async function GET(request: NextRequest) {
   // (src/app/actions/auth.ts) — OAuth has no separate signup step to carry
   // that logic, so it has to live here instead, checked on every arrival.
   if (data.user) {
+    // Google and other providers say so; an email link has no provider but "email".
+    const method = String(data.user.app_metadata?.provider ?? "email");
+    // The same route serves sign-in and sign-up: an account made in the last few minutes is a new one.
+    const isNew = Date.now() - new Date(data.user.created_at).getTime() < 5 * 60_000;
+    if (isNew) {
+      await trackSignedUp(data.user.id, method, {
+        firstTouch: request.cookies.get(FIRST_TOUCH_COOKIE)?.value,
+        partnerRef: request.cookies.get(PARTNER_REF_COOKIE)?.value,
+      });
+    } else {
+      await trackLoggedIn(data.user.id, method);
+    }
     const prefs = await getPreferencesFor(supabase, data.user.id);
     if (!hasOnboarded(prefs)) {
       // Where this user came from, same as signUp() (lib/signup-source.ts).

@@ -12,6 +12,7 @@ import { FIRST_TOUCH_COOKIE } from "@/lib/first-touch";
 import { PARTNER_REF_COOKIE } from "@/lib/partner-ref";
 import { recordSignupSource } from "@/lib/signup-source";
 import { markAuthChange } from "@/lib/auth-hint-server";
+import { trackLoggedIn, trackSignedUp } from "@/lib/mixpanel/auth-events";
 
 export type AuthActionState = { error: string | null };
 
@@ -34,6 +35,7 @@ export async function signIn(_prev: AuthActionState, formData: FormData): Promis
   }
 
   await markAuthChange(true);
+  if (data?.user) await trackLoggedIn(data.user.id, "email");
 
   if (data?.user && !isCheckoutPath(next)) {
     const prefs = await getPreferencesFor(supabase, data.user.id);
@@ -98,10 +100,9 @@ export async function signUp(_prev: AuthActionState, formData: FormData): Promis
   // Where this user came from: first touch and any partner link (lib/signup-source.ts).
   if (signUpData?.user) {
     const jar = await cookies();
-    await recordSignupSource(signUpData.user.id, {
-      firstTouch: jar.get(FIRST_TOUCH_COOKIE)?.value,
-      partnerRef: jar.get(PARTNER_REF_COOKIE)?.value,
-    });
+    const source = { firstTouch: jar.get(FIRST_TOUCH_COOKIE)?.value, partnerRef: jar.get(PARTNER_REF_COOKIE)?.value };
+    await recordSignupSource(signUpData.user.id, source);
+    await trackSignedUp(signUpData.user.id, "email", source);
   }
 
   void sendEmail({ to: email, ...welcomeEmail() });
