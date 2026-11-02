@@ -155,6 +155,8 @@ const nextConfig: NextConfig = {
 
   async redirects() {
     return [
+      // The old VIP chat page: links in emails and messages already sent land on the plans.
+      { source: "/vip", destination: "/pricing", permanent: true },
       /*
        * The earlier addresses (BetriX, then the .com.ng KiqStat domain) and the
        * bare kiqstat.app all land on www.kiqstat.app, keeping the path, so old

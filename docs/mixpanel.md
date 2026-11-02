@@ -29,10 +29,9 @@ Code: `src/lib/mixpanel/` (catalogue, browser and server wrappers), `src/compone
 | `model_performance_viewed` | match page, `ModelInsightViewed` | `accuracy_score_bucket` = the model's confidence in the pick shown: high 70+, medium 50-69, low <50, `unrated` with no pick |
 | `upgrade_to_pro_started` | Paystack and Flutterwave checkout routes | Pro only; `plan_period`: `monthly`, `quarterly`, `annual` |
 | `upgrade_to_vip_completed` | Paystack subscription webhook, pay-once grant, Flutterwave grant | One per payment (`$insert_id`); `vip_start_datetime` is ISO 8601 |
-| `whatsapp_vip_message_engaged` | `api/vip-chat/join` | The only WhatsApp action the app can see is opening the invite: `message_type` `vip_chat_invite`, `engagement_type` `clicked` |
 
 ## Before relying on it
 
 - Confirm the project's data residency. The default host is US; for an EU or India project set
   `NEXT_PUBLIC_MIXPANEL_API_HOST` and `MIXPANEL_API_HOST` (the CSP already allows all three hosts).
-- Set Lexicon descriptions for the ten events and an owner for the tracking plan.
+- Set Lexicon descriptions for the nine events and an owner for the tracking plan.

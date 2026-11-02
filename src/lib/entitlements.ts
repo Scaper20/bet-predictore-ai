@@ -51,8 +51,8 @@ export interface Entitlement {
   userId: string | null;
   /**
    * End of a running pass from an offer (lib/offers.ts), or absent. When the
-   * pass is what lifts the tier, `passOnly` is set: a pass unlocks the site,
-   * not the members' WhatsApp chat.
+   * pass is what lifts the tier, `passOnly` is set: a pass unlocks the site's
+   * features for its length, and is not a plan.
    */
   passUntil?: string | null;
   passOnly?: boolean;

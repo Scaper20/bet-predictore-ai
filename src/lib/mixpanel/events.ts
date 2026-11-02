@@ -82,13 +82,6 @@ export interface MixpanelEvents {
     /** ISO 8601 timestamp: Mixpanel reads it as a datetime. */
     vip_start_datetime: string;
   };
-  /** A VIP member acted on the WhatsApp VIP chat. */
-  whatsapp_vip_message_engaged: {
-    message_type: string;
-    engagement_type: string;
-    days_since_vip_start: number;
-    current_tier: string;
-  };
 }
 
 export type MixpanelEventName = keyof MixpanelEvents;

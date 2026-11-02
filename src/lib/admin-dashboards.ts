@@ -486,20 +486,19 @@ export interface MarketingDashboard {
   landings: { label: string; value: number }[];
   partners: { name: string; slug: string; signups30d: number; signupsAll: number; status: string }[];
   emails: { campaign: string; sent: number; pending: number; failed: number }[];
-  audience: { registered: number; reachable: number; push: number; waitlist: number; vip: number; optOut: number };
+  audience: { registered: number; reachable: number; push: number; waitlist: number; optOut: number };
 }
 
 export async function marketingDashboard(now = Date.now()): Promise<MarketingDashboard> {
   const admin = supabaseAdmin();
   const cur = now - WINDOW * DAY;
   const prev = now - 2 * WINDOW * DAY;
-  const [profiles, partners, emails, push, waitlist, vip, everPaid] = await Promise.all([
+  const [profiles, partners, emails, push, waitlist, everPaid] = await Promise.all([
     allProfiles(),
     admin.from("partners").select("id, name, slug, status"),
     admin.from("email_campaign_recipients").select("campaign, status").limit(20_000),
     admin.from("push_subscriptions").select("*", { count: "exact", head: true }),
     admin.from("code_hub_waitlist").select("*", { count: "exact", head: true }),
-    admin.from("vip_chat_members").select("*", { count: "exact", head: true }).is("removed_at", null),
     admin.from("payments").select("user_id, created_at").eq("status", "success").limit(10_000),
   ]);
 
@@ -583,7 +582,6 @@ export async function marketingDashboard(now = Date.now()): Promise<MarketingDas
       reachable: profiles.filter((p) => !p.marketing_opt_out && p.email).length,
       push: push.count ?? 0,
       waitlist: waitlist.count ?? 0,
-      vip: vip.count ?? 0,
       optOut: profiles.filter((p) => p.marketing_opt_out).length,
     },
   };

@@ -480,7 +480,6 @@ export function MarketingView({ d, ctx }: { d: MarketingDashboard; ctx: DashCont
                 { k: "Opted out", v: d.audience.optOut.toLocaleString() },
                 { k: "Push devices", v: d.audience.push.toLocaleString() },
                 { k: "Code Hub waitlist", v: d.audience.waitlist.toLocaleString() },
-                { k: "VIP chat members", v: d.audience.vip.toLocaleString() },
               ]}
             />
           </Panel>
