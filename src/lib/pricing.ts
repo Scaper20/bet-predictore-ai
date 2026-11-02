@@ -97,11 +97,9 @@ export const PLANS: PlanDefinition[] = [
   {
     id: "vip",
     name: "VIP",
-    description: "Daily Strong picks and 2 to 10 combos in the VIP WhatsApp chat, live win probability and priority help.",
+    description: "Live in-play win probability, the biggest Ask KiqStat allowance and priority help.",
     features: [
       "Everything in Pro",
-      "The VIP chat on WhatsApp: the day's Strong picks and combos priced 2 to 10, every day before kick-off",
-      "Live calls in the big games, and your questions answered first",
       "Live in-play win probability, updating as the match unfolds",
       `${VIP_CODES} SportyBet codes a week from your own picks`,
       askAllowance("Ask KiqStat: 100 questions a day"),
@@ -199,10 +197,10 @@ export const PLAN_MATRIX: MatrixGroup[] = [
     ],
   },
   {
-    group: "Alerts, chat and support",
+    group: "Alerts and support",
     rows: [
       { label: "Morning picks notification", values: { free: true, pro: true, vip: true } },
-      { label: "WhatsApp", values: { free: "Free community", pro: "Free community", vip: "VIP chat" } },
+      { label: "WhatsApp", values: { free: "Free community", pro: "Free community", vip: "Free community" } },
       { label: "Strong pick alerts, kick-off and result", values: { free: false, pro: true, vip: true } },
       { label: "Priority support", values: { free: false, pro: false, vip: true } },
     ],

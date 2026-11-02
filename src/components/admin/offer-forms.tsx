@@ -50,7 +50,7 @@ export function OfferForm({ offer, audience }: { offer?: Offer; audience?: Offer
         </Field>
         <Field label="Gives">
           <select name="tier" defaultValue={offer?.tier ?? "vip"} className={input}>
-            <option value="vip">VIP (site features, not the WhatsApp chat)</option>
+            <option value="vip">VIP</option>
             <option value="pro">Pro</option>
           </select>
         </Field>

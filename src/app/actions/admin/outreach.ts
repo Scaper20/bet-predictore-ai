@@ -1,8 +1,8 @@
 "use server";
 
 import { checkPermission, logAdminAction } from "@/lib/admin";
-import { enqueueCampaign, sendNextBatch, campaignProgress, segmentCounts, vipChatAudienceCounts } from "@/lib/outreach-feed";
-import type { CampaignType, VipChatCampaign } from "@/lib/outreach";
+import { enqueueCampaign, sendNextBatch, campaignProgress, segmentCounts } from "@/lib/outreach-feed";
+import type { CampaignType } from "@/lib/outreach";
 
 const CAMPAIGNS = new Set<CampaignType>([
   "warm_checkin",
@@ -12,9 +12,6 @@ const CAMPAIGNS = new Set<CampaignType>([
   "announce_rebrand",
   "checkout_reminder",
   "announce_pay_once",
-  "vip_chat_launch",
-  "vip_chat_reminder",
-  "vip_chat_free",
 ]);
 
 // A "use server" actions file can't export `maxDuration` the way a route.ts
@@ -77,8 +74,6 @@ export async function sendOutreachBatch(_prev: BatchState, formData: FormData): 
 export interface OutreachOverview {
   segments: { subscribed: number; free: number; optedOut: number };
   progress: Record<CampaignType, { pending: number; sent: number; failed: number }>;
-  /** Who each VIP chat campaign would reach if queued now. */
-  audience: Record<VipChatCampaign, number>;
 }
 
 /** Server Component data load, not a form action — used by /admin/outreach
@@ -88,15 +83,13 @@ export async function getOutreachOverview(): Promise<OutreachOverview | { error:
   if (!gate.ok) return { error: gate.error };
 
   const all = [...CAMPAIGNS];
-  const [segments, audience, ...progress] = await Promise.all([
+  const [segments, ...progress] = await Promise.all([
     segmentCounts(),
-    vipChatAudienceCounts(),
     ...all.map((c) => campaignProgress(c)),
   ]);
 
   return {
     segments,
-    audience,
     progress: Object.fromEntries(all.map((c, i) => [c, progress[i]])) as OutreachOverview["progress"],
   };
 }

@@ -12,7 +12,7 @@ export async function GET(request: Request) {
   if (!gate.ok) return new Response(gate.error, { status: gate.status });
 
   const slug = new URL(request.url).searchParams.get("slug") ?? "";
-  const email = /^[a-z0-9-]{2,40}$/.test(slug) ? await previewCampaignEmail(offerCampaign(slug), "free").catch(() => null) : null;
+  const email = /^[a-z0-9-]{2,40}$/.test(slug) ? await previewCampaignEmail(offerCampaign(slug)).catch(() => null) : null;
   if (!email) return new Response("No preview for this offer.", { status: 404 });
 
   const banner = `<div style="font:14px system-ui,sans-serif;background:#111;color:#eee;padding:12px 16px;">

@@ -71,7 +71,7 @@ const GROUPS: FaqGroup[] = [
       {
         q: "Is there a day pass?",
         text: "pass day weekend week one-off vip 24 hours",
-        a: <A>New visitors can get a VIP day pass: 24 hours of everything VIP unlocks on the site, paid once, offered during your first day on KiqStat. It doesn&apos;t renew and there&apos;s nothing to cancel. The VIP WhatsApp chat comes with the VIP plan, not the pass. A pass bought before October keeps working until it runs out.</A>,
+        a: <A>New visitors can get a VIP day pass: 24 hours of everything VIP unlocks on the site, paid once, offered during your first day on KiqStat. It doesn&apos;t renew and there&apos;s nothing to cancel. A pass bought before October keeps working until it runs out.</A>,
       },
       {
         q: "How do I pay?",

@@ -96,12 +96,6 @@ export default async function OfferPage({ params, searchParams }: PageProps<"/of
               <OfferCheckout slug={offer.slug} recipient={recipient} deadline={check.deadline} cta={`Pay ${naira(offer.priceNaira)}`} />
               <p className="mt-4 text-xs leading-relaxed text-ink-dim">
                 Starts the moment you pay and doesn&apos;t renew.
-                {offer.tier === "vip" && (
-                  <>
-                    {" "}The members&apos; WhatsApp chat comes with the{" "}
-                    <Link href="/pricing" className="underline underline-offset-2">VIP plan</Link>.
-                  </>
-                )}
               </p>
             </>
           ) : (

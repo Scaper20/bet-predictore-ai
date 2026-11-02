@@ -1,3 +1,4 @@
+import { trackVipCompleted } from "@/lib/mixpanel/billing-events";
 import { NextResponse } from "next/server";
 import crypto from "node:crypto";
 import { supabaseAdmin } from "@/lib/supabase/admin";
@@ -304,6 +305,9 @@ export async function POST(request: Request) {
       }
       if (!userId) break;
 
+      // What they held before this subscription, for the VIP upgrade event.
+      const { data: before } = tier === "vip" ? await admin.from("subscriptions").select("tier").eq("user_id", userId).maybeSingle() : { data: null };
+
       await admin.from("subscriptions").upsert(
         {
           user_id: userId,
@@ -318,6 +322,15 @@ export async function POST(request: Request) {
         },
         { onConflict: "user_id" }
       );
+      if (tier === "vip") {
+        trackVipCompleted({
+          userId,
+          fromTier: before?.tier,
+          cycle: cycleFromInterval(asString(asRecord(data.plan)?.interval)) ?? "monthly",
+          paymentMethod: "paystack_card_subscription",
+          reference: subscriptionCode ?? `${userId}:${now}`,
+        });
+      }
       break;
     }
 

@@ -1,3 +1,4 @@
+import { trackProStarted } from "@/lib/mixpanel/billing-events";
 import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 import { supabaseServer } from "@/lib/supabase/server";
@@ -94,5 +95,6 @@ export async function POST(request: Request) {
       { status: 502 },
     );
   }
+  await trackProStarted({ userId: user.id, tier, cycle, paymentMethod: "flutterwave" });
   return NextResponse.json({ authorization_url: link });
 }

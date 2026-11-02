@@ -23,6 +23,7 @@ import type { StatMarkets } from "@/lib/model/match-stats";
 import { LiveWinProbabilityPanel } from "@/components/match/live-win-probability-panel";
 import { LiveMatchProvider, LiveProgress, LiveScore, LiveStatusBadge } from "@/components/match/live-scoreboard";
 import { Gate } from "@/components/entitlements/gate";
+import { ModelInsightViewed } from "@/components/analytics/model-insight-viewed";
 import { DepthGate } from "@/components/entitlements/depth-gate";
 import { JsonLd } from "@/components/seo/json-ld";
 import { matchJsonLd } from "@/lib/seo/match-jsonld";
@@ -233,6 +234,12 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
       {/* ------------------------------------------------------------ Tabs */}
       <div className={`${containerClass()} pb-10 sm:pb-14`}>
         <div className="mx-auto max-w-5xl">
+          <ModelInsightViewed
+            matchId={match.id}
+            live={live}
+            confidence={prediction.sufficiency.publishable ? prediction.topPick?.confidence : null}
+            league={match.league.name}
+          />
           <MatchAccessProvider matchId={match.id}>
             <MatchTabs tabs={tabs} />
           </MatchAccessProvider>

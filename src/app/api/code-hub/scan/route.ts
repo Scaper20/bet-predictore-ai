@@ -1,3 +1,4 @@
+import { requestContext, trackLater } from "@/lib/mixpanel/server";
 import { NextResponse } from "next/server";
 import { getEntitlement } from "@/lib/entitlements";
 import { viewerForTier } from "@/lib/viewer";
@@ -53,5 +54,17 @@ export async function POST(request: Request) {
   // Pro-league games stay locked for a free viewer until kick-off, as on every other page.
   const scan = scanForViewer(read.scan, await viewerForTier(entitlement.tier));
   const { predictions: _predictions, ...out } = scan;
+  const mp = await requestContext();
+  trackLater(
+    "code_hub_validation_completed",
+    {
+      // Every game read: pass. Some read: partial. None read: fail.
+      validation_result: scan.readable === scan.total ? "pass" : scan.readable === 0 ? "fail" : "partial",
+      error_count: scan.total - scan.readable,
+      matches_checked: scan.total,
+      current_tier: entitlement.tier,
+    },
+    { userId: entitlement.userId, anonId: mp.anonId, country: mp.country },
+  );
   return NextResponse.json(out, { headers: NO_STORE });
 }

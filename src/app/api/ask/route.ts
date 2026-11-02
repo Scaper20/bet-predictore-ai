@@ -1,3 +1,5 @@
+import { later, requestContext, trackServer } from "@/lib/mixpanel/server";
+import { questionTopic, type MixpanelEvents } from "@/lib/mixpanel/events";
 import Anthropic from "@anthropic-ai/sdk";
 import { getEntitlement, meets } from "@/lib/entitlements";
 import { supabaseAdmin } from "@/lib/supabase/admin";
@@ -115,6 +117,11 @@ export async function POST(request: Request) {
   const plan = planOf(entitlement);
   const tier: AskTier = paid ? "paid" : "free";
   const viewer = await viewerForTier(entitlement.tier);
+  const startedAt = Date.now();
+  const mp = await requestContext();
+  // Resolved by the stream below with what to report (or null), then sent after the response.
+  let reportAsk!: (props: MixpanelEvents["ask_kiqstat_question_submitted"] | null) => void;
+  const askAnswered = new Promise<MixpanelEvents["ask_kiqstat_question_submitted"] | null>((resolve) => (reportAsk = resolve));
   const unavailable = { type: "error", code: "unavailable", message: "Ask KiqStat isn't available right now. Try again shortly." } as const;
 
   let used: number;
@@ -271,6 +278,16 @@ export async function POST(request: Request) {
           send({ type: "done", used, limit });
         }
       } finally {
+        reportAsk(
+          result?.answered && result.outcome !== "error" && result.outcome !== "aborted"
+            ? {
+                question_topic: questionTopic(parsed.turns.at(-1)?.text ?? ""),
+                response_time_ms: Date.now() - startedAt,
+                current_tier: entitlement.tier,
+                session_number: mp.sessionNumber,
+              }
+            : null,
+        );
         const actual = result?.costMicros ?? 0;
         const globalSpentAfter = reserved ? await settleSpend(reserved.reservation, actual) : null;
         await logQuestion({
@@ -291,6 +308,11 @@ export async function POST(request: Request) {
         }
       }
     },
+  });
+
+  later(async () => {
+    const props = await askAnswered;
+    if (props) await trackServer("ask_kiqstat_question_submitted", props, { distinctId: entitlement.userId ?? mp.anonId, country: mp.country });
   });
 
   const headers = new Headers({
