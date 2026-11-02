@@ -52,6 +52,8 @@ const GA_CONNECT_HOSTS = [
  * needs allowing. The EU and India hosts are listed so a data-residency move is
  * an env change (NEXT_PUBLIC_MIXPANEL_API_HOST), not a CSP edit.
  */
+/** Session Replay's recorder is a separate script the SDK loads from Mixpanel's CDN the first time a session is sampled in. */
+const MIXPANEL_SCRIPT_HOSTS = ["https://cdn.mxpnl.com"];
 const MIXPANEL_CONNECT_HOSTS = ["https://api.mixpanel.com", "https://api-eu.mixpanel.com", "https://api-in.mixpanel.com"];
 
 const X_PIXEL_HOSTS = [
@@ -71,7 +73,7 @@ function contentSecurityPolicy(): string {
 
   return [
     "default-src 'self'",
-    `script-src 'self' 'unsafe-inline' ${[...X_PIXEL_HOSTS, ...GA_SCRIPT_HOSTS].join(" ")}${dev ? " 'unsafe-eval' https://va.vercel-scripts.com" : ""}`,
+    `script-src 'self' 'unsafe-inline' ${[...X_PIXEL_HOSTS, ...GA_SCRIPT_HOSTS, ...MIXPANEL_SCRIPT_HOSTS].join(" ")}${dev ? " 'unsafe-eval' https://va.vercel-scripts.com" : ""}`,
     "style-src 'self' 'unsafe-inline'",
     `img-src 'self' data: blob: https: ${X_PIXEL_HOSTS.join(" ")}`,
     "font-src 'self' data:",

@@ -19,6 +19,12 @@ const queue: Array<(m: Sdk) => void> = [];
 
 const ENVIRONMENT = process.env.NEXT_PUBLIC_VERCEL_ENV ?? process.env.NODE_ENV ?? "production";
 
+/** NEXT_PUBLIC_MIXPANEL_REPLAY_PERCENT: the share of sessions recorded, 0 to 100. Default 100; 0 switches replay off. */
+function replayPercent(): number {
+  const n = Number(process.env.NEXT_PUBLIC_MIXPANEL_REPLAY_PERCENT ?? 100);
+  return Number.isFinite(n) ? Math.min(100, Math.max(0, n)) : 100;
+}
+
 function allowed(): boolean {
   // Nothing from `next dev`, so local clicking never reaches the real project.
   return typeof window !== "undefined" && process.env.NODE_ENV !== "development";
@@ -35,6 +41,12 @@ export function initMixpanel(): Promise<Sdk | null> {
         autocapture: false,
         track_pageview: false,
         persistence: "localStorage",
+        // Session Replay. Text and inputs stay masked (the SDK's defaults) and images and video are
+        // blocked, so a replay shows layout, scrolling and clicks, not what people typed or read.
+        // Sign-in, sign-up, billing and onboarding are paused entirely (setReplayPaused). The
+        // console is not recorded: error messages can carry user data.
+        record_sessions_percent: replayPercent(),
+        record_console: false,
         // Keep the visitor's anonymous id in step with the server's idea of them.
         loaded: (m) => {
           m.register({ environment: ENVIRONMENT });
@@ -73,6 +85,18 @@ export function resetIdentity(): void {
   whenReady((m) => {
     m.reset();
     writeAnonId(m);
+  });
+}
+
+/** Pauses (or resumes) the replay recording, for screens that must never be recorded. Events are unaffected. */
+export function setReplayPaused(paused: boolean): void {
+  whenReady((m) => {
+    const sdk = m as unknown as { pause_session_recording?: () => void; resume_session_recording?: () => void };
+    try {
+      (paused ? sdk.pause_session_recording : sdk.resume_session_recording)?.call(m);
+    } catch {
+      // A replay that can't pause must not break the page.
+    }
   });
 }
 

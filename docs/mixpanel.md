@@ -36,3 +36,17 @@ Code: `src/lib/mixpanel/` (catalogue, browser and server wrappers), `src/compone
   mismatched host drops events silently. To use another region set `NEXT_PUBLIC_MIXPANEL_API_HOST` and `MIXPANEL_API_HOST`
   (the CSP allows all three hosts).
 - Set Lexicon descriptions for the nine events and an owner for the tracking plan.
+
+## Session Replay
+
+On from the browser SDK (`record_sessions_percent`, default 100, set `NEXT_PUBLIC_MIXPANEL_REPLAY_PERCENT` to sample fewer
+or 0 to switch it off).
+
+- **Private by default:** all text and every input are masked, images and video are blocked, and the console is not
+  recorded. A replay shows layout, scrolling and clicks, not what people typed or read. To show a public area's text, add
+  `record_unmask_text_selector` in `lib/mixpanel/client.ts`.
+- **Never recorded:** sign-in, sign-up, password reset, billing and onboarding are paused (`NO_REPLAY` in
+  `mixpanel-provider.tsx`).
+- Not recorded for visitors from the EU/EEA, UK and Switzerland (no consent prompt yet), like all other tracking.
+- The recorder loads from `cdn.mxpnl.com` the first time a session is sampled in (allowed in the CSP). Replays are kept 30 days.
+- Mixpanel's plan includes a monthly replay allowance; lower the percentage if it runs out.
