@@ -30,7 +30,7 @@ import {
 
 let client: Mixpanel.Mixpanel | null = null;
 function mixpanel(): Mixpanel.Mixpanel {
-  return (client ??= Mixpanel.init(MIXPANEL_TOKEN, { protocol: "https", host: process.env.MIXPANEL_API_HOST || "api.mixpanel.com" }));
+  return (client ??= Mixpanel.init(MIXPANEL_TOKEN, { protocol: "https", host: process.env.MIXPANEL_API_HOST || "api-eu.mixpanel.com" }));
 }
 
 function enabled(country?: string | null): boolean {

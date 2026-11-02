@@ -1,10 +1,15 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { usePathname } from "next/navigation";
 import { useEntitlement } from "@/components/entitlements/entitlement-provider";
 import { COUNTRY_COOKIE } from "@/lib/visitor";
 import { needsConsent } from "@/lib/mixpanel/events";
-import { bumpSessionNumber, identifyUser, initMixpanel, resetIdentity, syncAnonId } from "@/lib/mixpanel/client";
+import { bumpSessionNumber, identifyUser, initMixpanel, resetIdentity, setReplayPaused, syncAnonId } from "@/lib/mixpanel/client";
+
+/** Screens where nothing is recorded: sign-in and sign-up, password reset, billing and onboarding. */
+const NO_REPLAY = ["/account/login", "/account/sign-up", "/account/forgot-password", "/account/reset-password", "/account/billing", "/onboarding", "/admin"];
+const isNoReplay = (path: string) => NO_REPLAY.some((p) => path === p || path.startsWith(`${p}/`));
 
 function visitorCountry(): string | undefined {
   const m = document.cookie.match(new RegExp(`(?:^|; )${COUNTRY_COOKIE}=([A-Z]{2})`));
@@ -27,6 +32,8 @@ export function MixpanelProvider() {
   const started = useRef(false);
   const wasSignedIn = useRef(false);
   const country = useRef<string | undefined>(undefined);
+  const pathname = usePathname();
+  const paused = useRef(false);
 
   // Boot: once per page load.
   useEffect(() => {
@@ -47,6 +54,15 @@ export function MixpanelProvider() {
     const t = globalThis.setTimeout(boot, 1500);
     return () => globalThis.clearTimeout(t);
   }, []);
+
+  // Replay is paused on sensitive screens and resumed when the visitor leaves them.
+  useEffect(() => {
+    if (needsConsent(country.current)) return;
+    const sensitive = isNoReplay(pathname ?? "");
+    if (sensitive === paused.current) return;
+    paused.current = sensitive;
+    setReplayPaused(sensitive);
+  }, [pathname]);
 
   // Identity: whenever the account state is known or changes.
   useEffect(() => {
