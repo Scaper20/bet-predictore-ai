@@ -48,6 +48,10 @@ class FotMob:
     def team(self, team_id: int | str) -> dict:
         return get_json(NAME, f"{BASE}/teams", params={"id": int(team_id)}) or {}
 
+    def player(self, player_id: int | str) -> dict:
+        data = get_json(NAME, f"{BASE}/playerData", params={"id": int(player_id)}) or {}
+        return data.get("data", data) if isinstance(data, dict) else {}
+
 
 # ---------------------------------------------------------------------------
 # helpers
@@ -618,4 +622,89 @@ def parse_team(data: dict) -> dict | None:
         "transfers": transfers,
         "honours": honours,
         "warnings": [f"team: missing {p}" for p in check_shape(data, TEAM_PATHS)],
+    }
+
+
+# ---------------------------------------------------------------------------
+# player profile
+
+PLAYER_PATHS = ["id", "name", "playerInformation", "careerHistory"]
+
+
+def _date(v: Any) -> str | None:
+    t = parse_time((v or {}).get("utcTime") if isinstance(v, dict) else v)
+    return t.date().isoformat() if t else None
+
+
+def _career(entries: list, limit: int = 25) -> list:
+    out = []
+    for e in (entries or [])[:limit]:
+        team = text(e.get("team"))
+        if not team:
+            continue
+        out.append({
+            "team": team, "teamId": to_int(e.get("teamId")),
+            "start": text(e.get("startDate"), 10), "end": text(e.get("endDate"), 10),
+            "active": bool(e.get("active")), "apps": to_int(e.get("appearances")),
+            "goals": to_int(e.get("goals")), "assists": to_int(e.get("assists")),
+            "loan": text(e.get("transferType"), 20) == "loan" if e.get("transferType") else False,
+        })
+    return out
+
+
+def parse_player(data: dict) -> dict | None:
+    """A player's profile: position, physical, country, value, contract, club,
+    career (senior and national team), trophies and current injury."""
+    if not isinstance(data, dict) or to_int(data.get("id")) is None or not data.get("name"):
+        return None
+    info = {}
+    country_code = None
+    for item in data.get("playerInformation") or []:
+        key = str(item.get("translationKey") or item.get("title") or "")
+        info[key] = item.get("value") or {}
+        if key.startswith("country"):
+            country_code = text(item.get("countryCode"), 8)
+    pos = data.get("positionDescription") or {}
+    positions = pos.get("positions") or []
+    main = next((p for p in positions if p.get("isMainPosition")), positions[0] if positions else {})
+    others = [text(((p.get("strPosShort") or {}).get("label")), 8) for p in positions if p is not main]
+    team = data.get("primaryTeam") or {}
+    injury = data.get("injuryInformation")
+    career = ((data.get("careerHistory") or {}).get("careerItems")) or {}
+    trophies = []
+    for club in ((data.get("trophies") or {}).get("playerTrophies")) or []:
+        for t in club.get("tournaments") or []:
+            won = len(t.get("seasonsWon") or [])
+            if won:
+                trophies.append({"name": text(t.get("leagueName")), "team": text(club.get("teamName")),
+                                 "won": won, "latest": text((t.get("seasonsWon") or [None])[0], 12)})
+    trophies.sort(key=lambda t: -t["won"])
+    country = (info.get("country_sentencecase") or {}).get("fallback")
+    return {
+        "fotmob_id": int(data["id"]),
+        "name": text(data.get("name")),
+        "position_label": text(((main.get("strPos") or {}).get("label")) or ((pos.get("primaryPosition") or {}).get("label")), 40),
+        "position_short": text(((main.get("strPosShort") or {}).get("label")), 8),
+        "other_positions": [o for o in others if o][:6],
+        "shirt": to_int((info.get("shirt") or {}).get("numberValue")),
+        "height_cm": to_int((info.get("height_sentencecase") or {}).get("numberValue")),
+        "foot": text((info.get("preferred_foot") or {}).get("fallback"), 10),
+        "country": text(country, 60),
+        "country_code": country_code,
+        "birth_date": _date(data.get("birthDate")),
+        "market_value": to_int((info.get("transfer_value") or {}).get("numberValue")),
+        "contract_end": _date(data.get("contractEnd")),
+        "fotmob_team_id": to_int(team.get("teamId")),
+        "team_name": text(team.get("teamName")),
+        "on_loan": bool(team.get("onLoan")),
+        "injury": {
+            "name": text(injury.get("name"), 80),
+            "expectedReturn": text(((injury.get("expectedReturn") or {}).get("expectedReturnFallback")), 80),
+        } if isinstance(injury, dict) else None,
+        "career": {
+            "club": _career(((career.get("senior") or {}).get("teamEntries")) or []),
+            "national": _career(((career.get("national team") or {}).get("teamEntries")) or [], 6),
+        },
+        "trophies": trophies[:20],
+        "warnings": [f"player {data.get('id')}: missing {p}" for p in check_shape(data, PLAYER_PATHS)],
     }

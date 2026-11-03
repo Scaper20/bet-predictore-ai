@@ -72,6 +72,8 @@ def main(argv: list[str] | None = None) -> int:
         kwargs = {"seasons": a.seasons or 3, "limit": a.limit or 4000}
     elif a.job == "fotmob-upcoming":
         kwargs = {"hours": a.hours or 72}
+    elif a.job == "fotmob-players":
+        kwargs = {"limit": a.limit or 400}
     elif a.job == "fotmob-teams" and a.limit:
         kwargs = {"limit": a.limit}
 

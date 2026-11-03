@@ -292,3 +292,38 @@ def test_backfill_seasons_are_named_like_fotmob():
 def test_backfill_spends_one_budget_across_seasons(ctx):
     jobs.job_fotmob_backfill(ctx, seasons=1, limit=4)
     assert len(ctx.fake.match_calls) == 4
+
+
+# --- player profiles ---------------------------------------------------------
+
+
+def test_player_profile():
+    p = fm.parse_player(load("player_737066"))
+    assert p and p["fotmob_id"] == 737066 and p["name"] == "Erling Haaland"
+    assert p["position_short"] == "ST" and p["shirt"] == 9 and p["height_cm"] == 195
+    assert p["foot"] == "Left" and p["country"] == "Norway" and p["country_code"] == "NOR"
+    assert p["birth_date"] == "2000-07-21" and p["market_value"] > 0
+    assert p["fotmob_team_id"] == 8456 and p["team_name"] == "Manchester City"
+    assert p["career"]["club"][0]["team"] == "Manchester City"
+    assert any(t["name"] == "FA Cup" for t in p["trophies"])
+    assert not p["warnings"]
+    assert fm.parse_player({}) is None and fm.parse_player({"id": 1}) is None
+
+
+def test_player_profile_write_creates_the_player():
+    from betrix_ingest.fotmob_writer import write_player_profile
+
+    db = MemoryDb()
+    write_player_profile(db, fm.parse_player(load("player_737066")))
+    assert db.tables["players"][0]["id"] == player_uuid(737066)
+    row = db.tables["player_profiles"][0]
+    assert row["player_id"] == player_uuid(737066) and "warnings" not in row and "name" not in row
+
+
+def test_players_job_fetches_candidates(ctx):
+    calls = []
+    ctx.fake.player = lambda fid: calls.append(fid) or load("player_737066")
+    ctx.db.tables["_player_candidates"] = [737066, 737067]
+    jobs.job_fotmob_players(ctx, limit=5)
+    assert calls == [737066, 737067]
+    assert len(ctx.db.tables["player_profiles"]) == 1  # same response twice: one player

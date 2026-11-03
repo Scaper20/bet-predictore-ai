@@ -18,6 +18,7 @@ on:
     - cron: "5 0-23/3 * * *"     # FotMob: next 72 hours, who is out and lineups as they stand (snapshotted)
     - cron: "50 10-21 * * *"     # FotMob: confirmed lineups, published about an hour before kickoff
     - cron: "40 3 * * 3"         # FotMob: club profiles (squad, coach, venue, transfers), weekly
+    - cron: "15 2 * * *"         # FotMob: player profiles, stalest 400 a day (everyone weekly)
   workflow_dispatch:
     inputs:
       job:
@@ -42,6 +43,7 @@ on:
           - fotmob-backfill
           - fotmob-upcoming
           - fotmob-teams
+          - fotmob-players
       args:
         description: "Extra arguments, e.g. --league npfl --days 30 --full, or --league premier-league --season 2023/2024 --limit 350"
         required: false
@@ -54,8 +56,9 @@ concurrency:
 jobs:
   ingest:
     runs-on: ubuntu-latest
-    # The FotMob history backfill is one long, polite crawl (~4 s a game); everything else fits in 30.
-    timeout-minutes: ${{ inputs.job == 'fotmob-backfill' && 350 || 30 }}
+    # The FotMob history backfill and a first fill of player profiles are long, polite crawls
+    # (~4 s a request) when run by hand; everything scheduled fits in 30.
+    timeout-minutes: ${{ (inputs.job == 'fotmob-backfill' || inputs.job == 'fotmob-players') && 350 || 30 }}
     defaults:
       run:
         working-directory: ingestion
@@ -105,6 +108,7 @@ jobs:
             "5 0-23/3 * * *")   echo "cmd=fotmob-upcoming --hours 72" >> "$GITHUB_OUTPUT" ;;
             "50 10-21 * * *")   echo "cmd=fotmob-upcoming --hours 2" >> "$GITHUB_OUTPUT" ;;
             "40 3 * * 3")       echo "cmd=fotmob-teams" >> "$GITHUB_OUTPUT" ;;
+            "15 2 * * *")       echo "cmd=fotmob-players --limit 400" >> "$GITHUB_OUTPUT" ;;
             "")                 echo "cmd=$INPUT_JOB $INPUT_ARGS" >> "$GITHUB_OUTPUT" ;;
             *) echo "unknown schedule: $SCHEDULE"; exit 1 ;;
           esac

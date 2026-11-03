@@ -737,6 +737,39 @@ def job_fotmob_teams(ctx: Context, limit: int = 400) -> None:
             r.rows_written += write_team_profile(ctx.db, team_id, profile)
 
 
+
+def job_fotmob_players(ctx: Context, limit: int = 400, stale_days: int = 7, min_apps: int = 5) -> None:
+    """Profiles for regulars of the last two seasons and every squad member,
+    stalest first; ``limit`` a run, so a daily run refreshes everyone weekly."""
+    from .fotmob_writer import write_player_profile
+    from .sources.fotmob import parse_player
+
+    fm = _fotmob(ctx, "fotmob-players")
+    if not fm:
+        return
+    with run(ctx.db, ctx.switch, "fotmob-players", "fotmob") as r:
+        if r.skipped:
+            return
+        since = datetime(season_start_year() - 1, 7, 1, tzinfo=timezone.utc).isoformat()
+        rows = ctx.db.rpc("fotmob_player_candidates", {
+            "p_since": since, "p_min_apps": min_apps, "p_stale_days": stale_days, "p_limit": limit,
+        }) or []
+        ids = [int(x["fotmob_id"]) for x in rows if isinstance(x, dict) and x.get("fotmob_id") is not None]
+        r.rows_in = len(ids)
+        for fid in ids:
+            try:
+                profile = parse_player(fm.player(fid))
+            except SourceError as err:
+                r.warn(f"player {fid}: {err}")
+                continue
+            if not profile:
+                r.warn(f"player {fid}: unreadable response")
+                continue
+            for w in profile.get("warnings", [])[:1]:
+                r.warn(w)
+            r.rows_written += write_player_profile(ctx.db, profile)
+
+
 JOBS = {
     "sync": job_sync,
     "fixtures": job_fixtures,
@@ -755,6 +788,7 @@ JOBS = {
     "fotmob-backfill": job_fotmob_backfill,
     "fotmob-upcoming": job_fotmob_upcoming,
     "fotmob-teams": job_fotmob_teams,
+    "fotmob-players": job_fotmob_players,
     # The last step of sync, on its own: rerun after editing aliases.json.
     "link-history": link_history,
 }

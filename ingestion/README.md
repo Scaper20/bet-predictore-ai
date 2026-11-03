@@ -160,6 +160,7 @@ python -m betrix_ingest <job> [--league CODE ...] [--dry-run] [-v]
 | `fotmob-backfill [--seasons 3] [--limit 4000]` | history: every FotMob league, current season and N before it, newest first; resumable (this job alone may run up to ~6 hours) | manual, rerun until done |
 | `fotmob-upcoming [--hours 72]` | games in the next N hours: lineups as they stand, who is out, snapshots | every 3 hours (72 h); hourly :50 10–21 (2 h, for confirmed lineups) |
 | `fotmob-teams` | club profiles for every club linked so far | Wednesdays 03:40 |
+| `fotmob-players [--limit 400]` | player profiles (position, shirt, height, foot, country, value, contract, career, trophies, injury) for regulars of the last two seasons and every squad member, stalest first; a first fill by hand with `--limit 3000` may run up to ~6 hours | 02:15 daily |
 
 Backfilling FotMob history: from the Actions tab run `fotmob-backfill`
 (`--seasons 3 --limit 4000`); rerun it until every `fotmob-matches` row it

@@ -282,3 +282,14 @@ def details_state(db: Database, match_ids: list[str]) -> dict:
         for r in db.select("match_details", {"select": "match_id,finished", "match_id": f"in.({','.join(chunk)})"}):
             out[str(r["match_id"])] = bool(r.get("finished"))
     return out
+
+
+def write_player_profile(db: Database, profile: dict) -> int:
+    """The player's row (created if we never saw them play) and their profile."""
+    pid = player_uuid(profile["fotmob_id"])
+    db.upsert("players", [{
+        "id": pid, "fotmob_id": profile["fotmob_id"], "name": profile["name"],
+        "fotmob_team_id": profile.get("fotmob_team_id"), "updated_at": _now(),
+    }], on_conflict="fotmob_id")
+    row = {k: v for k, v in profile.items() if k not in {"warnings", "name"}}
+    return 1 + db.upsert("player_profiles", [{"player_id": pid, **row, "fetched_at": _now()}], on_conflict="player_id")
