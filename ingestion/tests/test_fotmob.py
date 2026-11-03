@@ -134,6 +134,8 @@ def test_name_score():
     canon = canonical_keys(Resolver(MemoryDb()))
     assert name_score("Inter", "Inter Milan", canon) == 3
     assert name_score("FC København", "FC Copenhagen", canon) == 3
+    assert name_score("Athletic Club", "Athletic Bilbao", canon) == 3
+    assert name_score("Hamburger SV", "Hamburg", canon) == 3
 
 
 def _match_row(i, kickoff, home, away, hid, aid, **extra):
