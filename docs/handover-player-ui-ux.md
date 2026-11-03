@@ -41,7 +41,7 @@ Nothing here has been looked at on a real phone by the author of this note. Ever
 
 ### Design system
 
-Tokens and utilities already in use: `card`, `border-line`, `bg-surface`, `bg-surface-2`, `text-ink-muted`, `text-brand`, `font-display`, `tnum`, `stagger`, `no-scrollbar`. Palette: Ink / Pitch / Steel / Chalk / Volt / Signal. Fonts: Unbounded (display), Space Grotesk (body), IBM Plex Mono (numbers). Follow `docs/` and `video/DESIGN.md` for brand rules. House copy rules: no promise of winning, no bookmaker names in marketing copy (the product UI does say "SportyBet code" on props, which is existing behaviour; confirm with the founder before spreading it to new surfaces), 18+.
+Tokens and utilities already in use: `card`, `border-line`, `bg-surface`, `bg-surface-2`, `text-ink-muted`, `text-brand`, `font-display`, `tnum`, `stagger`, `no-scrollbar`. Palette: Ink / Pitch / Steel / Chalk / Volt / Signal. Fonts: Unbounded (display), Space Grotesk (body), IBM Plex Mono (numbers). Follow `docs/` and `video/DESIGN.md` for brand rules. House copy rules: no promise of winning, no bookmaker names in marketing copy (the product UI says "SportyBet code" on props and the founder has decided to keep that wording), 18+.
 
 ---
 
@@ -82,7 +82,7 @@ Tokens and utilities already in use: `card`, `border-line`, `bg-surface`, `bg-su
 - Every player has `players.fotmob_id`, so an image can be derived from the id without a new lookup.
 - `img-src` in `next.config.ts` already allows any `https:` host, so no CSP change is needed for hotlinking. `Crest` already renders remote images (team logos), so there is a pattern to copy.
 
-### The licensing question comes first (needs a decision, not code)
+### Decision (founder, 3 Nov): option B, falling back to option A
 
 Our FotMob feed is an unofficial one. `supabase/migrations/0091` and `0093` already lock FotMob data to service-role reads "because it is an unofficial feed of licensed data". Player photos are the most commonly enforced asset. Options:
 
@@ -93,7 +93,14 @@ Our FotMob feed is an unofficial one. `supabase/migrations/0091` and `0093` alre
 | C. A licensed source (API-Football, Sportmonks, Sportradar imagery, or club-supplied) | Subscription | Lowest risk. Check which of these we already pay for or can add to the budget. |
 | D. Initials only, plus a stylised silhouette by position | None | None. Weakest visually. |
 
-**My recommendation:** ship D polished now (see below), take the licensing decision with the founder, and build the avatar component so a source can be swapped without touching pages. Do not launch with option A in production without that decision.
+**Decision:** use **option B** (download and re-host in Supabase Storage). If that does not work, fall back to **option A** (hotlink). Initials (option D) stay as the permanent last fallback, so a missing or failed photo never shows a broken image.
+
+What "does not work" means, so the CTO can call it without a meeting: the image source returns errors or blocks our server for a meaningful share of requests, a sample of downloaded files is not a usable photo (placeholder silhouettes, wrong person, under 100px), or storage and bandwidth cost more than expected. Test first on 50 well-known players from the top leagues and record the result in this file.
+
+Notes on the decision:
+- The legal exposure for B and A is the one described in the table. The founder has accepted it; it is not a reason to skip the safeguards below.
+- Build the avatar component and the fill job so the source is swappable. Moving from B to A, or to a licensed source later, must not touch any page.
+- A needs the URL pattern verified from a machine that can reach the CDN (the sandbox cannot). Treat the pattern in the table as unconfirmed until then.
 
 ### Build plan (works for any source)
 
@@ -108,7 +115,8 @@ Our FotMob feed is an unofficial one. `supabase/migrations/0091` and `0093` alre
 - A missing or broken photo never shows a broken-image icon; it shows initials.
 - No layout shift when a photo loads (reserved box).
 - Prop card list of 40 cards loads no more than the visible photos (lazy).
-- The licensing decision is written down in this file before any photo ships.
+- The B-then-A decision and the test result on the 50-player sample are written down in this file before any photo ships.
+- Stored photos are served from our own Storage bucket (B) with long cache headers; the A path is a config switch, not a code change.
 
 ---
 
@@ -163,7 +171,7 @@ Severity is my judgement. "Checked" means I confirmed it in code or in the datab
 | 7 | Migrations | Numbering was duplicated (two 0091, two 0092). Fixed: ours are now 0097 and 0098. Rule going forward: take the next free number at merge time; two parallel branches collide. | Fixed |
 | 8 | Data quality | Docs list known gaps: elite finishers under-projected for goals; passes can disagree widely with SportyBet in lopsided games. Check the shadow record per player before the switch goes on. | Documented in `docs/player-props.md` |
 | 9 | Pre-commit hook | One commit attempt failed the pre-commit hook and the retry passed with nothing changed. Possibly a flaky test or a timing issue under load. Worth running the suite a few times in CI to find it. | Suspected |
-| 10 | Copy | Props cards show "SportyBet code" (a bookmaker name in product UI). Elsewhere our rule is "booking code", no bookmaker names in marketing. Confirm the policy covers product UI. | Needs a decision |
+| 10 | Copy | Props cards show "SportyBet code" (a bookmaker name in product UI). | Decided: leave as is |
 
 Typecheck (`npx tsc --noEmit`) and ESLint on the player, team and props files are clean as of this note, and the full suite passed (1,202 tests).
 
@@ -171,7 +179,7 @@ Typecheck (`npx tsc --noEmit`) and ESLint on the player, team and props files ar
 
 ## 5. Suggested order of work
 
-1. Decide the photo source (task two, licensing). One conversation, blocks nothing else.
+1. Photo source is decided (option B, fallback A). Run the 50-player test first; it tells you whether B holds.
 2. Spec the shared header and tab structure (task one) while that is decided.
 3. Quick wins from the bug list: always show the Props tab, 44px chips, repair the migration history.
 4. Entry points and flow (task three), then events.
