@@ -192,7 +192,7 @@ function RatingSide({ team, rating, align = "left" }: { team: Match["home"]; rat
   );
 }
 
-function CompareRow({
+export function CompareRow({
   label,
   h,
   a,

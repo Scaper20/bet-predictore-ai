@@ -574,6 +574,169 @@ def job_prune(ctx: Context) -> None:
             r.rows_written = ctx.db.rpc("prune_raw_payloads", {}) or 0
 
 
+# ---------------------------------------------------------------------------
+# FotMob: match details, pre-match snapshots and team profiles (migration 0091)
+
+
+def _fotmob(ctx: Context, job: str):
+    from .sources.fotmob import FotMob
+
+    return _source_or_skip(ctx, job, "fotmob", lambda: FotMob(ctx.db))
+
+
+def _fotmob_leagues(ctx: Context) -> list[League]:
+    return [lg for lg in ctx.ordered() if lg.ids.get("fotMob")]
+
+
+def _fotmob_fixtures(fm, lg: League, season: str | None, r) -> list:
+    from .sources.fotmob import check_shape, parse_league_fixtures
+
+    data = fm.league(lg.ids["fotMob"], season)
+    for path in check_shape(data, ["details.id", "fixtures.allMatches"]):
+        r.warn(f"league feed: missing {path}")
+    r.meta["season"] = (data.get("details") or {}).get("selectedSeason") or season
+    return parse_league_fixtures(data)
+
+
+def job_fotmob_link(ctx: Context, season: str | None = None) -> None:
+    """Link a season of FotMob games to our matches (no details fetched)."""
+    from .fotmob_writer import link_fixtures
+
+    fm = _fotmob(ctx, "fotmob-link")
+    if not fm:
+        return
+    for lg in _fotmob_leagues(ctx):
+        with run(ctx.db, ctx.switch, "fotmob-link", "fotmob", lg.code) as r:
+            if r.skipped:
+                continue
+            link_fixtures(ctx.db, ctx.resolver, lg, _fotmob_fixtures(fm, lg, season, r), r)
+
+
+def job_fotmob_matches(ctx: Context, season: str | None = None, limit: int = 300, refresh: bool = False) -> int:
+    """Details for finished games we do not hold yet: the backfill and the nightly top-up.
+
+    ``limit`` caps detail requests per run (one request each, ~4 s apart), so a
+    run fits GitHub's 30 minutes; rerun to continue where it stopped.
+    """
+    from .fotmob_writer import details_state, link_fixtures, write_match
+    from .sources.fotmob import parse_match
+
+    fm = _fotmob(ctx, "fotmob-matches")
+    if not fm:
+        return 0
+    budget = limit
+    for lg in _fotmob_leagues(ctx):
+        if budget <= 0:
+            break
+        with run(ctx.db, ctx.switch, "fotmob-matches", "fotmob", lg.code) as r:
+            if r.skipped:
+                continue
+            fixtures = _fotmob_fixtures(fm, lg, season, r)
+            linked = link_fixtures(ctx.db, ctx.resolver, lg, fixtures, r)
+            done = details_state(ctx.db, [v["match_id"] for v in linked.values()])
+            todo = [f for f in sorted(fixtures, key=lambda f: f.kickoff)
+                    if f.finished and f.fotmob_id in linked
+                    and (refresh or not done.get(linked[f.fotmob_id]["match_id"]))]
+            r.meta["todo"] = len(todo)
+            for f in todo[:budget]:
+                budget -= 1
+                try:
+                    bundle = parse_match(fm.match(f.fotmob_id))
+                except SourceError as err:
+                    r.warn(f"match {f.fotmob_id}: {err}")
+                    continue
+                if not bundle:
+                    r.warn(f"match {f.fotmob_id}: unreadable response")
+                    continue
+                for w in bundle.warnings[:3]:
+                    r.warn(w)
+                r.rows_written += write_match(ctx.db, linked[f.fotmob_id]["match_id"], bundle)
+                r.meta["fetched"] = r.meta.get("fetched", 0) + 1
+            r.meta["remaining"] = max(0, len(todo) - r.meta.get("fetched", 0))
+    return limit - budget
+
+
+def fotmob_seasons(back: int, day: date | None = None) -> list[str | None]:
+    """The current season (None: FotMob's default) and the ``back`` before it, as FotMob names them."""
+    y = season_start_year(day)
+    return [None] + [f"{y - i}/{y - i + 1}" for i in range(1, back + 1)]
+
+
+def job_fotmob_backfill(ctx: Context, seasons: int = 3, limit: int = 4000) -> None:
+    """History: every league, current season and ``seasons`` before it, newest
+    first, up to ``limit`` games a run. Resumable: rerun until nothing is left."""
+    budget = limit
+    for season in fotmob_seasons(seasons):
+        if budget <= 0:
+            break
+        budget -= job_fotmob_matches(ctx, season=season, limit=budget)
+
+
+def job_fotmob_upcoming(ctx: Context, hours: int = 72) -> None:
+    """Games kicking off in the next ``hours``: lineups as they stand, who is out,
+    and a snapshot of both (they cannot be fetched after the day)."""
+    from .fotmob_writer import link_fixtures, snapshot_prematch, write_match
+    from .sources.fotmob import parse_match
+
+    fm = _fotmob(ctx, "fotmob-upcoming")
+    if not fm:
+        return
+    now = datetime.now(timezone.utc)
+    for lg in _fotmob_leagues(ctx):
+        with run(ctx.db, ctx.switch, "fotmob-upcoming", "fotmob", lg.code) as r:
+            if r.skipped:
+                continue
+            fixtures = _fotmob_fixtures(fm, lg, None, r)
+            soon = [f for f in fixtures
+                    if not f.started and not f.cancelled and now <= f.kickoff <= now + timedelta(hours=hours)]
+            if not soon:
+                continue
+            linked = link_fixtures(ctx.db, ctx.resolver, lg, soon, r)
+            r.meta["upcoming"] = len(soon)
+            for f in sorted(soon, key=lambda f: f.kickoff):
+                if f.fotmob_id not in linked:
+                    continue
+                try:
+                    bundle = parse_match(fm.match(f.fotmob_id))
+                except SourceError as err:
+                    r.warn(f"match {f.fotmob_id}: {err}")
+                    continue
+                if not bundle:
+                    r.warn(f"match {f.fotmob_id}: unreadable response")
+                    continue
+                match_id = linked[f.fotmob_id]["match_id"]
+                r.rows_written += write_match(ctx.db, match_id, bundle)
+                r.rows_written += snapshot_prematch(ctx.db, match_id, bundle)
+
+
+def job_fotmob_teams(ctx: Context, limit: int = 400) -> None:
+    """Profiles (coach, venue, squad, transfers, honours) for every club linked so far."""
+    from .fotmob_writer import ID_SCOPE, known_fotmob_teams, write_team_profile
+    from .sources.fotmob import parse_team
+
+    fm = _fotmob(ctx, "fotmob-teams")
+    if not fm:
+        return
+    with run(ctx.db, ctx.switch, "fotmob-teams", "fotmob") as r:
+        if r.skipped:
+            return
+        teams = known_fotmob_teams(ctx.resolver)
+        r.rows_in = len(teams)
+        r.meta["alias_scope"] = ID_SCOPE
+        for fotmob_id, team_id in list(teams.items())[:limit]:
+            try:
+                profile = parse_team(fm.team(fotmob_id))
+            except SourceError as err:
+                r.warn(f"team {fotmob_id}: {err}")
+                continue
+            if not profile:
+                r.warn(f"team {fotmob_id}: unreadable response")
+                continue
+            for w in profile.get("warnings", [])[:2]:
+                r.warn(w)
+            r.rows_written += write_team_profile(ctx.db, team_id, profile)
+
+
 JOBS = {
     "sync": job_sync,
     "fixtures": job_fixtures,
@@ -587,6 +750,11 @@ JOBS = {
     "backfill-international-results": job_backfill_international_results,
     "backfill-thesportsdb": job_backfill_thesportsdb,
     "prune": job_prune,
+    "fotmob-link": job_fotmob_link,
+    "fotmob-matches": job_fotmob_matches,
+    "fotmob-backfill": job_fotmob_backfill,
+    "fotmob-upcoming": job_fotmob_upcoming,
+    "fotmob-teams": job_fotmob_teams,
     # The last step of sync, on its own: rerun after editing aliases.json.
     "link-history": link_history,
 }

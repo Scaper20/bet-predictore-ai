@@ -1,7 +1,8 @@
 import type { MetadataRoute } from "next";
 import { LEAGUES } from "@/lib/leagues";
 import { SITE_URL as SITE } from "@/lib/site-url";
-import { matchPath, sportPath, scoresPath } from "@/lib/routes";
+import { matchPath, sportPath, scoresPath, teamPath } from "@/lib/routes";
+import { leagueTeams, type TeamRef } from "@/lib/stats/queries";
 import { upcomingFeed } from "@/lib/service";
 import { publicLiveOffers } from "@/lib/offers-server";
 import { offerPath } from "@/lib/offers";
@@ -53,11 +54,23 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE}/responsible-use`, changeFrequency: "monthly", priority: 0.5 },
   ];
 
-  const [leagueFeed, matchFeed, liveOffers] = await Promise.all([
+  // Club pages: only clubs in the leagues with full match details (lineups,
+  // squads, player stats), which are the pages with something to say. Bounded:
+  // eight competitions, about two hundred clubs.
+  const clubLeagues = LEAGUES.filter((l) => l.ids.fotMob);
+  const [leagueFeed, matchFeed, liveOffers, clubLists] = await Promise.all([
     upcomingFeed(FIXTURES_WINDOW_DAYS).catch(() => null),
     upcomingFeed(MATCH_WINDOW_DAYS).catch(() => null),
     publicLiveOffers().catch(() => []),
+    Promise.all(clubLeagues.map((l) => leagueTeams(l.code).catch(() => [] as TeamRef[]))),
   ]);
+  const clubs = new Map<string, TeamRef>();
+  for (const list of clubLists) for (const t of list) clubs.set(t.id, t);
+  const teams: MetadataRoute.Sitemap = [...clubs.values()].map((t) => ({
+    url: `${SITE}${teamPath(t.id, t.name)}`,
+    changeFrequency: "daily" as const,
+    priority: 0.6,
+  }));
   // Public offers (the day pass) only while they run; a closed one drops out within the hour.
   const offers: MetadataRoute.Sitemap = liveOffers.map((o) => ({
     url: `${SITE}${offerPath(o.slug)}`,
@@ -120,5 +133,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   // Next writes <loc> verbatim, and the scores page's URLs carry two query
   // parameters: a bare & would make the whole sitemap invalid XML.
-  return [...core, ...offers, ...leagues, ...matches].map((e) => ({ ...e, url: e.url.replace(/&/g, "&amp;") }));
+  return [...core, ...offers, ...leagues, ...teams, ...matches].map((e) => ({ ...e, url: e.url.replace(/&/g, "&amp;") }));
 }

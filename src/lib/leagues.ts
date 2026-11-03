@@ -100,6 +100,12 @@ export interface LeagueDef {
     sportyBet?: string;
     /** ESPN league slug ("nga.1"), checked against site.api.espn.com. Read by ingestion/. */
     espn?: string;
+    /**
+     * FotMob league id (www.fotmob.com/api/data/leagues?id=N): lineups,
+     * player stats, shots and events for ingestion/'s fotmob jobs. Read off
+     * the live feed (details.name), never guessed.
+     */
+    fotMob?: number;
   };
   /**
    * Where a COMPLETE season history comes from.
@@ -157,7 +163,7 @@ export const LEAGUES: LeagueDef[] = [
     country: "England",
     flag: "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
     rank: 1,
-    ids: { footballData: "PL", theSportsDb: "4328", apiFootball: 39, sportyBet: "sr:tournament:17", espn: "eng.1" },
+    ids: { footballData: "PL", theSportsDb: "4328", apiFootball: 39, sportyBet: "sr:tournament:17", espn: "eng.1", fotMob: 47 },
     archive: { footballDataUk: "E0" },
   },
   {
@@ -169,7 +175,7 @@ export const LEAGUES: LeagueDef[] = [
     flag: "🇪🇺",
     rank: 2,
     cupPool: UEFA_CUPS,
-    ids: { footballData: "CL", theSportsDb: "4480", apiFootball: 2, sportyBet: "sr:tournament:7", espn: "uefa.champions" },
+    ids: { footballData: "CL", theSportsDb: "4480", apiFootball: 2, sportyBet: "sr:tournament:7", espn: "uefa.champions", fotMob: 42 },
     archive: { sportApi: 7, openfootball: { repo: "champions-league", glob: "*/cl.txt" } },
   },
   {
@@ -187,7 +193,7 @@ export const LEAGUES: LeagueDef[] = [
     // service: a wrong one fails silently. The SportyBet ids here and on the
     // Conference League were read off SportyBet's own tournament list
     // (factsCenter/sportList, "International Clubs").
-    ids: { theSportsDb: "4481", espn: "uefa.europa", sportyBet: "sr:tournament:679" },
+    ids: { theSportsDb: "4481", espn: "uefa.europa", sportyBet: "sr:tournament:679", fotMob: 73 },
     archive: { openfootball: { repo: "champions-league", glob: "*/el.txt" } },
   },
   {
@@ -199,7 +205,7 @@ export const LEAGUES: LeagueDef[] = [
     flag: "🇪🇺",
     rank: 13,
     cupPool: UEFA_CUPS,
-    ids: { theSportsDb: "5071", espn: "uefa.europa.conf", sportyBet: "sr:tournament:34480" },
+    ids: { theSportsDb: "5071", espn: "uefa.europa.conf", sportyBet: "sr:tournament:34480", fotMob: 10216 },
     archive: { openfootball: { repo: "champions-league", glob: "*/conf.txt" } },
   },
   {
@@ -235,7 +241,7 @@ export const LEAGUES: LeagueDef[] = [
     country: "Spain",
     flag: "🇪🇸",
     rank: 7,
-    ids: { footballData: "PD", theSportsDb: "4335", apiFootball: 140, sportyBet: "sr:tournament:8", espn: "esp.1" },
+    ids: { footballData: "PD", theSportsDb: "4335", apiFootball: 140, sportyBet: "sr:tournament:8", espn: "esp.1", fotMob: 87 },
     archive: { footballDataUk: "SP1" },
   },
   {
@@ -246,7 +252,7 @@ export const LEAGUES: LeagueDef[] = [
     country: "Italy",
     flag: "🇮🇹",
     rank: 8,
-    ids: { footballData: "SA", theSportsDb: "4332", apiFootball: 135, sportyBet: "sr:tournament:23", espn: "ita.1" },
+    ids: { footballData: "SA", theSportsDb: "4332", apiFootball: 135, sportyBet: "sr:tournament:23", espn: "ita.1", fotMob: 55 },
     archive: { footballDataUk: "I1" },
   },
   {
@@ -257,7 +263,7 @@ export const LEAGUES: LeagueDef[] = [
     country: "Germany",
     flag: "🇩🇪",
     rank: 9,
-    ids: { footballData: "BL1", theSportsDb: "4331", apiFootball: 78, sportyBet: "sr:tournament:35", espn: "ger.1" },
+    ids: { footballData: "BL1", theSportsDb: "4331", apiFootball: 78, sportyBet: "sr:tournament:35", espn: "ger.1", fotMob: 54 },
     archive: { footballDataUk: "D1" },
   },
   {
@@ -268,7 +274,7 @@ export const LEAGUES: LeagueDef[] = [
     country: "France",
     flag: "🇫🇷",
     rank: 10,
-    ids: { footballData: "FL1", theSportsDb: "4334", apiFootball: 61, sportyBet: "sr:tournament:34", espn: "fra.1" },
+    ids: { footballData: "FL1", theSportsDb: "4334", apiFootball: 61, sportyBet: "sr:tournament:34", espn: "fra.1", fotMob: 53 },
     archive: { footballDataUk: "F1" },
   },
   {

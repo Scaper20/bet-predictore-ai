@@ -27,11 +27,15 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--full", action="store_true", help="elo: write the whole history, not just recent days")
     p.add_argument("--window-days", type=int,
                    help="elo: days of ratings to write (default 14); 400 fills the Ratings page for a new league")
-    p.add_argument("--seasons", type=int, help="backfill-football-data-uk (default 25) / backfill-thesportsdb (default 10)")
+    p.add_argument("--seasons", type=int, help="backfill-football-data-uk (default 25) / backfill-thesportsdb (default 10) / fotmob-backfill (default 3)")
     p.add_argument("--odds-seasons", type=int,
                    help="backfill-football-data-uk: seasons of opening/closing odds to keep (default 10)")
     p.add_argument("--since", type=date.fromisoformat,
                    help="backfill-clubelo / backfill-international-results: first date (YYYY-MM-DD)")
+    p.add_argument("--season", help="fotmob-link / fotmob-matches: FotMob season, e.g. 2023/2024 (default current)")
+    p.add_argument("--limit", type=int, help="fotmob-matches / fotmob-teams: most detail requests this run")
+    p.add_argument("--refresh", action="store_true", help="fotmob-matches: refetch games already held")
+    p.add_argument("--hours", type=int, help="fotmob-upcoming: look this many hours ahead (default 72)")
     p.add_argument("--dry-run", action="store_true", help="fetch and transform, write to memory only")
     p.add_argument("-v", "--verbose", action="store_true")
     a = p.parse_args(argv)
@@ -59,6 +63,17 @@ def main(argv: list[str] | None = None) -> int:
             kwargs["odds_seasons"] = a.odds_seasons
     elif a.job in {"backfill-clubelo", "backfill-international-results"} and a.since:
         kwargs = {"since": a.since}
+
+    elif a.job == "fotmob-link":
+        kwargs = {"season": a.season}
+    elif a.job == "fotmob-matches":
+        kwargs = {"season": a.season, "limit": a.limit or 300, "refresh": a.refresh}
+    elif a.job == "fotmob-backfill":
+        kwargs = {"seasons": a.seasons or 3, "limit": a.limit or 4000}
+    elif a.job == "fotmob-upcoming":
+        kwargs = {"hours": a.hours or 72}
+    elif a.job == "fotmob-teams" and a.limit:
+        kwargs = {"limit": a.limit}
 
     JOBS[a.job](ctx, **kwargs)
 

@@ -27,11 +27,34 @@ SportyBet, Odds API ─▶ /api/cron/odds-snapshot (pg_cron, hourly) ──▶ o
 | openfootball | CC0 files (git clone) | History: NPFL 2009–2026, CAF Champions League, UEFA Champions League, World Cup, Euros. |
 | International results ([martj42](https://github.com/martj42/international_results)) | CC0 CSV | Every men's international since 1990 for KiqStat's international competitions (≈23,000 games, ≈10,800 friendlies): World Cup qualifiers split by confederation, AFCON + qualifiers, Euro + qualifiers, Nations League, Copa América, Gold Cup, World Cup. Scores include extra time. |
 | ClubElo | `soccerdata` | Daily Elo for European and South American clubs. No African clubs, so KiqStat computes its own Elo for every league (`elo` job). |
+| FotMob | JSON the site itself reads (`/api/data/...`), no key | Top five leagues, UCL, UEL, UECL: lineups, every player stat, shots with xG, events, team stats, club profiles, and who is out before kickoff (migration 0091). Linked onto existing matches only; never creates a match or a club, never trusted for scores. See below. |
 
 Checked and not used: **Sofascore** (403 from GitHub's runners on every
-request), **FotMob** (removed from soccerdata after 1.8.3; its API now returns a
-web page), **Hudl/StatsBomb open data** (research event data for a few seasons;
-its terms require their logo).
+request), **FotMob through soccerdata** (removed after 1.8.3; the
+`fotmob` source above reads FotMob's own JSON instead), **Hudl/StatsBomb open
+data** (research event data for a few seasons; its terms require their logo).
+
+### FotMob, and what to keep in mind
+
+- **Rights.** FotMob is an unofficial feed of data it licenses (Opta ids appear
+  in the payloads) and its terms do not allow scraping. The tables it fills are
+  service-role only (no Data API grants); pages read one match or one club at a
+  time through `match_details_bundle`, `team_fixtures`, `team_profile` and
+  `team_season_leaders`, and show facts and our own analysis, never a copy of
+  the feed. Switch it off on the Data health page (`ingest_sources.enabled`)
+  and hide every section it feeds with the `fotmob_ui` switch.
+- **Linking.** A FotMob game is matched to the one existing row in its
+  competition, within a day, whose two clubs both match (FotMob team ids once
+  learned, else names, else `aliases.json`). Ambiguous games stay unlinked and
+  are reported as a warning; nothing is guessed.
+- **Point in time.** Lineups, stats and shots are facts of the game. Who was
+  *out* is not: on an old game FotMob shows today's injuries, so unavailable
+  players are only stored for games not yet started, and snapshotted daily
+  (`availability_snapshots`, `prematch_lineup_snapshots`). Those snapshots
+  cannot be backfilled; they exist from the day this job first ran.
+- **Depth.** Player stats from 2016/17, shot xG from 2020/21, lineups further
+  back. A stat FotMob omits for a player who played is a zero (it lists what
+  happened): player shots add up to the team's shots.
 
 ## Rules every job follows
 
@@ -132,6 +155,16 @@ python -m betrix_ingest <job> [--league CODE ...] [--dry-run] [-v]
 | `backfill-international-results [--since 1990-01-01]` | internationals for every international competition, friendlies included | manual once; weekly (last two years) Tuesdays 05:20 |
 | `backfill-clubelo [--since 2016-07-01]` | ClubElo history for tracked clubs | manual, once |
 | `prune` | expire old raw payloads (also runs daily in pg_cron) | — |
+| `fotmob-link [--season 2023/2024]` | link a season of FotMob games onto our matches, nothing else | manual |
+| `fotmob-matches [--season S] [--limit 300] [--refresh]` | details for finished games not yet held; rerun to continue a backfill (about 4 s a game, so 350 fit in one 30-minute run) | 01:25, 10:25 |
+| `fotmob-backfill [--seasons 3] [--limit 4000]` | history: every FotMob league, current season and N before it, newest first; resumable (this job alone may run up to ~6 hours) | manual, rerun until done |
+| `fotmob-upcoming [--hours 72]` | games in the next N hours: lineups as they stand, who is out, snapshots | every 3 hours (72 h); hourly :50 10–21 (2 h, for confirmed lineups) |
+| `fotmob-teams` | club profiles for every club linked so far | Wednesdays 03:40 |
+
+Backfilling FotMob history: from the Actions tab run `fotmob-backfill`
+(`--seasons 3 --limit 4000`); rerun it until every `fotmob-matches` row it
+records shows `remaining` 0. One league and season alone:
+`fotmob-matches --league premier-league --season 2023/2024 --limit 350`.
 
 `--dry-run` fetches and transforms for real but writes to memory and prints
 one line per unit, which is the quickest way to check a source by hand.
