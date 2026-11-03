@@ -57,7 +57,7 @@ Written from `scripts/props-lab.ts` (walk-forward) on 3 November 2026. Inputs: `
 | Saves | 365 | 20 | 10 | 0 | 13.5 / Poisson / Poisson / Poisson | 1.02 |
 ## What it means, and what it does not
 
-- Every market clearly beats a plain recent average and is well calibrated from 70% up. Above 90% every market runs one to two points overconfident, so published picks are capped at 88% (`src/lib/model/prop-picks.ts`: floor 72%, cap 88%, minimum price 1.25, bookmaker no more than 10 points below us).
+- Every market clearly beats a plain recent average and is well calibrated from 70% up. Above 90% every market runs one to two points overconfident, so published picks are capped at 88% (`src/lib/model/prop-picks.ts`: floor 72%, cap 88%, minimum price 1.18 (as team picks), bookmaker no more than 10 points below us).
 - **This is not a test against the bookmaker.** No history of SportyBet player lines exists, so whether the picks beat SportyBet's prices is unknown until the shadow record builds up (`player_prop_picks` with `published = false`). The `player_props` switch stays off until that record is calibrated.
 - Counts are FotMob's. A bookmaker's data provider can count tackles, clearances and passes differently; the UI says so.
 - Clearances has no SportyBet market, and SportyBet offers goals + assists only as yes/no ("to score or assist", 0.5). Both still show as projections.

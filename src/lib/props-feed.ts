@@ -52,6 +52,8 @@ interface MatchRow {
   league_code: string;
   home_team_id: string | null;
   away_team_id: string | null;
+  home_name?: string;
+  away_name?: string;
 }
 
 interface LineupRow {
@@ -110,20 +112,25 @@ async function conceded(admin: Admin, teamId: string | null): Promise<Map<number
   if (!teamId) return out;
   const since = new Date(Date.now() - 3 * 365 * DAY).toISOString();
   const rows = await cached(`props:conceded:${teamId}`, 6 * 3_600_000, async () => {
+    // Against each player's usual output (0095); the 0094 position-average version until that is applied.
+    const expected = await admin.rpc("team_conceded_expected", { p_team: teamId, p_since: since });
+    if (!expected.error) return (expected.data ?? []) as Record<string, unknown>[];
     const { data, error } = await admin.rpc("team_conceded_by_position", { p_team: teamId, p_since: since });
     if (error) throw error;
     return (data ?? []) as Record<string, unknown>[];
   });
+  const counts = (r: Record<string, unknown>, prefix = "") => {
+    const n = (k: string) => Number(r[`${prefix}${k}`]) || 0;
+    return {
+      goals: n("goals"), assists: n("assists"), goalsAssists: n("goals") + n("assists"), shots: n("shots"), shotsOnTarget: n("shots_on_target"),
+      tackles: n("tackles"), fouls: n("fouls_committed"), clearances: n("clearances"), passes: n("passes_attempted"), saves: n("saves"),
+    };
+  };
   for (const r of rows) {
     const pos = Number(r.pos);
-    const goals = Number(r.goals) || 0, assists = Number(r.assists) || 0;
     const c: ConcededGame = {
-      t: Date.parse(String(r.kickoff)), min: Number(r.minutes) || 0,
-      y: {
-        goals, assists, goalsAssists: goals + assists, shots: Number(r.shots) || 0, shotsOnTarget: Number(r.shots_on_target) || 0,
-        tackles: Number(r.tackles) || 0, fouls: Number(r.fouls_committed) || 0, clearances: Number(r.clearances) || 0,
-        passes: Number(r.passes_attempted) || 0, saves: Number(r.saves) || 0,
-      },
+      t: Date.parse(String(r.kickoff)), min: Number(r.minutes) || 0, y: counts(r),
+      ...(r.e_passes_attempted !== undefined ? { e: counts(r, "e_") } : {}),
     };
     const list = out.get(pos);
     if (list) list.push(c); else out.set(pos, [c]);
@@ -133,7 +140,7 @@ async function conceded(admin: Admin, teamId: string | null): Promise<Map<number
 
 /** The bookmaker's player lines for one game, matched to our players. */
 async function captureLines(
-  admin: Admin, adapter: PlatformAdapter, match: MatchRow, squad: { id: string; name: string }[], report: PropsRunReport,
+  admin: Admin, adapter: PlatformAdapter, match: MatchRow, squad: { id: string; name: string; team?: string }[], report: PropsRunReport,
 ): Promise<Map<string, PlayerLine[]>> {
   const byPlayer = new Map<string, PlayerLine[]>();
   const { data: link } = await admin.from("sportybet_event_links").select("event_id").eq("match_id", publicMatchId(match)).maybeSingle();
@@ -155,7 +162,7 @@ async function captureLines(
   for (const l of parsed.lines) {
     let playerId = l.playerId ? known.get(l.playerId) ?? null : null;
     if (!playerId) {
-      const hit = matchPlayer(l.playerName, squad);
+      const hit = matchPlayer(l.playerName, squad, l.teamName);
       playerId = hit?.id ?? null;
       if (hit && l.playerId && !known.has(l.playerId)) {
         known.set(l.playerId, hit.id);
@@ -187,7 +194,10 @@ async function captureLines(
 /** Project, capture and (near kickoff) log picks for one game. */
 async function runMatch(admin: Admin, match: MatchRow, lineup: LineupRow[], confirmed: boolean, publish: boolean, report: PropsRunReport) {
   const starters = lineup.filter((r) => r.role === "starter");
-  const squad = lineup.filter((r) => r.role !== "unavailable").map((r) => ({ id: r.player_id, name: r.players?.name ?? "" })).filter((p) => p.name);
+  const squad = lineup
+    .filter((r) => r.role !== "unavailable")
+    .map((r) => ({ id: r.player_id, name: r.players?.name ?? "", team: (r.side === "home" ? match.home_name : match.away_name) ?? undefined }))
+    .filter((p) => p.name);
   const [pri, hist, homeConc, awayConc] = await Promise.all([
     priors(admin),
     histories(admin, starters.map((s) => s.player_id)),
@@ -324,7 +334,7 @@ export async function runPlayerProps(admin: Admin): Promise<PropsRunReport> {
   const now = Date.now();
   const { data: games, error } = await admin
     .from("matches")
-    .select("id, source_ids, kickoff, league_code, home_team_id, away_team_id")
+    .select("id, source_ids, kickoff, league_code, home_team_id, away_team_id, home_name, away_name")
     .gt("kickoff", new Date(now).toISOString())
     .lte("kickoff", new Date(now + HORIZON_MS).toISOString())
     .in("league_code", FOTMOB_CODES)

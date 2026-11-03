@@ -1,22 +1,23 @@
 /**
  * Bookmaker player lines, read from one event's markets, and the platform
- * layer the props feed books through. Pure (no I/O), so it is tested on saved
- * payloads.
+ * layer the props feed books through. Pure (no I/O), tested on a real capture
+ * (__fixtures__/sportybet-player-props.json, Atletico v Bayern, 3 Nov 2026).
  *
- * SportyBet (Sportradar feed) lists each player's market as its own market
- * row: specifier `variant=pre:playerprops:<n>:<playerId>` (market census,
- * docs/sportybet-markets.md). Two outcome shapes are read:
+ * SportyBet's player markets (Sportradar feed), as captured:
  *
- *   thresholds   outcomes "Name 2+" / "2+": over (n - 0.5) only
- *   over/under   outcomes "Over 1.5" / "Under 1.5", the line in the outcome
- *                or a `total=` specifier: both sides
+ *   per player   770 assists, 775 goals, 776 shots, 777 shots on target,
+ *                778 passes, 780 tackles: one market row per player,
+ *                specifier `variant=pre:playerprops:<event>:<playerId>`
+ *   all players  800291 fouls, 800297 saves, 800289 to score or assist: one
+ *                row, every player's outcomes in it, no specifier
  *
- * The player's name comes from the outcome or market description. Anything
- * else is skipped and counted, so a change of shape shows up on Data health
- * instead of as wrong lines.
- *
- * NOTE: the outcome shape has not yet been checked against a live capture
- * (SportyBet refuses this build environment); see docs/player-props.md.
+ * Outcomes are thresholds, over only: "Kane, Harry (Bayern Munich) 26+" is
+ * over 25.5. "To score or assist" has no threshold (over 0.5). The player id
+ * is the fourth part of the outcome id (`pre:playerprops:<event>:<player>:..`).
+ * Each outcome carries SportyBet's own fair chance (`probability`, margin
+ * out); its prices carry a heavy margin (often 10-30% on these markets).
+ * Over/under outcomes are read too, should a market ever list them. Anything
+ * else is skipped and counted (Data health).
  */
 
 import type { PropMarketKey } from "@/lib/model/player-props";
@@ -29,11 +30,15 @@ export const SPORTYBET_PROP_MARKETS: Record<string, PropMarketKey> = {
   "770": "assists",
   "776": "shots",
   "777": "shotsOnTarget",
+  "778": "passes",
   "780": "tackles",
   "800291": "fouls",
   "800297": "saves",
-  "778": "passes",
+  "800289": "goalsAssists",
 };
+
+/** Markets whose outcomes are yes/no for one player ("to score or assist"): over 0.5. */
+const YES_ONLY = new Set(["800289"]);
 
 export type Platform = "sportybet";
 
@@ -45,10 +50,15 @@ export interface PlayerLine {
   line: number;
   playerId: string | null;
   playerName: string;
+  /** The club in brackets after the name, when the bookmaker gives one. */
+  teamName: string | null;
   overOdds: number | null;
   underOdds: number | null;
   overOutcome: string | null;
   underOutcome: string | null;
+  /** The bookmaker's own fair chance per side, when it publishes one. */
+  overChance?: number | null;
+  underChance?: number | null;
 }
 
 export interface ParsedLines {
@@ -60,6 +70,11 @@ export interface ParsedLines {
 function num(v: unknown): number | null {
   const n = typeof v === "number" ? v : typeof v === "string" ? Number(v) : NaN;
   return Number.isFinite(n) && n > 1 ? n : null;
+}
+
+function chance(v: unknown): number | null {
+  const n = typeof v === "number" ? v : typeof v === "string" ? Number(v) : NaN;
+  return Number.isFinite(n) && n > 0 && n < 1 ? n : null;
 }
 
 function specParts(spec: string | null | undefined): Record<string, string> {
@@ -78,12 +93,28 @@ export function playerIdOf(spec: string | null | undefined): string | null {
   return m ? m[1] : null;
 }
 
-function clean(name: string): string {
-  return name.replace(/\s+/g, " ").replace(/[\s,-]+$/, "").trim().slice(0, 120);
+/** The player id inside an outcome id (`pre:playerprops:<event>:<player>:...`). */
+function outcomePlayerId(oid: string | null): string | null {
+  const m = oid ? /^pre:playerprops:\d+:(\d+)(?::|$)/.exec(oid) : null;
+  return m ? m[1] : null;
 }
 
-const THRESHOLD = /^(.*?)\s*(\d{1,3})\s*\+\s*$/;
-const OVER_UNDER = /^(?:(.*?)\s+)?(over|under)\s+(\d{1,3}(?:\.5)?)\s*$/i;
+/** "Kane, Harry (Bayern Munich)" -> { name: "Harry Kane", team: "Bayern Munich" }. */
+export function splitPlayer(raw: string): { name: string; team: string | null } {
+  let s = raw.replace(/\s+/g, " ").trim();
+  let team: string | null = null;
+  const t = /^(.*?)\s*\(([^()]+)\)$/.exec(s);
+  if (t) {
+    s = t[1].trim();
+    team = t[2].trim() || null;
+  }
+  const c = /^([^,]+),\s*(.+)$/.exec(s);
+  if (c) s = `${c[2].trim()} ${c[1].trim()}`;
+  return { name: s.replace(/[\s,-]+$/, "").slice(0, 120), team };
+}
+
+const THRESHOLD = /^(.*?)\s*(\d{1,3})\s*\+$/;
+const OVER_UNDER = /^(?:(.*?)\s+)?(over|under)\s+(\d{1,3}(?:\.5)?)$/i;
 
 /** Player lines in one event's markets. */
 export function parsePlayerLines(markets: readonly RawMarket[] | null | undefined): ParsedLines {
@@ -94,52 +125,58 @@ export function parsePlayerLines(markets: readonly RawMarket[] | null | undefine
     const market = SPORTYBET_PROP_MARKETS[id];
     if (!market) continue;
     const spec = m.specifier ?? "";
-    const playerId = playerIdOf(spec);
+    const specPlayer = playerIdOf(spec);
     const total = Number(specParts(spec).total);
-    const byLine = new Map<number, PlayerLine>();
+    const byKey = new Map<string, PlayerLine>();
     let understood = 0;
     for (const o of m.outcomes ?? []) {
-      const desc = (o.desc ?? "").trim();
+      const desc = (o.desc ?? "").replace(/\s+/g, " ").trim();
       const oid = o.id !== undefined ? String(o.id) : null;
-      const odds = num(o.odds);
-      const th = THRESHOLD.exec(desc);
-      const ou = th ? null : OVER_UNDER.exec(desc);
       let line: number | null = null;
       let side: "over" | "under" | null = null;
-      let name = "";
-      if (th) {
+      let who = "";
+      const th = THRESHOLD.exec(desc);
+      const ou = th ? null : OVER_UNDER.exec(desc);
+      if (YES_ONLY.has(id) && desc && !th) {
+        line = 0.5;
+        side = "over";
+        who = desc;
+      } else if (th) {
         line = Number(th[2]) - 0.5;
         side = "over";
-        name = th[1];
+        who = th[1];
       } else if (ou) {
         line = ou[3].includes(".") ? Number(ou[3]) : Number.isFinite(total) ? total : Number(ou[3]) - 0.5;
         side = ou[2].toLowerCase() === "over" ? "over" : "under";
-        name = ou[1] ?? "";
-      } else if (/^over$/i.test(desc) || /^under$/i.test(desc)) {
-        if (Number.isFinite(total)) {
-          line = total;
-          side = /^over$/i.test(desc) ? "over" : "under";
-        }
+        who = ou[1] ?? "";
+      } else if ((/^over$/i.test(desc) || /^under$/i.test(desc)) && Number.isFinite(total)) {
+        line = total;
+        side = /^over$/i.test(desc) ? "over" : "under";
       }
       if (line === null || side === null || line < 0.5 || line > 200) continue;
-      const playerName = clean(name || m.desc || "");
-      if (!playerName) continue;
+      const { name, team } = splitPlayer(who || m.desc || "");
+      if (!name) continue;
+      const playerId = outcomePlayerId(oid) ?? specPlayer;
       understood++;
-      const cur = byLine.get(line) ?? {
+      const key = `${playerId ?? name}|${line}`;
+      const cur = byKey.get(key) ?? {
         platform: "sportybet" as const, market, platformMarket: id, specifier: spec, line, playerId,
-        playerName, overOdds: null, underOdds: null, overOutcome: null, underOutcome: null,
+        playerName: name, teamName: team, overOdds: null, underOdds: null, overOutcome: null, underOutcome: null,
+        overChance: null, underChance: null,
       };
       if (side === "over") {
-        cur.overOdds = odds;
+        cur.overOdds = num(o.odds);
         cur.overOutcome = oid;
+        cur.overChance = chance(o.probability);
       } else {
-        cur.underOdds = odds;
+        cur.underOdds = num(o.odds);
         cur.underOutcome = oid;
+        cur.underChance = chance(o.probability);
       }
-      byLine.set(line, cur);
+      byKey.set(key, cur);
     }
     if (understood === 0) skipped++;
-    for (const l of byLine.values()) if (l.overOdds !== null || l.underOdds !== null) lines.push(l);
+    for (const l of byKey.values()) if (l.overOdds !== null || l.underOdds !== null) lines.push(l);
   }
   return { lines, skipped };
 }
@@ -151,14 +188,19 @@ export function bookingSelection(l: PlayerLine, side: "over" | "under"): string 
   return rawMarket({ marketId: l.platformMarket, outcomeId: outcome, ...(l.specifier ? { specifier: l.specifier } : {}) });
 }
 
-/** The bookmaker's own chance for a side, margin removed when both sides are priced. */
+/**
+ * The bookmaker's own chance for a side: its published fair chance when it
+ * gives one; else the price with the margin removed (both sides priced), or
+ * with a typical margin taken off (one side).
+ */
 export function impliedChance(l: PlayerLine, side: "over" | "under"): number | null {
+  const own = side === "over" ? l.overChance : l.underChance;
+  if (own) return own;
   const o = l.overOdds ? 1 / l.overOdds : null;
   const u = l.underOdds ? 1 / l.underOdds : null;
   if (o !== null && u !== null) return (side === "over" ? o : u) / (o + u);
   const v = side === "over" ? o : u;
-  // One side only: take ~7% margin off, typical of SportyBet's player markets.
-  return v === null ? null : Math.min(0.99, v / 1.07);
+  return v === null ? null : Math.min(0.99, v / 1.15);
 }
 
 /**
@@ -187,6 +229,17 @@ export function nameKey(name: string): string {
 export interface SquadPlayer {
   id: string;
   name: string;
+  /** The player's club name, to narrow a match when the bookmaker names the club. */
+  team?: string;
+}
+
+/** Whether two club names are the same club ("Atletico Madrid" / "Atlético de Madrid", "Bayern Munich" / "FC Bayern München"). */
+export function sameClub(a: string, b: string): boolean {
+  const words = (s: string) => new Set(nameKey(s).split(" ").filter((w) => w.length >= 4 && !["club", "football", "calcio"].includes(w)));
+  const A = words(a), B = words(b);
+  for (const w of A) if (B.has(w)) return true;
+  const ka = nameKey(a).replace(/ /g, ""), kb = nameKey(b).replace(/ /g, "");
+  return ka.length > 3 && kb.length > 3 && (ka.includes(kb) || kb.includes(ka));
 }
 
 /**
@@ -194,7 +247,9 @@ export interface SquadPlayer {
  * the game: full name, then "initial surname" / surname alone when exactly one
  * player matches. Ambiguous or unknown names stay unmatched.
  */
-export function matchPlayer(name: string, squad: readonly SquadPlayer[]): SquadPlayer | null {
+export function matchPlayer(name: string, all: readonly SquadPlayer[], team?: string | null): SquadPlayer | null {
+  const side = team ? all.filter((p) => p.team && sameClub(p.team, team)) : [];
+  const squad = side.length ? side : all;
   const k = nameKey(name);
   if (!k) return null;
   const full = squad.filter((p) => nameKey(p.name) === k);

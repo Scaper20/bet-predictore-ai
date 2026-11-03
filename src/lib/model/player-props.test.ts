@@ -3,7 +3,7 @@ import {
   calibrate, expectedMinutes, logScore, opponentFactor, overProb, playerRate, project, propLadder,
   type ConcededGame, type PositionPriors, type PropGame, type PropParams,
 } from "./player-props";
-import { buildLadder, choosePick, hitFact, propRisk, PROP_CAP, PROP_FLOOR } from "./prop-picks";
+import { buildLadder, choosePick, hitFact, propRisk, PROP_CAP, PROP_FLOOR, PROP_MIN_PRICE } from "./prop-picks";
 import type { PlayerLine } from "@/lib/odds/player-lines";
 
 const DAY = 86_400_000;
@@ -56,6 +56,20 @@ describe("minutes and opponent", () => {
     expect(f).toBeLessThanOrEqual(1.6);
     expect(opponentFactor(leaky, "shots", NOW, 2, { ...params, oppK: 0 })).toBe(1);
   });
+
+  it("with each player's usual output, a club that only meets low-output teams is not marked down", () => {
+    // Opponents record 4 shots per 90 against this club, the position average is 8 —
+    // but those players usually record 4 anyway, so the club concedes as normal.
+    const games: ConcededGame[] = Array.from({ length: 10 }, (_, i) => ({
+      t: NOW - (i + 1) * DAY, min: 360, y: { ...zero(), shots: 16 }, e: { ...zero(), shots: 16 },
+    }));
+    expect(opponentFactor(games, "shots", NOW, 8, params)).toBeCloseTo(1, 6);
+    const plain = games.map(({ e: _e, ...g }) => (void _e, g));
+    expect(opponentFactor(plain, "shots", NOW, 8, params)).toBeLessThan(0.8);
+    // and one that halves what players usually do is marked down
+    const tight = games.map((g) => ({ ...g, y: { ...g.y, shots: 8 } }));
+    expect(opponentFactor(tight, "shots", NOW, 8, params)).toBeLessThan(0.85);
+  });
 });
 
 function zero() {
@@ -91,7 +105,7 @@ describe("projection and distribution", () => {
 
 describe("pick", () => {
   const line = (l: number, over: number | null, under: number | null): PlayerLine => ({
-    platform: "sportybet", market: "shots", platformMarket: "776", specifier: "v", line: l, playerId: "1", playerName: "X",
+    platform: "sportybet", market: "shots", platformMarket: "776", specifier: "v", line: l, playerId: "1", playerName: "X", teamName: null,
     overOdds: over, underOdds: under, overOutcome: over ? `o${l}` : null, underOutcome: under ? `u${l}` : null,
   });
   const sel = (l: PlayerLine, side: "over" | "under") => (side === "over" ? l.overOutcome : l.underOutcome);
@@ -102,7 +116,7 @@ describe("pick", () => {
     expect(pick).not.toBeNull();
     expect(pick!.probability).toBeGreaterThanOrEqual(PROP_FLOOR);
     expect(pick!.probability).toBeLessThanOrEqual(PROP_CAP);
-    expect(pick!.price).toBeGreaterThanOrEqual(1.25);
+    expect(pick!.price).toBeGreaterThanOrEqual(PROP_MIN_PRICE);
     expect(pick!.selection).toBe(pick!.side === "over" ? `o${pick!.line}` : `u${pick!.line}`);
   });
 

@@ -18,7 +18,7 @@ export function PropsSection({ record, enabled, canSwitch }: { record: PropsReco
         <div>
           <h2 className="mb-1 font-sans text-sm font-semibold uppercase tracking-wider text-ink-muted">Player props</h2>
           <p className="max-w-2xl text-xs leading-relaxed text-ink-dim">
-            Picks on SportyBet&rsquo;s player lines (72&ndash;88%, price 1.25+), logged once lineups are confirmed and graded from FotMob counts; a player who
+            Picks on SportyBet&rsquo;s player lines (72&ndash;88%, price 1.18+), logged once lineups are confirmed and graded from FotMob counts; a player who
             did not play is void. {enabled ? "Published now." : "Shadow only until switched on."} Switch after {READY_DAYS} days and {READY_PICKS} graded picks if
             they land about as often as they say, and at least as often as SportyBet&rsquo;s own price says (docs/props-backtest.md).
           </p>

@@ -41,6 +41,10 @@ const CACHE = path.join(process.cwd(), ".backtest-cache");
 const VAL_FROM = Date.UTC(2025, 0, 1);
 const TEST_FROM = Date.UTC(2025, 6, 1);
 const MIN_STARTS = 5;
+/** Opponent factor against each player's usual output (default) or the plain position average (--opp=plain). */
+const EXPECTED = !process.argv.includes("--opp=plain");
+/** Pseudo-90s of position average in a player's usual rate, for "expected". */
+const OWN_K = 5;
 const DAY = 86_400_000;
 
 interface Raw {
@@ -81,6 +85,8 @@ function build(rows: Raw[]): Instance[] {
     return out;
   };
 
+  // Each player's running totals (all earlier games), for the opponent factor's "expected".
+  const rates = new Map<string, Record<PropMarketKey | "n90", number>>();
   const out: Instance[] = [];
   let i = 0;
   while (i < rows.length) {
@@ -89,6 +95,7 @@ function build(rows: Raw[]): Instance[] {
     while (j < rows.length && Math.floor(rows[j].t / DAY) === day) j++;
     const dayRows = rows.slice(i, j);
     const priors = snapshot();
+    const priorsNow = priors;
     const warm = rows[i].t >= VAL_FROM - 120 * DAY; // instances only needed from shortly before validation
 
     if (warm) {
@@ -115,14 +122,30 @@ function build(rows: Raw[]): Instance[] {
     const agg = new Map<string, ConcededGame>();
     for (const r of dayRows) {
       const g = toGame(r);
+      // The player's usual output in these minutes, from his games before this one.
+      const own = rates.get(r.p);
       const list = hist.get(r.p);
       if (list) list.push(g); else hist.set(r.p, [g]);
       if (r.pos === null) continue;
       const key = `${r.op}|${r.pos}|${r.m}`;
-      const c = agg.get(key) ?? { t: r.t, min: 0, y: Object.fromEntries(PROP_MARKETS.map((m) => [m, 0])) as Record<PropMarketKey, number> };
+      const zero = () => Object.fromEntries(PROP_MARKETS.map((m) => [m, 0])) as Record<PropMarketKey, number>;
+      const c = agg.get(key) ?? { t: r.t, min: 0, y: zero(), ...(EXPECTED ? { e: zero() } : {}) };
       c.min += r.min;
-      for (const m of PROP_MARKETS) c.y[m] += propValue(g, m);
+      for (const m of PROP_MARKETS) {
+        c.y[m] += propValue(g, m);
+        if (c.e) {
+          const pri = priorsNow[r.pos as PositionCode][m];
+          const rate = ((own?.[m] ?? 0) + OWN_K * pri) / ((own?.n90 ?? 0) + OWN_K);
+          c.e[m] += (rate * r.min) / 90;
+        }
+      }
       agg.set(key, c);
+      if (r.min >= 15) {
+        const o = own ?? (Object.fromEntries([...PROP_MARKETS.map((m) => [m, 0]), ["n90", 0]]) as Record<PropMarketKey | "n90", number>);
+        for (const m of PROP_MARKETS) o[m] += propValue(g, m);
+        o.n90 += r.min / 90;
+        rates.set(r.p, o);
+      }
       if (r.min >= 15) {
         const tp = tot[r.pos];
         for (const k of STAT_KEYS) tp[k] += k === "xg" ? g.xg : k === "xa" ? g.xa : propValue(g, k as PropMarketKey);

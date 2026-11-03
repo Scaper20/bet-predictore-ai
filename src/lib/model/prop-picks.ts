@@ -12,12 +12,16 @@
 
 import type { PlayerLine } from "@/lib/odds/player-lines";
 import { impliedChance } from "@/lib/odds/player-lines";
-import { calibrate, propLadder, type PropMarketKey } from "./player-props";
+import { calibrate, overProb, propLadder, type PropMarketKey } from "./player-props";
 
 export const PROP_FLOOR = 0.72;
 export const PROP_CAP = 0.88;
-/** Shorter than this the price is not worth the pick's risk. */
-export const PROP_MIN_PRICE = 1.25;
+/**
+ * The team picks' floor (LISTED_MIN_PRICE). SportyBet's player lines carry a
+ * heavy margin: on a captured Champions League game the outcomes it rated
+ * 72-80% paid 1.15 to 1.26, so a higher floor would leave almost nothing.
+ */
+export const PROP_MIN_PRICE = 1.18;
 /** Skip a line the bookmaker rates this much (or more) below the model: it knows something (or we are wrong). */
 export const PROP_MARKET_GAP = 0.1;
 
@@ -49,15 +53,28 @@ export interface PropPick {
   risk: PropRisk;
 }
 
-/** The ±`each` ladder, calibrated, with the bookmaker's prices merged in. */
+/**
+ * The ladder: up to 2 x `each` + 1 lines around the one nearest 50/50,
+ * calibrated. Where the bookmaker lists lines they are used (so every rung it
+ * lists is bookable, at its own steps: passes go up in fours on SportyBet),
+ * topped up with the model's own lines when it lists fewer.
+ */
 export function buildLadder(mean: number, size: number, market: PropMarketKey, calibration: number, listed: readonly PlayerLine[], each = 3): LadderRung[] {
   const byLine = new Map(listed.map((l) => [l.line, l]));
-  const rungs: LadderRung[] = propLadder(mean, size, market, each).map((r) => {
-    const over = calibrate(r.over, calibration);
-    const l = byLine.get(r.line);
-    return { line: r.line, over, under: 1 - over, overPrice: l?.overOdds ?? null, underPrice: l?.underOdds ?? null };
+  const model = propLadder(mean, size, market, each);
+  const centre = model.reduce((best, r) => (Math.abs(r.over - 0.5) < Math.abs(best.over - 0.5) ? r : best), model[0])?.line ?? 0.5;
+  const lines = [...new Set([...listed.map((l) => l.line), ...model.map((r) => r.line)])];
+  const listedLines = new Set(listed.map((l) => l.line));
+  // Bookable lines first, then nearness to the centre; keep the closest 2 x each + 1.
+  const chosen = lines
+    .sort((a, b) => Number(listedLines.has(b)) - Number(listedLines.has(a)) || Math.abs(a - centre) - Math.abs(b - centre))
+    .slice(0, 2 * each + 1)
+    .sort((a, b) => a - b);
+  return chosen.map((line) => {
+    const over = calibrate(overProb(mean, size, line), calibration);
+    const l = byLine.get(line);
+    return { line, over, under: 1 - over, overPrice: l?.overOdds ?? null, underPrice: l?.underOdds ?? null };
   });
-  return rungs;
 }
 
 /**

@@ -138,17 +138,34 @@ export interface ConcededGame {
   t: number;
   min: number;
   y: Record<PropMarketKey, number>;
+  /**
+   * What those same players usually record in those minutes (their own
+   * per-90 rates before the game). With it, the factor is "how much more or
+   * less than usual players record against this club", which does not mistake
+   * a strong club's weaker opponents for its effect.
+   */
+  e?: Record<PropMarketKey, number>;
 }
 
 /** How much more (>1) or less of this stat the opponent concedes to the position than average. */
 export function opponentFactor(conceded: ConcededGame[], m: PropMarketKey, now: number, prior: number, p: PropParams): number {
   if (p.oppK <= 0 || prior <= 0) return 1;
-  let num = 0, den = 0;
+  let num = 0, den = 0, exp = 0, withExp = 0, n = 0;
   for (const c of conceded) {
     if (c.t >= now) continue;
     const w = weight(now, c.t, p.halfLife);
     num += w * c.y[m];
     den += (w * c.min) / 90;
+    n++;
+    if (c.e) {
+      exp += w * c.e[m];
+      withExp++;
+    }
+  }
+  if (n > 0 && withExp === n) {
+    // Actual against expected, shrunk by oppK pseudo-90s at the position average.
+    const f = (num + p.oppK * prior) / (exp + p.oppK * prior);
+    return Math.min(1.6, Math.max(0.6, f));
   }
   const rate = (num + p.oppK * prior) / (den + p.oppK);
   return Math.min(1.6, Math.max(0.6, rate / prior));
