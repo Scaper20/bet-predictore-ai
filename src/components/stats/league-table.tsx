@@ -7,7 +7,7 @@ import type { LiveTable } from "@/lib/stats/live-table";
 import { Crest } from "@/components/ui/crest";
 import { LiveDot } from "@/components/ui/primitives";
 import { FormPips } from "@/components/stats/form-pips";
-import { matchPath } from "@/lib/routes";
+import { matchPath, teamPath } from "@/lib/routes";
 import { useTickingMinute } from "@/components/match/use-live-clock";
 import { rebase, type Reading } from "@/lib/live-clock";
 
@@ -21,6 +21,9 @@ import { rebase, type Reading } from "@/lib/live-clock";
  * measure, re-render, play the difference back to zero) and flashes green
  * or red for its direction. With nothing live it never polls.
  */
+
+/** Standings rows carry our club id when the table job resolved the name. */
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export function LeagueTable({
   initial,
   highlight = [],
@@ -207,9 +210,19 @@ function Row({
       <td className="py-2.5 pr-2">
         <span className="flex min-w-0 items-center gap-2.5">
           <Crest src={r.team.crest} name={r.team.name} size={20} />
-          <span className={`min-w-0 truncate ${highlighted ? "font-bold text-ink" : "font-medium text-ink"} ${compact ? "max-w-[9rem] sm:max-w-none" : ""}`}>
-            {r.team.name}
-          </span>
+          {UUID.test(r.team.id) ? (
+            <Link
+              href={teamPath(r.team.id, r.team.name)}
+              prefetch={false}
+              className={`min-w-0 truncate hover:text-brand ${highlighted ? "font-bold text-ink" : "font-medium text-ink"} ${compact ? "max-w-[9rem] sm:max-w-none" : ""}`}
+            >
+              {r.team.name}
+            </Link>
+          ) : (
+            <span className={`min-w-0 truncate ${highlighted ? "font-bold text-ink" : "font-medium text-ink"} ${compact ? "max-w-[9rem] sm:max-w-none" : ""}`}>
+              {r.team.name}
+            </span>
+          )}
           {live && (
             <Link
               href={matchPath(live.matchId)} prefetch={false}
