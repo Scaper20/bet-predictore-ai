@@ -1,7 +1,9 @@
 import type { DetailPlayer, LineupSide, LineupStatus, MatchDetails } from "@/lib/match-details-core";
 import { ratingBand } from "@/lib/match-details-core";
 import type { Match } from "@/lib/types";
+import Link from "next/link";
 import { Crest } from "@/components/ui/crest";
+import { playerPath } from "@/lib/routes";
 
 /**
  * Both starting elevens on one pitch, home attacking up from the bottom and
@@ -216,8 +218,9 @@ function PitchPlayer({ player: p, style }: { player: DetailPlayer; style: React.
     .filter(Boolean)
     .join(", ");
   return (
-    <div role="listitem" aria-label={summary} title={summary} className="absolute flex w-[4.5rem] -translate-x-1/2 -translate-y-1/2 flex-col items-center sm:w-20" style={style}>
-      <div className="relative">
+    <div role="listitem" className="absolute w-[4.5rem] -translate-x-1/2 -translate-y-1/2 sm:w-20" style={style}>
+      <Link href={playerPath(p.id, p.name)} prefetch={false} aria-label={summary} title={summary} className="group flex flex-col items-center rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-brand">
+      <div className="relative transition-transform duration-200 group-hover:scale-110">
         <span
           className={`grid size-8 place-items-center rounded-full border text-xs font-bold tnum shadow-[0_2px_10px_rgb(0_0_0/0.35)] sm:size-9 sm:text-[13px] ${
             band === "elite" ? "border-brand bg-brand text-brand-ink" : "border-line-strong bg-shell text-ink"
@@ -242,10 +245,11 @@ function PitchPlayer({ player: p, style }: { player: DetailPlayer; style: React.
           </span>
         )}
       </div>
-      <span className="mt-1.5 max-w-full truncate rounded px-1 text-center text-[10.5px] font-medium leading-tight text-ink sm:text-[11.5px]">
+      <span className="mt-1.5 max-w-full truncate rounded px-1 text-center text-[10.5px] font-medium leading-tight text-ink group-hover:text-brand sm:text-[11.5px]">
         {p.captain && <span className="mr-0.5 text-brand">©</span>}
         {p.short}
       </span>
+      </Link>
     </div>
   );
 }
@@ -275,7 +279,7 @@ function PlayerList({ team, players, finished }: { team: Match["home"]; players:
           <li key={p.id} className="flex min-h-11 items-center gap-3 py-1.5" style={{ ["--i" as string]: i }}>
             <span className="tnum w-6 shrink-0 text-right font-mono text-xs text-ink-dim">{p.shirt ?? ""}</span>
             <span className="min-w-0 flex-1 truncate text-sm">
-              {p.name}
+              <Link href={playerPath(p.id, p.name)} prefetch={false} className="hover:text-brand">{p.name}</Link>
               {p.goals > 0 && <span className="ml-1.5 inline-flex align-middle"><BallIcon /></span>}
               {p.red ? <span className="ml-1 inline-flex align-middle"><CardIcon red /></span> : p.yellow ? <span className="ml-1 inline-flex align-middle"><CardIcon /></span> : null}
             </span>
@@ -311,7 +315,7 @@ function AbsenceList({ team, players }: { team: Match["home"]; players: DetailPl
                 >
                   {p.absence === "suspension" ? "S" : "+"}
                 </span>
-                <span className="min-w-0 truncate text-sm">{p.name}</span>
+                <Link href={playerPath(p.id, p.name)} prefetch={false} className="min-w-0 truncate text-sm hover:text-brand">{p.name}</Link>
               </span>
               <span className="shrink-0 text-right text-[11px] text-ink-dim">
                 {p.absence === "suspension" ? "Suspended" : "Injured"}

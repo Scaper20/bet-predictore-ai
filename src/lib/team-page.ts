@@ -8,6 +8,7 @@ import { goalProfile, ratingScore, summariseForm, type FormSummary, type GoalPro
 import { ratingScope } from "@/lib/stats/leagues";
 import { liveLeagueTable, type LiveTable } from "@/lib/stats/live-table";
 import { latestRatings, recentResults, searchTeams, teamsById, type TeamRef } from "@/lib/stats/queries";
+import { playerIdsByFotmob } from "./player-page";
 import { mapLeaders, mapProfile, primaryLeague, seasonStart, teamSlug, type Leader, type TeamProfile } from "./team-page-core";
 
 export { teamSegment, parseTeamSegment, teamSlug } from "./team-page-core";
@@ -47,6 +48,8 @@ export interface TeamPage {
   rating: number | null;
   profile: TeamProfile | null;
   leaders: Leader[];
+  /** Our player id for each squad member's FotMob id, for the ones we hold. */
+  squadLinks: Record<number, string>;
 }
 
 async function client() {
@@ -105,7 +108,8 @@ function profile(teamId: string): Promise<TeamProfile | null> {
   });
 }
 
-function leaders(teamId: string): Promise<Leader[]> {
+/** This season's per-player totals for one club (cached 30 min). */
+export function seasonLeaders(teamId: string): Promise<Leader[]> {
   const since = seasonStart().toISOString();
   return cached(`team:leaders:${teamId}:${since.slice(0, 10)}`, 30 * 60_000, async () => {
     const c = await client();
@@ -124,9 +128,11 @@ export async function teamPage(teamId: string): Promise<TeamPage | null> {
     teamFixtures(team.id).catch(() => [] as TeamFixture[]),
     recentResults([team.id], 10).catch(() => new Map<string, TeamResult[]>()),
     showFotmob ? profile(team.id).catch(() => null) : Promise.resolve(null),
-    showFotmob ? leaders(team.id).catch(() => [] as Leader[]) : Promise.resolve([] as Leader[]),
+    showFotmob ? seasonLeaders(team.id).catch(() => [] as Leader[]) : Promise.resolve([] as Leader[]),
   ]);
 
+  const squadIds = prof ? Object.values(prof.squad).flat().map((m) => m.id) : [];
+  const links = await playerIdsByFotmob(squadIds).catch(() => new Map<number, string>());
   const recent = recentMap.get(team.id) ?? [];
   const league = primaryLeague(
     [...fixtures.map((f) => f.leagueCode), ...recent.map((r) => r.leagueCode)],
@@ -152,6 +158,7 @@ export async function teamPage(teamId: string): Promise<TeamPage | null> {
     rating: r ? ratingScore(r.rating) : null,
     profile: prof,
     leaders: lead,
+    squadLinks: Object.fromEntries(links),
   };
 }
 

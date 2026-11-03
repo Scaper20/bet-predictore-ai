@@ -3,7 +3,7 @@ import { Crest } from "@/components/ui/crest";
 import { LocalTime } from "@/components/ui/local-time";
 import { FormPips } from "@/components/stats/form-pips";
 import { RatingChip } from "@/components/match/lineup-pitch";
-import { matchPath, teamPath } from "@/lib/routes";
+import { matchPath, playerPath, teamPath } from "@/lib/routes";
 import { percent } from "@/lib/format";
 import { outcome, type FormSummary, type GoalProfile } from "@/lib/stats/compute";
 import type { TeamFixture } from "@/lib/team-page";
@@ -175,7 +175,7 @@ export function InjuriesCard({ injured }: { injured: SquadMember[] }) {
 
 const GROUP_LABEL: Record<SquadGroup, string> = { keepers: "Goalkeepers", defenders: "Defenders", midfielders: "Midfielders", attackers: "Forwards" };
 
-export function SquadPanel({ profile }: { profile: TeamProfile }) {
+export function SquadPanel({ profile, links = {} }: { profile: TeamProfile; links?: Record<number, string> }) {
   const groups = (Object.keys(GROUP_LABEL) as SquadGroup[]).filter((g) => profile.squad[g].length > 0);
   if (groups.length === 0) return <EmptyCard text="The squad list isn't in yet." />;
   return (
@@ -192,7 +192,13 @@ export function SquadPanel({ profile }: { profile: TeamProfile }) {
                 <span className="tnum w-7 shrink-0 text-right font-mono text-sm text-ink-dim">{m.shirt ?? ""}</span>
                 <span className="min-w-0 flex-1">
                   <span className="flex items-center gap-1.5 truncate text-sm font-medium">
-                    {m.name}
+                    {links[m.id] ? (
+                      <Link href={playerPath(links[m.id], m.name)} prefetch={false} className="truncate hover:text-brand">
+                        {m.name}
+                      </Link>
+                    ) : (
+                      m.name
+                    )}
                     {m.injured && <span className="rounded bg-rose/15 px-1 text-[10px] font-bold text-rose" title={m.injury ?? "Injured"}>Inj</span>}
                   </span>
                   <span className="block truncate text-[11px] text-ink-dim">{[m.position?.replace(/,\s*/g, ", "), m.country].filter(Boolean).join(" · ")}</span>
@@ -237,7 +243,9 @@ export function LeadersPanel({ leaders }: { leaders: Leader[] }) {
                   <div className="mb-1 flex items-baseline justify-between gap-3 text-sm">
                     <span className="min-w-0 truncate">
                       <span className="tnum mr-2 font-mono text-xs text-ink-dim">{i + 1}</span>
-                      {l.name}
+                      <Link href={playerPath(l.playerId, l.name)} prefetch={false} className="hover:text-brand">
+                        {l.name}
+                      </Link>
                     </span>
                     <span className={`tnum shrink-0 font-mono font-semibold ${i === 0 ? "text-brand" : ""}`}>{(b.fmt ?? String)(b.pick(l))}</span>
                   </div>

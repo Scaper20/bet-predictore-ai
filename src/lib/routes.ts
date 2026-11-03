@@ -72,6 +72,11 @@ export function teamPath(id: string, name: string, sport: SportId = DEFAULT_SPOR
   return `/${sport}/team/${teamSegment(id, name)}`;
 }
 
+/** A player's page: /football/player/erling-haaland--<uuid>, resolved by the id like club pages. */
+export function playerPath(id: string, name: string, sport: SportId = DEFAULT_SPORT): string {
+  return `/${sport}/player/${teamSegment(id, name)}`;
+}
+
 /**
  * Where a session starts when the user did not ask for anywhere specific.
  *

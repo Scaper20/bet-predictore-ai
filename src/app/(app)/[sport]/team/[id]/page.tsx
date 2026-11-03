@@ -21,7 +21,7 @@ import {
 } from "@/components/team/team-sections";
 import { parseTeamSegment, teamBySlug, teamPage, teamSlug } from "@/lib/team-page";
 import { teamJsonLd } from "@/lib/seo/team-jsonld";
-import { sportPath, teamPath } from "@/lib/routes";
+import { playerPath, sportPath, teamPath } from "@/lib/routes";
 import { SITE_URL as SITE } from "@/lib/site-url";
 import { topBy } from "@/lib/team-page-core";
 
@@ -117,7 +117,7 @@ export default async function TeamPage({ params }: { params: Params }) {
         </div>
       ),
     },
-    ...(profile ? [{ key: "squad", label: "Squad", panel: <SquadPanel profile={profile} /> }] : []),
+    ...(profile ? [{ key: "squad", label: "Squad", panel: <SquadPanel profile={profile} links={page.squadLinks} /> }] : []),
     { key: "stats", label: "Player stats", short: "Players", panel: <LeadersPanel leaders={leaders} /> },
     ...(profile ? [{ key: "club", label: "Club", panel: <ClubPanel profile={profile} /> }] : []),
   ];
@@ -161,9 +161,9 @@ export default async function TeamPage({ params }: { params: Params }) {
               )}
               {topScorer && (
                 <HeroStat label="Top scorer">
-                  <span className="max-w-32 truncate text-sm font-semibold">
+                  <Link href={playerPath(topScorer.playerId, topScorer.name)} prefetch={false} className="max-w-32 truncate text-sm font-semibold hover:text-brand">
                     {topScorer.name.split(" ").slice(-1)[0]} <span className="tnum font-mono text-brand">{topScorer.goals}</span>
-                  </span>
+                  </Link>
                 </HeroStat>
               )}
             </div>
