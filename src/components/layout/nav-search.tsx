@@ -49,26 +49,24 @@ interface TeamHit {
 
 /** Clubs by name, from /api/teams/search (cached at the edge), a moment after typing stops. */
 function useTeamSearch(query: string, active: boolean): TeamHit[] {
-  const [teams, setTeams] = useState<TeamHit[]>([]);
+  const q = query.trim().slice(0, 40);
+  const [found, setFound] = useState<{ q: string; hits: TeamHit[] }>({ q: "", hits: [] });
   useEffect(() => {
-    const q = query.trim();
-    if (!active || q.length < 2) {
-      setTeams([]);
-      return;
-    }
+    if (!active || q.length < 2) return;
     const ctrl = new AbortController();
     const t = setTimeout(() => {
-      fetch(`/api/teams/search?q=${encodeURIComponent(q.slice(0, 40))}`, { signal: ctrl.signal })
+      fetch(`/api/teams/search?q=${encodeURIComponent(q)}`, { signal: ctrl.signal })
         .then((r) => (r.ok ? r.json() : { teams: [] }))
-        .then((d: { teams?: TeamHit[] }) => setTeams(Array.isArray(d.teams) ? d.teams.slice(0, 5) : []))
+        .then((d: { teams?: TeamHit[] }) => setFound({ q, hits: Array.isArray(d.teams) ? d.teams.slice(0, 5) : [] }))
         .catch(() => {});
     }, 180);
     return () => {
       clearTimeout(t);
       ctrl.abort();
     };
-  }, [query, active]);
-  return teams;
+  }, [q, active]);
+  // Only the answer to what is typed now; nothing for a stale or too-short query.
+  return active && q.length >= 2 && found.q === q ? found.hits : [];
 }
 
 function useSearch(sport: SportId, query: string, active: boolean) {
