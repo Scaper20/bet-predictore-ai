@@ -612,7 +612,7 @@ def job_fotmob_link(ctx: Context, season: str | None = None) -> None:
             link_fixtures(ctx.db, ctx.resolver, lg, _fotmob_fixtures(fm, lg, season, r), r)
 
 
-def job_fotmob_matches(ctx: Context, season: str | None = None, limit: int = 300, refresh: bool = False) -> None:
+def job_fotmob_matches(ctx: Context, season: str | None = None, limit: int = 300, refresh: bool = False) -> int:
     """Details for finished games we do not hold yet: the backfill and the nightly top-up.
 
     ``limit`` caps detail requests per run (one request each, ~4 s apart), so a
@@ -623,7 +623,7 @@ def job_fotmob_matches(ctx: Context, season: str | None = None, limit: int = 300
 
     fm = _fotmob(ctx, "fotmob-matches")
     if not fm:
-        return
+        return 0
     budget = limit
     for lg in _fotmob_leagues(ctx):
         if budget <= 0:
@@ -653,6 +653,23 @@ def job_fotmob_matches(ctx: Context, season: str | None = None, limit: int = 300
                 r.rows_written += write_match(ctx.db, linked[f.fotmob_id]["match_id"], bundle)
                 r.meta["fetched"] = r.meta.get("fetched", 0) + 1
             r.meta["remaining"] = max(0, len(todo) - r.meta.get("fetched", 0))
+    return limit - budget
+
+
+def fotmob_seasons(back: int, day: date | None = None) -> list[str | None]:
+    """The current season (None: FotMob's default) and the ``back`` before it, as FotMob names them."""
+    y = season_start_year(day)
+    return [None] + [f"{y - i}/{y - i + 1}" for i in range(1, back + 1)]
+
+
+def job_fotmob_backfill(ctx: Context, seasons: int = 3, limit: int = 4000) -> None:
+    """History: every league, current season and ``seasons`` before it, newest
+    first, up to ``limit`` games a run. Resumable: rerun until nothing is left."""
+    budget = limit
+    for season in fotmob_seasons(seasons):
+        if budget <= 0:
+            break
+        budget -= job_fotmob_matches(ctx, season=season, limit=budget)
 
 
 def job_fotmob_upcoming(ctx: Context, hours: int = 72) -> None:
@@ -735,6 +752,7 @@ JOBS = {
     "prune": job_prune,
     "fotmob-link": job_fotmob_link,
     "fotmob-matches": job_fotmob_matches,
+    "fotmob-backfill": job_fotmob_backfill,
     "fotmob-upcoming": job_fotmob_upcoming,
     "fotmob-teams": job_fotmob_teams,
     # The last step of sync, on its own: rerun after editing aliases.json.

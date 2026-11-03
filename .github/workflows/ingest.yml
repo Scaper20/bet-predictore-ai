@@ -39,6 +39,7 @@ on:
           - link-history
           - fotmob-link
           - fotmob-matches
+          - fotmob-backfill
           - fotmob-upcoming
           - fotmob-teams
       args:
@@ -53,7 +54,8 @@ concurrency:
 jobs:
   ingest:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # The FotMob history backfill is one long, polite crawl (~4 s a game); everything else fits in 30.
+    timeout-minutes: ${{ inputs.job == 'fotmob-backfill' && 350 || 30 }}
     defaults:
       run:
         working-directory: ingestion

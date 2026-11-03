@@ -1,4 +1,5 @@
 import { DEFAULT_SPORT, isSportId, type SportId } from "@/lib/sports";
+import { teamSegment } from "@/lib/team-page-core";
 
 /**
  * Sport-scoped URLs, built in one place.
@@ -61,6 +62,14 @@ export function scoresPath(
 
 export function matchPath(id: string, sport: SportId = DEFAULT_SPORT): string {
   return `/${sport}/match/${encodeURIComponent(id)}`;
+}
+
+/**
+ * A club's page: /football/team/arsenal--<uuid>. The id decides; the name is
+ * there for people and search engines, and a stale one redirects.
+ */
+export function teamPath(id: string, name: string, sport: SportId = DEFAULT_SPORT): string {
+  return `/${sport}/team/${teamSegment(id, name)}`;
 }
 
 /**

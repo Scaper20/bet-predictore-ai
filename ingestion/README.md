@@ -157,12 +157,14 @@ python -m betrix_ingest <job> [--league CODE ...] [--dry-run] [-v]
 | `prune` | expire old raw payloads (also runs daily in pg_cron) | — |
 | `fotmob-link [--season 2023/2024]` | link a season of FotMob games onto our matches, nothing else | manual |
 | `fotmob-matches [--season S] [--limit 300] [--refresh]` | details for finished games not yet held; rerun to continue a backfill (about 4 s a game, so 350 fit in one 30-minute run) | 01:25, 10:25 |
+| `fotmob-backfill [--seasons 3] [--limit 4000]` | history: every FotMob league, current season and N before it, newest first; resumable (this job alone may run up to ~6 hours) | manual, rerun until done |
 | `fotmob-upcoming [--hours 72]` | games in the next N hours: lineups as they stand, who is out, snapshots | every 3 hours (72 h); hourly :50 10–21 (2 h, for confirmed lineups) |
 | `fotmob-teams` | club profiles for every club linked so far | Wednesdays 03:40 |
 
-Backfilling FotMob history: from the Actions tab run `fotmob-matches` with
-`--league premier-league --season 2023/2024 --limit 350`, once per league and
-season (rerun until the run's `remaining` is 0).
+Backfilling FotMob history: from the Actions tab run `fotmob-backfill`
+(`--seasons 3 --limit 4000`); rerun it until every `fotmob-matches` row it
+records shows `remaining` 0. One league and season alone:
+`fotmob-matches --league premier-league --season 2023/2024 --limit 350`.
 
 `--dry-run` fetches and transforms for real but writes to memory and prints
 one line per unit, which is the quickest way to check a source by hand.

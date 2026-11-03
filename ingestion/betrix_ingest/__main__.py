@@ -27,7 +27,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--full", action="store_true", help="elo: write the whole history, not just recent days")
     p.add_argument("--window-days", type=int,
                    help="elo: days of ratings to write (default 14); 400 fills the Ratings page for a new league")
-    p.add_argument("--seasons", type=int, help="backfill-football-data-uk (default 25) / backfill-thesportsdb (default 10)")
+    p.add_argument("--seasons", type=int, help="backfill-football-data-uk (default 25) / backfill-thesportsdb (default 10) / fotmob-backfill (default 3)")
     p.add_argument("--odds-seasons", type=int,
                    help="backfill-football-data-uk: seasons of opening/closing odds to keep (default 10)")
     p.add_argument("--since", type=date.fromisoformat,
@@ -68,6 +68,8 @@ def main(argv: list[str] | None = None) -> int:
         kwargs = {"season": a.season}
     elif a.job == "fotmob-matches":
         kwargs = {"season": a.season, "limit": a.limit or 300, "refresh": a.refresh}
+    elif a.job == "fotmob-backfill":
+        kwargs = {"seasons": a.seasons or 3, "limit": a.limit or 4000}
     elif a.job == "fotmob-upcoming":
         kwargs = {"hours": a.hours or 72}
     elif a.job == "fotmob-teams" and a.limit:

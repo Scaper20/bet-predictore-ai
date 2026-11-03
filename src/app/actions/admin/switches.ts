@@ -8,7 +8,14 @@ import type { Permission } from "@/lib/admin-access";
 
 export type SwitchActionState = { error: string | null; message: string | null };
 
-const KEYS: SwitchKey[] = ["parsebot_live", "code_hub_open", "sportybet_direct", "headline_engine"];
+const KEYS: SwitchKey[] = [
+  "parsebot_live",
+  "code_hub_open",
+  "sportybet_direct",
+  "headline_engine",
+  "fotmob_ui",
+  "lineup_adjust",
+];
 
 const DONE: Record<SwitchKey, [string, string]> = {
   parsebot_live: [
@@ -24,6 +31,14 @@ const DONE: Record<SwitchKey, [string, string]> = {
     "The headline engine now publishes the headline, on every page within about 15 seconds of a fresh slate.",
     "The model's own headline is back. The engine is still logged beside it.",
   ],
+  fotmob_ui: [
+    "Lineups, timelines, shot maps and club profiles are showing again within about 15 seconds.",
+    "Lineups, timelines, shot maps and club profiles are hidden. Pages show what they did before.",
+  ],
+  lineup_adjust: [
+    "Lineups and absences now move the model's numbers on new predictions.",
+    "Lineups and absences are shown as context only; the numbers are the model's own again.",
+  ],
 };
 
 /** Changing what is published is the owner's call; the operational switches are product's. */
@@ -32,6 +47,8 @@ const PERMISSION: Record<SwitchKey, Permission> = {
   code_hub_open: "codehub.manage",
   sportybet_direct: "codehub.manage",
   headline_engine: "model.manage",
+  fotmob_ui: "data.manage",
+  lineup_adjust: "model.manage",
 };
 
 /** Flips one operator switch (public.app_switches). Instances pick it up within SWITCH_TTL_MS. */
@@ -54,5 +71,6 @@ export async function setSwitch(_prev: SwitchActionState, formData: FormData): P
   revalidatePath("/admin/parsebot");
   revalidatePath("/admin/sportybet");
   revalidatePath("/admin/model-performance");
+  revalidatePath("/admin/data-health");
   return { error: null, message: DONE[key][enabled ? 0 : 1] };
 }

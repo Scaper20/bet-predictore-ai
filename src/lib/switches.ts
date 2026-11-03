@@ -18,9 +18,21 @@ import { cached } from "@/lib/providers/cache";
  *
  * headline_engine publishes the headline engine's pick (engine-feed.ts) in
  * place of the model's own; off, the engine is only logged beside it.
+ *
+ * fotmob_ui shows what FotMob's match details feed (lineups, timeline, shot
+ * map, team stats, club profiles). Like sportybet_direct it reads as ON with
+ * no row: it is a brake for a broken or withdrawn feed, and with no data the
+ * sections already render nothing. lineup_adjust lets lineups move the
+ * model's numbers; it fails closed (migration 0091).
  */
 
-export type SwitchKey = "parsebot_live" | "code_hub_open" | "sportybet_direct" | "headline_engine";
+export type SwitchKey =
+  | "parsebot_live"
+  | "code_hub_open"
+  | "sportybet_direct"
+  | "headline_engine"
+  | "fotmob_ui"
+  | "lineup_adjust";
 
 export const SWITCH_TTL_MS = 15_000;
 
@@ -35,6 +47,8 @@ async function readAll(): Promise<Record<SwitchKey, SwitchState>> {
     code_hub_open: { enabled: false, updatedAt: null },
     sportybet_direct: { enabled: true, updatedAt: null },
     headline_engine: { enabled: false, updatedAt: null },
+    fotmob_ui: { enabled: true, updatedAt: null },
+    lineup_adjust: { enabled: false, updatedAt: null },
   };
   try {
     const { supabaseAdmin } = await import("@/lib/supabase/admin");

@@ -280,3 +280,13 @@ def test_disabled_source_is_never_called(ctx):
     ctx.db.tables["ingest_sources"] = [{"id": "fotmob", "enabled": False}]
     jobs.job_fotmob_matches(ctx, limit=5)
     assert ctx.fake.match_calls == []
+
+
+def test_backfill_seasons_are_named_like_fotmob():
+    assert jobs.fotmob_seasons(3, date(2026, 11, 3)) == [None, "2025/2026", "2024/2025", "2023/2024"]
+    assert jobs.fotmob_seasons(1, date(2027, 3, 1)) == [None, "2025/2026"]
+
+
+def test_backfill_spends_one_budget_across_seasons(ctx):
+    jobs.job_fotmob_backfill(ctx, seasons=1, limit=4)
+    assert len(ctx.fake.match_calls) == 4
