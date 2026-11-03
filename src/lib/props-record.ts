@@ -1,6 +1,7 @@
 import "server-only";
 
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { allPages } from "@/lib/supabase/pages";
 import { PROP_MARKETS, type PropMarketKey } from "@/lib/model/player-props";
 
 /**
@@ -33,13 +34,18 @@ export interface PropsRecord {
 }
 
 export async function getPropsRecord(): Promise<PropsRecord> {
-  const { data, error } = await supabaseAdmin()
-    .from("player_prop_picks")
-    .select("market, probability, market_probability, price, result, logged_at")
-    .gte("logged_at", new Date(Date.now() - 180 * 86_400_000).toISOString())
-    .order("logged_at")
-    .limit(20_000);
-  const rows = error ? [] : (data ?? []);
+  const since = new Date(Date.now() - 180 * 86_400_000).toISOString();
+  const rows = await allPages<{ market: string; probability: number; market_probability: number | null; price: number | null; result: string | null; logged_at: string }>(
+    (from, to) =>
+      supabaseAdmin()
+        .from("player_prop_picks")
+        .select("market, probability, market_probability, price, result, logged_at")
+        .gte("logged_at", since)
+        .order("logged_at")
+        .order("id")
+        .range(from, to),
+    { max: 20_000 },
+  ).catch(() => []);
   const mean = (xs: number[]) => (xs.length ? xs.reduce((s, x) => s + x, 0) / xs.length : null);
   const summarise = (rs: typeof rows) => {
     const g = rs.filter((r) => r.result === "win" || r.result === "lose");
