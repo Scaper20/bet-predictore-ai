@@ -1,4 +1,4 @@
--- 0091: Remove the VIP WhatsApp chat (0064, 0065).
+-- 0098: Remove the VIP WhatsApp chat (0064, 0065).
 --
 -- The feature is gone from the product: no /vip page, no invite link, no
 -- roster, no launch emails. This drops its two tables and the three campaign

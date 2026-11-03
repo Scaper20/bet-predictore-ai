@@ -14,7 +14,7 @@ import { planEndingEmail } from "@/lib/email-templates";
  *
  * Who is left out: card subscriptions (Paystack bills and tells them),
  * cancelled plans (they chose to stop), gifts and anyone with no email. A
- * reminder is recorded before it is sent (renewal_reminders, 0092), so a crash
+ * reminder is recorded before it is sent (renewal_reminders, 0097), so a crash
  * can never send the same person two, and removed again if the send fails so
  * tomorrow's run tries once more.
  */
