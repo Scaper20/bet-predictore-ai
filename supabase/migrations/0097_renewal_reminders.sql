@@ -1,4 +1,4 @@
--- 0092: One "your plan ends soon" email per paid period (src/lib/renewal-reminders.ts).
+-- 0097: One "your plan ends soon" email per paid period (src/lib/renewal-reminders.ts).
 --
 -- Pay-once plans (a prepaid month with nothing renewing) lapse silently, so a
 -- few days before the end the daily job emails the member once. A row here
