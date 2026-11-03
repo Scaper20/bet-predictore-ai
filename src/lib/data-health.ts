@@ -30,6 +30,10 @@ export interface FotmobHealth {
   absenceSnapshots: number;
   lastUpcomingRun: string | null;
   lastTeamsRun: string | null;
+  /** Player profiles held (migration 0093). */
+  playerProfiles: number | null;
+  /** The latest player-props run (migration 0094): null until it has run. */
+  props: { at: string; status: string; matches: number; projections: number; lines: number; unmatched: number; skippedMarkets: number; picks: number; settled: number } | null;
   leagues: {
     leagueCode: string;
     season: string | null;
@@ -116,13 +120,15 @@ async function fotmobHealth(db: ReturnType<typeof supabaseAdmin>): Promise<Fotmo
     if (error) throw error;
     return n ?? 0;
   };
-  const [details, players, profiles, snapshots, runs] = await Promise.all([
+  const [details, players, profiles, snapshots, runs, playerProfiles, propsRun] = await Promise.all([
     count("match_details"),
     count("players"),
     count("team_profiles"),
     count("availability_snapshots"),
     db.from("ingest_runs").select("job, league_code, status, started_at, meta")
-      .eq("source", "fotmob").order("started_at", { ascending: false }).limit(300),
+      .eq("source", "fotmob").neq("job", "player-props").order("started_at", { ascending: false }).limit(300),
+    count("player_profiles").catch(() => null),
+    db.from("ingest_runs").select("status, started_at, meta").eq("job", "player-props").order("started_at", { ascending: false }).limit(1).maybeSingle(),
   ]);
   if (runs.error) throw runs.error;
   type Run = { job: string; league_code: string | null; status: string; started_at: string; meta: Record<string, unknown> | null };
@@ -141,6 +147,15 @@ async function fotmobHealth(db: ReturnType<typeof supabaseAdmin>): Promise<Fotmo
     absenceSnapshots: snapshots,
     lastUpcomingRun: rows.find((r) => r.job === "fotmob-upcoming")?.started_at ?? null,
     lastTeamsRun: rows.find((r) => r.job === "fotmob-teams")?.started_at ?? null,
+    playerProfiles,
+    props: propsRun.data
+      ? {
+          at: propsRun.data.started_at, status: propsRun.data.status,
+          matches: num(propsRun.data.meta?.matches), projections: num(propsRun.data.meta?.projections), lines: num(propsRun.data.meta?.lines),
+          unmatched: num(propsRun.data.meta?.unmatched), skippedMarkets: num(propsRun.data.meta?.skippedMarkets),
+          picks: num(propsRun.data.meta?.picks), settled: num(propsRun.data.meta?.settled),
+        }
+      : null,
     leagues: [...latest.values()]
       .map((r) => ({
         leagueCode: r.league_code as string,

@@ -48,6 +48,9 @@ export default function robots(): MetadataRoute.Robots {
           // Results by past day: an archive that only grows, and every
           // day/league pair is another server render.
           "/*?*day=",
+          // Player props by market and league: the hub is enough for search,
+          // each filter is another per-viewer render.
+          "/football/props?",
         ],
       },
     ],

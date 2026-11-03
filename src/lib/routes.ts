@@ -31,6 +31,7 @@ export const SPORT_ROUTES = {
   teamForm: "team-form",
   goals: "goals-stats",
   ratings: "ratings",
+  props: "props",
 } as const;
 
 export type SportRoute = keyof typeof SPORT_ROUTES;
@@ -70,6 +71,11 @@ export function matchPath(id: string, sport: SportId = DEFAULT_SPORT): string {
  */
 export function teamPath(id: string, name: string, sport: SportId = DEFAULT_SPORT): string {
   return `/${sport}/team/${teamSegment(id, name)}`;
+}
+
+/** A player's page: /football/player/erling-haaland--<uuid>, resolved by the id like club pages. */
+export function playerPath(id: string, name: string, sport: SportId = DEFAULT_SPORT): string {
+  return `/${sport}/player/${teamSegment(id, name)}`;
 }
 
 /**

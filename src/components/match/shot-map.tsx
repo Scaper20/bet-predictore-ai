@@ -25,11 +25,16 @@ export function ShotMap({
   homeName,
   awayName,
   xg,
+  single = false,
+  title = "Shot map",
 }: {
   shots: ShotPoint[];
   homeName: string;
   awayName: string;
   xg: { home: number | null; away: number | null };
+  /** One player's or one side's shots only: no second total, all attacking right. */
+  single?: boolean;
+  title?: string;
 }) {
   const [picked, setPicked] = useState<number | null>(null);
   if (shots.length === 0) return null;
@@ -40,15 +45,15 @@ export function ShotMap({
   return (
     <section className="card overflow-hidden">
       <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3 sm:px-5">
-        <h2 className="font-sans text-sm font-semibold uppercase tracking-wider text-ink-muted">Shot map</h2>
+        <h2 className="font-sans text-sm font-semibold uppercase tracking-wider text-ink-muted">{title}</h2>
         <Legend />
       </div>
       <div className="grid grid-cols-2 gap-3 px-4 pt-4 sm:px-5">
         <SideTotal name={homeName} shots={count("home")} goals={goals("home")} xg={xg.home} tone="brand" />
-        <SideTotal name={awayName} shots={count("away")} goals={goals("away")} xg={xg.away} tone="cyan" right />
+        {!single && <SideTotal name={awayName} shots={count("away")} goals={goals("away")} xg={xg.away} tone="cyan" right />}
       </div>
       <div className="mx-auto max-w-3xl px-3 py-4 sm:px-5">
-        <svg viewBox="0 0 105 68" className="w-full overflow-visible rounded-lg" role="group" aria-label={`Shot map: ${homeName} attack right, ${awayName} attack left`}>
+        <svg viewBox="0 0 105 68" className="w-full overflow-visible rounded-lg" role="group" aria-label={single ? `Shot map: ${homeName}, attacking right` : `Shot map: ${homeName} attack right, ${awayName} attack left`}>
           <rect width="105" height="68" rx="1.5" className="fill-surface-2" />
           <g className="stroke-line-strong" fill="none" strokeWidth="0.3">
             <rect x="0.5" y="0.5" width="104" height="67" />

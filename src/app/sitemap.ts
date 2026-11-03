@@ -1,7 +1,9 @@
 import type { MetadataRoute } from "next";
 import { LEAGUES } from "@/lib/leagues";
 import { SITE_URL as SITE } from "@/lib/site-url";
-import { matchPath, sportPath, scoresPath, teamPath } from "@/lib/routes";
+import { matchPath, playerPath, sportPath, scoresPath, teamPath } from "@/lib/routes";
+import { seasonLeaders } from "@/lib/team-page";
+import type { Leader } from "@/lib/team-page-core";
 import { leagueTeams, type TeamRef } from "@/lib/stats/queries";
 import { upcomingFeed } from "@/lib/service";
 import { publicLiveOffers } from "@/lib/offers-server";
@@ -23,6 +25,19 @@ const MATCH_WINDOW_DAYS = 3;
 const PREDICTIONS_WINDOW_DAYS = 5;
 const FIXTURES_WINDOW_DAYS = 14;
 const DAY_MS = 86_400_000;
+/** Player pages listed: regulars only (this many appearances this season), so thin pages stay out. */
+const PLAYER_MIN_APPS = 8;
+const PLAYER_MAX = 4000;
+
+/** Each club's season leaders, ten clubs at a time so the sitemap never fans out 200 queries at once. */
+async function regulars(clubIds: string[]): Promise<Leader[]> {
+  const out: Leader[] = [];
+  for (let i = 0; i < clubIds.length; i += 10) {
+    const batch = await Promise.all(clubIds.slice(i, i + 10).map((id) => seasonLeaders(id).catch(() => [] as Leader[])));
+    for (const list of batch) for (const l of list) if (l.apps >= PLAYER_MIN_APPS) out.push(l);
+  }
+  return out;
+}
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
@@ -44,6 +59,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE}${sportPath("teamForm")}`, lastModified: now, changeFrequency: "daily", priority: 0.6 },
     { url: `${SITE}${sportPath("goals")}`, lastModified: now, changeFrequency: "daily", priority: 0.6 },
     { url: `${SITE}${sportPath("ratings")}`, lastModified: now, changeFrequency: "daily", priority: 0.6 },
+    { url: `${SITE}${sportPath("props")}`, lastModified: now, changeFrequency: "hourly", priority: 0.7 },
     { url: `${SITE}/about`, changeFrequency: "monthly", priority: 0.6 },
     { url: `${SITE}/how-it-works`, changeFrequency: "monthly", priority: 0.5 },
     { url: `${SITE}/guides`, changeFrequency: "monthly", priority: 0.5 },
@@ -71,6 +87,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     changeFrequency: "daily" as const,
     priority: 0.6,
   }));
+  // Player pages: regulars at those clubs (FotMob data), deduplicated, bounded.
+  const seen = new Set<string>();
+  const players: MetadataRoute.Sitemap = [];
+  for (const l of await regulars([...clubs.keys()]).catch(() => [] as Leader[])) {
+    if (seen.has(l.playerId) || players.length >= PLAYER_MAX) continue;
+    seen.add(l.playerId);
+    players.push({ url: `${SITE}${playerPath(l.playerId, l.name)}`, changeFrequency: "daily" as const, priority: 0.5 });
+  }
   // Public offers (the day pass) only while they run; a closed one drops out within the hour.
   const offers: MetadataRoute.Sitemap = liveOffers.map((o) => ({
     url: `${SITE}${offerPath(o.slug)}`,
@@ -133,5 +157,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   // Next writes <loc> verbatim, and the scores page's URLs carry two query
   // parameters: a bare & would make the whole sitemap invalid XML.
-  return [...core, ...offers, ...leagues, ...teams, ...matches].map((e) => ({ ...e, url: e.url.replace(/&/g, "&amp;") }));
+  return [...core, ...offers, ...leagues, ...teams, ...players, ...matches].map((e) => ({ ...e, url: e.url.replace(/&/g, "&amp;") }));
 }

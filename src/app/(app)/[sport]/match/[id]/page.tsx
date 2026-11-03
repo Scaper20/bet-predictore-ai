@@ -8,6 +8,7 @@ import { matchPath, sportPath, scoresPath, teamPath } from "@/lib/routes";
 import { BttsPanel, CorrectScorePanel, DoubleChancePanel, GoalsPanel, H2HPanel, OutcomePanel } from "@/components/match/market-panels";
 import { AddToSlip } from "@/components/match/add-to-slip";
 import { MatchTabs, type MatchTab } from "@/components/match/match-tabs";
+import { PropsPanel } from "@/components/props/props-panel";
 import { MatchStats } from "@/components/match/match-stats";
 import { LeagueTable } from "@/components/stats/league-table";
 import { SplitBar } from "@/components/stats/split-bar";
@@ -137,6 +138,9 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   const tabs: MatchTab[] = [
     { key: "overview", label: "Overview", panel: <Overview match={match} prediction={prediction} ctx={ctx} live={live} label={label} proLeagueOpened={proLeagueOpened} corners={proLocked ? null : extra?.stats.corners} details={details} availability={availability} paid={viewer.paid} /> },
     ...(details ? [{ key: "lineups", label: "Lineups", short: "Lineups", panel: <LineupsPanel match={match} details={details} /> }] : []),
+    ...(details && match.status === "scheduled"
+      ? [{ key: "props", label: "Player props", short: "Props", panel: <PropsPanel matchId={match.id} emptyText="Player props appear once FotMob has a likely eleven for this game, usually a day or two before kickoff." /> }]
+      : []),
     { key: "markets", label: "Predictions", short: "Picks", panel: <Markets prediction={prediction} extra={proLocked ? null : extra} statsLocked={!viewer.paid} /> },
     {
       key: "stats",

@@ -198,6 +198,8 @@ class MemoryDb:
                     ids["fotmob"] = args["p_fotmob_id"]
                     return True
             return False
+        if fn == "fotmob_player_candidates":
+            return [{"fotmob_id": fid} for fid in self.tables.get("_player_candidates", [])][: args.get("p_limit", 400)]
         if fn == "rename_team":
             for t in self.tables.get("teams", []):
                 if t["id"] == args["p_team_id"]:

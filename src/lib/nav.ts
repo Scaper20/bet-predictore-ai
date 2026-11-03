@@ -108,12 +108,13 @@ export function navFor(sport: SportId): { tabs: NavTab[]; tools: NavLink[]; tool
   const predictions: NavMenu = {
     id: "predictions",
     label: "Predictions",
-    match: [p("predictions")],
+    match: [p("predictions"), p("props")],
     columns: [
       {
         title: "Picks",
         links: [
           { label: "Today", desc: "Every game we rate today", href: p("predictions") },
+          { label: "Player props", desc: "Shots, goals, tackles and more, player by player", href: p("props"), badge: { text: "New", tone: "brand" } },
         ],
       },
       {
