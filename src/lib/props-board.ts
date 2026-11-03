@@ -73,7 +73,12 @@ async function load(games: GameRow[], playerId?: string): Promise<PropRow[]> {
     .eq("published", true)
     .limit(2_000);
   if (playerId) kq = kq.eq("player_id", playerId);
-  const [{ data: projections, error }, { data: picks }] = await Promise.all([pq, kq]);
+  const [{ data: projections, error }, { data: picks }, { data: links }] = await Promise.all([
+    pq,
+    kq,
+    admin.from("sportybet_event_links").select("match_id, event_id").in("match_id", games.map((g) => publicMatchId(g))),
+  ]);
+  const eventBy = new Map((links ?? []).map((l) => [l.match_id as string, l.event_id as string]));
   if (error) throw error;
   const pickBy = new Map((picks as PickRow[] | null ?? []).map((p) => [`${p.match_id}|${p.player_id}|${p.market}`, p]));
   const gameBy = new Map(games.map((g) => [g.id, g]));
@@ -87,6 +92,7 @@ async function load(games: GameRow[], playerId?: string): Promise<PropRow[]> {
     out.push({
       matchId: g.id, publicId: publicMatchId(g), kickoff: g.kickoff, leagueCode: g.league_code,
       leagueName: leagueByCode(g.league_code)?.shortName ?? g.league_code, homeName: g.home_name, awayName: g.away_name,
+      eventId: eventBy.get(publicMatchId(g)) ?? null,
       playerId: r.player_id, playerName: r.players.name, teamId: r.team_id, teamName, teamCrest: r.teams?.crest ?? null,
       position: r.position, lineup: r.lineup, market: r.market, mean: Number(r.mean),
       rungs, recent: Array.isArray(r.ladder?.recent) ? r.ladder!.recent!.map(Number) : [],

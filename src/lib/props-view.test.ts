@@ -3,7 +3,7 @@ import { clearedCount, factLine, pickLabel, viewProps, type PropRow } from "./pr
 
 const row: PropRow = {
   matchId: "m", publicId: "fd:1", kickoff: "2026-11-04T20:00:00Z", leagueCode: "champions-league", leagueName: "UCL",
-  homeName: "A", awayName: "B", playerId: "p", playerName: "Harry Kane", teamId: "t", teamName: "B", teamCrest: null,
+  homeName: "A", awayName: "B", eventId: "sr:match:1", playerId: "p", playerName: "Harry Kane", teamId: "t", teamName: "B", teamCrest: null,
   position: 3, lineup: "confirmed", market: "shots", mean: 3.4,
   rungs: [{ line: 2.5, over: 0.61, under: 0.39, overPrice: 1.55, underPrice: 2.3 }],
   recent: [4, 2, 5, 3, 1, 6, 3, 2, 4, 3],

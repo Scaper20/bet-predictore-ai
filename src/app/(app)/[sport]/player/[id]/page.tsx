@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { Crest } from "@/components/ui/crest";
 import { containerClass } from "@/components/ui/container";
+import { PropsPanel } from "@/components/props/props-panel";
 import { MatchTabs, type MatchTab } from "@/components/match/match-tabs";
 import { JsonLd } from "@/components/seo/json-ld";
 import { RatingChip } from "@/components/match/lineup-pitch";
@@ -98,6 +99,9 @@ export default async function PlayerPage({ params }: { params: Params }) {
     { key: "stats", label: "Stats", panel: <StatsPanel page={page} /> },
     ...(page.shots.length > 0 ? [{ key: "shots", label: "Shots", panel: <ShotsPanel shots={page.shots} name={p.name} /> }] : []),
     { key: "lines", label: "Lines cleared", short: "Lines", panel: <HitRatesPanel rates={page.hitRates} /> },
+    ...(page.next
+      ? [{ key: "props", label: "Props", panel: <PropsPanel playerId={p.id} emptyText="Props for the next game appear once FotMob has a likely eleven, usually a day or two before kickoff." /> }]
+      : []),
     { key: "profile", label: "Profile", panel: <ProfilePanel player={p} /> },
   ];
 

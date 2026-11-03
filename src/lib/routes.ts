@@ -31,6 +31,7 @@ export const SPORT_ROUTES = {
   teamForm: "team-form",
   goals: "goals-stats",
   ratings: "ratings",
+  props: "props",
 } as const;
 
 export type SportRoute = keyof typeof SPORT_ROUTES;

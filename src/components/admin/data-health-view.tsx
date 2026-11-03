@@ -107,6 +107,21 @@ export function DataHealthView({ h, fotmobUi = true }: { h: DataHealth; fotmobUi
               </div>
             ))}
           </div>
+          <p className="text-xs text-ink-dim">
+            Player profiles {h.fotmob.playerProfiles === null ? "–" : h.fotmob.playerProfiles.toLocaleString("en-GB")}
+            {" · "}
+            {h.fotmob.props ? (
+              <>
+                Player props {ago(h.fotmob.props.at)} ({h.fotmob.props.status}): {h.fotmob.props.matches} games, {h.fotmob.props.projections} projections,{" "}
+                {h.fotmob.props.lines} SportyBet lines,{" "}
+                <span className={h.fotmob.props.unmatched ? "text-amber" : ""}>{h.fotmob.props.unmatched} unmatched names</span>,{" "}
+                <span className={h.fotmob.props.skippedMarkets ? "text-amber" : ""}>{h.fotmob.props.skippedMarkets} unreadable player markets</span>,{" "}
+                {h.fotmob.props.picks} picks, {h.fotmob.props.settled} settled
+              </>
+            ) : (
+              "player props have not run yet"
+            )}
+          </p>
           {h.fotmob.leagues.length > 0 && (
             <div className="max-w-full overflow-x-auto">
               <table className="w-full min-w-[36rem] text-sm">

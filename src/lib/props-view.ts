@@ -28,6 +28,8 @@ export interface PropRow {
   leagueName: string;
   homeName: string;
   awayName: string;
+  /** The bookmaker's event, for booking a pick (null when the game is not linked). */
+  eventId: string | null;
   playerId: string;
   playerName: string;
   teamId: string | null;
