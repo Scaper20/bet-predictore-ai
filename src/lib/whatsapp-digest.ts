@@ -1,5 +1,9 @@
 import { odds, percent, kickoffTime } from "@/lib/format";
 import { SITE_URL } from "@/lib/site-url";
+import { utmUrl } from "@/lib/utm";
+
+/** A link in the daily message, tagged so sign-ups from WhatsApp stop arriving as "direct". */
+const wa = (path: string) => utmUrl(`${SITE_URL}${path}`, { source: "whatsapp", medium: "digest", campaign: "daily_picks" });
 import type { PersonalizedPick } from "@/lib/for-you";
 import { headlineEligible, type Pick, type Prediction } from "@/lib/model/predict";
 import { isStrong } from "@/lib/model/tiers";
@@ -195,12 +199,12 @@ export function formatPicksMessage(picks: PersonalizedPick[], proHeld = 0): stri
   const overflow = picks.length - shown.length;
   const header = `*KiqStat — Today's Picks*\n${shown.length} pick${shown.length === 1 ? "" : "s"} for the next 24 hours, all at a price of ${odds(DIGEST_MIN_ODDS)} or longer.`;
   const footer =
-    overflow > 0 ? `+${overflow} more at ${SITE_URL}/football/predictions` : `${SITE_URL}/football/predictions`;
+    overflow > 0 ? `+${overflow} more at ${wa("/football/predictions")}` : wa("/football/predictions");
   // Pro-league picks (lib/pro-leagues.ts) are held back from this public
   // message until kick-off; say how many, never which.
   const pro =
     proHeld > 0
-      ? `🔒 +${proHeld} more pick${proHeld === 1 ? "" : "s"} today in Pro leagues (Champions League, Serie A, Bundesliga and more), for Pro members before kick-off → ${SITE_URL}/pricing`
+      ? `🔒 +${proHeld} more pick${proHeld === 1 ? "" : "s"} today in Pro leagues (Champions League, Serie A, Bundesliga and more), for Pro members before kick-off → ${wa("/pricing")}`
       : null;
 
   return [header, ...lines, ...(pro ? [pro] : []), footer].join("\n\n");
@@ -223,7 +227,7 @@ export function formatAccaMessage(acca: DigestAcca): string {
 export const NO_PICK_MESSAGE = [
   "*KiqStat — Today's Picks*",
   `Nothing in the next 24 hours clears our bar — enough history, a price of ${odds(DIGEST_MIN_ODDS)} or longer. We'd rather send nothing than guess.`,
-  `Live scores anyway → ${SITE_URL}`,
+  `Live scores anyway → ${wa("")}`,
 ].join("\n\n");
 
 /** The full day's digest, ready to paste — or a single no-pick message. */
@@ -234,7 +238,7 @@ export function buildDigestFromPicks(picks: PersonalizedPick[], proHeld = 0): Da
       picksMessage: [
         "*KiqStat — Today's Picks*",
         `All ${proHeld} of today's picks are in Pro leagues (Champions League, Serie A, Bundesliga and more). Pro members have them now; everyone sees them at kick-off.`,
-        `${SITE_URL}/pricing`,
+        wa("/pricing"),
       ].join("\n\n"),
       accaMessages: [],
     };

@@ -3,12 +3,15 @@ import "server-only";
 import { emailLayout } from "@/lib/email";
 import { naira } from "@/lib/format";
 import { SITE_URL } from "@/lib/site-url";
+import { utmUrl } from "@/lib/utm";
 import { sportPath } from "@/lib/routes";
 import { TIER_LABEL } from "@/lib/outreach";
 import type { Tier } from "@/lib/entitlements";
 
 function button(href: string, label: string): string {
-  return `<p style="margin:24px 0 0;"><a href="${href}" style="display:inline-block;background:#d4ff3a;color:#07090b;font-weight:700;text-decoration:none;padding:10px 20px;border-radius:8px;font-size:14px;">${label}</a></p>`;
+  // Links back to the site are tagged, so a click and the sign-up after it are traceable to email.
+  const tagged = utmUrl(href, { source: "kiqstat_email", medium: "email" });
+  return `<p style="margin:24px 0 0;"><a href="${tagged}" style="display:inline-block;background:#d4ff3a;color:#07090b;font-weight:700;text-decoration:none;padding:10px 20px;border-radius:8px;font-size:14px;">${label}</a></p>`;
 }
 
 /** Only on the one-off outreach campaigns below — transactional email
@@ -97,6 +100,35 @@ export function unfinishedCheckoutEmail(opts: { tier: "pro" | "vip"; nigeria: bo
           : "Mobile money and cards both work on the payment page."
       } If something went wrong at checkout, message us from the Help page and we'll sort it out.</p>
       ${opts.unsubscribeUrl ? unsubscribeFooter(opts.unsubscribeUrl) : ""}
+    `),
+  };
+}
+
+/**
+ * A pay-once plan is about to end (lib/renewal-reminders.ts). Nothing renews and
+ * nothing is charged, so the email says that first, then what ends and how to
+ * keep it. Renewing adds a month on top of what is left.
+ */
+export function planEndingEmail(opts: { tier: "pro" | "vip"; endsAt: string; canAutoRenew: boolean }): { subject: string; html: string } {
+  const name = opts.tier === "vip" ? "VIP" : "Pro";
+  const date = new Date(opts.endsAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", timeZone: "Africa/Lagos" });
+  const loses =
+    opts.tier === "vip"
+      ? ["Picks before kick-off in the Pro leagues", "Live win probability during matches", "Every prediction type and Forge's full range", "Priority support"]
+      : ["Picks before kick-off in the Pro leagues", "Every prediction type, half-time and winning margin included", "The full match breakdown on every game", "Forge's full range"];
+  return {
+    subject: `Your KiqStat ${name} ends on ${date}`,
+    html: emailLayout(`
+      <p style="margin:0 0 12px;font-size:17px;font-weight:700;">Your ${name} plan ends on ${date}</p>
+      <p style="margin:0;">You paid for ${name} once, so nothing renews and you won't be charged again. After ${date} your
+      account goes back to the free plan. What changes:</p>
+      <ul style="margin:12px 0 0;padding-left:20px;">${loses.map((p) => `<li style="margin:4px 0;">${p}</li>`).join("")}</ul>
+      <p style="margin:16px 0 0;">Renewing adds a month on top of the days you have left, so doing it early loses nothing.${
+        opts.canAutoRenew ? " Prefer it automatic? You can choose card auto-renew on the same page instead." : ""
+      }</p>
+      ${button(`${SITE_URL}/account/billing?plan=${opts.tier}`, `Renew ${name}`)}
+      <p style="margin:20px 0 0;font-size:13px;color:#6b7670;">Everything free stays free, and your history and saved picks are kept either way.
+      If something looks wrong with your plan, message us from the Help page.</p>
     `),
   };
 }

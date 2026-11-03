@@ -1,6 +1,6 @@
 /**
  * Which marketing channel a new account came from, as one word for Mixpanel's
- * acquisition_channel: partner, ads, social, organic_search, referral, direct.
+ * acquisition_channel: partner, ads, ai_assistant, social, organic_search, referral, direct.
  *
  * Read from the first-touch cookie (src/proxy.ts, lib/first-touch.ts) and the
  * partner link, the same two things lib/signup-source.ts saves to the profile.
@@ -10,6 +10,8 @@
 const SEARCH = /(^|\.)(google|bing|duckduckgo|yahoo|yandex|baidu|ecosia|brave)\./i;
 const SOCIAL =
   /(^|\.)(facebook|fb|instagram|t|twitter|x|tiktok|youtube|whatsapp|wa|telegram|t\.me|linkedin|reddit|snapchat|pinterest)\./i;
+/** ChatGPT, Perplexity and the other assistants: as a referrer, or as the utm_source they add to links they cite. */
+const AI = /(^|\.)(chatgpt|openai|perplexity|claude|gemini|copilot|you|phind|poe)(\.|$)/i;
 const PAID_MEDIUM = /^(cpc|ppc|paid|paidsocial|paid_social|display|ads?|banner|cpm)$/i;
 
 interface Touch {
@@ -33,6 +35,7 @@ export function acquisitionChannel(firstTouch: string | null | undefined, partne
   const t = parseTouch(firstTouch);
   if (!t) return "direct";
   const medium = (t.utmMedium ?? "").trim();
+  if (AI.test((t.utmSource ?? "").trim()) || AI.test((t.referrerHost ?? "").trim())) return "ai_assistant";
   if (PAID_MEDIUM.test(medium)) return "ads";
   const source = (t.utmSource ?? "").trim().toLowerCase();
   const host = (t.referrerHost ?? "").trim().toLowerCase();

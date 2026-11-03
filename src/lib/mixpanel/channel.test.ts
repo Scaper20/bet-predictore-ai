@@ -15,6 +15,11 @@ describe("acquisitionChannel", () => {
   it("reads paid media as ads", () => {
     expect(acquisitionChannel(touch({ utmSource: "x", utmMedium: "cpc" }), null)).toBe("ads");
   });
+  it("reads AI assistants by referrer or by the utm_source they add", () => {
+    expect(acquisitionChannel(touch({ utmSource: "chatgpt.com" }), null)).toBe("ai_assistant");
+    expect(acquisitionChannel(touch({ referrerHost: "www.perplexity.ai" }), null)).toBe("ai_assistant");
+    expect(acquisitionChannel(touch({ referrerHost: "gemini.google.com" }), null)).toBe("ai_assistant");
+  });
   it("reads social hosts, search hosts and other referrers", () => {
     expect(acquisitionChannel(touch({ referrerHost: "t.co" }), null)).toBe("social");
     expect(acquisitionChannel(touch({ referrerHost: "www.google.com" }), null)).toBe("organic_search");

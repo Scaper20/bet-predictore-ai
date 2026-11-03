@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { sendCheckoutReminders } from "@/lib/checkout-recovery";
+import { sendRenewalReminders } from "@/lib/renewal-reminders";
 import { expireStalePendingPayments } from "@/lib/payments-feed";
 
 // Node-only (Supabase service-role client), same as the other cron routes;
@@ -29,5 +30,7 @@ export async function GET(request: Request) {
   const { expired } = await expireStalePendingPayments();
   // Then one reminder to people who left checkout in the last two days.
   const reminders = await sendCheckoutReminders().catch(() => ({ candidates: 0, sent: 0 }));
-  return NextResponse.json({ expired, reminders });
+  // And one heads-up to pay-once members whose plan ends in the next few days.
+  const renewals = await sendRenewalReminders().catch(() => ({ candidates: 0, sent: 0 }));
+  return NextResponse.json({ expired, reminders, renewals });
 }
