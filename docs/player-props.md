@@ -36,11 +36,13 @@ What SportyBet's payload looks like (a real capture, Atletico v Bayern, 3 Nov 20
 
 ## Pipeline
 
-`/api/cron/player-props` (pg_cron `betrix-player-props`, every 15 minutes, only when there is work; migration 0094):
+Two schedules (both pg_cron, both only when there is work):
 
-- settles picks once FotMob has the game's player stats (an hourly evening `fotmob-matches` run makes that the same night). **No minutes = void**, not a loss; a postponed game is void.
-- projects every starter with 5+ earlier starts for games in the next 36 hours that have a FotMob eleven (predicted until confirmed), and captures SportyBet's player lines.
-- logs picks once the eleven is confirmed and kickoff is under 100 minutes away; the set can change until kickoff and is frozen after.
+- **The live lane** (`/api/cron/fotmob-live`, every 2 minutes, migration 0096; see `docs/fotmob-match-data.md`): when FotMob confirms a game's eleven, that game's props are projected and its picks logged in the same run; when a game's final player stats land, its picks are settled in the same run. So picks appear about two minutes after the lineup, and results about two minutes after FotMob's final stats.
+- **The props run** (`/api/cron/player-props`, every 15 minutes, migration 0094) keeps everything else fresh:
+  - settles picks once FotMob has the game's player stats (a backstop for the live lane). **No minutes = void**, not a loss; a postponed game is void.
+  - projects every starter with 5+ earlier starts for games in the next 36 hours that have a FotMob eleven (predicted until confirmed), and captures SportyBet's player lines.
+  - logs picks once the eleven is confirmed and kickoff is under 100 minutes away; the set can change until kickoff and is frozen after.
 
 Picks are **shadow only** until `app_switches.player_props` is on (admin › Model performance shows the shadow record next to SportyBet's own chance, with the switch). Switch after about three weeks and 400 graded picks if they land as often as they say and at least as often as SportyBet's price says.
 

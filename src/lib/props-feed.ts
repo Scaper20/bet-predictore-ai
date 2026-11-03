@@ -339,23 +339,31 @@ export async function settlePlayerProps(admin: Admin): Promise<number> {
   return settled;
 }
 
-/** One pipeline run (the cron route). */
-export async function runPlayerProps(admin: Admin): Promise<PropsRunReport> {
+/**
+ * One pipeline run. The 15-minute cron runs everything; the live FotMob lane
+ * (src/lib/fotmob/live.ts) passes `matchIds` the moment a game's eleven is
+ * confirmed, which projects and logs picks for those games at once (no
+ * refresh wait, no settlement pass).
+ */
+export async function runPlayerProps(admin: Admin, opts: { matchIds?: string[] } = {}): Promise<PropsRunReport> {
   const report: PropsRunReport = { settled: 0, matches: 0, projections: 0, lines: 0, unmatched: 0, starters: 0, startersWithLines: 0, skippedMarkets: 0, picks: 0, errors: [] };
-  report.settled = await settlePlayerProps(admin).catch((e: unknown) => {
-    report.errors.push(`settle: ${e instanceof Error ? e.message : String(e)}`);
-    return 0;
-  });
+  const only = opts.matchIds?.length ? opts.matchIds.slice(0, MAX_MATCHES) : null;
+  if (!only) {
+    report.settled = await settlePlayerProps(admin).catch((e: unknown) => {
+      report.errors.push(`settle: ${e instanceof Error ? e.message : String(e)}`);
+      return 0;
+    });
+  }
 
   const now = Date.now();
-  const { data: games, error } = await admin
+  let gq = admin
     .from("matches")
     .select("id, source_ids, kickoff, league_code, home_team_id, away_team_id, home_name, away_name")
     .gt("kickoff", new Date(now).toISOString())
     .lte("kickoff", new Date(now + HORIZON_MS).toISOString())
-    .in("league_code", FOTMOB_CODES)
-    .order("kickoff")
-    .limit(80);
+    .in("league_code", FOTMOB_CODES);
+  if (only) gq = gq.in("id", only);
+  const { data: games, error } = await gq.order("kickoff").limit(80);
   if (error) {
     report.errors.push(`matches: ${error.message}`);
     return report;
@@ -397,7 +405,7 @@ export async function runPlayerProps(admin: Admin): Promise<PropsRunReport> {
     const kickoff = Date.parse(g.kickoff);
     const inLogWindow = confirmed && kickoff - now <= LOG_WINDOW_MS;
     // Skip a fresh projection unless the eleven was just confirmed or picks are due.
-    if (prev && now - prev.at < REFRESH_MS && !(confirmed && prev.lineup !== "confirmed") && !inLogWindow) continue;
+    if (!only && prev && now - prev.at < REFRESH_MS && !(confirmed && prev.lineup !== "confirmed") && !inLogWindow) continue;
     try {
       await runMatch(admin, g, lineup, confirmed, publish, report);
       report.matches++;

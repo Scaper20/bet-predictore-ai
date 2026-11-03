@@ -21,7 +21,8 @@ export type { MatchDetails } from "./match-details-core";
  */
 
 const FINAL_TTL = 30 * 60_000;
-const LIVE_TTL = 2 * 60_000;
+/** Open games: the live lane (src/lib/fotmob/live.ts) refreshes them every two minutes, so cache briefly. */
+const LIVE_TTL = 45_000;
 const ROW_TTL = 60 * 60_000;
 
 async function client() {

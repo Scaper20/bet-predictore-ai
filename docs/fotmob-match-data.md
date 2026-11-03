@@ -19,6 +19,40 @@ Champions League, Europa League and Conference League.
 | Absences model and backtest | `src/lib/model/availability.ts`, `scripts/lineup-backtest.ts`, `docs/lineup-backtest.md` |
 | Admin | Data health page: coverage per competition and the `fotmob_ui` switch |
 
+## Timing: the live lane
+
+Time-critical fetches run in the app, not on GitHub Actions (whose schedules start 5-25 minutes late): pg_cron calls `/api/cron/fotmob-live` every two minutes (`invoke_fotmob_live`, migration 0096), and only while a game needs it:
+
+| Game state | Fetched | Then, in the same run |
+|---|---|---|
+| Kicks off within 90 min, eleven not confirmed | every 2 min until FotMob confirms it | player props projected and picks logged |
+| In play | every 2 min | events, shots and stats on the match page |
+| Finished, final player stats not in | every 2 min (every 20 min if FotMob has no player stats for it) | props settled |
+
+So lineups, live events and final stats trail FotMob by about two minutes (the match page caches open games for 45 seconds). The Python jobs keep everything else: history, the 72-hour look-ahead with absences, club and player profiles, and a backstop for anything the lane missed. The lane writes exactly the rows the Python job writes: `src/lib/fotmob/parse.ts` is a port of `parse_match`, held to it by `src/lib/fotmob/parse.test.ts`, which compares both parsers on the saved responses in `ingestion/tests/fixtures/fotmob/`. When either parser changes, change the other and regenerate the expected output:
+
+```bash
+cd ingestion && python3 - <<'PY'
+import gzip, json, dataclasses
+from betrix_ingest.sources import fotmob as fm
+from betrix_ingest.fotmob_writer import player_uuid
+def norm(v):
+    if dataclasses.is_dataclass(v): return {k: norm(x) for k, x in dataclasses.asdict(v).items()}
+    if isinstance(v, dict): return {str(k): norm(x) for k, x in v.items()}
+    if isinstance(v, (list, tuple)): return [norm(x) for x in v]
+    return v.isoformat() if hasattr(v, "isoformat") else v
+out = {}
+for name in ["match_4193569", "match_old", "match_upcoming"]:
+    d = norm(fm.parse_match(json.load(gzip.open(f"tests/fixtures/fotmob/{name}.json.gz"))))
+    d["players"] = sorted(d["players"].values(), key=lambda p: p["fotmob_id"])
+    out[name] = d
+out["_uuids"] = {str(i): player_uuid(i) for i in (737066, 1, 30981)}
+json.dump(out, open("../src/lib/fotmob/__fixtures__/python-parse.json", "w"), indent=0, sort_keys=True)
+PY
+```
+
+Switching the `fotmob` source off in `ingest_sources` stops the lane as well as the Python jobs. Quiet runs are not logged; runs that fetched something show as `fotmob-live` on Data health.
+
 ## Rules that keep it safe
 
 - **Facts free, analysis paid.** Lineups, events, stats, shot maps and club
