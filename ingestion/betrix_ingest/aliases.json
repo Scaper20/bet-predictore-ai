@@ -353,5 +353,18 @@
       "Red Bull New York",
       "NY Red Bulls"
     ]
+  },
+  "denmark": {
+    "FC Copenhagen": [
+      "F.C. København",
+      "FC København",
+      "København"
+    ]
+  },
+  "serbia": {
+    "Crvena Zvezda": [
+      "FK Crvena Zvezda",
+      "Red Star Belgrade"
+    ]
   }
 }

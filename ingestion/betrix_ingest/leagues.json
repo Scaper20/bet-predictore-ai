@@ -10,7 +10,8 @@
       "theSportsDb": "4328",
       "apiFootball": 39,
       "sportyBet": "sr:tournament:17",
-      "espn": "eng.1"
+      "espn": "eng.1",
+      "fotMob": 47
     },
     "archive": {
       "footballDataUk": "E0"
@@ -29,7 +30,8 @@
       "theSportsDb": "4480",
       "apiFootball": 2,
       "sportyBet": "sr:tournament:7",
-      "espn": "uefa.champions"
+      "espn": "uefa.champions",
+      "fotMob": 42
     },
     "archive": {
       "sportApi": 7,
@@ -50,7 +52,8 @@
     "ids": {
       "theSportsDb": "4481",
       "espn": "uefa.europa",
-      "sportyBet": "sr:tournament:679"
+      "sportyBet": "sr:tournament:679",
+      "fotMob": 73
     },
     "archive": {
       "openfootball": {
@@ -70,7 +73,8 @@
     "ids": {
       "theSportsDb": "5071",
       "espn": "uefa.europa.conf",
-      "sportyBet": "sr:tournament:34480"
+      "sportyBet": "sr:tournament:34480",
+      "fotMob": 10216
     },
     "archive": {
       "openfootball": {
@@ -120,7 +124,8 @@
       "theSportsDb": "4335",
       "apiFootball": 140,
       "sportyBet": "sr:tournament:8",
-      "espn": "esp.1"
+      "espn": "esp.1",
+      "fotMob": 87
     },
     "archive": {
       "footballDataUk": "SP1"
@@ -139,7 +144,8 @@
       "theSportsDb": "4332",
       "apiFootball": 135,
       "sportyBet": "sr:tournament:23",
-      "espn": "ita.1"
+      "espn": "ita.1",
+      "fotMob": 55
     },
     "archive": {
       "footballDataUk": "I1"
@@ -158,7 +164,8 @@
       "theSportsDb": "4331",
       "apiFootball": 78,
       "sportyBet": "sr:tournament:35",
-      "espn": "ger.1"
+      "espn": "ger.1",
+      "fotMob": 54
     },
     "archive": {
       "footballDataUk": "D1"
@@ -177,7 +184,8 @@
       "theSportsDb": "4334",
       "apiFootball": 61,
       "sportyBet": "sr:tournament:34",
-      "espn": "fra.1"
+      "espn": "fra.1",
+      "fotMob": 53
     },
     "archive": {
       "footballDataUk": "F1"
