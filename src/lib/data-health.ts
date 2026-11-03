@@ -33,7 +33,7 @@ export interface FotmobHealth {
   /** Player profiles held (migration 0093). */
   playerProfiles: number | null;
   /** The latest player-props run (migration 0094): null until it has run. */
-  props: { at: string; status: string; matches: number; projections: number; lines: number; unmatched: number; skippedMarkets: number; picks: number; settled: number } | null;
+  props: { at: string; status: string; matches: number; projections: number; lines: number; unmatched: number; starters: number; startersWithLines: number; skippedMarkets: number; picks: number; settled: number } | null;
   leagues: {
     leagueCode: string;
     season: string | null;
@@ -153,6 +153,7 @@ async function fotmobHealth(db: ReturnType<typeof supabaseAdmin>): Promise<Fotmo
           at: propsRun.data.started_at, status: propsRun.data.status,
           matches: num(propsRun.data.meta?.matches), projections: num(propsRun.data.meta?.projections), lines: num(propsRun.data.meta?.lines),
           unmatched: num(propsRun.data.meta?.unmatched), skippedMarkets: num(propsRun.data.meta?.skippedMarkets),
+          starters: num(propsRun.data.meta?.starters), startersWithLines: num(propsRun.data.meta?.startersWithLines),
           picks: num(propsRun.data.meta?.picks), settled: num(propsRun.data.meta?.settled),
         }
       : null,

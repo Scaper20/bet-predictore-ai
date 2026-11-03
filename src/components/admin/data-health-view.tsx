@@ -114,7 +114,10 @@ export function DataHealthView({ h, fotmobUi = true }: { h: DataHealth; fotmobUi
               <>
                 Player props {ago(h.fotmob.props.at)} ({h.fotmob.props.status}): {h.fotmob.props.matches} games, {h.fotmob.props.projections} projections,{" "}
                 {h.fotmob.props.lines} SportyBet lines,{" "}
-                <span className={h.fotmob.props.unmatched ? "text-amber" : ""}>{h.fotmob.props.unmatched} unmatched names</span>,{" "}
+                <span className={h.fotmob.props.starters && h.fotmob.props.startersWithLines / h.fotmob.props.starters < 0.9 ? "text-amber" : ""}>
+                  {h.fotmob.props.startersWithLines} of {h.fotmob.props.starters} starters with lines
+                </span>
+                {" "}({h.fotmob.props.unmatched} bookmaker lines for players outside the eleven),{" "}
                 <span className={h.fotmob.props.skippedMarkets ? "text-amber" : ""}>{h.fotmob.props.skippedMarkets} unreadable player markets</span>,{" "}
                 {h.fotmob.props.picks} picks, {h.fotmob.props.settled} settled
               </>

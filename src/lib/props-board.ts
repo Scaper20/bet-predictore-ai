@@ -4,6 +4,7 @@ import { LEAGUES, leagueByCode } from "@/lib/leagues";
 import { cached } from "@/lib/providers/cache";
 import { publicMatchId } from "@/lib/providers/db-source";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { allPages } from "@/lib/supabase/pages";
 import { switchOn } from "@/lib/switches";
 import type { PropMarketKey } from "@/lib/model/player-props";
 import type { LadderRung, PropRisk } from "@/lib/model/prop-picks";
@@ -60,12 +61,15 @@ async function load(games: GameRow[], playerId?: string): Promise<PropRow[]> {
   if (games.length === 0) return [];
   const admin = supabaseAdmin();
   const ids = games.map((g) => g.id);
-  let pq = admin
-    .from("player_prop_projections")
-    .select("match_id, player_id, market, team_id, position, lineup, mean, ladder, players(name), teams(name, crest)")
-    .in("match_id", ids)
-    .limit(10_000);
-  if (playerId) pq = pq.eq("player_id", playerId);
+  // A day's projections run past the API's 1,000-row cap: page them.
+  const projectionsQ = allPages((from, to) => {
+    let q = admin
+      .from("player_prop_projections")
+      .select("match_id, player_id, market, team_id, position, lineup, mean, ladder, players(name), teams(name, crest)")
+      .in("match_id", ids);
+    if (playerId) q = q.eq("player_id", playerId);
+    return q.order("match_id").order("player_id").order("market").range(from, to);
+  }, { max: 20_000 });
   let kq = admin
     .from("player_prop_picks")
     .select("match_id, player_id, market, line, side, probability, market_probability, price, risk, selection, published")
@@ -73,13 +77,12 @@ async function load(games: GameRow[], playerId?: string): Promise<PropRow[]> {
     .eq("published", true)
     .limit(2_000);
   if (playerId) kq = kq.eq("player_id", playerId);
-  const [{ data: projections, error }, { data: picks }, { data: links }] = await Promise.all([
-    pq,
+  const [projections, { data: picks }, { data: links }] = await Promise.all([
+    projectionsQ,
     kq,
     admin.from("sportybet_event_links").select("match_id, event_id").in("match_id", games.map((g) => publicMatchId(g))),
   ]);
   const eventBy = new Map((links ?? []).map((l) => [l.match_id as string, l.event_id as string]));
-  if (error) throw error;
   const pickBy = new Map((picks as PickRow[] | null ?? []).map((p) => [`${p.match_id}|${p.player_id}|${p.market}`, p]));
   const gameBy = new Map(games.map((g) => [g.id, g]));
   const out: PropRow[] = [];

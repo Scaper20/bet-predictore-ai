@@ -3,6 +3,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { LEAGUES } from "@/lib/leagues";
 import { cached } from "@/lib/providers/cache";
+import { allPages } from "@/lib/supabase/pages";
 import { publicMatchId } from "@/lib/providers/db-source";
 import { switchOn } from "@/lib/switches";
 import { fetchEventMarkets } from "@/lib/odds/sportybet-direct";
@@ -39,7 +40,11 @@ export interface PropsRunReport {
   matches: number;
   projections: number;
   lines: number;
+  /** Bookmaker players not matched to anyone in our lineup rows (mostly reserves it lists and we do not project). */
   unmatched: number;
+  /** Starters projected, and how many of them the bookmaker lists lines for. */
+  starters: number;
+  startersWithLines: number;
   skippedMarkets: number;
   picks: number;
   errors: string[];
@@ -90,8 +95,10 @@ function priors(admin: Admin): Promise<PositionPriors> {
 
 async function histories(admin: Admin, ids: string[]): Promise<Map<string, PropGame[]>> {
   const since = new Date(Date.now() - 3 * 365 * DAY).toISOString();
-  const { data, error } = await admin.rpc("prop_game_logs", { p_players: ids.slice(0, 60), p_since: since });
-  if (error) throw error;
+  // Twenty-two players' histories run to a few thousand rows: page past the API's 1,000-row cap.
+  const data = await allPages<Record<string, unknown>>((from, to) =>
+    admin.rpc("prop_game_logs", { p_players: ids.slice(0, 60), p_since: since }).order("kickoff").order("player_id").range(from, to),
+  );
   const out = new Map<string, PropGame[]>();
   for (const r of (data ?? []) as Record<string, unknown>[]) {
     const g: PropGame = {
@@ -209,6 +216,10 @@ async function runMatch(admin: Admin, match: MatchRow, lineup: LineupRow[], conf
     return new Map<string, PlayerLine[]>();
   });
 
+  const listedPlayers = new Set([...lines.keys()].map((k) => k.slice(0, k.indexOf("|"))));
+  report.starters += starters.length;
+  report.startersWithLines += starters.filter((s) => listedPlayers.has(s.player_id)).length;
+
   const now = Date.now();
   const kickoff = Date.parse(match.kickoff);
   const logPicks = confirmed && kickoff > now && kickoff - now <= LOG_WINDOW_MS;
@@ -290,11 +301,16 @@ export async function settlePlayerProps(admin: Admin): Promise<number> {
   const ids = matchIds.filter((m) => ready.has(m));
   const stats = new Map<string, Record<string, number | null>>();
   for (let i = 0; i < ids.length; i += 50) {
-    const { data } = await admin
-      .from("player_match_stats")
-      .select("match_id, player_id, minutes, goals, assists, shots, shots_on_target, tackles, clearances, fouls_committed, passes_attempted, saves")
-      .in("match_id", ids.slice(i, i + 50));
-    for (const r of data ?? []) stats.set(`${r.match_id}|${r.player_id}`, r);
+    const data = await allPages<Record<string, number | null> & { match_id: string; player_id: string }>((from, to) =>
+      admin
+        .from("player_match_stats")
+        .select("match_id, player_id, minutes, goals, assists, shots, shots_on_target, tackles, clearances, fouls_committed, passes_attempted, saves")
+        .in("match_id", ids.slice(i, i + 50))
+        .order("match_id")
+        .order("player_id")
+        .range(from, to),
+    );
+    for (const r of data) stats.set(`${r.match_id}|${r.player_id}`, r);
   }
   let settled = 0;
   const now = new Date().toISOString();
@@ -325,7 +341,7 @@ export async function settlePlayerProps(admin: Admin): Promise<number> {
 
 /** One pipeline run (the cron route). */
 export async function runPlayerProps(admin: Admin): Promise<PropsRunReport> {
-  const report: PropsRunReport = { settled: 0, matches: 0, projections: 0, lines: 0, unmatched: 0, skippedMarkets: 0, picks: 0, errors: [] };
+  const report: PropsRunReport = { settled: 0, matches: 0, projections: 0, lines: 0, unmatched: 0, starters: 0, startersWithLines: 0, skippedMarkets: 0, picks: 0, errors: [] };
   report.settled = await settlePlayerProps(admin).catch((e: unknown) => {
     report.errors.push(`settle: ${e instanceof Error ? e.message : String(e)}`);
     return 0;
@@ -346,10 +362,16 @@ export async function runPlayerProps(admin: Admin): Promise<PropsRunReport> {
   }
   if (!games?.length) return report;
   const ids = games.map((g) => g.id);
-  const [{ data: details }, { data: lineupRows }, { data: done }] = await Promise.all([
+  const [{ data: details }, lineupRows, done] = await Promise.all([
     admin.from("match_details").select("match_id, lineup_type").in("match_id", ids),
-    admin.from("match_lineup_players").select("match_id, player_id, side, role, usual_position, players(name, usual_position)").in("match_id", ids),
-    admin.from("player_prop_projections").select("match_id, lineup, computed_at").in("match_id", ids).limit(5000),
+    allPages((from, to) =>
+      admin.from("match_lineup_players").select("match_id, player_id, side, role, usual_position, players(name, usual_position)")
+        .in("match_id", ids).order("match_id").order("player_id").range(from, to),
+    ),
+    allPages<{ match_id: string; lineup: string; computed_at: string }>((from, to) =>
+      admin.from("player_prop_projections").select("match_id, lineup, computed_at")
+        .in("match_id", ids).order("match_id").order("player_id").order("market").range(from, to),
+    ),
   ]);
   const lineupType = new Map((details ?? []).map((d) => [d.match_id, d.lineup_type as string | null]));
   const byMatch = new Map<string, LineupRow[]>();
