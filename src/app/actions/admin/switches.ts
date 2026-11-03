@@ -15,6 +15,7 @@ const KEYS: SwitchKey[] = [
   "headline_engine",
   "fotmob_ui",
   "lineup_adjust",
+  "player_props",
 ];
 
 const DONE: Record<SwitchKey, [string, string]> = {
@@ -39,6 +40,10 @@ const DONE: Record<SwitchKey, [string, string]> = {
     "Lineups and absences now move the model's numbers on new predictions.",
     "Lineups and absences are shown as context only; the numbers are the model's own again.",
   ],
+  player_props: [
+    "Player prop picks are published from the next logging run. The shadow record keeps going.",
+    "Player prop picks are back to shadow only: logged and settled, not shown as published picks.",
+  ],
 };
 
 /** Changing what is published is the owner's call; the operational switches are product's. */
@@ -49,6 +54,7 @@ const PERMISSION: Record<SwitchKey, Permission> = {
   headline_engine: "model.manage",
   fotmob_ui: "data.manage",
   lineup_adjust: "model.manage",
+  player_props: "model.manage",
 };
 
 /** Flips one operator switch (public.app_switches). Instances pick it up within SWITCH_TTL_MS. */

@@ -32,7 +32,8 @@ export type SwitchKey =
   | "sportybet_direct"
   | "headline_engine"
   | "fotmob_ui"
-  | "lineup_adjust";
+  | "lineup_adjust"
+  | "player_props";
 
 export const SWITCH_TTL_MS = 15_000;
 
@@ -49,6 +50,7 @@ async function readAll(): Promise<Record<SwitchKey, SwitchState>> {
     headline_engine: { enabled: false, updatedAt: null },
     fotmob_ui: { enabled: true, updatedAt: null },
     lineup_adjust: { enabled: false, updatedAt: null },
+    player_props: { enabled: false, updatedAt: null },
   };
   try {
     const { supabaseAdmin } = await import("@/lib/supabase/admin");

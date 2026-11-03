@@ -15,6 +15,7 @@ on:
     - cron: "0 2 * * 1"          # sync competitions and club lists, weekly
     - cron: "20 5 * * 2"         # international results (CC0 dataset), weekly: last two years
     - cron: "25 1,10 * * *"      # FotMob: details for finished games not yet held (lineups, player stats, shots)
+    - cron: "55 14-23 * * *"     # FotMob: the same, hourly through the match window (settles player props)
     - cron: "5 0-23/3 * * *"     # FotMob: next 72 hours, who is out and lineups as they stand (snapshotted)
     - cron: "50 10-21 * * *"     # FotMob: confirmed lineups, published about an hour before kickoff
     - cron: "40 3 * * 3"         # FotMob: club profiles (squad, coach, venue, transfers), weekly
@@ -105,6 +106,7 @@ jobs:
             "0 2 * * 1")        echo "cmd=sync" >> "$GITHUB_OUTPUT" ;;
             "20 5 * * 2")       echo "cmd=backfill-international-results --since $(date -u -d '2 years ago' +%F)" >> "$GITHUB_OUTPUT" ;;
             "25 1,10 * * *")    echo "cmd=fotmob-matches --limit 350" >> "$GITHUB_OUTPUT" ;;
+            "55 14-23 * * *")   echo "cmd=fotmob-matches --limit 60" >> "$GITHUB_OUTPUT" ;;
             "5 0-23/3 * * *")   echo "cmd=fotmob-upcoming --hours 72" >> "$GITHUB_OUTPUT" ;;
             "50 10-21 * * *")   echo "cmd=fotmob-upcoming --hours 2" >> "$GITHUB_OUTPUT" ;;
             "40 3 * * 3")       echo "cmd=fotmob-teams" >> "$GITHUB_OUTPUT" ;;
