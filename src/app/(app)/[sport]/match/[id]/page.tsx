@@ -41,7 +41,8 @@ import { percent, isLive } from "@/lib/format";
 import { LocalTime } from "@/components/ui/local-time";
 import type { Match } from "@/lib/types";
 import { containerClass } from "@/components/ui/container";
-import { matchDetailsFor, type MatchDetails } from "@/lib/match-details";
+import { availabilityFor, matchDetailsFor, type MatchAvailability, type MatchDetails } from "@/lib/match-details";
+import { AbsenceImpact, AbsenceImpactLock } from "@/components/match/absence-impact";
 import { LineupsPanel, RatingChip } from "@/components/match/lineup-pitch";
 import { MatchTimeline } from "@/components/match/match-timeline";
 import { ShotMap } from "@/components/match/shot-map";
@@ -122,6 +123,9 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
     // facts, open to everyone. Null when the competition isn't covered yet.
     matchDetailsFor(match),
   ]);
+  // Pro: who each side is missing and what it costs. Computed only for a paid
+  // viewer, so none of it can reach a free viewer's page.
+  const availability = viewer.paid && match.status !== "finished" ? await availabilityFor(match, details, ctx.teamIds) : null;
   // FotMob's team stats are the fuller set; ESPN's counts stay as the fallback.
   const counts = details?.stats.length ? null : espnCounts;
   const referee = extra?.referee ?? details?.referee ?? null;
@@ -130,7 +134,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   const label = `${match.home.name} v ${match.away.name}`;
 
   const tabs: MatchTab[] = [
-    { key: "overview", label: "Overview", panel: <Overview match={match} prediction={prediction} ctx={ctx} live={live} label={label} proLeagueOpened={proLeagueOpened} corners={proLocked ? null : extra?.stats.corners} details={details} /> },
+    { key: "overview", label: "Overview", panel: <Overview match={match} prediction={prediction} ctx={ctx} live={live} label={label} proLeagueOpened={proLeagueOpened} corners={proLocked ? null : extra?.stats.corners} details={details} availability={availability} paid={viewer.paid} /> },
     ...(details ? [{ key: "lineups", label: "Lineups", short: "Lineups", panel: <LineupsPanel match={match} details={details} /> }] : []),
     { key: "markets", label: "Predictions", short: "Picks", panel: <Markets prediction={prediction} extra={proLocked ? null : extra} statsLocked={!viewer.paid} /> },
     {
@@ -287,6 +291,8 @@ function Overview({
   proLeagueOpened,
   corners,
   details,
+  availability,
+  paid,
 }: {
   match: Match;
   prediction: ViewedPrediction;
@@ -297,6 +303,8 @@ function Overview({
   /** Pro: the corners markets, for the corners top pick. */
   corners?: StatMarkets | null;
   details: MatchDetails | null;
+  availability: MatchAvailability | null;
+  paid: boolean;
 }) {
   const pick = prediction.topPick;
   const homeForm: Outcome[] = ctx.home?.form.letters ?? prediction.form.home.entries.map((e) => e.result as Outcome);
@@ -351,6 +359,14 @@ function Overview({
         {details && (live || match.status === "finished") && <MatchTimeline match={match} events={details.events} />}
 
         {details && !live && match.status !== "finished" && <TeamNews match={match} details={details} />}
+
+        {availability ? (
+          <AbsenceImpact match={match} availability={availability} />
+        ) : (
+          !paid && details && !live && match.status !== "finished" && (details.home?.unavailable.length || details.away?.unavailable.length) ? (
+            <AbsenceImpactLock missing={(details.home?.unavailable.length ?? 0) + (details.away?.unavailable.length ?? 0)} />
+          ) : null
+        )}
 
         <OutcomePanel prediction={prediction} facts={!prediction.locked.markets} />
 

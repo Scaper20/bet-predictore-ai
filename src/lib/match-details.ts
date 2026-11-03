@@ -5,6 +5,7 @@ import { cached } from "@/lib/providers/cache";
 import { sourceKeyForId } from "@/lib/providers/db-source";
 import { switchOn } from "@/lib/switches";
 import { mapMatchDetails, type MatchDetails } from "./match-details-core";
+import { mapUsage, sideAvailability, type PlayerUsage, type SideAvailability } from "./model/availability";
 
 export type { MatchDetails } from "./match-details-core";
 
@@ -56,6 +57,48 @@ export async function matchDetailsFor(match: Match): Promise<MatchDetails | null
       if (error) throw error;
       return mapMatchDetails(data, started);
     });
+  } catch {
+    return null;
+  }
+}
+
+export interface MatchAvailability {
+  home: SideAvailability | null;
+  away: SideAvailability | null;
+}
+
+function usageFor(teamId: string, before: string): Promise<PlayerUsage[]> {
+  return cached(`team-usage:${teamId}:${before.slice(0, 13)}`, 30 * 60_000, async () => {
+    const c = await client();
+    const { data, error } = await c.rpc("team_player_usage", { p_team: teamId, p_before: before, p_games: 6 });
+    if (error) throw error;
+    return mapUsage(data);
+  });
+}
+
+/**
+ * Who each side is missing and how much of its attack they carry (paid read).
+ * Judged against the named eleven only once it is confirmed or played; a
+ * predicted or last-game XI is a guess, so before then only the injury and
+ * suspension list counts.
+ */
+export async function availabilityFor(
+  match: Match,
+  details: MatchDetails | null,
+  teamIds: { home: string | null; away: string | null },
+): Promise<MatchAvailability | null> {
+  if (!details) return null;
+  try {
+    const xiKnown = details.lineupStatus === "confirmed" || details.lineupStatus === "final";
+    const side = async (teamId: string | null, lineup: MatchDetails["home"]) => {
+      if (!teamId) return null;
+      const usage = await usageFor(teamId, match.kickoff);
+      const xi = xiKnown && lineup?.starters.length ? lineup.starters.map((p) => p.id) : null;
+      const absent = (lineup?.unavailable ?? []).map((p) => ({ playerId: p.id, kind: p.absence }));
+      return sideAvailability(usage, xi, absent);
+    };
+    const [home, away] = await Promise.all([side(teamIds.home, details.home), side(teamIds.away, details.away)]);
+    return home || away ? { home, away } : null;
   } catch {
     return null;
   }
