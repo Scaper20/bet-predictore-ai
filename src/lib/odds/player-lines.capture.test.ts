@@ -74,6 +74,22 @@ describe("SportyBet player markets (real capture)", () => {
     expect(matchPlayer(splitPlayer("Alphonso Davies (Bayern Munich)").name, squad)?.id).toBe("davies");
   });
 
+  it("matches the spellings that missed on the first live run", () => {
+    const squad = [
+      { id: "1", name: "Fredrik Sjøvold" }, { id: "2", name: "Odin Lurås Bjørtuft" }, { id: "3", name: "Kasper Jørgensen" },
+      { id: "4", name: "Evan N'Dicka" }, { id: "5", name: "Mykola Matviyenko" }, { id: "6", name: "Fredrik André Bjørkan" },
+    ];
+    expect(matchPlayer("Fredrik Sjovold", squad)?.id).toBe("1");
+    expect(matchPlayer("Odin Bjortuft", squad)?.id).toBe("2");
+    expect(matchPlayer("Odin Luras Bjortuft", squad)?.id).toBe("2");
+    expect(matchPlayer("Kasper Jorgensen", squad)?.id).toBe("3");
+    expect(matchPlayer("Evan Ndicka", squad)?.id).toBe("4");
+    expect(matchPlayer("Mykola Matvienko", squad)?.id).toBe("5");
+    expect(matchPlayer("Fredrik Bjorkan", squad)?.id).toBe("6");
+    // close spellings never merge two different surnames that both exist
+    expect(matchPlayer("Someone Matvienko", [...squad, { id: "7", name: "Ivan Matvienko" }])?.id).toBe("7");
+  });
+
   it("uses the club to tell two players with the same surname apart", () => {
     const squad = [
       { id: "a", name: "Lucas Hernández", team: "Paris Saint-Germain" },

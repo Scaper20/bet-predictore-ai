@@ -222,8 +222,33 @@ export const SPORTYBET_ADAPTER: PlatformAdapter = {
 };
 
 /** Normalised name for matching a bookmaker's player to ours. */
+const LETTERS: Record<string, string> = { ø: "o", æ: "ae", œ: "oe", ß: "ss", đ: "d", ð: "d", ł: "l", þ: "th", ı: "i" };
+
 export function nameKey(name: string): string {
-  return name.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z ]/g, " ").replace(/\s+/g, " ").trim();
+  return name
+    .toLowerCase()
+    .replace(/[øæœßđðłþı]/g, (c) => LETTERS[c] ?? c)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/['’`]/g, "")
+    .replace(/[^a-z ]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** Bigram overlap of two strings, 0..1 (Dice). */
+function similarity(a: string, b: string): number {
+  if (a === b) return 1;
+  if (a.length < 2 || b.length < 2) return 0;
+  const grams = (s: string) => {
+    const m = new Map<string, number>();
+    for (let i = 0; i < s.length - 1; i++) m.set(s.slice(i, i + 2), (m.get(s.slice(i, i + 2)) ?? 0) + 1);
+    return m;
+  };
+  const A = grams(a), B = grams(b);
+  let both = 0;
+  for (const [g, n] of A) both += Math.min(n, B.get(g) ?? 0);
+  return (2 * both) / (a.length - 1 + b.length - 1);
 }
 
 export interface SquadPlayer {
@@ -265,5 +290,13 @@ export function matchPlayer(name: string, all: readonly SquadPlayer[], team?: st
   if (byLast.length === 1) return byLast[0];
   // One-word names (Rodri, Vinicius Junior's "Vinicius Jr") and reversed orders
   const contains = squad.filter((p) => nameKey(p.name).split(" ").includes(k) || k.split(" ").every((w) => nameKey(p.name).includes(w)));
-  return contains.length === 1 ? contains[0] : null;
+  if (contains.length === 1) return contains[0];
+  // Spelling and transliteration (Matvienko / Matviyenko): one close surname,
+  // and the same first initial when both names have one.
+  const close = squad.filter((p) => {
+    const q = nameKey(p.name).split(" ");
+    if (similarity(q[q.length - 1], last) < 0.8) return false;
+    return parts.length < 2 || q.length < 2 || q[0][0] === parts[0][0];
+  });
+  return close.length === 1 ? close[0] : null;
 }

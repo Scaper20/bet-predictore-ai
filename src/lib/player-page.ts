@@ -2,6 +2,7 @@ import "server-only";
 
 import { leagueByCode } from "@/lib/leagues";
 import { cached } from "@/lib/providers/cache";
+import { allPages } from "@/lib/supabase/pages";
 import { publicMatchId } from "@/lib/providers/db-source";
 import { switchOn } from "@/lib/switches";
 import type { ShotPoint } from "./match-details-core";
@@ -65,9 +66,15 @@ async function rpc<T>(fn: string, args: Record<string, unknown>): Promise<T> {
 }
 
 function peers(position: number, since: string) {
-  return cached(`player:peers:${position}:${since.slice(0, 10)}`, 6 * 60 * 60_000, async () =>
-    mapPeers(await rpc("position_peer_rates", { p_position: position, p_since: since, p_min_minutes: 900 })),
-  );
+  // A position's pool can pass the API's 1,000-row cap over twelve months: page it.
+  return cached(`player:peers:${position}:${since.slice(0, 10)}`, 6 * 60 * 60_000, async () => {
+    const c = await client();
+    return mapPeers(
+      await allPages((from, to) =>
+        c.rpc("position_peer_rates", { p_position: position, p_since: since, p_min_minutes: 900 }).order("player_id").range(from, to),
+      ),
+    );
+  });
 }
 
 interface FixtureRow {
