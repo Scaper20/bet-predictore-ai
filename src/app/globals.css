@@ -465,6 +465,18 @@
 }
 .pip { animation: pip-in .45s var(--ease-out-expo) both; animation-delay: calc(var(--p, 0) * 55ms + min(var(--i, 0), 14) * 30ms); }
 
+/* Shot-map dots land one after another, from nothing to their xG size. */
+@keyframes shot-in {
+  from { opacity: 0; transform: scale(0); }
+  to   { opacity: 1; transform: none; }
+}
+.shot-dot {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: shot-in .5s var(--ease-out-expo) both;
+  animation-delay: calc(min(var(--i, 0), 30) * 22ms);
+}
+
 /* Shared-element morph for a club crest travelling from a list row into
    the match page (React <ViewTransition share="morph">). */
 ::view-transition-group(.morph) { animation-duration: 420ms; animation-timing-function: var(--ease-out-expo); }
@@ -473,7 +485,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .stagger > *, .scroll-reveal, .panel-in-right, .panel-in-left, .seg-grow, .dial, .pip,
-  .score-pop, .row-moved-up, .row-moved-down { animation: none !important; }
+  .score-pop, .row-moved-up, .row-moved-down, .shot-dot { animation: none !important; }
   .orbit-border::before { animation: none; }
   ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
 }

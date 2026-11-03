@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Badge, ButtonLink, LiveDot } from "@/components/ui/primitives";
 import { Crest } from "@/components/ui/crest";
-import { matchPath, sportPath, scoresPath } from "@/lib/routes";
+import { matchPath, sportPath, scoresPath, teamPath } from "@/lib/routes";
 import { BttsPanel, CorrectScorePanel, DoubleChancePanel, GoalsPanel, H2HPanel, OutcomePanel } from "@/components/match/market-panels";
 import { AddToSlip } from "@/components/match/add-to-slip";
 import { MatchTabs, type MatchTab } from "@/components/match/match-tabs";
@@ -41,6 +41,11 @@ import { percent, isLive } from "@/lib/format";
 import { LocalTime } from "@/components/ui/local-time";
 import type { Match } from "@/lib/types";
 import { containerClass } from "@/components/ui/container";
+import { matchDetailsFor, type MatchDetails } from "@/lib/match-details";
+import { LineupsPanel, RatingChip } from "@/components/match/lineup-pitch";
+import { MatchTimeline } from "@/components/match/match-timeline";
+import { ShotMap } from "@/components/match/shot-map";
+import { TeamStatsCard } from "@/components/match/team-stats-card";
 
 /** What the scoreboard starts from, stamped with when this render read it: the
  * cached page can be served minutes later, and the clock counts on from here. */
@@ -103,7 +108,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
   const proLocked = Boolean(prediction.locked.proLeague);
   const proLeagueOpened = !viewer.paid && !proLocked && isProLeague(match.league.code);
   const started = match.status === "live" || match.status === "halftime" || match.status === "finished";
-  const [ctx, extra, counts, averages] = await Promise.all([
+  const [ctx, extra, espnCounts, averages, details] = await Promise.all([
     matchContext(match).catch((): MatchContext => ({ teamIds: { home: null, away: null }, home: null, away: null, table: null })),
     // Corners, cards, shots and more goal markets; the referee where one is
     // named (the English divisions, about a week ahead). Pro only: not even
@@ -113,15 +118,42 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
     // per-game averages: facts, so open to every viewer.
     started ? espnCountsFor(match).catch(() => null) : Promise.resolve(null),
     teamStatAverages(match).catch(() => null),
+    // Lineups, timeline, shot map and team stats (FotMob, migration 0091):
+    // facts, open to everyone. Null when the competition isn't covered yet.
+    matchDetailsFor(match),
   ]);
-  const referee = extra?.referee ?? null;
+  // FotMob's team stats are the fuller set; ESPN's counts stay as the fallback.
+  const counts = details?.stats.length ? null : espnCounts;
+  const referee = extra?.referee ?? details?.referee ?? null;
+  const venue = match.venue ?? details?.stadium ?? null;
   const live = isLive(match);
   const label = `${match.home.name} v ${match.away.name}`;
 
   const tabs: MatchTab[] = [
-    { key: "overview", label: "Overview", panel: <Overview match={match} prediction={prediction} ctx={ctx} live={live} label={label} proLeagueOpened={proLeagueOpened} corners={proLocked ? null : extra?.stats.corners} /> },
+    { key: "overview", label: "Overview", panel: <Overview match={match} prediction={prediction} ctx={ctx} live={live} label={label} proLeagueOpened={proLeagueOpened} corners={proLocked ? null : extra?.stats.corners} details={details} /> },
+    ...(details ? [{ key: "lineups", label: "Lineups", short: "Lineups", panel: <LineupsPanel match={match} details={details} /> }] : []),
     { key: "markets", label: "Predictions", short: "Picks", panel: <Markets prediction={prediction} extra={proLocked ? null : extra} statsLocked={!viewer.paid} /> },
-    { key: "stats", label: "Stats", panel: <MatchStats match={match} home={ctx.home} away={ctx.away} counts={counts} averages={averages} /> },
+    {
+      key: "stats",
+      label: "Stats",
+      panel: (
+        <div className="space-y-4">
+          {details && details.stats.length > 0 && <TeamStatsCard match={match} rows={details.stats} live={live} />}
+          {details && details.shots.length > 0 && (
+            <ShotMap
+              shots={details.shots}
+              homeName={match.home.name}
+              awayName={match.away.name}
+              xg={{
+                home: details.stats.find((r) => r.key === "expected_goals")?.home ?? null,
+                away: details.stats.find((r) => r.key === "expected_goals")?.away ?? null,
+              }}
+            />
+          )}
+          <MatchStats match={match} home={ctx.home} away={ctx.away} counts={counts} averages={averages} />
+        </div>
+      ),
+    },
     ...(ctx.table
       ? [{
           key: "table",
@@ -190,7 +222,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
             </div>
 
             <div className="mt-5 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-3 sm:mt-7 sm:gap-8">
-              <TeamBlock team={match.home} matchId={match.id} side="home" />
+              <TeamBlock team={match.home} matchId={match.id} side="home" teamId={ctx.teamIds.home} />
               <div className="pt-2.5 text-center sm:pt-0">
                 {live ? (
                   <LiveScore className="tnum font-mono tracking-tighter text-3xl font-medium leading-none sm:text-5xl" />
@@ -211,15 +243,17 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
                   </p>
                 )}
               </div>
-              <TeamBlock team={match.away} matchId={match.id} side="away" />
+              <TeamBlock team={match.away} matchId={match.id} side="away" teamId={ctx.teamIds.away} />
             </div>
 
             <div className="mx-auto mt-6 max-w-xl sm:mt-8">
               <div className="mb-2 flex items-center justify-between text-[10.5px] font-semibold uppercase tracking-[0.12em] text-ink-dim">
                 <span>Model&apos;s read</span>
-                {(match.venue || referee) && (
+                {(venue || referee) && (
                   <span className="truncate pl-3 normal-case tracking-normal">
-                    {[match.venue, referee && `Referee: ${referee}`].filter(Boolean).join(" · ")}
+                    {[venue, referee && `Referee: ${referee}`, match.status === "finished" && details?.attendance ? `${details.attendance.toLocaleString("en-GB")} fans` : null]
+                      .filter(Boolean)
+                      .join(" · ")}
                   </span>
                 )}
               </div>
@@ -252,6 +286,7 @@ function Overview({
   label,
   proLeagueOpened,
   corners,
+  details,
 }: {
   match: Match;
   prediction: ViewedPrediction;
@@ -261,6 +296,7 @@ function Overview({
   label: string;
   /** Pro: the corners markets, for the corners top pick. */
   corners?: StatMarkets | null;
+  details: MatchDetails | null;
 }) {
   const pick = prediction.topPick;
   const homeForm: Outcome[] = ctx.home?.form.letters ?? prediction.form.home.entries.map((e) => e.result as Outcome);
@@ -310,6 +346,12 @@ function Overview({
           </section>
         )}
 
+        {details?.playerOfMatch && <PlayerOfMatch details={details} />}
+
+        {details && (live || match.status === "finished") && <MatchTimeline match={match} events={details.events} />}
+
+        {details && !live && match.status !== "finished" && <TeamNews match={match} details={details} />}
+
         <OutcomePanel prediction={prediction} facts={!prediction.locked.markets} />
 
         {!prediction.locked.proLeague && <MorePredictions prediction={prediction} />}
@@ -321,8 +363,8 @@ function Overview({
               <a href="#stats" className="text-xs font-medium text-brand hover:underline">Full stats →</a>
             </div>
             <div className="space-y-3">
-              <FormLine team={match.home} letters={homeForm} />
-              <FormLine team={match.away} letters={awayForm} />
+              <FormLine team={match.home} letters={homeForm} teamId={ctx.teamIds.home} />
+              <FormLine team={match.away} letters={awayForm} teamId={ctx.teamIds.away} />
             </div>
           </section>
         )}
@@ -361,13 +403,22 @@ function MarketCheckNote({ check }: { check: NonNullable<ViewedPrediction["marke
   );
 }
 
-function FormLine({ team, letters }: { team: Match["home"]; letters: Outcome[] }) {
+function FormLine({ team, letters, teamId }: { team: Match["home"]; letters: Outcome[]; teamId: string | null }) {
+  const name = (
+    <>
+      <Crest src={team.crest} name={team.name} size={22} />
+      <span className="min-w-0 truncate text-sm font-medium">{team.name}</span>
+    </>
+  );
   return (
     <div className="flex items-center justify-between gap-3">
-      <span className="flex min-w-0 items-center gap-2.5">
-        <Crest src={team.crest} name={team.name} size={22} />
-        <span className="min-w-0 truncate text-sm font-medium">{team.name}</span>
-      </span>
+      {teamId ? (
+        <Link href={teamPath(teamId, team.name)} className="flex min-w-0 items-center gap-2.5 rounded-md hover:text-brand">
+          {name}
+        </Link>
+      ) : (
+        <span className="flex min-w-0 items-center gap-2.5">{name}</span>
+      )}
       {letters.length > 0 ? <FormPips letters={letters.slice(0, 5)} /> : <span className="text-xs text-ink-dim">No recent games</span>}
     </div>
   );
@@ -446,15 +497,86 @@ const STAT_LABEL = { corners: "Corners", shots: "Shots", shotsOnTarget: "On targ
  * long club name wraps under its badge instead of squeezing the score.
  * The crest morphs in from the row the visitor tapped.
  */
-function TeamBlock({ team, matchId, side }: { team: Match["home"]; matchId: string; side: "home" | "away" }) {
-  return (
-    <div className="flex min-w-0 flex-col items-center gap-2 text-center sm:gap-3">
+function TeamBlock({ team, matchId, side, teamId }: { team: Match["home"]; matchId: string; side: "home" | "away"; teamId: string | null }) {
+  const body = (
+    <>
       <Morph name={morphName(matchId, side)}>
-        <span className="inline-flex">
+        <span className="inline-flex transition-transform duration-300 ease-out group-hover:scale-105">
           <Crest src={team.crest} name={team.name} size={56} />
         </span>
       </Morph>
-      <p className="min-w-0 wrap-break-word font-display text-base font-bold leading-tight sm:text-2xl">{team.name}</p>
-    </div>
+      <p className="min-w-0 wrap-break-word font-display text-base font-bold leading-tight transition-colors group-hover:text-brand sm:text-2xl">{team.name}</p>
+    </>
+  );
+  return teamId ? (
+    <Link href={teamPath(teamId, team.name)} className="group flex min-w-0 flex-col items-center gap-2 rounded-xl text-center sm:gap-3" aria-label={`${team.name}: club page`}>
+      {body}
+    </Link>
+  ) : (
+    <div className="flex min-w-0 flex-col items-center gap-2 text-center sm:gap-3">{body}</div>
+  );
+}
+
+/** The best-rated player of a finished game, with what they did. */
+function PlayerOfMatch({ details }: { details: MatchDetails }) {
+  const p = details.playerOfMatch!;
+  const facts = [
+    p.goals ? `${p.goals} goal${p.goals > 1 ? "s" : ""}` : null,
+    p.assists ? `${p.assists} assist${p.assists > 1 ? "s" : ""}` : null,
+    p.shots !== null ? `${p.shots} shot${p.shots === 1 ? "" : "s"}` : null,
+    p.xg !== null && p.xg > 0 ? `xG ${p.xg.toFixed(2)}` : null,
+    p.minutes !== null ? `${p.minutes}'` : null,
+  ].filter(Boolean);
+  return (
+    <section className="card relative overflow-hidden p-5">
+      <div aria-hidden className="pointer-events-none absolute -right-10 -top-10 size-40 rounded-full bg-[radial-gradient(closest-side,color-mix(in_oklab,var(--color-brand)_14%,transparent),transparent)]" />
+      <p className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-ink-dim">Player of the match</p>
+      <div className="mt-2 flex items-center justify-between gap-4">
+        <div className="min-w-0">
+          <p className="truncate font-display text-lg font-bold sm:text-xl">{p.name}</p>
+          {facts.length > 0 && <p className="mt-0.5 truncate text-xs text-ink-muted">{facts.join(" · ")}</p>}
+        </div>
+        {p.rating !== null && (
+          <span className="shrink-0 scale-125">
+            <RatingChip rating={p.rating} />
+          </span>
+        )}
+      </div>
+    </section>
+  );
+}
+
+/** Before kickoff: who is out on each side, with a way into the lineups. */
+function TeamNews({ match, details }: { match: Match; details: MatchDetails }) {
+  const sides = [
+    { team: match.home, out: details.home?.unavailable ?? [] },
+    { team: match.away, out: details.away?.unavailable ?? [] },
+  ];
+  if (sides.every((s) => s.out.length === 0) && details.lineupStatus !== "confirmed") return null;
+  return (
+    <section className="card p-5">
+      <div className="mb-3 flex items-baseline justify-between gap-3">
+        <h2 className="font-sans text-sm font-semibold uppercase tracking-wider text-ink-muted">Team news</h2>
+        <a href="#lineups" className="text-xs font-medium text-brand hover:underline">
+          {details.lineupStatus === "confirmed" ? "Confirmed lineups →" : "Lineups →"}
+        </a>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {sides.map(({ team, out }) => (
+          <div key={team.name} className="min-w-0 rounded-xl border border-line bg-surface-2 px-3.5 py-3">
+            <p className="flex items-center gap-2 text-xs font-semibold">
+              <Crest src={team.crest} name={team.name} size={16} />
+              <span className="truncate">{team.name}</span>
+              <span className={`ml-auto tnum shrink-0 font-mono ${out.length ? "text-rose" : "text-ink-dim"}`}>{out.length} out</span>
+            </p>
+            {out.length > 0 ? (
+              <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-ink-muted">{out.map((p) => p.short).join(", ")}</p>
+            ) : (
+              <p className="mt-1.5 text-xs text-ink-dim">No one reported out.</p>
+            )}
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }

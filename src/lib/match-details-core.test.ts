@@ -147,6 +147,8 @@ describe("pieces", () => {
     expect(lineupStatus("standard", false, false)).toBe("confirmed");
     expect(lineupStatus("standard", true, true)).toBe("final");
     expect(lineupStatus("lastStarting11", false, false)).toBe("previous");
+    expect(lineupStatus("predicted", false, false)).toBe("predicted");
+    expect(lineupStatus("unavailable", false, false)).toBe("none");
     expect(lineupStatus(null, false, false)).toBe("none");
     expect(ratingBand(8.2)).toBe("elite");
     expect(ratingBand(6.4)).toBe("ok");

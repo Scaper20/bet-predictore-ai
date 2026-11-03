@@ -11,7 +11,7 @@
 export type Side = "home" | "away";
 
 /** How sure the shown lineup is. */
-export type LineupStatus = "final" | "confirmed" | "previous" | "none";
+export type LineupStatus = "final" | "confirmed" | "predicted" | "previous" | "none";
 
 export interface DetailPlayer {
   id: string;
@@ -151,6 +151,7 @@ export function shortName(name: string, lastName?: string | null): string {
 export function lineupStatus(lineupType: string | null, finished: boolean, started: boolean): LineupStatus {
   if (!lineupType) return "none";
   if (lineupType === "standard") return finished || started ? "final" : "confirmed";
+  if (lineupType === "predicted") return "predicted";
   if (lineupType === "lastStarting11") return "previous";
   return "none";
 }
