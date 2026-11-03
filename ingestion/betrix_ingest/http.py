@@ -28,6 +28,7 @@ MIN_GAP_SECONDS: dict[str, float] = {
     "clubelo": 4.0,
     "openfootball": 0.0,  # local files after one git clone
     "international-results": 2.0,  # one CSV per run
+    "fotmob": 3.5,  # unofficial feed: stay well under anything a person browsing would do
 }
 DEFAULT_GAP = 4.0
 

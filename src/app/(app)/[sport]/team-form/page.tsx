@@ -11,7 +11,7 @@ import { leagueByCode } from "@/lib/leagues";
 import { leagueTeams, recentResults, type TeamRef } from "@/lib/stats/queries";
 import { summariseForm, outcome, type FormSummary, type TeamResult } from "@/lib/stats/compute";
 import { STAT_LEAGUES, pickLeague } from "@/lib/stats/leagues";
-import { matchPath, sportPath } from "@/lib/routes";
+import { matchPath, sportPath, teamPath } from "@/lib/routes";
 
 type Venue = "all" | "home" | "away";
 
@@ -95,7 +95,9 @@ export default async function TeamFormPage({ searchParams }: { searchParams: Pro
                     <span className="tnum text-xs font-semibold text-ink-dim">{i + 1}</span>
                     <span className="flex min-w-0 items-center gap-2.5">
                       <Crest src={r.team.crest} name={r.team.name} size={24} />
-                      <span className="min-w-0 truncate text-sm font-semibold">{r.team.name}</span>
+                      <Link href={teamPath(r.team.id, r.team.name)} prefetch={false} className="min-w-0 truncate text-sm font-semibold hover:text-brand">
+                        {r.team.name}
+                      </Link>
                       <Trend value={r.form.trend} />
                     </span>
                     <span className="col-span-3 row-start-2 sm:col-span-1 sm:row-start-auto">
@@ -154,7 +156,9 @@ function Spot({
       <p className={`text-[10.5px] font-semibold uppercase tracking-[0.14em] ${text}`}>{title}</p>
       <div className="mt-2 flex items-center gap-2.5">
         <Crest src={row.team.crest} name={row.team.name} size={28} />
-        <span className="min-w-0 truncate font-display text-lg font-bold">{row.team.name}</span>
+        <Link href={teamPath(row.team.id, row.team.name)} prefetch={false} className="min-w-0 truncate font-display text-lg font-bold hover:text-brand">
+          {row.team.name}
+        </Link>
       </div>
       <div className="mt-3"><FormPips letters={row.form.letters.slice(0, 5)} size="sm" index={i} /></div>
       <p className="mt-2 text-xs text-ink-muted">{note}</p>

@@ -7,6 +7,8 @@ import { pairedLogLoss, priceSkill, type PriceSkill, type PricedOutcome } from "
 import { requirePermission } from "@/lib/admin";
 import { can } from "@/lib/admin-access";
 import { switchesFresh } from "@/lib/switches";
+import { getPropsRecord } from "@/lib/props-record";
+import { PropsSection } from "@/components/admin/props-section";
 import { summariseEngine, type EngineLogRow, type EngineRecord, type PublishedLogRow } from "@/lib/engine-record";
 import { EngineSection } from "@/components/admin/engine-section";
 
@@ -14,8 +16,13 @@ export const metadata: Metadata = { title: "Model performance" };
 
 export default async function ModelPerformancePage() {
   const identity = await requirePermission("model.view");
-  const [perf, shadow, prices, engine, sw, accuracy] = await Promise.all([getModelPerformance(), getShadowRecord(), getPriceRecord(), getEngineRecord(), switchesFresh(), getMarketAccuracy()]);
-  const engineSection = <EngineSection record={engine} enabled={sw.headline_engine.enabled} canSwitch={can(identity.roles, "model.manage")} />;
+  const [perf, shadow, prices, engine, sw, accuracy, props] = await Promise.all([getModelPerformance(), getShadowRecord(), getPriceRecord(), getEngineRecord(), switchesFresh(), getMarketAccuracy(), getPropsRecord()]);
+  const engineSection = (
+    <>
+      <EngineSection record={engine} enabled={sw.headline_engine.enabled} canSwitch={can(identity.roles, "model.manage")} />
+      <PropsSection record={props} enabled={sw.player_props.enabled} canSwitch={can(identity.roles, "model.manage")} />
+    </>
+  );
   const totalSettled = perf.overall.wins + perf.overall.losses + perf.overall.pushes;
 
   if (totalSettled === 0) {

@@ -159,6 +159,10 @@
       "Bor. Mönchengladbach",
       "M'gladbach",
       "Borussia M'gladbach"
+    ],
+    "Hamburg": [
+      "HSV",
+      "Hamburger SV"
     ]
   },
   "italy": {
@@ -227,6 +231,10 @@
     "Sporting de Gijón": [
       "Sp Gijon",
       "Sporting Gijon"
+    ],
+    "Athletic Bilbao": [
+      "Athletic Club",
+      "Athletic Club Bilbao"
     ]
   },
   "brazil": {
@@ -352,6 +360,19 @@
     "New York Red Bulls": [
       "Red Bull New York",
       "NY Red Bulls"
+    ]
+  },
+  "denmark": {
+    "FC Copenhagen": [
+      "F.C. København",
+      "FC København",
+      "København"
+    ]
+  },
+  "serbia": {
+    "Crvena Zvezda": [
+      "FK Crvena Zvezda",
+      "Red Star Belgrade"
     ]
   }
 }

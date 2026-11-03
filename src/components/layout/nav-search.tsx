@@ -7,14 +7,14 @@ import type { Match } from "@/lib/types";
 import type { SportId } from "@/lib/sports";
 import { allLinks, type NavLink } from "@/lib/nav";
 import { CLUB_LEAGUES, INTERNATIONAL_LEAGUES } from "@/lib/leagues";
-import { matchPath, sportPath } from "@/lib/routes";
+import { matchPath, playerPath, sportPath, teamPath } from "@/lib/routes";
 import { kickoffDay, kickoffTime } from "@/lib/format";
 import { useTimeZone } from "@/lib/use-visitor";
 import { runNavAction } from "@/components/layout/nav-actions";
 
 interface Result {
   key: string;
-  group: "Pages" | "Leagues" | "Matches";
+  group: "Teams" | "Players" | "Pages" | "Leagues" | "Matches";
   label: string;
   meta?: string;
   href: string;
@@ -41,8 +41,50 @@ function loadFixtures(): Promise<Match[]> {
   return fixtures;
 }
 
+interface TeamHit {
+  id: string;
+  name: string;
+  crest?: string;
+}
+
+interface PlayerHit {
+  id: string;
+  name: string;
+  teamName: string | null;
+  position: string | null;
+}
+
+/** Clubs by name, from /api/teams/search (cached at the edge), a moment after typing stops. */
+function useTeamSearch(query: string, active: boolean): { teams: TeamHit[]; players: PlayerHit[] } {
+  const q = query.trim().slice(0, 40);
+  const [found, setFound] = useState<{ q: string; hits: TeamHit[]; players: PlayerHit[] }>({ q: "", hits: [], players: [] });
+  useEffect(() => {
+    if (!active || q.length < 2) return;
+    const ctrl = new AbortController();
+    const t = setTimeout(() => {
+      fetch(`/api/teams/search?q=${encodeURIComponent(q)}&with=players`, { signal: ctrl.signal })
+        .then((r) => (r.ok ? r.json() : { teams: [] }))
+        .then((d: { teams?: TeamHit[]; players?: PlayerHit[] }) =>
+          setFound({
+            q,
+            hits: Array.isArray(d.teams) ? d.teams.slice(0, 5) : [],
+            players: Array.isArray(d.players) ? d.players.slice(0, 5) : [],
+          }),
+        )
+        .catch(() => {});
+    }, 180);
+    return () => {
+      clearTimeout(t);
+      ctrl.abort();
+    };
+  }, [q, active]);
+  // Only the answer to what is typed now; nothing for a stale or too-short query.
+  return active && q.length >= 2 && found.q === q ? { teams: found.hits, players: found.players } : { teams: [], players: [] };
+}
+
 function useSearch(sport: SportId, query: string, active: boolean) {
   const [matches, setMatches] = useState<Match[]>([]);
+  const { teams: teamHits, players: playerHits } = useTeamSearch(query, active);
   const tz = useTimeZone();
   useEffect(() => {
     if (!active) return;
@@ -74,8 +116,22 @@ function useSearch(sport: SportId, query: string, active: boolean) {
         meta: `${m.league.name} · ${kickoffDay(m.kickoff, tz)} ${kickoffTime(m.kickoff, tz)}`,
         href: matchPath(m.id, sport),
       }));
-    return [...games, ...leagues, ...pages];
-  }, [query, matches, sport, tz]);
+    const teams: Result[] = teamHits.map((t) => ({
+      key: `t:${t.id}`,
+      group: "Teams",
+      label: t.name,
+      meta: "Fixtures, form, squad",
+      href: teamPath(t.id, t.name, sport),
+    }));
+    const players: Result[] = playerHits.map((p) => ({
+      key: `pl:${p.id}`,
+      group: "Players",
+      label: p.name,
+      meta: [p.position, p.teamName].filter(Boolean).join(" · ") || "Stats, form and game log",
+      href: playerPath(p.id, p.name, sport),
+    }));
+    return [...teams, ...players, ...games, ...leagues, ...pages];
+  }, [query, matches, sport, tz, teamHits, playerHits]);
 }
 
 /**
@@ -148,7 +204,7 @@ export function NavSearch({
       {results.length === 0 ? (
         <p className="px-3 py-4 text-sm text-ink-muted">Nothing matches &ldquo;{query.trim()}&rdquo; yet.</p>
       ) : (
-        (["Matches", "Leagues", "Pages"] as const).map((group) => {
+        (["Teams", "Players", "Matches", "Leagues", "Pages"] as const).map((group) => {
           const rows = results.filter((r) => r.group === group);
           if (!rows.length) return null;
           return (
