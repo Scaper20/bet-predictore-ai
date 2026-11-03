@@ -1,5 +1,7 @@
 "use client";
 
+import { utmUrl } from "@/lib/utm";
+import { CANONICAL_ORIGIN } from "@/lib/site-url";
 import { useState } from "react";
 import { ShareImageSheet } from "@/components/slip/share-slip-sheet";
 
@@ -24,7 +26,7 @@ export function SharePicksButton({ matchId, label }: { matchId: string; label: s
           src={`/api/match/${encodeURIComponent(matchId)}/share-image?theme=${theme}`}
           title="picks"
           filename="kiqstat-picks.png"
-          shareText={`${label} · picks on KiqStat · kiqstat.app`}
+          shareText={`${label} · picks on KiqStat · ${utmUrl(CANONICAL_ORIGIN, { source: "share", medium: "match_picks" })}`}
           onClose={() => setTheme(null)}
         />
       )}

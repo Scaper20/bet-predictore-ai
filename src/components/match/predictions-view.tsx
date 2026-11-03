@@ -33,15 +33,15 @@ export function predictionsMetadata(league: string | undefined): Metadata {
   const base = sportPath("predictions");
   if (!def) {
     return {
-      title: "Today's Football Predictions",
+      title: "Football Predictions Today: NPFL, Premier League, CAF Champions League",
       description:
-        "Football predictions fitted on real completed matches: match result, over/under, both teams to score and " +
-        "correct score probabilities with the sample size behind every number.",
+        "Today's football predictions for Nigeria and Africa, from a model fitted on real results: who wins, over/under 2.5, " +
+        "both teams to score and correct score, with the sample size behind every number. NPFL, Premier League and CAF Champions League.",
       alternates: { canonical: base },
     };
   }
   return {
-    title: `${def.name} Predictions Today`,
+    title: `${def.name} Predictions Today: Win, Draw, Over/Under and BTTS`,
     description:
       `${def.name} predictions from a statistical model fitted on real results: win, draw, ` +
       `over/under 2.5, both teams to score and correct score probabilities, with the sample size behind each.`,

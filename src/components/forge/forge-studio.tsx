@@ -1,5 +1,7 @@
 "use client";
 
+import { utmUrl } from "@/lib/utm";
+import { CANONICAL_ORIGIN } from "@/lib/site-url";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
@@ -295,7 +297,7 @@ export function ForgeStudio() {
     const text = [
       `My KiqStat Forge combo · combined price ${t.odds.toFixed(2)}`,
       ...slip.legs.map((l) => `• ${l.fixture}: ${l.label} @ ${legOdds(l).toFixed(2)}`),
-      `Built on kiqstat.app — probabilities, not guarantees. 18+`,
+      `Built on ${utmUrl(CANONICAL_ORIGIN, { source: "share", medium: "forge_combo" })} — probabilities, not guarantees. 18+`,
     ].join("\n");
     try {
       if (navigator.share) await navigator.share({ text });
