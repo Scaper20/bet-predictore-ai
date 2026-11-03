@@ -22,8 +22,30 @@ export interface SourceRow {
   notes: string | null;
 }
 
+/** FotMob match details (migration 0091): per competition, from each job's latest run. */
+export interface FotmobHealth {
+  matchesWithDetails: number;
+  players: number;
+  clubProfiles: number;
+  absenceSnapshots: number;
+  lastUpcomingRun: string | null;
+  lastTeamsRun: string | null;
+  leagues: {
+    leagueCode: string;
+    season: string | null;
+    at: string;
+    status: string;
+    linked: number;
+    fetched: number;
+    remaining: number;
+    unmatched: number;
+    warning: string | null;
+  }[];
+}
+
 export interface DataHealth {
   available: boolean;
+  fotmob: FotmobHealth | null;
   dataLayer: DataLayer;
   sources: SourceRow[];
   competitions: CompetitionHealth[];
@@ -34,7 +56,7 @@ export interface DataHealth {
 }
 
 const EMPTY: DataHealth = {
-  available: false, dataLayer: "live", sources: [], competitions: [], recentFailures: [], unresolved: [], duplicates: [], gaps: [],
+  available: false, fotmob: null, dataLayer: "live", sources: [], competitions: [], recentFailures: [], unresolved: [], duplicates: [], gaps: [],
 };
 
 /** Everything the admin Data health page shows, in one read. Empty (not an error) before migration 0029. */
@@ -59,10 +81,12 @@ export async function getDataHealth(): Promise<DataHealth> {
       .not("gap_note", "is", null).order("league_code").order("season"),
   ]);
   if (health.error) return EMPTY;
+  const fotmob = await fotmobHealth(db).catch(() => null);
 
   const mode = settings.data?.data_layer;
   return {
     available: true,
+    fotmob,
     dataLayer: mode === "db" || mode === "db_fallback" ? mode : "live",
     sources: (sources.data ?? []) as SourceRow[],
     competitions: (health.data ?? []).map((r) => ({
@@ -83,5 +107,52 @@ export async function getDataHealth(): Promise<DataHealth> {
     gaps: (gaps.data ?? []).map((g) => ({
       leagueCode: g.league_code, season: g.season, source: g.source, expected: g.expected, loaded: g.loaded, note: g.gap_note,
     })),
+  };
+}
+
+async function fotmobHealth(db: ReturnType<typeof supabaseAdmin>): Promise<FotmobHealth | null> {
+  const count = async (table: string) => {
+    const { count: n, error } = await db.from(table).select("*", { count: "exact", head: true });
+    if (error) throw error;
+    return n ?? 0;
+  };
+  const [details, players, profiles, snapshots, runs] = await Promise.all([
+    count("match_details"),
+    count("players"),
+    count("team_profiles"),
+    count("availability_snapshots"),
+    db.from("ingest_runs").select("job, league_code, status, started_at, meta")
+      .eq("source", "fotmob").order("started_at", { ascending: false }).limit(300),
+  ]);
+  if (runs.error) throw runs.error;
+  type Run = { job: string; league_code: string | null; status: string; started_at: string; meta: Record<string, unknown> | null };
+  const rows = (runs.data ?? []) as Run[];
+  const latest = new Map<string, Run>();
+  for (const r of rows) {
+    // The latest current-season run per competition (backfill runs carry an older season).
+    if (r.job !== "fotmob-matches" || !r.league_code) continue;
+    if (!latest.has(r.league_code)) latest.set(r.league_code, r);
+  }
+  const num = (v: unknown) => (typeof v === "number" ? v : Number(v ?? 0)) || 0;
+  return {
+    matchesWithDetails: details,
+    players,
+    clubProfiles: profiles,
+    absenceSnapshots: snapshots,
+    lastUpcomingRun: rows.find((r) => r.job === "fotmob-upcoming")?.started_at ?? null,
+    lastTeamsRun: rows.find((r) => r.job === "fotmob-teams")?.started_at ?? null,
+    leagues: [...latest.values()]
+      .map((r) => ({
+        leagueCode: r.league_code as string,
+        season: typeof r.meta?.season === "string" ? r.meta.season : null,
+        at: r.started_at,
+        status: r.status,
+        linked: num(r.meta?.linked_total),
+        fetched: num(r.meta?.fetched),
+        remaining: num(r.meta?.remaining),
+        unmatched: num(r.meta?.unmatched),
+        warning: Array.isArray(r.meta?.warnings) ? String((r.meta?.warnings as unknown[])[0] ?? "") || null : null,
+      }))
+      .sort((a, b) => a.leagueCode.localeCompare(b.leagueCode)),
   };
 }

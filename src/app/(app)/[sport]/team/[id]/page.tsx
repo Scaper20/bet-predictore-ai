@@ -32,6 +32,11 @@ import { topBy } from "@/lib/team-page-core";
  */
 export const revalidate = 1800;
 
+/** No club is built at deploy time; each is rendered on its first visit, then cached (ISR). */
+export async function generateStaticParams() {
+  return [];
+}
+
 type Params = Promise<{ id: string }>;
 
 async function load(segment: string) {
