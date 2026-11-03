@@ -89,7 +89,7 @@ export function DataHealthView({ h, fotmobUi = true }: { h: DataHealth; fotmobUi
           <div className="flex flex-wrap items-baseline justify-between gap-3">
             <h2 className="text-sm font-semibold text-ink">Match details (FotMob)</h2>
             <span className="text-xs text-ink-dim">
-              Lineups {ago(h.fotmob.lastUpcomingRun)} · club profiles {ago(h.fotmob.lastTeamsRun)}
+              Live lane {ago(h.fotmob.lastLiveRun)} · lineups {ago(h.fotmob.lastUpcomingRun)} · club profiles {ago(h.fotmob.lastTeamsRun)}
             </span>
           </div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

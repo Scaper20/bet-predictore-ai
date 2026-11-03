@@ -19,7 +19,8 @@ import type { PropRow } from "@/lib/props-view";
  */
 
 const FOTMOB_CODES = LEAGUES.filter((l) => l.ids.fotMob).map((l) => l.code);
-const TTL = 2 * 60_000;
+/** Short: lineups confirm and picks log minutes before kickoff (the live lane). */
+const TTL = 60_000;
 
 interface GameRow {
   id: string;

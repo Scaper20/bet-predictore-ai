@@ -30,6 +30,8 @@ export interface FotmobHealth {
   absenceSnapshots: number;
   lastUpcomingRun: string | null;
   lastTeamsRun: string | null;
+  /** The live lane's last run that fetched something (migration 0096; quiet runs are not logged). */
+  lastLiveRun: string | null;
   /** Player profiles held (migration 0093). */
   playerProfiles: number | null;
   /** The latest player-props run (migration 0094): null until it has run. */
@@ -147,6 +149,7 @@ async function fotmobHealth(db: ReturnType<typeof supabaseAdmin>): Promise<Fotmo
     absenceSnapshots: snapshots,
     lastUpcomingRun: rows.find((r) => r.job === "fotmob-upcoming")?.started_at ?? null,
     lastTeamsRun: rows.find((r) => r.job === "fotmob-teams")?.started_at ?? null,
+    lastLiveRun: rows.find((r) => r.job === "fotmob-live")?.started_at ?? null,
     playerProfiles,
     props: propsRun.data
       ? {
