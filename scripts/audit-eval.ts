@@ -20,6 +20,7 @@ import { fitLeague, type FitOptions } from "../src/lib/model/fit";
 import { NEXT_PARAMS } from "../src/lib/model/params";
 import { evaluatePick } from "../src/lib/settlement";
 import { csv, parse, toMatch, toResultRow, type Row } from "./lib/football-data-uk";
+import { clampEnd } from "./lib/holdout";
 
 const DAY = 86_400_000;
 const TRAIN_CAP = 1200;
@@ -118,7 +119,8 @@ async function main() {
   const cfg = CONFIGS[name];
   if (!cfg) throw new Error(`unknown config ${name}`);
   const from = Date.parse(arg("from") ?? "2023-08-01");
-  const to = Date.parse(arg("to") ?? "2026-06-30") + DAY;
+  // Stops at 31 Oct 2026 unless --final: the frozen holdout (scripts/lib/holdout.ts).
+  const to = Date.parse(clampEnd(arg("to") ?? "2026-06-30", process.argv.includes("--final"))) + DAY;
   const only = arg("only")?.split(",");
   const out: Rec[] = [];
   const { fitOpts, ...options } = cfg;

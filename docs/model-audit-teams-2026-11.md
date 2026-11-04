@@ -299,7 +299,7 @@ What this says:
 ## F. Recommended work, in order
 
 1. **Fix A1** (cutoff for finished games). Small, contained, no model change. (Done, section G.)
-2. **Freeze a holdout.** From now on, nothing tuned on data after a fixed date
+2. **Freeze a holdout (done, section H).** From now on, nothing tuned on data after a fixed date
    (suggest 1 Nov 2026) until a rule is final; evaluate every pick-layer
    change once on it. Re-evaluate the market check on publish-time SportyBet
    snapshots only (the table exists, `predictions_log` closing/publish prices).
@@ -384,3 +384,83 @@ carries no flag to separate them), corners picks overstated live (75.0% against
 81.8% stated, n=48), Liga MX 62.8% against 74.0% (n=43), the market check's
 evidence (closing prices stand in for publish-time prices), and the frozen
 holdout recommended in section F.
+
+## H. Follow-up (4 Nov 2026): the freeze, corners, Liga MX, overs in all markets
+
+**Freeze (done).** `scripts/lib/holdout.ts` sets the frozen holdout at 1 Nov 2026.
+`audit-eval.ts`, `audit-corners.ts` and `audit-ligamx.ts` stop at 31 Oct 2026 and
+only include later games with `--final`. A finished change is scored on the
+holdout once.
+
+**Corner losses: unders are not the problem (live picks since 1 Aug).**
+
+| | Picks | Won | Hit |
+|---|---|---|---|
+| Corners unders | 39 | 32 | 82.1% |
+| Corners overs (all team lines, from the SportyBet board swap) | 10 | 4 | 40% |
+| All corners | 49 | 36 | 73.5% |
+
+Unders are 7 of the 13 losses because they are 80% of the picks, but they win at
+about their stated rate. The weak side is the small group of team-corner overs.
+Ten picks is too few to rest on, so I replayed corners walk-forward
+(`audit-corners.ts`, 17 divisions, ~25,000 fixtures, count model refitted each
+matchday). Claimed against landed at 65%+ stated:
+
+| Corners | 2022-25 | 2025-26 held out | Sep-Oct 2026 |
+|---|---|---|---|
+| Total over | -1.5 | -1.6 | +1.1 |
+| Total under | 0.0 | -0.7 | -2.7 |
+| Team over | -1.4 | -1.4 | -0.2 |
+| Team under | +0.9 | +0.2 | -0.6 |
+
+(Points, landed minus claimed.) Overs are overstated by about 1.5 points over
+four seasons and thousands of picks; unders are calibrated. The shipped rule
+`corners:under:12.5` at 82%+ landed 83.6% / 84.5% / 82.4% on the three windows
+(stated about 83.5%), so the live 80.6% on 31 picks is within noise.
+
+**Overs in all markets: tested, not shipped for counts.** One count pick per
+fixture (likeliest selection at 80-85%), hit rate on 2022-25 / 2025-26 / Sep-Oct 2026:
+
+| Policy | Corners | Shots | Shots on target |
+|---|---|---|---|
+| As priced | 81.9 / 82.5 / 84.4 | 83.0 / 83.5 / 82.6 | 83.5 / 83.5 / 80.2 |
+| Lean to overs +0.02 | 81.7 / 81.6 / 83.9 | 82.6 / 83.4 / 83.9 | 83.1 / 83.2 / 81.4 |
+| Lean to overs +0.04 | 81.4 / 81.3 / 83.4 | 82.2 / 83.1 / 85.9 | 82.5 / 82.2 / 82.5 |
+| Unders only | 82.8 / 82.7 / 82.3 | 82.6 / 82.7 / 74.5 | 83.6 / 83.1 / 77.2 |
+
+For corners the lean to overs is lower on all three windows. For shots and shots
+on target it is slightly lower on the long history and higher on Sep-Oct 2026,
+within noise. The goals lean (0.02) stays: it is neutral there.
+
+**Why Sep-Oct 2026 looks different: a level shift.** Per-match averages across the
+17 divisions, 2025-26 against Aug-Oct 2026: shots 25.2 to 27.3-27.8, shots on
+target 8.5 to 9.1-9.3, corners 9.7 to 10.0-10.2, goals 2.7 to 2.9-3.0. Unders on
+shots landed 61% against 75.5% stated in Sep-Oct. I do not know the cause (a rule
+change, a data change or the schedule); worth asking. A recent-level adjustment
+(60 or 90-day memory, 50% or 100% of the gap) was built into the count model and
+tested: it fixes some of the Sep-Oct calibration but does not raise the hit rate
+(corners 82.5 to 82.2 and 81.6 on 2025-26) and was removed. The same adjustment
+for goals (section E, `levelAdjust`) was neutral on 17,857 games and stays off.
+
+**Corner changes tested, none shipped:** an over haircut of 0.015 or 0.03 (+0.3 to
++1.8 points on 2022-26, -1.0 to -1.3 on Sep-Oct), unders only (+0.9 / +0.2 and
+-2.1), recent-level adjustment (no gain). The signals disagree between the long
+history and the autumn, and the autumn is a level shift, so no corners change
+is made. The corners rule stands.
+
+**Liga MX: no structural problem found.** `audit-ligamx.ts` replays Liga MX from
+football-data's MEX.csv (1,022 games 2022-25, 336 in 2025-26, 75 in Sep-Oct 2026):
+
+| | Ranker pick hit | Stated | 1X2 log loss (market) |
+|---|---|---|---|
+| 2022-25 | 75.2% | 73.5% | 1.0107 (0.9922) |
+| 2025-26 | 76.2% | 73.5% | 0.9977 (0.9774) |
+| Sep-Oct 2026 | 68.0% | 73.8% | 1.1157 (1.0651) |
+
+Draw and home-win rates matched the model over 2022-26 (25.9% against 26.3%).
+In Sep-Oct 2026 home wins were 34.7% against 44.4% expected and draws 30.7%
+against 25.7%, on 75 games: a bad run, 1.7 standard deviations, not a pattern.
+The live 27 of 43 (62.8%) is within about 1.7 standard deviations of 74% as well.
+League-specific changes (draw factors, more regularisation, a longer memory)
+raised hit rate in some windows and worsened log loss in the same ones, so none
+was shipped. Revisit after the holdout has a few hundred Liga MX games.
