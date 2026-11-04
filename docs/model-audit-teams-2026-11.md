@@ -464,3 +464,116 @@ The live 27 of 43 (62.8%) is within about 1.7 standard deviations of 74% as well
 League-specific changes (draw factors, more regularisation, a longer memory)
 raised hit rate in some windows and worsened log loss in the same ones, so none
 was shipped. Revisit after the holdout has a few hundred Liga MX games.
+
+## I. Forge and Code Hub codes (4 Nov 2026)
+
+Scope: `forge.ts`, `forge-solve.ts`, `forge-feed.ts`, `code-hub.ts`, `code-hub-feed.ts`,
+`code-hub-posts-core.ts`, `code-editor*.ts`. Evidence: the live `code_hub_codes`
+table graded against `match_results` (74 codes, 16 Oct to 4 Nov), a 365-day
+walk-forward replay with the production builders (`scripts/decision-lab.ts
+--hub=...`, `scripts/forge-lab.ts`; closing prices stand in for SportyBet's;
+stops at 31 Oct), and code review. Nothing here changes what ships.
+
+**Code Hub, live.** Codes published 16 Oct to 4 Nov, graded on final scores
+(a whole-line handicap that refunds counts as a win):
+
+| Tier | Codes | Won | Expected | Avg odds | Avg legs |
+|---|---|---|---|---|---|
+| 2 | 19 | 9 | 8.7 | 1.91 | 3.3 |
+| 3 | 19 | 2 | 5.8 | 2.84 | 4.6 |
+| 5 | 17 | 6 | 3.0 | 4.60 | 5.6 |
+| 10 | 10 | 1 | 0.9 | 9.11 | 5.7 |
+| 20 | 8 | 1 | 0.4 | 16.33 | 8.0 |
+
+Across all tiers 19 won against 19.8 expected. At least one code landed on 13 of
+19 days (68%; the replay says 67%). Legs: 384 graded, 74.6% landed against 72.1%
+stated; SportyBet's price averaged 94-95% of the model's fair price. The 3-odds
+tier's 2 of 19 is the one low number (about a 1-in-13 chance if the model is
+right); it shares no weakness at leg level, so it is variance until shown
+otherwise. Every code from 23 Oct on has a booking code (the first ten days were
+before booking started).
+
+**Code Hub, replay (256 days, production builder, closing prices):**
+
+| Tier | Built | Landed | Expected | Loads at |
+|---|---|---|---|---|
+| 2 | 218 | 43.6% | 38.1% | 2.01 |
+| 3 | 197 | 32.5% | 24.8% | 3.01 |
+| 5 | 159 | 9.4% | 14.7% | 4.97 |
+| 10 | 117 | 16.2% | 7.6% | 9.74 |
+| 20 | 74 | 1.4% | 3.1% | 19.39 |
+
+Legs land about at their stated chance (78.7 / 77.3 / 72.3 / 69.1 / 67.1% against
+76.2 / 73.7 / 71.7 / 67.3 / 68.2%). Tier results swing either side of expected
+because codes on one day share games; they are not a pattern. Since the 28 Oct
+fix, codes load at their tier's odds. Raising the leg floor from 60% to 65% or
+70% (tested) changed the leg calibration by nothing and the tier results by
+noise (tier 5 landed 9.4 / 20.5 / 20.9%), and a 70% floor stops tiers 10 and 20
+being built on most days, so the floor stays.
+
+**What the hub pays.** Each leg's SportyBet price is about 5.5% under the model's
+fair price, and that compounds over 3-8 legs. At the model's stated chances a
+code's return per unit staked is 0.88 (2-odds) falling to 0.72 (20-odds). The
+legs have landed about 3% more often than stated (live 74.6% against 72.1%,
+replay similar); if that holds, the return is 0.93 to 1.01. So the expected
+return on a code is negative on the model's own numbers (down 12 to 28%) and
+close to break-even only if its small under-confidence is real and lasts. The
+live result of -2.4 units on 75 codes is inside the noise of either. This matters
+for what the product says about codes.
+
+**Forge (replay, `forge-lab.ts`).** forgeSolve, the four default markets, one
+slip per day per style:
+
+| Style (2 picks a game) | Slips | Landed | Stated | With no market check |
+|---|---|---|---|---|
+| Safe 2.5, 3 games | 217 | 44.2% | 40.9% | 41.9% vs 42.0% |
+| Balanced 5, 4 games | 206 | 23.8% | 20.9% | 19.4% vs 22.8% |
+| Balanced 10, 5 games | 195 | 12.3% | 10.5% | 10.8% vs 12.8% |
+| Risky 20, 5 games | 195 | 3.1% | 5.3% | 4.6% vs 6.8% |
+
+(With one pick a game: 40.1 / 16.0 / 7.7 / 4.6% landed against 39.0 / 20.3 /
+10.4 / 5.2% stated.) Slips land at or near their stated chance **because the
+market check is on** (`keepOnBoard`, 5 points). Without it a slip lands 1 to 8
+points under its stated chance, worst on the 5-odds style. The solver picks the
+legs with the most chance for their price, which is where the model most
+disagrees with the market, and the market is usually right. Two solver changes
+were tested on top of the check and neither helped beyond noise: maximising the
+log of the legs' chances (the slip's chance) and ranking each leg by the lower of
+the model's and the market's chance.
+
+**Findings**
+
+1. **No live record for Forge (M).** Forge slips are not stored, so nothing can
+   be checked after the fact; every Forge claim above rests on the replay.
+   Logging each built slip (anonymously: legs, stated chance, price) and grading
+   it would give a record in about a week.
+2. **The check only covers games on SportyBet's board (M).** `forge-feed.ts`
+   returns a game's candidates unchecked when SportyBet has no listing for it,
+   and the replay shows unchecked legs are the ones that land 5 to 8 points under
+   stated on a 5-odds slip. How many pool games are unlisted is not recorded.
+3. **Forge counts an unpriced leg at fair odds (M).** `forge-solve.ts` `oddsOf`
+   uses the model's fair price where no board price exists; `forge.ts` `oddsOf`
+   (the hub's builder) deducts a 7% margin, the fix made after "a 10 loaded at
+   6.22". A Forge slip with unpriced legs shows a total above what SportyBet
+   would pay, and same-game combos are always shown at fair odds
+   (`forge-feed.ts`: "we won't guess it"). The replay shows 4.79 shown against
+   about 3.6 for a 5-odds slip of combos, on my own 10% estimate of the
+   bookmaker's combo margin, so treat the size as indicative.
+4. **Community ranking rewards model-against-market gaps (M, not tested).**
+   `rankScore` is chance x SportyBet odds x sqrt(chance), with the chance from
+   our model. A code ranks highest where our chance most exceeds the market's,
+   which section C showed is where the model is most often wrong. A consensus
+   chance (the lower of the two) is the fix the hub already uses.
+5. **Seven of fifteen settled community posts never get a result (L).** Status
+   `settled`, result null, average 18 games and odds above 100,000; the games
+   include markets `gradeGame` cannot grade. One post was removed at odds above
+   400 million. Nothing stops absurd codes being posted.
+6. **The hub does not build the long tiers every day (L).** Tier 20 was built on 8
+   of 19 live days and tier 10 on 10 of 19; the replay agrees (74 and 117 of 218).
+   Codes per day ranged 2 to 6.
+7. **Not audited:** the Code Hub editor's chances on raw SportyBet markets (goal
+   bounds, half markets, 1UP): they are described in code as estimates and have
+   no live record.
+
+Reproduce: `npx tsx scripts/decision-lab.ts --hub=18 --examples`,
+`npx tsx scripts/forge-lab.ts`. The live table is graded by `scripts/sql/code-hub-live-grade.sql`.
