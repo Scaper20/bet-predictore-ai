@@ -18,6 +18,9 @@ import {
   slipTotals,
   type ForgeSettings,
   type PoolEntry,
+  daysLabel,
+  forgeDates,
+  forgeWindow,
 } from "./forge";
 
 /* A synthetic league: 12 clubs of graded strength, two full rounds of deterministic scores. */
@@ -184,10 +187,37 @@ describe("helpers", () => {
       settings: { risk: "yolo", targetOdds: 99999, games: 40, picksPerGame: 7, markets: ["goals", "nonsense"], when: "never", leagues: "<x>" },
       state: { locked: [{ matchId: "fd:1", market: "1x2:home" }, { matchId: "bad id" }], removed: ["fd:2", 3], seed: -5 },
     });
-    expect(r.settings).toMatchObject({ risk: "balanced", targetOdds: 1000, games: 12, picksPerGame: 2, markets: ["goals"], when: "today", leagues: "all" });
+    expect(r.settings).toMatchObject({ risk: "balanced", targetOdds: 1000, games: 12, picksPerGame: 2, markets: ["goals"], when: "today", days: null, leagues: [] });
     expect(r.state.locked).toEqual([{ matchId: "fd:1", market: "1x2:home" }]);
     expect(r.state.removed).toEqual(["fd:2"]);
     expect(r.state.seed).toBe(0);
+  });
+
+  it("takes several leagues, keeps the old single-league string, and checks day ranges", () => {
+    const now = new Date();
+    const dates = forgeDates(now);
+    const r = parseForgeRequest({ settings: { leagues: ["premier-league", "la-liga", "bad league", "premier-league"], days: { from: dates[1], to: dates[3] } } });
+    expect(r.settings.leagues).toEqual(["premier-league", "la-liga"]);
+    expect(r.settings.days).toEqual({ from: dates[1], to: dates[3] });
+    expect(parseForgeRequest({ settings: { leagues: "serie-a" } }).settings.leagues).toEqual(["serie-a"]);
+    expect(parseForgeRequest({ settings: { leagues: "all" } }).settings.leagues).toEqual([]);
+    expect(parseForgeRequest({ settings: { days: { from: dates[3], to: dates[1] } } }).settings.days).toBeNull();
+    expect(parseForgeRequest({ settings: { days: { from: "2020-01-01", to: dates[0] } } }).settings.days).toBeNull();
+  });
+
+  it("turns a day range into its kickoff window", () => {
+    const now = new Date("2026-10-30T15:00:00Z");
+    const dates = forgeDates(now);
+    expect(dates[0]).toBe("2026-10-30");
+    expect(dates).toHaveLength(7);
+    const today = forgeWindow({ days: { from: dates[0], to: dates[0] }, when: "today" }, now)!;
+    expect(today.from).toBe(now.getTime() - 3 * 3_600_000);
+    expect(new Date(today.to).toISOString()).toBe("2026-10-30T23:00:00.000Z");
+    const weekend = forgeWindow({ days: { from: dates[1], to: dates[2] }, when: "today" }, now)!;
+    expect(new Date(weekend.from).toISOString()).toBe("2026-10-30T23:00:00.000Z");
+    expect(new Date(weekend.to).toISOString()).toBe("2026-11-01T23:00:00.000Z");
+    expect(forgeWindow({ days: null, when: "today" }, now)).toBeNull();
+    expect(daysLabel({ from: dates[0], to: dates[1] }, now)).toBe("Today – Tomorrow");
   });
 });
 

@@ -11,17 +11,17 @@ import {
   rebrandAnnouncementEmail,
   payOnceAnnouncementEmail,
   unfinishedCheckoutEmail,
-  vipChatLaunchEmail,
-  vipChatReminderEmail,
-  vipChatFreeEmail,
+  offerEmail,
 } from "@/lib/email-templates";
-import { classifySegment, isVipChatCampaign, vipChatAudience, VIP_CHAT_CAMPAIGNS, type CampaignType, type VipChatCampaign } from "@/lib/outreach";
+import { classifySegment, isOfferCampaign, type CampaignType } from "@/lib/outreach";
 import { livePlans } from "@/lib/paid-users";
 import { settledRecords } from "@/lib/performance-store";
-import { strongRecordLine } from "@/lib/vip-chat";
+import { strongRecordLine } from "@/lib/strong-record";
 import { SITE_URL } from "@/lib/site-url";
 import { WHATSAPP_COMMUNITY_URL } from "@/lib/whatsapp-community";
 import type { Tier } from "@/lib/entitlements";
+import { offerBySlug } from "@/lib/offers-server";
+import { durationLabel, naira as nairaText, offerPath, tierName, type Offer } from "@/lib/offers";
 
 /** "Scaper, KiqStat <support@…>" — falls back the same way the WhatsApp
  * digest's notify email does if SUPPORT_INBOX_EMAIL isn't set. */
@@ -102,7 +102,7 @@ export async function enqueueCampaign(campaign: CampaignType): Promise<{ enqueue
   }
 
   const admin = supabaseAdmin();
-  if (isVipChatCampaign(campaign)) return enqueueVipChat(admin, campaign);
+  if (isOfferCampaign(campaign)) return enqueueOffer(admin, campaign);
 
   const [{ data: profiles }, { data: subs }] = await Promise.all([
     admin.from("profiles").select("id, email").eq("marketing_opt_out", false).not("email", "is", null),
@@ -148,30 +148,32 @@ export async function enqueueCampaign(campaign: CampaignType): Promise<{ enqueue
   return { enqueued: (inserted ?? []).length };
 }
 
-/** Everyone a VIP chat campaign would reach right now, with the tier their email is written for. */
-async function vipChatRecipients(
-  admin: ReturnType<typeof supabaseAdmin>,
-  campaign: VipChatCampaign,
-): Promise<{ id: string; email: string; tier: "free" | "pro" | "vip" }[]> {
-  const [{ data: profiles }, plans, { data: opened }] = await Promise.all([
+/**
+ * An email offer's audience: everyone not opted out who is on no live paid
+ * plan, gift or pass, the free members the offer is for.
+ */
+async function offerRecipients(admin: ReturnType<typeof supabaseAdmin>): Promise<{ id: string; email: string }[]> {
+  const [{ data: profiles }, plans, { data: passes }] = await Promise.all([
     admin.from("profiles").select("id, email").eq("marketing_opt_out", false).not("email", "is", null),
     livePlans(admin),
-    admin.from("vip_chat_members").select("user_id").not("last_opened_at", "is", null),
+    admin.from("passes").select("user_id").gt("expires_at", new Date().toISOString()),
   ]);
-  const inChat = new Set((opened ?? []).map((r) => r.user_id as string));
-  return (profiles ?? []).flatMap((p) => {
-    const tier = vipChatAudience(campaign, plans.get(p.id as string) ?? null, inChat.has(p.id as string));
-    return tier ? [{ id: p.id as string, email: p.email as string, tier }] : [];
-  });
+  const passing = new Set((passes ?? []).map((p) => p.user_id as string));
+  return (profiles ?? [])
+    .filter((p) => !plans.has(p.id as string) && !passing.has(p.id as string))
+    .map((p) => ({ id: p.id as string, email: p.email as string }));
 }
 
-async function enqueueVipChat(admin: ReturnType<typeof supabaseAdmin>, campaign: VipChatCampaign): Promise<{ enqueued: number; error?: string }> {
-  const people = await vipChatRecipients(admin, campaign);
+async function enqueueOffer(admin: ReturnType<typeof supabaseAdmin>, campaign: `offer:${string}`): Promise<{ enqueued: number; error?: string }> {
+  const offer = await offerBySlug(campaign.slice("offer:".length));
+  if (!offer || offer.audience !== "email") return { enqueued: 0, error: "That isn't an email offer." };
+  if (!offer.active) return { enqueued: 0, error: "Switch the offer on before sending it: its links would open a closed offer." };
+  const people = await offerRecipients(admin);
   if (people.length === 0) return { enqueued: 0 };
   const { data: inserted, error } = await admin
     .from("email_campaign_recipients")
     .upsert(
-      people.map((p) => ({ campaign, user_id: p.id, email: p.email, tier: p.tier })),
+      people.map((p) => ({ campaign, user_id: p.id, email: p.email, tier: "free" })),
       { onConflict: "campaign,user_id", ignoreDuplicates: true },
     )
     .select("user_id");
@@ -179,33 +181,56 @@ async function enqueueVipChat(admin: ReturnType<typeof supabaseAdmin>, campaign:
   return { enqueued: (inserted ?? []).length };
 }
 
-/** How many people each VIP chat campaign would reach if queued now, opted-out users excluded. */
-export async function vipChatAudienceCounts(): Promise<Record<VipChatCampaign, number>> {
-  const admin = supabaseAdmin();
-  const counts = await Promise.all(VIP_CHAT_CAMPAIGNS.map((c) => vipChatRecipients(admin, c).then((r) => r.length)));
-  return Object.fromEntries(VIP_CHAT_CAMPAIGNS.map((c, i) => [c, counts[i]])) as Record<VipChatCampaign, number>;
+/** How many free members an email offer would reach if queued now. */
+export async function offerAudienceCount(): Promise<number> {
+  return (await offerRecipients(supabaseAdmin())).length;
 }
 
-/** The Strong picks' 30-day record for the VIP chat emails, or null when there's too little to quote. */
+/** The offer email for one recipient (or the preview, with recipientId "preview"). */
+async function offerCampaignEmail(offer: Offer, recipientId: string, unsubscribeUrl: string) {
+  const expires = offer.windowHours
+    ? `${new Date(Date.now() + offer.windowHours * 3_600_000).toLocaleString("en-GB", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        hour: "numeric",
+        minute: "2-digit",
+        timeZone: "Africa/Lagos",
+      })} WAT`
+    : null;
+  return offerEmail({
+    tierLabel: tierName(offer.tier),
+    duration: durationLabel(offer.hours),
+    priceText: nairaText(offer.priceNaira),
+    compareText: offer.compareNaira ? nairaText(offer.compareNaira) : null,
+    headline: offer.headline,
+    subline: offer.subline,
+    perks: offer.perks,
+    cta: offer.cta,
+    claimUrl: `${SITE_URL}${offerPath(offer.slug, recipientId)}`,
+    expires,
+    record: await strongRecord(),
+    unsubscribeUrl,
+  });
+}
+
+/** The Strong picks' 30-day record for the offer emails, or null when there's too little to quote. */
 async function strongRecord(): Promise<string | null> {
   const settled = await settledRecords({ sinceDays: 30 }).catch(() => null);
   return settled ? strongRecordLine(settled.strong) : null;
 }
 
-function vipChatEmail(campaign: VipChatCampaign, tier: string | null, record: string | null, unsubscribeUrl: string) {
-  if (campaign === "vip_chat_launch") return vipChatLaunchEmail({ tier: tier === "vip" ? "vip" : "pro", record, unsubscribeUrl });
-  if (campaign === "vip_chat_reminder") return vipChatReminderEmail({ record, unsubscribeUrl });
-  return vipChatFreeEmail({ record, unsubscribeUrl });
-}
-
 /**
  * An email as a recipient would get it, for the admin preview: no one is
  * queued and nothing is sent. Only the announcements, whose content doesn't
- * depend on a stored row; `tier` picks the version of the VIP chat launch.
+ * depend on a stored row.
  */
-export async function previewCampaignEmail(campaign: CampaignType, tier: string | null): Promise<{ subject: string; html: string } | null> {
+export async function previewCampaignEmail(campaign: CampaignType): Promise<{ subject: string; html: string } | null> {
   const unsubscribeUrl = `${SITE_URL}/unsubscribe/preview`;
-  if (isVipChatCampaign(campaign)) return vipChatEmail(campaign, tier, await strongRecord(), unsubscribeUrl);
+  if (isOfferCampaign(campaign)) {
+    const offer = await offerBySlug(campaign.slice("offer:".length));
+    return offer ? offerCampaignEmail(offer, "preview", unsubscribeUrl) : null;
+  }
   if (campaign === "warm_checkin") return warmCheckInEmail({ unsubscribeUrl });
   if (campaign === "announce_rebrand") return rebrandAnnouncementEmail({ unsubscribeUrl });
   if (campaign === "announce_pay_once") return payOnceAnnouncementEmail({ unsubscribeUrl });
@@ -254,6 +279,13 @@ async function buildCampaignEmail(
     return warmCheckInEmail({ unsubscribeUrl });
   }
 
+  if (isOfferCampaign(campaign)) {
+    // Switched off or changed audience since it was queued: nothing to send.
+    const offer = await offerBySlug(campaign.slice("offer:".length));
+    if (!offer || offer.audience !== "email" || !offer.active) return null;
+    return offerCampaignEmail(offer, recipient.id, unsubscribeUrl);
+  }
+
   if (campaign === "checkout_reminder") {
     const { data: attempt } = await admin
       .from("payments")
@@ -273,15 +305,6 @@ async function buildCampaignEmail(
       nigeria: attempt.provider === "paystack",
       unsubscribeUrl,
     });
-  }
-
-  if (isVipChatCampaign(campaign)) {
-    if (campaign === "vip_chat_reminder") {
-      // Queued before they joined: the reminder no longer applies.
-      const { data: member } = await admin.from("vip_chat_members").select("last_opened_at").eq("user_id", recipient.user_id).maybeSingle();
-      if (member?.last_opened_at) return null;
-    }
-    return vipChatEmail(campaign, recipient.tier, await strongRecord(), unsubscribeUrl);
   }
 
   if (campaign === "announce_rebrand") {
@@ -349,9 +372,9 @@ export async function sendNextBatch(campaign: CampaignType, batchSize: number): 
     const unsubscribeUrl = `${SITE_URL}/unsubscribe/${recipient.id}`;
     try {
       const email = await buildCampaignEmail(admin, campaign, recipient, unsubscribeUrl);
-      if (!email) throw new Error("Nothing to send anymore (no survey row or checkout, or already in the VIP chat).");
+      if (!email) throw new Error("Nothing to send anymore (no survey row or checkout).");
 
-      await sendEmail({ to: recipient.email, subject: email.subject, html: email.html, from: outreachFrom() });
+      await sendEmail({ to: recipient.email, subject: email.subject, html: email.html, from: outreachFrom(), unsubscribeUrl });
       await admin
         .from("email_campaign_recipients")
         .update({ status: "sent", sent_at: new Date().toISOString() })

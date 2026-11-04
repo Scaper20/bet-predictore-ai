@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function ForgotPasswordPage() {
   return (
-    <AuthCard title="Forgot your password?" intro="Enter the email you signed up with and we'll send you a link to choose a new one.">
+    <AuthCard title="Forgot your password?" intro="It happens. We'll email you a link.">
       <ForgotPasswordForm />
     </AuthCard>
   );

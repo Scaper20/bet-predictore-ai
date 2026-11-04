@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Badge, Button } from "@/components/ui/primitives";
 import { formatMoney, NIGERIA, type Market } from "@/lib/payments/markets";
 import {
-  CYCLE_LABEL, PLANS, priceSaving, type BillingCycle, type PlanTier,
+  CYCLE_LABEL, PLANS, priceSaving, type BillingCycle, type PlanDefinition, type PlanTier,
 } from "@/lib/pricing";
 import type { Tier } from "@/lib/entitlements";
 
@@ -19,6 +19,8 @@ export function BillingPlans({
   initialCycle = "monthly",
   market = NIGERIA,
   prepaid = null,
+  plans = PLANS,
+  chosen = null,
 }: {
   currentTier: Tier;
   hasActiveSubscription?: boolean;
@@ -33,7 +35,15 @@ export function BillingPlans({
   market?: Market;
   /** A running Flutterwave (prepaid) plan, which more payments add time to. */
   prepaid?: { tier: "pro" | "vip"; until: string } | null;
+  /** The plans with the admin's prices (lib/plan-prices.ts). */
+  plans?: PlanDefinition[];
+  /** The plan they picked on the way here (?plan=), marked and scrolled to. */
+  chosen?: "pro" | "vip" | null;
 }) {
+  const chosenRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (chosen) chosenRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, [chosen]);
   const flutterwave = market.provider === "flutterwave";
   // Every cycle is sold as a prepaid period (Flutterwave abroad, pay once
   // through Paystack in Nigeria). Card auto-renew in Nigeria is offered only
@@ -119,7 +129,7 @@ export function BillingPlans({
       {error && <p className="mb-4 text-center text-sm text-rose">{error}</p>}
 
       <div className="grid gap-6 md:grid-cols-3">
-        {PLANS.map((plan) => {
+        {plans.map((plan) => {
           const isCurrent = plan.id === currentTier;
           const recurring = plan.id === "pro" || plan.id === "vip";
           const blocked = plan.id !== "free" && hasActiveSubscription && !isCurrent;
@@ -145,11 +155,23 @@ export function BillingPlans({
           const button = paidButton(plan.id as "pro" | "vip");
 
           return (
-            <div key={plan.id} className={`card relative flex flex-col p-5 sm:p-7 ${plan.badge ? "border-brand/40 glow-brand" : ""}`}>
-              {plan.badge && (
+            <div
+              key={plan.id}
+              ref={plan.id === chosen ? chosenRef : undefined}
+              className={`card relative flex flex-col p-5 sm:p-7 ${
+                plan.id === chosen ? "border-brand ring-2 ring-brand/40" : plan.badge ? "border-brand/40 glow-brand" : ""
+              }`}
+            >
+              {plan.id === chosen ? (
                 <Badge tone="brand" className="absolute -top-3 left-6">
-                  {plan.badge}
+                  Your pick
                 </Badge>
+              ) : (
+                plan.badge && (
+                  <Badge tone="brand" className="absolute -top-3 left-6">
+                    {plan.badge}
+                  </Badge>
+                )
               )}
               <h3 className="text-base font-semibold">{plan.name}</h3>
               <p className="mt-1 text-xs text-ink-muted">{plan.description}</p>
@@ -179,7 +201,7 @@ export function BillingPlans({
                 </Button>
               ) : (
                 <Button
-                  variant={plan.badge ? "primary" : "secondary"}
+                  variant={plan.id === chosen || (!chosen && plan.badge) ? "primary" : "secondary"}
                   className="mt-5 w-full"
                   disabled={button.disabled || pending !== null || blocked || unavailable}
                   onClick={() => checkout(plan.id as "pro" | "vip", tierCycle)}

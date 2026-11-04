@@ -44,8 +44,8 @@ export default function Loading() {
       <div className={`${containerClass()} pb-10 sm:pb-14`} aria-hidden>
         <div className="mx-auto max-w-5xl">
           <div className="flex gap-6 border-b border-line py-3.5">
-            {["w-16", "w-20", "w-12", "w-12", "w-24"].map((w, i) => (
-              <Skeleton key={i} className={`h-4 ${w} ${i === 4 ? "hidden sm:block" : ""}`} />
+            {["w-16", "w-14", "w-20", "w-12", "w-12", "w-24"].map((w, i) => (
+              <Skeleton key={i} className={`h-4 ${w} ${i === 5 ? "hidden sm:block" : ""}`} />
             ))}
           </div>
           <div className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">

@@ -41,7 +41,7 @@ export function SocialAuthButtons({ next }: { next: string }) {
         type="button"
         onClick={handleClick}
         disabled={loading}
-        className="flex w-full items-center justify-center gap-2 rounded-lg border border-line bg-surface-2 px-4 py-2.5 text-xs font-medium text-ink transition-colors hover:border-line-strong hover:bg-surface-3 disabled:opacity-50"
+        className="flex h-12 w-full items-center justify-center gap-2.5 rounded-xl border border-line bg-surface-2 px-4 text-sm font-semibold text-ink transition-colors hover:border-line-strong hover:bg-surface-3 disabled:opacity-50"
       >
         {loading ? (
           <Spinner className="size-4" />
@@ -62,9 +62,7 @@ export function SocialAuthButtons({ next }: { next: string }) {
         <div className="absolute inset-0 flex items-center">
           <div className="w-full border-t border-line" />
         </div>
-        <span className="relative bg-surface px-3 text-[11px] font-semibold tracking-wider text-ink-dim uppercase">
-          or continue with email
-        </span>
+        <span className="relative bg-shell px-3 text-[11px] font-medium text-ink-dim">or with email</span>
       </div>
     </div>
   );

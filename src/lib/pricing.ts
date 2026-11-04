@@ -1,5 +1,6 @@
 import type { Tier } from "@/lib/entitlements";
 import { weeklyCodeAllowance } from "@/lib/code-hub-plans";
+import { askAllowance } from "@/lib/ask/status";
 
 const PRO_CODES = weeklyCodeAllowance("pro");
 const VIP_CODES = weeklyCodeAllowance("vip");
@@ -62,7 +63,7 @@ export const PLANS: PlanDefinition[] = [
       "Forge: 5 combos a day, match result and two results",
       "Code Hub: the daily 2-odds combo with its SportyBet code",
       "Check any SportyBet code, make it safer, and post yours to the Code Hub",
-      "Ask KiqStat: 3 questions a day",
+      askAllowance("Ask KiqStat: 3 questions a day"),
     ],
     price: {},
     cadence: "forever",
@@ -77,13 +78,14 @@ export const PLANS: PlanDefinition[] = [
       "Everything in Free",
       "Picks before kick-off in the 15 Pro leagues: Champions League, Serie A, Bundesliga and more",
       "Corners, cards and shots predictions, plus both teams 2+ goals, goal ranges and more",
+      "Player props: every starter's projection and our pick on SportyBet's player lines",
       "Strong pick alerts at kick-off and full time",
       "Winning margin lines",
       "Half-time predictions and half-by-half goals",
       "Forge with every prediction type, 100 combos a day",
-      "Code Hub: every daily combo from 2 to 20 odds before kick-off, each with a SportyBet code",
+      "Code Hub: every daily combo before kick-off (2 to 5 odds most days, up to 20 when the games allow), each with a SportyBet code",
       `${PRO_CODES} SportyBet codes a week from your own slip, Forge combos or the code editor`,
-      "Ask KiqStat: 30 questions a day",
+      askAllowance("Ask KiqStat: 30 questions a day"),
       "Full match breakdown and value against the market price",
       "Pay monthly, every 3 months (save 10%) or yearly (save 20%)",
     ],
@@ -96,14 +98,12 @@ export const PLANS: PlanDefinition[] = [
   {
     id: "vip",
     name: "VIP",
-    description: "Daily Strong picks and 2 to 10 combos in the VIP WhatsApp chat, live win probability and priority help.",
+    description: "Live in-play win probability, the biggest Ask KiqStat allowance and priority help.",
     features: [
       "Everything in Pro",
-      "The VIP chat on WhatsApp: the day's Strong picks and combos priced 2 to 10, every day before kick-off",
-      "Live calls in the big games, and your questions answered first",
       "Live in-play win probability, updating as the match unfolds",
       `${VIP_CODES} SportyBet codes a week from your own picks`,
-      "Ask KiqStat: 100 questions a day",
+      askAllowance("Ask KiqStat: 100 questions a day"),
       "Priority support: your messages go to the front of the queue",
       "Pay monthly, every 3 months (save 10%) or yearly (save 20%)",
     ],
@@ -162,6 +162,7 @@ export const PLAN_MATRIX: MatrixGroup[] = [
         values: { free: true, pro: true, vip: true },
       },
       { label: "Corners, cards, shots and shots on target", values: { free: false, pro: true, vip: true } },
+      { label: "Player props: projections, line chances and picks", values: { free: "Recent hit rates", pro: true, vip: true } },
       { label: "Both teams 2+ goals, goal ranges, win to nil, result combos", values: { free: false, pro: true, vip: true } },
       { label: "Winning margin", values: { free: false, pro: true, vip: true } },
       { label: "Half-time and half-by-half predictions", values: { free: false, pro: true, vip: true } },
@@ -171,7 +172,7 @@ export const PLAN_MATRIX: MatrixGroup[] = [
     group: "Tools",
     rows: [
       { label: "Forge combo builder", values: { free: "5 a day, match result + two results", pro: "100 a day", vip: "100 a day" } },
-      { label: "Ask KiqStat", values: { free: "3 a day", pro: "30 a day", vip: "100 a day" } },
+      { label: askAllowance("Ask KiqStat"), values: { free: "3 a day", pro: "30 a day", vip: "100 a day" } },
       { label: "Selection builder and combo tracking", values: { free: true, pro: true, vip: true } },
       { label: "Shareable combo image", values: { free: false, pro: true, vip: true } },
     ],
@@ -198,10 +199,10 @@ export const PLAN_MATRIX: MatrixGroup[] = [
     ],
   },
   {
-    group: "Alerts, chat and support",
+    group: "Alerts and support",
     rows: [
       { label: "Morning picks notification", values: { free: true, pro: true, vip: true } },
-      { label: "WhatsApp", values: { free: "Free community", pro: "Free community", vip: "VIP chat" } },
+      { label: "WhatsApp", values: { free: "Free community", pro: "Free community", vip: "Free community" } },
       { label: "Strong pick alerts, kick-off and result", values: { free: false, pro: true, vip: true } },
       { label: "Priority support", values: { free: false, pro: false, vip: true } },
     ],

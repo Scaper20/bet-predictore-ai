@@ -12,7 +12,7 @@ export function WaitlistWall({ email, joined }: { email: string | null; joined: 
           Ready-made combos, with the code to load them
         </h2>
         <p className="mt-4 text-sm leading-relaxed text-ink-muted sm:text-base">
-          Every morning the model builds five codes from 2 to 20 odds from the day&apos;s games. Each one comes with
+          Every morning the model builds ready-made codes from the day&apos;s games: about 2, 3 and 5 odds, and 10 and 20 when the games allow. Each one comes with
           a SportyBet booking code and the model&apos;s honest chance of it landing.
           Every code stays on the page afterwards with its result.
         </p>

@@ -8,8 +8,9 @@ import { useSlip } from "@/lib/slip";
 import { useEntitlement } from "@/components/entitlements/entitlement-provider";
 import { LocalTime } from "@/components/ui/local-time";
 import type { AskEvent, AskPickCard, AskTurn } from "@/lib/ask/request";
-import { ASK_FREE_DAILY, ASK_GUEST_TOTAL, ASK_MAX_QUESTION } from "@/lib/ask/request";
+import { ASK_FREE_DAILY, ASK_GUEST_TOTAL, ASK_MAX_QUESTION, ASK_PAID_DAILY } from "@/lib/ask/request";
 import { AskAvatar } from "@/components/ask/ask-avatar";
+import { ASK_PAUSED, ASK_PAUSED_MESSAGE } from "@/lib/ask/status";
 
 /* ------------------------------------------------------------------ types */
 
@@ -396,7 +397,7 @@ function AskPanelInner({ page }: { page: { matchId: string; label: string } | nu
       <div className="border-t border-line px-4 pb-3 pt-3 sm:px-5" style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}>
         {!enabled ? (
           <p className="rounded-xl border border-line bg-surface px-4 py-3 text-sm text-ink-muted">
-            Ask KiqStat isn&apos;t available right now. Check back soon.
+            {ASK_PAUSED ? ASK_PAUSED_MESSAGE : "Ask KiqStat isn't available right now. Check back soon."}
           </p>
         ) : (
           <>
@@ -461,7 +462,11 @@ function AskPanelInner({ page }: { page: { matchId: string; label: string } | nu
             </form>
             <p className="mt-2 text-center text-[11px] text-ink-dim">
               {allowance?.paid ? (
-                "Unlimited with your plan · Never invents injuries or news"
+                remaining !== null && allowance.limit !== null ? (
+                  `${remaining} of ${allowance.limit} questions left today · Never invents injuries or news`
+                ) : (
+                  "Never invents injuries or news"
+                )
               ) : !signedIn ? (
                 <>
                   {remaining !== null
@@ -477,7 +482,7 @@ function AskPanelInner({ page }: { page: { matchId: string; label: string } | nu
                   {remaining !== null ? `${remaining} of ${ASK_FREE_DAILY} free questions left today` : `Free: ${ASK_FREE_DAILY} questions a day`}
                   {" · "}
                   <Link href="/pricing" className="underline-offset-2 hover:text-ink hover:underline">
-                    Pro: unlimited
+                    Pro: {ASK_PAID_DAILY} a day
                   </Link>
                 </>
               )}
@@ -544,7 +549,7 @@ function GuestGate({ pathname }: { pathname: string }) {
             I already have an account
           </Link>
         </div>
-        <p className="mt-4 text-[11px] text-ink-dim">Takes a minute. Pro: unlimited questions.</p>
+        <p className="mt-4 text-[11px] text-ink-dim">Takes a minute. Pro: {ASK_PAID_DAILY} questions a day.</p>
       </div>
     </div>
   );

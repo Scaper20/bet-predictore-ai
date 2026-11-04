@@ -58,3 +58,9 @@ export function tierFromPlanCode(planCode: string | undefined): "pro" | "vip" | 
   }
   return undefined;
 }
+
+/** The configured plan code for a tier and cycle, or null (no throw), for the admin price check. */
+export function planCodeOrNull(tier: "pro" | "vip", cycle: BillingCycle): string | null {
+  const key = PLAN_ENV[tier][cycle];
+  return key ? (process.env[key] ?? null) : null;
+}

@@ -3,6 +3,8 @@ import "server-only";
 import { supabaseServer, supabaseConfigured } from "@/lib/supabase/server";
 import { activeGiftsFor } from "@/lib/subscription-gifts-feed";
 import { bestGiftTier, effectiveEntitlement } from "@/lib/subscription-gifts";
+import { livePassFor } from "@/lib/offers-server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export type Tier = "free" | "pass" | "pro" | "vip";
 
@@ -47,6 +49,15 @@ export interface Entitlement {
    * a second getUser() round trip.
    */
   userId: string | null;
+  /**
+   * End of a running pass from an offer (lib/offers.ts), or absent. When the
+   * pass is what lifts the tier, `passOnly` is set: a pass unlocks the site's
+   * features for its length, and is not a plan.
+   */
+  passUntil?: string | null;
+  passOnly?: boolean;
+  /** With passOnly: the tier the account has on its own, for billing (the plan they can buy is not "current"). */
+  planTier?: Tier;
 }
 
 /** Signed in, but with no paid relationship — a different thing from ANON. */
@@ -127,7 +138,7 @@ export async function getEntitlement(): Promise<Entitlement> {
     userId = user.id;
     email = user.email ?? null;
 
-    const [{ data }, { data: profile }, gifts] = await Promise.all([
+    const [{ data }, { data: profile }, gifts, pass] = await Promise.all([
       supabase
         .from("subscriptions")
         .select("tier, status, current_period_end, pass_expires_at")
@@ -135,12 +146,47 @@ export async function getEntitlement(): Promise<Entitlement> {
         .maybeSingle(),
       supabase.from("profiles").select("display_name").eq("id", user.id).maybeSingle(),
       activeGiftsFor(user.id),
+      livePassFor(user.id).catch(() => null),
     ]);
     displayName = profile?.display_name ?? null;
 
     const resolved = effectiveEntitlement(resolveSubscriptionTier(data), bestGiftTier(gifts));
-    return { ...resolved, signedIn: true, email, displayName, userId: user.id };
+    if (pass && !meets(resolved.tier, pass.tier)) {
+      return {
+        tier: pass.tier,
+        status: "active",
+        signedIn: true,
+        email,
+        displayName,
+        userId: user.id,
+        passUntil: pass.expiresAt,
+        passOnly: true,
+        planTier: resolved.tier,
+      };
+    }
+    return { ...resolved, signedIn: true, email, displayName, userId: user.id, passUntil: pass?.expiresAt ?? null };
   } catch {
     return userId ? signedInFree(userId, email, displayName) : ANON;
+  }
+}
+
+/**
+ * A user's tier by id, with no session: for server-side work that happens
+ * outside the user's own request (analytics, webhooks). Same rules as
+ * getEntitlement() minus the day pass; any failure reads as free.
+ */
+export async function tierForUser(userId: string): Promise<Tier> {
+  try {
+    const [{ data }, gifts] = await Promise.all([
+      supabaseAdmin()
+        .from("subscriptions")
+        .select("tier, status, current_period_end, pass_expires_at")
+        .eq("user_id", userId)
+        .maybeSingle(),
+      activeGiftsFor(userId),
+    ]);
+    return effectiveEntitlement(resolveSubscriptionTier(data), bestGiftTier(gifts)).tier;
+  } catch {
+    return "free";
   }
 }

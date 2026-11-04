@@ -547,7 +547,7 @@ function hub(all: Graded[]): { day: number; tier: string; odds: number; chance: 
       const used = new Set<string>();
       let any = false;
       V1_TIERS.forEach((t, ti) => {
-        const { legs } = forge(pool, { risk: t.risk, targetOdds: t.target, games: t.games, picksPerGame: 1, markets: ["result", "double_chance", "goals", "btts"], when: "today", leagues: "all", stake: 1000 }, { locked: [], removed: [], avoid: [...used], seed: daySeed(String(day)) + ti });
+        const { legs } = forge(pool, { risk: t.risk, targetOdds: t.target, games: t.games, picksPerGame: 1, markets: ["result", "double_chance", "goals", "btts"], when: "today", days: null, leagues: [], stake: 1000 }, { locked: [], removed: [], avoid: [...used], seed: daySeed(String(day)) + ti });
         if (legs.length < t.games) return;
         legs.forEach((l) => used.add(l.matchId));
         s[ti].built++;

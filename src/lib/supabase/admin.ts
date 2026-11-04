@@ -66,6 +66,13 @@ const secretKey = process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_SERVIC
  * `auth.admin.generateLink()`, and the only thing it does with the result is
  * email the link to that same address. Nothing about the account is returned
  * to the caller, whose answer is the same whether or not the email exists.
+ *
+ * A sixth: player props (migration 0094). The props tables are system-owned
+ * (written by the CRON_SECRET-gated /api/cron/player-props) and closed to the
+ * Data API because projections and picks are paid content. Pages read them
+ * here, server-side, and pass every row through viewProps
+ * (src/lib/props-view.ts) for the viewer's plan before anything is sent; the
+ * request only chooses which game or player, never what is written.
  */
 export function supabaseAdmin() {
   if (!url || !secretKey) {

@@ -1,5 +1,7 @@
 "use client";
 
+import { utmUrl } from "@/lib/utm";
+import { CANONICAL_ORIGIN } from "@/lib/site-url";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import type { SlipView } from "@/components/slip/tracked-slip";
@@ -154,5 +156,5 @@ export function ShareImageSheet({
 
 /** A tracked slip as a KiqStat slip image. */
 export function ShareSlipSheet({ view, onClose }: { view: SlipView; onClose: () => void }) {
-  return <ShareImageSheet src={slipImageUrl(view)} title="combo" filename="kiqstat-combo.png" shareText="My combo on KiqStat · kiqstat.app" onClose={onClose} />;
+  return <ShareImageSheet src={slipImageUrl(view)} title="combo" filename="kiqstat-combo.png" shareText={`My combo on KiqStat · ${utmUrl(CANONICAL_ORIGIN, { source: "share", medium: "combo" })}`} onClose={onClose} />;
 }

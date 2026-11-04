@@ -29,6 +29,8 @@ export function OutreachCampaignPanel({
   initialProgress,
   audience,
   previews = [],
+  enqueue = enqueueOutreach,
+  send = sendOutreachBatch,
 }: {
   campaign: CampaignType;
   label: string;
@@ -38,6 +40,9 @@ export function OutreachCampaignPanel({
   audience?: number;
   /** Links to /admin/outreach/preview, one per version of the email. */
   previews?: { label: string; href: string }[];
+  /** Other queue and send actions taking the same form (the offer emails, actions/admin/offers.ts). */
+  enqueue?: typeof enqueueOutreach;
+  send?: typeof sendOutreachBatch;
 }) {
   const [progress, setProgress] = useState<Progress>(initialProgress);
   const [enqueuing, setEnqueuing] = useState(false);
@@ -52,7 +57,7 @@ export function OutreachCampaignPanel({
     setMessage(null);
     const fd = new FormData();
     fd.set("campaign", campaign);
-    const result = await enqueueOutreach({ error: null, message: null, enqueued: null }, fd);
+    const result = await enqueue({ error: null, message: null, enqueued: null }, fd);
     setEnqueuing(false);
     if (result.error) {
       setError(result.error);
@@ -73,7 +78,7 @@ export function OutreachCampaignPanel({
     while (!stopRef.current) {
       const fd = new FormData();
       fd.set("campaign", campaign);
-      const result = await sendOutreachBatch({ sent: 0, failed: 0, remaining: 0, error: null }, fd);
+      const result = await send({ sent: 0, failed: 0, remaining: 0, error: null }, fd);
       if (result.error) {
         setError(result.error);
         break;

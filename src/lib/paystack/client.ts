@@ -97,3 +97,15 @@ export function getSubscriptionManageLink(subscriptionCode: string) {
     { method: "GET" },
   );
 }
+
+export interface PaystackPlan {
+  plan_code: string;
+  /** Kobo. */
+  amount: number;
+  interval: string;
+}
+
+/** A plan as Paystack holds it: what a card subscription on it is really charged. */
+export function fetchPlan(planCode: string) {
+  return paystackFetch<PaystackPlan>(`/plan/${encodeURIComponent(planCode)}`, { method: "GET", signal: AbortSignal.timeout(6_000) });
+}

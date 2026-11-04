@@ -3,6 +3,8 @@ import Link from "next/link";
 import { verifyTransaction } from "@/lib/paystack/client";
 import { grantFlutterwavePayment } from "@/lib/flutterwave/grant";
 import { grantPaystackOnce } from "@/lib/paystack/once";
+import { grantPass } from "@/lib/offers-server";
+import { OFFER_REFERENCE_PREFIX } from "@/lib/offers";
 import { ButtonLink } from "@/components/ui/primitives";
 import { sportPath } from "@/lib/routes";
 
@@ -29,6 +31,7 @@ export default async function BillingCallbackPage({
   const txRef = typeof params.tx_ref === "string" ? params.tx_ref : undefined;
 
   let status: "success" | "failed" | "unknown" = "unknown";
+  let pass = false;
   if (txRef?.startsWith("betrix_fw_")) {
     if (params.status === "cancelled") {
       status = "failed";
@@ -36,6 +39,10 @@ export default async function BillingCallbackPage({
       const outcome = await grantFlutterwavePayment(txRef).catch(() => "pending" as const);
       status = outcome === "granted" || outcome === "already" ? "success" : outcome === "failed" ? "failed" : "unknown";
     }
+  } else if (reference?.startsWith(OFFER_REFERENCE_PREFIX)) {
+    const outcome = await grantPass(reference).catch(() => "pending" as const);
+    status = outcome === "granted" || outcome === "already" ? "success" : outcome === "failed" ? "failed" : "unknown";
+    pass = true;
   } else if (reference) {
     const once = await grantPaystackOnce(reference).catch(() => "pending" as const);
     if (once !== "unknown") {
@@ -52,7 +59,15 @@ export default async function BillingCallbackPage({
 
   return (
     <div className="mx-auto max-w-md px-4 py-12 sm:py-20 text-center sm:px-6">
-      {status === "success" && (
+      {status === "success" && pass && (
+        <>
+          <h1 className="font-display text-2xl font-bold">Your pass is on</h1>
+          <p className="mt-2 text-sm text-ink-muted">
+            Everything it covers is open now, and the clock is on your account page.
+          </p>
+        </>
+      )}
+      {status === "success" && !pass && (
         <>
           <h1 className="font-display text-2xl font-bold">Payment received</h1>
           <p className="mt-2 text-sm text-ink-muted">

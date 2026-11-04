@@ -47,6 +47,15 @@ const GA_CONNECT_HOSTS = [
   "https://*.analytics.google.com",
 ];
 
+/**
+ * Mixpanel (lib/mixpanel/client.ts): the SDK is bundled, so only its collector
+ * needs allowing. The EU and India hosts are listed so a data-residency move is
+ * an env change (NEXT_PUBLIC_MIXPANEL_API_HOST), not a CSP edit.
+ */
+/** Session Replay's recorder is a separate script the SDK loads from Mixpanel's CDN the first time a session is sampled in. */
+const MIXPANEL_SCRIPT_HOSTS = ["https://cdn.mxpnl.com"];
+const MIXPANEL_CONNECT_HOSTS = ["https://api.mixpanel.com", "https://api-eu.mixpanel.com", "https://api-in.mixpanel.com"];
+
 const X_PIXEL_HOSTS = [
   "https://static.ads-twitter.com",
   "https://ads-twitter.com",
@@ -58,13 +67,13 @@ const X_PIXEL_HOSTS = [
 function contentSecurityPolicy(): string {
   const dev = process.env.NODE_ENV === "development";
   const supabase = safeOrigin(process.env.NEXT_PUBLIC_SUPABASE_URL);
-  const connect = ["'self'", ...X_PIXEL_HOSTS, ...GA_CONNECT_HOSTS];
+  const connect = ["'self'", ...X_PIXEL_HOSTS, ...GA_CONNECT_HOSTS, ...MIXPANEL_CONNECT_HOSTS];
   if (supabase) connect.push(supabase, supabase.replace(/^https:/, "wss:"));
   if (dev) connect.push("ws://localhost:*", "https://va.vercel-scripts.com");
 
   return [
     "default-src 'self'",
-    `script-src 'self' 'unsafe-inline' ${[...X_PIXEL_HOSTS, ...GA_SCRIPT_HOSTS].join(" ")}${dev ? " 'unsafe-eval' https://va.vercel-scripts.com" : ""}`,
+    `script-src 'self' 'unsafe-inline' ${[...X_PIXEL_HOSTS, ...GA_SCRIPT_HOSTS, ...MIXPANEL_SCRIPT_HOSTS].join(" ")}${dev ? " 'unsafe-eval' https://va.vercel-scripts.com" : ""}`,
     "style-src 'self' 'unsafe-inline'",
     `img-src 'self' data: blob: https: ${X_PIXEL_HOSTS.join(" ")}`,
     "font-src 'self' data:",
@@ -148,6 +157,8 @@ const nextConfig: NextConfig = {
 
   async redirects() {
     return [
+      // The old VIP chat page: links in emails and messages already sent land on the plans.
+      { source: "/vip", destination: "/pricing", permanent: true },
       /*
        * The earlier addresses (BetriX, then the .com.ng KiqStat domain) and the
        * bare kiqstat.app all land on www.kiqstat.app, keeping the path, so old

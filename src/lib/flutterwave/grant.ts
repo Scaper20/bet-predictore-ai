@@ -1,3 +1,4 @@
+import { trackVipCompleted } from "@/lib/mixpanel/billing-events";
 import "server-only";
 
 import { supabaseAdmin } from "@/lib/supabase/admin";
@@ -94,10 +95,15 @@ export async function grantFlutterwavePayment(txRef: string): Promise<GrantOutco
     paidAt: now,
   });
 
+  if (tier === "vip") {
+    trackVipCompleted({ userId: payment.user_id as string, fromTier: current?.tier, cycle, paymentMethod: "flutterwave", reference: txRef, at: now });
+  }
+
   const email = tx.customer?.email;
   if (email) {
     void sendEmail({
       to: email,
+      idempotencyKey: `receipt:flutterwave:${txRef}`,
       ...receiptEmail({
         tier,
         amountKobo: 0,

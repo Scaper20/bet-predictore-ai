@@ -42,12 +42,15 @@ export default function robots(): MetadataRoute.Robots {
           "/api/",
           // An internal operator tool, never for public discovery.
           "/admin",
-          // Sign-in, billing and per-device pages: empty for a crawler.
-          "/account/",
+          // /account/ is not blocked here on purpose: its pages carry a noindex tag (account/layout.tsx),
+          // which a crawler can only read if it is allowed to fetch them.
           "/football/combo",
           // Results by past day: an archive that only grows, and every
           // day/league pair is another server render.
           "/*?*day=",
+          // Player props by market and league: the hub is enough for search,
+          // each filter is another per-viewer render.
+          "/football/props?",
         ],
       },
     ],

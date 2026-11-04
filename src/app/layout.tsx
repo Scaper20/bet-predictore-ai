@@ -197,8 +197,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <SpeedInsights />
         {GA_ID && (
           <>
-            {/* Google Analytics 4 (gtag.js): hosts allowed in next.config.ts's CSP. */}
-            <Script id="ga-loader" strategy="afterInteractive" src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`} />
+            {/* Google Analytics 4 (gtag.js): hosts allowed in next.config.ts's CSP. The ~150 KB
+                library waits for the page's load event (lazyOnload) so it never competes with the
+                page itself on a slow phone; ga-init defines the dataLayer queue straight away, so
+                nothing sent before it arrives is lost. */}
+            <Script id="ga-loader" strategy="lazyOnload" src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`} />
             <Script id="ga-init" strategy="afterInteractive" dangerouslySetInnerHTML={{ __html: gaInit(GA_ID) }} />
           </>
         )}

@@ -10,7 +10,8 @@ import { PlanMatrixMobile } from "@/components/pricing/plan-matrix-mobile";
 import { IntervalToggle } from "@/components/pricing/interval-toggle";
 import { sportPath } from "@/lib/routes";
 import { headers } from "next/headers";
-import { planById, priceSaving, type BillingCycle } from "@/lib/pricing";
+import { priceSaving, type BillingCycle } from "@/lib/pricing";
+import { getPlans } from "@/lib/plan-prices";
 import { flutterwaveConfigured } from "@/lib/flutterwave/client";
 import { weeklyCodeAllowance } from "@/lib/code-hub-plans";
 import { formatMoney, marketFor, NIGERIA } from "@/lib/payments/markets";
@@ -32,16 +33,12 @@ const faqs = (sellsAbroad: boolean) => [
     a: "No. Every pick and every prediction type on every match is free, along with live scores, fixtures and results. Pro adds winning margins, half-time predictions, the full breakdowns, value against the market price and more from Forge and Ask KiqStat.",
   },
   {
-    q: "What is the VIP chat?",
-    a: "A members-only WhatsApp group that comes with VIP. Every day before kick-off it gets the day's Strong picks, Pro leagues included, and four ready-made combos priced about 2, 3, 5 and 10, plus live calls in the big games and your questions answered first. They are chances, not promises: every result stays on the public track record. Join from kiqstat.app/vip with the number you use on WhatsApp; it is checked against your plan before you are let in. The free WhatsApp community stays open to everyone.",
-  },
-  {
     q: "What do I get in the Code Hub?",
-    a: `Every day the Code Hub has combos from 2 to 20 odds, each with a SportyBet code. Free accounts get the 2-odds combo in full before kick-off; Pro and VIP get all of them. Anyone signed in can check any SportyBet code, make it safer and post their own codes. A new SportyBet code for your own picks or an edited code comes from your weekly allowance: ${weeklyCodeAllowance("pro")} a week on Pro and ${weeklyCodeAllowance("vip")} on VIP, each slot freeing up seven days after it was used.`,
+    a: `Every day the Code Hub has combos from about 2 odds upward (2, 3 and 5 most days, 10 and 20 on days with enough strong games), each with a SportyBet code. Free accounts get the 2-odds combo in full before kick-off; Pro and VIP get all of them. Anyone signed in can check any SportyBet code, make it safer and post their own codes. A new SportyBet code for your own picks or an edited code comes from your weekly allowance: ${weeklyCodeAllowance("pro")} a week on Pro and ${weeklyCodeAllowance("vip")} on VIP, each slot freeing up seven days after it was used.`,
   },
   {
-    q: "What happened to passes?",
-    a: "Passes are no longer sold; everything they unlocked is now in Pro. A pass you already bought keeps working until it runs out.",
+    q: "Is there a day pass?",
+    a: "New visitors can get a VIP day pass: 24 hours of everything VIP unlocks on the site, paid once, offered during your first day on KiqStat. It doesn't renew and there's nothing to cancel. A pass bought before October keeps working until it runs out.",
   },
   {
     q: "Can I cancel?",
@@ -71,7 +68,8 @@ export default async function PricingPage({ searchParams }: PageProps<"/pricing"
   const sellsAbroad = flutterwaveConfigured();
   const country = sellsAbroad ? ((await headers()).get("x-vercel-ip-country") ?? NIGERIA.country) : NIGERIA.country;
   const market = sellsAbroad ? marketFor(country) : NIGERIA;
-  const proPrices = market.provider === "flutterwave" ? (market.prices?.pro ?? {}) : planById("pro").price;
+  const plans = await getPlans();
+  const proPrices = market.provider === "flutterwave" ? (market.prices?.pro ?? {}) : (plans.find((p) => p.id === "pro")?.price ?? {});
   const proSaving = priceSaving(proPrices, interval);
   const FAQS = faqs(sellsAbroad);
 
@@ -98,6 +96,7 @@ export default async function PricingPage({ searchParams }: PageProps<"/pricing"
             interval={interval}
             sellsAbroad={sellsAbroad}
             country={country}
+            plans={plans}
             hrefFor={(plan) =>
               plan.id === "free"
                 ? "/account/sign-up"

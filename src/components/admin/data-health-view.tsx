@@ -1,6 +1,7 @@
 import type { DataHealth } from "@/lib/data-health";
 import { DataLayerForm, SourceToggle } from "@/components/admin/data-layer-form";
 import { Badge } from "@/components/ui/primitives";
+import { SwitchForm } from "@/components/admin/switch-form";
 
 const ago = (iso: string | null | undefined) => {
   if (!iso) return "never";
@@ -10,7 +11,7 @@ const ago = (iso: string | null | undefined) => {
   return `${Math.round(mins / 1440)}d ago`;
 };
 
-export function DataHealthView({ h }: { h: DataHealth }) {
+export function DataHealthView({ h, fotmobUi = true }: { h: DataHealth; fotmobUi?: boolean }) {
 
   if (!h.available) {
     return (
@@ -82,6 +83,95 @@ export function DataHealthView({ h }: { h: DataHealth }) {
           </tbody>
         </table>
       </section>
+
+      {h.fotmob && (
+        <section className="card space-y-4 p-5 sm:p-6">
+          <div className="flex flex-wrap items-baseline justify-between gap-3">
+            <h2 className="text-sm font-semibold text-ink">Match details (FotMob)</h2>
+            <span className="text-xs text-ink-dim">
+              Live lane {ago(h.fotmob.lastLiveRun)} · lineups {ago(h.fotmob.lastUpcomingRun)} · club profiles {ago(h.fotmob.lastTeamsRun)}
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {(
+              [
+                ["Games with details", h.fotmob.matchesWithDetails],
+                ["Players", h.fotmob.players],
+                ["Club profiles", h.fotmob.clubProfiles],
+                ["Absence snapshots", h.fotmob.absenceSnapshots],
+              ] as const
+            ).map(([label, n]) => (
+              <div key={label} className="rounded-xl border border-line bg-surface-2 px-3 py-2.5">
+                <p className="text-[10.5px] uppercase tracking-wider text-ink-dim">{label}</p>
+                <p className="tnum mt-1 font-mono text-lg font-semibold">{n.toLocaleString("en-GB")}</p>
+              </div>
+            ))}
+          </div>
+          <p className="text-xs text-ink-dim">
+            Player profiles {h.fotmob.playerProfiles === null ? "–" : h.fotmob.playerProfiles.toLocaleString("en-GB")}
+            {" · "}
+            {h.fotmob.props ? (
+              <>
+                Player props {ago(h.fotmob.props.at)} ({h.fotmob.props.status}): {h.fotmob.props.matches} games, {h.fotmob.props.projections} projections,{" "}
+                {h.fotmob.props.lines} SportyBet lines,{" "}
+                <span className={h.fotmob.props.starters && h.fotmob.props.startersWithLines / h.fotmob.props.starters < 0.9 ? "text-amber" : ""}>
+                  {h.fotmob.props.startersWithLines} of {h.fotmob.props.starters} starters with lines
+                </span>
+                {" "}({h.fotmob.props.unmatched} bookmaker lines for players outside the eleven),{" "}
+                <span className={h.fotmob.props.skippedMarkets ? "text-amber" : ""}>{h.fotmob.props.skippedMarkets} unreadable player markets</span>,{" "}
+                {h.fotmob.props.picks} picks, {h.fotmob.props.settled} settled
+              </>
+            ) : (
+              "player props have not run yet"
+            )}
+          </p>
+          {h.fotmob.leagues.length > 0 && (
+            <div className="max-w-full overflow-x-auto">
+              <table className="w-full min-w-[36rem] text-sm">
+                <thead>
+                  <tr className="text-left text-[10.5px] uppercase tracking-wider text-ink-dim">
+                    <th className="py-2 pr-3 font-medium">Competition</th>
+                    <th className="py-2 pr-3 font-medium">Last run</th>
+                    <th className="py-2 pr-3 text-right font-medium">Linked</th>
+                    <th className="py-2 pr-3 text-right font-medium">Fetched</th>
+                    <th className="py-2 pr-3 text-right font-medium">Left</th>
+                    <th className="py-2 font-medium">Not linked</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-line/60">
+                  {h.fotmob.leagues.map((l) => (
+                    <tr key={l.leagueCode}>
+                      <td className="py-2 pr-3 font-medium text-ink">
+                        {l.leagueCode}
+                        {l.season && <span className="ml-1.5 text-xs text-ink-dim">{l.season}</span>}
+                      </td>
+                      <td className="py-2 pr-3 text-xs text-ink-muted">
+                        {ago(l.at)} {l.status !== "ok" && <Badge tone="amber">{l.status}</Badge>}
+                      </td>
+                      <td className="tnum py-2 pr-3 text-right font-mono">{l.linked}</td>
+                      <td className="tnum py-2 pr-3 text-right font-mono">{l.fetched}</td>
+                      <td className="tnum py-2 pr-3 text-right font-mono">{l.remaining}</td>
+                      <td className="max-w-xs truncate py-2 text-xs text-ink-dim" title={l.warning ?? undefined}>
+                        {l.unmatched > 0 ? `${l.unmatched}: ${l.warning ?? ""}` : "none"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <p className="text-xs text-ink-dim">
+            Games FotMob has that no match row fits are left unlinked, never guessed: add the spelling to
+            ingestion/betrix_ingest/aliases.json.
+          </p>
+          <div className="flex flex-wrap items-center gap-3 border-t border-line pt-4">
+            <span className="text-xs text-ink-muted">
+              Lineups, timelines, shot maps and club profiles on the site: {fotmobUi ? <Badge tone="brand">Showing</Badge> : <Badge tone="amber">Hidden</Badge>}
+            </span>
+            <SwitchForm switchKey="fotmob_ui" enabled={fotmobUi} onLabel="Show FotMob sections" offLabel="Hide FotMob sections" />
+          </div>
+        </section>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-2">
         <section className="card space-y-3 p-5">

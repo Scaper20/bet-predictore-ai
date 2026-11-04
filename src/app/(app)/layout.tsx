@@ -3,6 +3,7 @@ import { SiteFooter } from "@/components/layout/site-footer";
 import { EntitlementProvider } from "@/components/entitlements/entitlement-provider";
 import { DeferredWidgets } from "@/components/layout/deferred-widgets";
 import { MobileNav } from "@/components/layout/mobile-nav";
+import { MixpanelProvider } from "@/components/analytics/mixpanel-provider";
 
 /**
  * Shared chrome for every public page, the landing page included.
@@ -29,6 +30,7 @@ import { MobileNav } from "@/components/layout/mobile-nav";
 export default function AppLayout({ children }: LayoutProps<"/">) {
   return (
     <EntitlementProvider>
+      <MixpanelProvider />
       <SiteHeader />
       <main className="flex-1">{children}</main>
       <SiteFooter />

@@ -189,6 +189,17 @@ class MemoryDb:
         if fn in {"upsert_historical_results", "upsert_historic_odds"}:
             self.tables.setdefault(fn, []).extend(args["p_rows"])
             return len(args["p_rows"])
+        if fn == "link_fotmob_match":
+            for m in self.tables.get("matches", []):
+                if str(m.get("id")) == str(args["p_match_id"]):
+                    ids = m.setdefault("source_ids", {})
+                    if ids.get("fotmob") not in (None, args["p_fotmob_id"]):
+                        return False
+                    ids["fotmob"] = args["p_fotmob_id"]
+                    return True
+            return False
+        if fn == "fotmob_player_candidates":
+            return [{"fotmob_id": fid} for fid in self.tables.get("_player_candidates", [])][: args.get("p_limit", 400)]
         if fn == "rename_team":
             for t in self.tables.get("teams", []):
                 if t["id"] == args["p_team_id"]:

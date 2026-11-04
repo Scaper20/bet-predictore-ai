@@ -14,6 +14,12 @@ on:
     - cron: "35 4 * * *"         # BetriX Elo, after the early results run
     - cron: "0 2 * * 1"          # sync competitions and club lists, weekly
     - cron: "20 5 * * 2"         # international results (CC0 dataset), weekly: last two years
+    - cron: "25 1,10 * * *"      # FotMob: details for finished games not yet held (lineups, player stats, shots)
+    - cron: "55 14-23 * * *"     # FotMob: the same, hourly through the match window (settles player props)
+    - cron: "5 0-23/3 * * *"     # FotMob: next 72 hours, who is out and lineups as they stand (snapshotted)
+    - cron: "50 10-21 * * *"     # FotMob: confirmed lineups, published about an hour before kickoff
+    - cron: "40 3 * * 3"         # FotMob: club profiles (squad, coach, venue, transfers), weekly
+    - cron: "15 2 * * *"         # FotMob: player profiles, stalest 400 a day (everyone weekly)
   workflow_dispatch:
     inputs:
       job:
@@ -33,8 +39,14 @@ on:
           - backfill-international-results
           - backfill-thesportsdb
           - link-history
+          - fotmob-link
+          - fotmob-matches
+          - fotmob-backfill
+          - fotmob-upcoming
+          - fotmob-teams
+          - fotmob-players
       args:
-        description: "Extra arguments, e.g. --league npfl --days 30 --full"
+        description: "Extra arguments, e.g. --league npfl --days 30 --full, or --league premier-league --season 2023/2024 --limit 350"
         required: false
         default: ""
 
@@ -45,7 +57,9 @@ concurrency:
 jobs:
   ingest:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # The FotMob history backfill and a first fill of player profiles are long, polite crawls
+    # (~4 s a request) when run by hand; everything scheduled fits in 30.
+    timeout-minutes: ${{ (inputs.job == 'fotmob-backfill' || inputs.job == 'fotmob-players') && 350 || 30 }}
     defaults:
       run:
         working-directory: ingestion
@@ -91,6 +105,12 @@ jobs:
             "35 4 * * *")       echo "cmd=elo" >> "$GITHUB_OUTPUT" ;;
             "0 2 * * 1")        echo "cmd=sync" >> "$GITHUB_OUTPUT" ;;
             "20 5 * * 2")       echo "cmd=backfill-international-results --since $(date -u -d '2 years ago' +%F)" >> "$GITHUB_OUTPUT" ;;
+            "25 1,10 * * *")    echo "cmd=fotmob-matches --limit 350" >> "$GITHUB_OUTPUT" ;;
+            "55 14-23 * * *")   echo "cmd=fotmob-matches --limit 60" >> "$GITHUB_OUTPUT" ;;
+            "5 0-23/3 * * *")   echo "cmd=fotmob-upcoming --hours 72" >> "$GITHUB_OUTPUT" ;;
+            "50 10-21 * * *")   echo "cmd=fotmob-upcoming --hours 2" >> "$GITHUB_OUTPUT" ;;
+            "40 3 * * 3")       echo "cmd=fotmob-teams" >> "$GITHUB_OUTPUT" ;;
+            "15 2 * * *")       echo "cmd=fotmob-players --limit 400" >> "$GITHUB_OUTPUT" ;;
             "")                 echo "cmd=$INPUT_JOB $INPUT_ARGS" >> "$GITHUB_OUTPUT" ;;
             *) echo "unknown schedule: $SCHEDULE"; exit 1 ;;
           esac

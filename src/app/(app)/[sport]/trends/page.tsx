@@ -10,7 +10,7 @@ import { scoresPath } from "@/lib/routes";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/football/trends" },
-  title: "Football Trends and Streaks",
+  title: "Football Trends and Streaks Today: Over 2.5, BTTS and Winning Runs",
   description:
     "The streaks worth knowing before kick-off: winning runs, over 2.5 and both-teams-scoring streaks, clean sheets and slumps " +
     "for every team playing in the next three days.",

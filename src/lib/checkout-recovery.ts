@@ -44,6 +44,8 @@ export async function sendCheckoutReminders(lookbackHours = 48, now = new Date()
     .gte("created_at", from)
     .lte("created_at", to)
     .not("user_id", "is", null)
+    // A missed offer isn't chased with a plan email; the offer itself is still there while it lasts.
+    .not("plan", "like", "offer:%")
     .order("created_at", { ascending: false });
   if (error || !attempts?.length) return { candidates: 0, sent: 0 };
 

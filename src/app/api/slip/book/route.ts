@@ -1,3 +1,4 @@
+import { requestContext, trackLater } from "@/lib/mixpanel/server";
 import { after, NextResponse } from "next/server";
 import { getEntitlement } from "@/lib/entitlements";
 import { leagueByProviderName } from "@/lib/leagues";
@@ -279,6 +280,18 @@ export async function POST(request: Request) {
       code: booked.bookingCode,
       readBack: booked.readBack,
     });
+    const mp = await requestContext();
+    trackLater(
+      "code_hub_code_generated",
+      {
+        code_type: "sportybet_booking_code",
+        // A code read back from SportyBet after booking was checked as well as generated.
+        validation_mode: booked.readBack ? "generate_and_validate" : "generate_only",
+        matches_in_payload: booked.selectionsCount,
+        current_tier: entitlement.tier,
+      },
+      { userId: entitlement.userId, anonId: mp.anonId, country: mp.country },
+    );
     return NextResponse.json(
       {
         ok: true,

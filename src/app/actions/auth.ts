@@ -7,11 +7,12 @@ import { getPreferencesFor, hasOnboarded } from "@/lib/preferences";
 import { sendEmail } from "@/lib/email";
 import { welcomeEmail } from "@/lib/email-templates";
 import { safeNext } from "@/lib/safe-redirect";
-import { POST_AUTH_DESTINATION } from "@/lib/routes";
+import { POST_AUTH_DESTINATION, isCheckoutPath } from "@/lib/routes";
 import { FIRST_TOUCH_COOKIE } from "@/lib/first-touch";
 import { PARTNER_REF_COOKIE } from "@/lib/partner-ref";
 import { recordSignupSource } from "@/lib/signup-source";
 import { markAuthChange } from "@/lib/auth-hint-server";
+import { trackLoggedIn, trackSignedUp } from "@/lib/mixpanel/auth-events";
 
 export type AuthActionState = { error: string | null };
 
@@ -34,8 +35,9 @@ export async function signIn(_prev: AuthActionState, formData: FormData): Promis
   }
 
   await markAuthChange(true);
+  if (data?.user) await trackLoggedIn(data.user.id, "email");
 
-  if (data?.user) {
+  if (data?.user && !isCheckoutPath(next)) {
     const prefs = await getPreferencesFor(supabase, data.user.id);
     if (!hasOnboarded(prefs)) {
       redirect(`/onboarding?next=${encodeURIComponent(next)}`);
@@ -98,18 +100,18 @@ export async function signUp(_prev: AuthActionState, formData: FormData): Promis
   // Where this user came from: first touch and any partner link (lib/signup-source.ts).
   if (signUpData?.user) {
     const jar = await cookies();
-    await recordSignupSource(signUpData.user.id, {
-      firstTouch: jar.get(FIRST_TOUCH_COOKIE)?.value,
-      partnerRef: jar.get(PARTNER_REF_COOKIE)?.value,
-    });
+    const source = { firstTouch: jar.get(FIRST_TOUCH_COOKIE)?.value, partnerRef: jar.get(PARTNER_REF_COOKIE)?.value };
+    await recordSignupSource(signUpData.user.id, source);
+    await trackSignedUp(signUpData.user.id, "email", source);
   }
 
   void sendEmail({ to: email, ...welcomeEmail() });
   await markAuthChange(true);
 
   // Straight into onboarding, carrying the original destination so whatever
-  // they were trying to reach still happens once the questions are answered.
-  redirect(`/onboarding?next=${encodeURIComponent(next)}`);
+  // they were trying to reach still happens once the questions are answered;
+  // straight to the checkout when that is where they were going.
+  redirect(isCheckoutPath(next) ? next : `/onboarding?next=${encodeURIComponent(next)}`);
 }
 
 export async function signOut() {

@@ -3,12 +3,15 @@ import "server-only";
 import { emailLayout } from "@/lib/email";
 import { naira } from "@/lib/format";
 import { SITE_URL } from "@/lib/site-url";
+import { utmUrl } from "@/lib/utm";
 import { sportPath } from "@/lib/routes";
 import { TIER_LABEL } from "@/lib/outreach";
 import type { Tier } from "@/lib/entitlements";
 
 function button(href: string, label: string): string {
-  return `<p style="margin:24px 0 0;"><a href="${href}" style="display:inline-block;background:#d4ff3a;color:#07090b;font-weight:700;text-decoration:none;padding:10px 20px;border-radius:8px;font-size:14px;">${label}</a></p>`;
+  // Links back to the site are tagged, so a click and the sign-up after it are traceable to email.
+  const tagged = utmUrl(href, { source: "kiqstat_email", medium: "email" });
+  return `<p style="margin:24px 0 0;"><a href="${tagged}" style="display:inline-block;background:#d4ff3a;color:#07090b;font-weight:700;text-decoration:none;padding:10px 20px;border-radius:8px;font-size:14px;">${label}</a></p>`;
 }
 
 /** Only on the one-off outreach campaigns below — transactional email
@@ -41,7 +44,7 @@ export function codeHubWaitlistEmail(): { subject: string; html: string } {
     html: emailLayout(`
       <p style="margin:0 0 12px;font-size:17px;font-weight:700;">You're on the list</p>
       <p style="margin:0;">Thanks for joining the Code Hub waitlist. Each morning the model will build
-      five ready-made codes from 2 to 20 odds from the day's games. Each one comes with a SportyBet booking
+      ready-made codes from the day's games: about 2, 3 and 5 odds, and 10 and 20 when the games allow. Each one comes with a SportyBet booking
       code and the model's chance of it landing.</p>
       <p style="margin:12px 0 0;">We'll send you one more email, on the day it opens. Until then, today's
       predictions are free to read.</p>
@@ -68,7 +71,7 @@ export function unfinishedCheckoutEmail(opts: { tier: "pro" | "vip"; nigeria: bo
           "Picks before kick-off in the 15 Pro leagues, including the Champions League and Serie A",
           "Live win probability during every match",
           "Every prediction type, half-time and winning margin included",
-          "Forge with every prediction type and Ask KiqStat 100 times a day",
+          "Forge with every prediction type, 100 combos a day",
           "Priority support",
         ]
       : [
@@ -76,7 +79,6 @@ export function unfinishedCheckoutEmail(opts: { tier: "pro" | "vip"; nigeria: bo
           "Every prediction type, half-time and winning margin included",
           "The full match breakdown on every game",
           "Forge with every prediction type, 100 combos a day",
-          "Ask KiqStat 30 times a day",
         ];
   return {
     subject: `Your KiqStat ${name} upgrade is waiting`,
@@ -102,6 +104,35 @@ export function unfinishedCheckoutEmail(opts: { tier: "pro" | "vip"; nigeria: bo
   };
 }
 
+/**
+ * A pay-once plan is about to end (lib/renewal-reminders.ts). Nothing renews and
+ * nothing is charged, so the email says that first, then what ends and how to
+ * keep it. Renewing adds a month on top of what is left.
+ */
+export function planEndingEmail(opts: { tier: "pro" | "vip"; endsAt: string; canAutoRenew: boolean }): { subject: string; html: string } {
+  const name = opts.tier === "vip" ? "VIP" : "Pro";
+  const date = new Date(opts.endsAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", timeZone: "Africa/Lagos" });
+  const loses =
+    opts.tier === "vip"
+      ? ["Picks before kick-off in the Pro leagues", "Live win probability during matches", "Every prediction type and Forge's full range", "Priority support"]
+      : ["Picks before kick-off in the Pro leagues", "Every prediction type, half-time and winning margin included", "The full match breakdown on every game", "Forge's full range"];
+  return {
+    subject: `Your KiqStat ${name} ends on ${date}`,
+    html: emailLayout(`
+      <p style="margin:0 0 12px;font-size:17px;font-weight:700;">Your ${name} plan ends on ${date}</p>
+      <p style="margin:0;">You paid for ${name} once, so nothing renews and you won't be charged again. After ${date} your
+      account goes back to the free plan. What changes:</p>
+      <ul style="margin:12px 0 0;padding-left:20px;">${loses.map((p) => `<li style="margin:4px 0;">${p}</li>`).join("")}</ul>
+      <p style="margin:16px 0 0;">Renewing adds a month on top of the days you have left, so doing it early loses nothing.${
+        opts.canAutoRenew ? " Prefer it automatic? You can choose card auto-renew on the same page instead." : ""
+      }</p>
+      ${button(`${SITE_URL}/account/billing?plan=${opts.tier}`, `Renew ${name}`)}
+      <p style="margin:20px 0 0;font-size:13px;color:#6b7670;">Everything free stays free, and your history and saved picks are kept either way.
+      If something looks wrong with your plan, message us from the Help page.</p>
+    `),
+  };
+}
+
 export function passwordResetEmail(opts: { url: string }): { subject: string; html: string } {
   return {
     subject: "Reset your KiqStat password",
@@ -123,13 +154,17 @@ export function receiptEmail(opts: {
   amountText?: string;
   /** Prepaid plans (Flutterwave): the date access now runs to. */
   accessUntil?: string;
+  /** Names the purchase in place of the tier ("VIP day pass"); access-until then carries the time too. */
+  planLabel?: string;
   reference: string;
   date: string;
 }): { subject: string; html: string } {
-  const label = opts.tier ? TIER_LABEL[opts.tier] : undefined;
+  const label = opts.planLabel ?? (opts.tier ? TIER_LABEL[opts.tier] : undefined);
   const amount = opts.amountText ?? naira(opts.amountKobo / 100);
   const until = opts.accessUntil
-    ? new Date(opts.accessUntil).toLocaleDateString("en-GB", { year: "numeric", month: "long", day: "numeric" })
+    ? opts.planLabel
+      ? `${new Date(opts.accessUntil).toLocaleString("en-GB", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", timeZone: "Africa/Lagos" })} WAT`
+      : new Date(opts.accessUntil).toLocaleDateString("en-GB", { year: "numeric", month: "long", day: "numeric" })
     : undefined;
   const when = new Date(opts.date).toLocaleDateString("en-NG", { year: "numeric", month: "long", day: "numeric" });
 
@@ -138,7 +173,7 @@ export function receiptEmail(opts: {
     html: emailLayout(`
       <p style="margin:0 0 12px;font-size:17px;font-weight:700;">Payment received</p>
       <p style="margin:0 0 20px;">${
-        label ? `Thanks for subscribing to ${label}.` : "Thanks for your payment."
+        opts.planLabel ? `Your ${opts.planLabel} is on.` : label ? `Thanks for subscribing to ${label}.` : "Thanks for your payment."
       } Here's your receipt.</p>
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;">
         <tr><td style="padding:6px 0;color:#6b7670;">Amount</td><td style="padding:6px 0;text-align:right;font-weight:700;">${amount}</td></tr>
@@ -380,116 +415,65 @@ export function payOnceAnnouncementEmail(opts: { unsubscribeUrl: string }): { su
   };
 }
 
-/* ------------------------------------------------------------ VIP chat */
-
-const VIP_CHAT_DAILY = [
-  "<strong>The day's Strong picks</strong>: the model's surest reads, Pro leagues included",
-  "<strong>Four ready-made combos</strong> priced about 2, 3, 5 and 10, built from the day's strongest reads",
-  "<strong>Live calls in the big games</strong>, and your questions answered first",
-];
-
-function vipChatList(): string {
-  return `<ul style="margin:12px 0 0;padding-left:20px;">${VIP_CHAT_DAILY.map((p) => `<li style="margin:6px 0;">${p}</li>`).join("")}</ul>`;
-}
-
-/** The Strong picks' live record (lib/vip-chat.ts strongRecordLine), or nothing when the sample is too small. */
-function vipRecord(record: string | null): string {
+/** The Strong picks' live record (lib/strong-record.ts), or nothing when the sample is too small. */
+function recordBlock(record: string | null): string {
   if (!record) return "";
   return `<p style="margin:16px 0 0;padding:12px 14px;border-radius:10px;background:#f3f8e6;">
     <strong>Strong picks: ${record}.</strong>
     <a href="${SITE_URL}${sportPath("trackRecord")}" style="color:#4f6b00;">Every result</a> is public.</p>`;
 }
 
-const VIP_CHAT_SMALL_PRINT = `<p style="margin:20px 0 0;font-size:12px;color:#6b7670;">Chances, not promises: even the
+const SMALL_PRINT = `<p style="margin:20px 0 0;font-size:12px;color:#6b7670;">Chances, not promises: even the
   surest reads miss, and a combo is lost if any one game in it is. 18+.</p>`;
 
-const VIP_CHAT_HOW_TO_JOIN = `<p style="margin:20px 0 0;"><strong>Joining takes a minute:</strong> open the VIP chat page,
-  add the WhatsApp number you'll join with and tap Join. We let in requests from VIP members' numbers, usually
-  within a few hours.</p>`;
+/** HTML-escapes text typed in admin (offer copy) before it goes into an email. */
+function esc(s: string): string {
+  return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
+}
 
 /**
- * VIP chat launch, to everyone on a live Pro or VIP plan. VIP members are
- * invited in; Pro members hear what VIP now adds.
+ * An email-only offer (lib/offers.ts audience "email") to a free member:
+ * the pass, its price, what it opens, and a link that only works on their
+ * account (offer page ?r=<recipient id>) until `expires`.
  */
-export function vipChatLaunchEmail(opts: { tier: "pro" | "vip"; record: string | null; unsubscribeUrl: string }): {
-  subject: string;
-  html: string;
-} {
-  if (opts.tier === "vip") {
-    return {
-      subject: "Your VIP chat on WhatsApp is open",
-      html: emailLayout(`
-        <p style="margin:0 0 16px;">Hi there,</p>
-        <p style="margin:0;">As a VIP member you now have a place in the <strong>KiqStat VIP chat</strong>, a
-        members-only WhatsApp group. Every day before kick-off it gets:</p>
-        ${vipChatList()}
-        ${vipRecord(opts.record)}
-        ${VIP_CHAT_HOW_TO_JOIN}
-        ${button(`${SITE_URL}/vip`, "Join the VIP chat")}
-        <p style="margin:24px 0 0;">See you in there.<br>— Scaper, Founder &amp; CEO, KiqStat</p>
-        ${VIP_CHAT_SMALL_PRINT}
-        ${unsubscribeFooter(opts.unsubscribeUrl)}
-      `),
-    };
-  }
+export function offerEmail(opts: {
+  tierLabel: string;
+  duration: string;
+  priceText: string;
+  compareText: string | null;
+  headline: string;
+  subline: string | null;
+  perks: string[];
+  cta: string;
+  claimUrl: string;
+  /** "Friday 31 October, 9:00 pm WAT", or null when the link doesn't expire. */
+  expires: string | null;
+  record: string | null;
+  unsubscribeUrl: string;
+}): { subject: string; html: string } {
+  const perks = opts.perks.length
+    ? `<ul style="margin:12px 0 0;padding-left:20px;">${opts.perks.map((p) => `<li style="margin:6px 0;">${esc(p)}</li>`).join("")}</ul>`
+    : "";
   return {
-    subject: "New for VIP: our surest picks every day, on WhatsApp",
+    subject: `${opts.headline}: ${opts.tierLabel} for ${opts.duration}, ${opts.priceText}`,
     html: emailLayout(`
       <p style="margin:0 0 16px;">Hi there,</p>
-      <p style="margin:0;">Thanks for being on Pro. We've opened something new for VIP members: the
-      <strong>KiqStat VIP chat</strong>, a members-only WhatsApp group. Every day before kick-off it gets:</p>
-      ${vipChatList()}
-      ${vipRecord(opts.record)}
-      <p style="margin:20px 0 0;">VIP keeps everything you have on Pro, plus the chat, live win
-      probability, 100 Ask KiqStat questions a day and priority support. Your Pro plan carries on as it is if you'd
-      rather stay.</p>
-      ${button(`${SITE_URL}/vip`, "See the VIP chat")}
-      <p style="margin:24px 0 0;">— Scaper, Founder &amp; CEO, KiqStat</p>
-      ${VIP_CHAT_SMALL_PRINT}
-      ${unsubscribeFooter(opts.unsubscribeUrl)}
-    `),
-  };
-}
-
-/** The follow-up to VIP members who haven't opened the chat yet. */
-export function vipChatReminderEmail(opts: { record: string | null; unsubscribeUrl: string }): { subject: string; html: string } {
-  return {
-    subject: "Your seat in the VIP chat is still waiting",
-    html: emailLayout(`
-      <p style="margin:0 0 16px;">Hi there,</p>
-      <p style="margin:0;">You're on VIP, but you haven't joined the <strong>VIP chat</strong> on WhatsApp yet. It's
-      included in your plan, and it's where these land every morning:</p>
-      ${vipChatList()}
-      ${vipRecord(opts.record)}
-      ${VIP_CHAT_HOW_TO_JOIN}
-      ${button(`${SITE_URL}/vip`, "Join the VIP chat")}
-      <p style="margin:24px 0 0;">— Scaper, Founder &amp; CEO, KiqStat</p>
-      ${VIP_CHAT_SMALL_PRINT}
-      ${unsubscribeFooter(opts.unsubscribeUrl)}
-    `),
-  };
-}
-
-/** The VIP chat, to everyone not on a paid plan. */
-export function vipChatFreeEmail(opts: { record: string | null; unsubscribeUrl: string }): { subject: string; html: string } {
-  return {
-    subject: "Our surest picks of the day, every day, on WhatsApp",
-    html: emailLayout(`
-      <p style="margin:0 0 16px;">Hi there,</p>
-      <p style="margin:0;">Every day our model marks a few picks as <strong>Strong</strong>: the games it is surest
-      of. We've opened a members-only WhatsApp group, the <strong>KiqStat VIP chat</strong>, where every morning before
-      kick-off VIP members get:</p>
-      ${vipChatList()}
-      ${vipRecord(opts.record)}
+      <p style="margin:0 0 6px;font-size:20px;font-weight:800;">${esc(opts.headline)}</p>
+      ${opts.subline ? `<p style="margin:0 0 16px;color:#4c5650;">${esc(opts.subline)}</p>` : ""}
+      <p style="margin:0;">You've had KiqStat's free picks. Now try <strong>${opts.tierLabel} for ${opts.duration}</strong>
+      for <strong>${opts.priceText}</strong>${opts.compareText ? ` (the plan is ${opts.compareText} a month)` : ""}. It opens:</p>
+      ${perks}
+      ${recordBlock(opts.record)}
       <p style="margin:20px 0 8px;font-weight:700;">What the model got right lately</p>
       <a href="${SITE_URL}${sportPath("trackRecord")}" style="text-decoration:none;">
         <img src="${SITE_URL}/api/og/recent-wins" width="496" alt="KiqStat's most recent winning picks" style="display:block;width:100%;max-width:496px;height:auto;border:0;border-radius:10px;">
       </a>
-      <p style="margin:20px 0 0;">The chat comes with the VIP plan, and you can pay once for a month with nothing
-      renewing. Everything you have for free stays free, the WhatsApp community included.</p>
-      ${button(`${SITE_URL}/vip`, "See the VIP chat")}
+      ${button(opts.claimUrl, `${esc(opts.cta)} · ${opts.priceText}`)}
+      <p style="margin:12px 0 0;font-size:13px;color:#4c5650;">This link is yours: it works on the account this email
+      came to${opts.expires ? `, until <strong>${opts.expires}</strong>` : ""}. Pay by transfer, OPay, PalmPay, USSD or
+      card. One payment, nothing renews.</p>
       <p style="margin:24px 0 0;">— Scaper, Founder &amp; CEO, KiqStat</p>
-      ${VIP_CHAT_SMALL_PRINT}
+      ${SMALL_PRINT}
       ${unsubscribeFooter(opts.unsubscribeUrl)}
     `),
   };

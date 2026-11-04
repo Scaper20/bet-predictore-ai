@@ -1,0 +1,1280 @@
+{
+ "bizCode": 10000,
+ "message": "0#0",
+ "data": {
+  "eventId": "sr:match:74165980",
+  "homeTeamName": "Atletico Madrid",
+  "awayTeamName": "Bayern Munich",
+  "estimateStartTime": 1793736000000,
+  "markets": [
+   {
+    "id": "770",
+    "specifier": "variant=pre:playerprops:74165980:84539",
+    "desc": "Player assists (incl. overtime)",
+    "name": "Player Assists",
+    "group": "Players",
+    "status": 0,
+    "outcomes": [
+     {
+      "id": "pre:playerprops:74165980:84539:1",
+      "odds": "8.25",
+      "probability": "0.0839000000",
+      "isActive": 1,
+      "desc": "Koke (Atletico Madrid) 1+"
+     },
+     {
+      "id": "pre:playerprops:74165980:84539:2",
+      "odds": "47.00",
+      "probability": "0.0127000000",
+      "isActive": 1,
+      "desc": "Koke (Atletico Madrid) 2+"
+     }
+    ]
+   },
+   {
+    "id": "770",
+    "specifier": "variant=pre:playerprops:74165980:108579",
+    "desc": "Player assists (incl. overtime)",
+    "name": "Player Assists",
+    "group": "Players",
+    "status": 0,
+    "outcomes": [
+     {
+      "id": "pre:playerprops:74165980:108579:1",
+      "odds": "4.60",
+      "probability": "0.1617000000",
+      "isActive": 1,
+      "desc": "Kane, Harry (Bayern Munich) 1+"
+     },
+     {
+      "id": "pre:playerprops:74165980:108579:2",
+      "odds": "28.00",
+      "probability": "0.0222000000",
+      "isActive": 1,
+      "desc": "Kane, Harry (Bayern Munich) 2+"
+     }
+    ]
+   },
+   {
+    "id": "770",
+    "specifier": "variant=pre:playerprops:74165980:177177",
+    "desc": "Player assists (incl. overtime)",
+    "name": "Player Assists",
+    "group": "Players",
+    "status": 0,
+    "outcomes": [
+     {
+      "id": "pre:playerprops:74165980:177177:1",
+      "odds": "3.70",
+      "probability": "0.2076000000",
+      "isActive": 1,
+      "desc": "Grimaldo, Alex (Atletico Madrid) 1+"
+     },
+     {
+      "id": "pre:playerprops:74165980:177177:2",
+      "odds": "18.50",
+      "probability": "0.0347000000",
+      "isActive": 1,
+      "desc": "Grimaldo, Alex (Atletico Madrid) 2+"
+     }
+    ]
+   },
+   {
+    "id": "770",
+    "specifier": "variant=pre:playerprops:74165980:227672",
+    "desc": "Player assists (incl. overtime)",
+    "name": "Player Assists",
+    "group": "Players",
+    "status": 0,
+    "outcomes": [
+     {
+      "id": "pre:playerprops:74165980:227672:1",
+      "odds": "13.50",
+      "probability": "0.0477000000",
+      "isActive": 1,
+      "desc": "Tah, Jonathan (Bayern Munich) 1+"
+     },
+     {
+      "id": "pre:playerprops:74165980:227672:2",
+      "odds": "69.00",
+      "probability": "0.0081000000",
+      "isActive": 1,
+      "desc": "Tah, Jonathan (Bayern Munich) 2+"
+     }
+    ]
+   },
+   {
+    "id": "775",
+    "specifier": "variant=pre:playerprops:74165980:84539",
+    "desc": "Player goals (incl. overtime)",
+    "name": "Player Goals",
+    "group": "Players",
+    "status": 0,
+    "outcomes": [
+     {
+      "id": "pre:playerprops:74165980:84539:1",
+      "odds": "9.10",
+      "probability": "0.0747000000",
+      "isActive": 1,
+      "desc": "Koke (Atletico Madrid) 1+"
+     },
+     {
+      "id": "pre:playerprops:74165980:84539:2",
+      "odds": "115.00",
+      "probability": "0.0046000000",
+      "isActive": 1,
+      "desc": "Koke (Atletico Madrid) 2+"
+     },
+     {
+      "id": "pre:playerprops:74165980:84539:3",
+      "odds": "250.00",
+      "probability": "0.0013000000",
+      "isActive": 1,
+      "desc": "Koke (Atletico Madrid) 3+"
+     }
+    ]
+   },
+   {
+    "id": "775",
+    "specifier": "variant=pre:playerprops:74165980:108579",
+    "desc": "Player goals (incl. overtime)",
+    "name": "Player Goals",
+    "group": "Players",
+    "status": 0,
+    "outcomes": [
+     {
+      "id": "pre:playerprops:74165980:108579:1",
+      "odds": "1.90",
+      "probability": "0.4536000000",
+      "isActive": 1,
+      "desc": "Kane, Harry (Bayern Munich) 1+"
+     },
+     {
+      "id": "pre:playerprops:74165980:108579:2",
+      "odds": "4.70",
+      "probability": "0.1617000000",
+      "isActive": 1,
+      "desc": "Kane, Harry (Bayern Munich) 2+"
+     },
+     {
+      "id": "pre:playerprops:74165980:108579:3",
+      "odds": "23.00",
+      "probability": "0.0271000000",
+      "isActive": 1,
+      "desc": "Kane, Harry (Bayern Munich) 3+"
+     }
+    ]
+   },
+   {
+    "id": "775",
+    "specifier": "variant=pre:playerprops:74165980:177177",
+    "desc": "Player goals (incl. overtime)",
+    "name": "Player Goals",
+    "group": "Players",
+    "status": 0,
+    "outcomes": [
+     {
+      "id": "pre:playerprops:74165980:177177:1",
+      "odds": "4.20",
+      "probability": "0.1819000000",
+      "isActive": 1,
+      "desc": "Grimaldo, Alex (Atletico Madrid) 1+"
+     },
+     {
+      "id": "pre:playerprops:74165980:177177:2",
+      "odds": "37.00",
+      "probability": "0.0162000000",
+      "isActive": 1,
+      "desc": "Grimaldo, Alex (Atletico Madrid) 2+"
+     },
+     {
+      "id": "pre:playerprops:74165980:177177:3",
+      "odds": "185.00",
+      "probability": "0.0028000000",
+      "isActive": 1,
+      "desc": "Grimaldo, Alex (Atletico Madrid) 3+"
+     }
+    ]
+   },
+   {
+    "id": "775",
+    "specifier": "variant=pre:playerprops:74165980:227672",
+    "desc": "Player goals (incl. overtime)",
+    "name": "Player Goals",
+    "group": "Players",
+    "status": 0,
+    "outcomes": [
+     {
+      "id": "pre:playerprops:74165980:227672:1",
+      "odds": "12.50",
+      "probability": "0.0514000000",
+      "isActive": 1,
+      "desc": "Tah, Jonathan (Bayern Munich) 1+"
+     },
+     {
+      "id": "pre:playerprops:74165980:227672:2",
+      "odds": "115.00",
+      "probability": "0.0046000000",
+      "isActive": 1,
+      "desc": "Tah, Jonathan (Bayern Munich) 2+"
+     },
+     {
+      "id": "pre:playerprops:74165980:227672:3",
+      "odds": "250.00",
+      "probability": "0.0013000000",
+      "isActive": 1,
+      "desc": "Tah, Jonathan (Bayern Munich) 3+"
+     }
+    ]
+   },
+   {
+    "id": "776",
+    "specifier": "variant=pre:playerprops:74165980:84539",
+    "desc": "Player shots (incl. overtime)",
+    "name": "Player shots",
+    "group": "Players",
+    "status": 0,
+    "outcomes": [
+     {
+      "id": "pre:playerprops:74165980:84539:1",
+      "odds": "1.80",
+      "probability": "0.4339000000",
+      "isActive": 1,
+      "desc": "Koke (Atletico Madrid) 1+"
+     },
+     {
+      "id": "pre:playerprops:74165980:84539:2",
+      "odds": "4.20",
+      "probability": "0.1692000000",
+      "isActive": 1,
+      "desc": "Koke (Atletico Madrid) 2+"
+     },
+     {
+      "id": "pre:playerprops:74165980:84539:3",
+      "odds": "16.00",
+      "probability": "0.0390000000",
+      "isActive": 1,
+      "desc": "Koke (Atletico Madrid) 3+"
+     }
+    ]
+   },
+   {
+    "id": "776",
+    "specifier": "variant=pre:playerprops:74165980:108579",
+    "desc": "Player shots (incl. overtime)",
+    "name": "Player shots",
+    "group": "Players",
+    "status": 0,
+    "outcomes": [
+     {
+      "id": "pre:playerprops:74165980:108579:3",
+      "odds": "1.23",
+      "probability": "0.7675000000",
+      "isActive": 1,
+      "desc": "Kane, Harry (Bayern Munich) 3+"
+     },
+     {
+      "id": "pre:playerprops:74165980:108579:4",
+      "odds": "1.71",
+      "probability": "0.5145000000",
+      "isActive": 1,
+      "desc": "Kane, Harry (Bayern Munich) 4+"
+     },
+     {
+      "id": "pre:playerprops:74165980:108579:5",
+      "odds": "2.45",
+      "probability": "0.3386000000",
+      "isActive": 1,
+      "desc": "Kane, Harry (Bayern Munich) 5+"
+     },
+     {
+      "id": "pre:playerprops:74165980:108579:6",
+      "odds": "3.90",
+      "probability": "0.1965000000",
+      "isActive": 1,
+      "desc": "Kane, Harry (Bayern Munich) 6+"
+     },
+     {
+      "id": "pre:playerprops:74165980:108579:7",
+      "odds": "7.20",
+      "probability": "0.0991000000",
+      "isActive": 1,
+      "desc": "Kane, Harry (Bayern Munich) 7+"
+     },
+     {
+      "id": "pre:playerprops:74165980:108579:8",
+      "odds": "15.00",
+      "probability": "0.0444000000",
+      "isActive": 1,
+      "desc": "Kane, Harry (Bayern Munich) 8+"
+     }
+    ]
+   },
+   {
+    "id": "776",
+    "specifier": "variant=pre:playerprops:74165980:177177",
+    "desc": "Player shots (incl. overtime)",
+    "name": "Player shots",
+    "group": "Players",
+    "status": 0,
+    "outcomes": [
+     {
+      "id": "pre:playerprops:74165980:177177:1",
+      "odds": "1.19",
+      "probability": "0.7675000000",
+      "isActive": 1,
+      "desc": "Grimaldo, Alex (Atletico Madrid) 1+"
+     },
+     {
+      "id": "pre:playerprops:74165980:177177:2",
+      "odds": "2.05",
+      "probability": "0.3970000000",
+      "isActive": 1,
+      "desc": "Grimaldo, Alex (Atletico Madrid) 2+"
+     },
+     {
+      "id": "pre:playerprops:74165980:177177:3",
+      "odds": "3.70",
+      "probability": "0.2019000000",
+      "isActive": 1,
+      "desc": "Grimaldo, Alex (Atletico Madrid) 3+"
+     },
+     {
+      "id": "pre:playerprops:74165980:177177:4",
+      "odds": "9.00",
+      "probability": "0.0747000000",
+      "isActive": 1,
+      "desc": "Grimaldo, Alex (Atletico Madrid) 4+"
+     },
+     {
+      "id": "pre:playerprops:74165980:177177:5",
+      "odds": "29.00",
+      "probability": "0.0207000000",
+      "isActive": 1,
+      "desc": "Grimaldo, Alex (Atletico Madrid) 5+"
+     },
+     {
+      "id": "pre:playerprops:74165980:177177:6",
+      "odds": "32.00",
+      "probability": "0E-10",
+      "isActive": 0,
+      "desc": "Grimaldo, Alex (Atletico Madrid) 6+"
+     }
+    ]
+   },
+   {
+    "id": "776",
+    "specifier": "variant=pre:playerprops:74165980:227672",
+    "desc": "Player shots (incl. overtime)",
+    "name": "Player shots",
+    "group": "Players",
+    "status": 0,
+    "outcomes": [
+     {
+      "id": "pre:playerprops:74165980:227672:1",
+      "odds": "2.65",
+      "probability": "0.2668000000",
+      "isActive": 1,
+      "desc": "Tah, Jonathan (Bayern Munich) 1+"
+     },
+     {
+      "id": "pre:playerprops:74165980:227672:2",
+      "odds": "6.25",
+      "probability": "0.1068000000",
+      "isActive": 1,
+      "desc": "Tah, Jonathan (Bayern Munich) 2+"
+     },
+     {
+      "id": "pre:playerprops:74165980:227672:3",
+      "odds": "26.00",
+      "probability": "0.0222000000",
+      "isActive": 1,
+      "desc": "Tah, Jonathan (Bayern Munich) 3+"
+     }
+    ]
+   },
+   {
+    "id": "777",
+    "specifier": "variant=pre:playerprops:74165980:84539",
+    "desc": "Player shots on goal (incl. overtime)",
+    "name": "Player shots on goal",
+    "group": "Players",
+    "status": 0,
+    "outcomes": [
+     {
+      "id": "pre:playerprops:74165980:84539:1",
+      "odds": "3.50",
+      "probability": "0.2076000000",
+      "isActive": 1,
+      "desc": "Koke (Atletico Madrid) 1+"
+     },
+     {
+      "id": "pre:playerprops:74165980:84539:2",
+      "odds": "18.00",
+      "probability": "0.0347000000",
+      "isActive": 1,
+      "desc": "Koke (Atletico Madrid) 2+"
+     },
+     {
+      "id": "pre:playerprops:74165980:84539:3",
+      "odds": "45.00",
+      "probability": "0.0127000000",
+      "isActive": 1,
+      "desc": "Koke (Atletico Madrid) 3+"
+     },
+     {
+      "id": "pre:playerprops:74165980:84539:4",
+      "odds": "115.00",
+      "probability": "0.0046000000",
+      "isActive": 1,
+      "desc": "Koke (Atletico Madrid) 4+"
+     },
+     {
+      "id": "pre:playerprops:74165980:84539:5",
+      "odds": "250.00",
+      "probability": "0.0020000000",
+      "isActive": 1,
+      "desc": "Koke (Atletico Madrid) 5+"
+     }
+    ]
+   },
+   {
+    "id": "777",
+    "specifier": "variant=pre:playerprops:74165980:108579",
+    "desc": "Player shots on goal (incl. overtime)",
+    "name": "Player shots on goal",
+    "group": "Players",
+    "status": 0,
+    "outcomes": [
+     {
+      "id": "pre:playerprops:74165980:108579:1",
+      "odds": "1.17",
+      "probability": "0.8115000000",
+      "isActive": 1,
+      "desc": "Kane, Harry (Bayern Munich) 1+"
+     },
+     {
+      "id": "pre:playerprops:74165980:108579:2",
+      "odds": "1.76",
+      "probability": "0.4956000000",
+      "isActive": 1,
+      "desc": "Kane, Harry (Bayern Munich) 2+"
+     },
+     {
+      "id": "pre:playerprops:74165980:108579:3",
+      "odds": "4.20",
+      "probability": "0.1819000000",
+      "isActive": 1,
+      "desc": "Kane, Harry (Bayern Munich) 3+"
+     },
+     {
+      "id": "pre:playerprops:74165980:108579:4",
+      "odds": "9.30",
+      "probability": "0.0747000000",
+      "isActive": 1,
+      "desc": "Kane, Harry (Bayern Munich) 4+"
+     },
+     {
+      "id": "pre:playerprops:74165980:108579:5",
+      "odds": "18.50",
+      "probability": "0.0347000000",
+      "isActive": 1,
+      "desc": "Kane, Harry (Bayern Munich) 5+"
+     }
+    ]
+   },
+   {
+    "id": "777",
+    "specifier": "variant=pre:playerprops:74165980:177177",
+    "desc": "Player shots on goal (incl. overtime)",
+    "name": "Player shots on goal",
+    "group": "Players",
+    "status": 0,
+    "outcomes": [
+     {
+      "id": "pre:playerprops:74165980:177177:1",
+      "odds": "1.85",
+      "probability": "0.4536000000",
+      "isActive": 1,
+      "desc": "Grimaldo, Alex (Atletico Madrid) 1+"
+     },
+     {
+      "id": "pre:playerprops:74165980:177177:2",
+      "odds": "7.30",
+      "probability": "0.0957000000",
+      "isActive": 1,
+      "desc": "Grimaldo, Alex (Atletico Madrid) 2+"
+     },
+     {
+      "id": "pre:playerprops:74165980:177177:3",
+      "odds": "23.00",
+      "probability": "0.0271000000",
+      "isActive": 1,
+      "desc": "Grimaldo, Alex (Atletico Madrid) 3+"
+     },
+     {
+      "id": "pre:playerprops:74165980:177177:4",
+      "odds": "69.00",
+      "probability": "0.0081000000",
+      "isActive": 1,
+      "desc": "Grimaldo, Alex (Atletico Madrid) 4+"
+     },
+     {
+      "id": "pre:playerprops:74165980:177177:5",
+      "odds": "165.00",
+      "probability": "0.0032000000",
+      "isActive": 1,
+      "desc": "Grimaldo, Alex (Atletico Madrid) 5+"
+     }
+    ]
+   },
+   {
+    "id": "777",
+    "specifier": "variant=pre:playerprops:74165980:227672",
+    "desc": "Player shots on goal (incl. overtime)",
+    "name": "Player shots on goal",
+    "group": "Players",
+    "status": 0,
+    "outcomes": [
+     {
+      "id": "pre:playerprops:74165980:227672:1",
+      "odds": "5.25",
+      "probability": "0.1319000000",
+      "isActive": 1,
+      "desc": "Tah, Jonathan (Bayern Munich) 1+"
+     },
+     {
+      "id": "pre:playerprops:74165980:227672:2",
+      "odds": "27.00",
+      "probability": "0.0222000000",
+      "isActive": 1,
+      "desc": "Tah, Jonathan (Bayern Munich) 2+"
+     },
+     {
+      "id": "pre:playerprops:74165980:227672:3",
+      "odds": "69.00",
+      "probability": "0.0081000000",
+      "isActive": 1,
+      "desc": "Tah, Jonathan (Bayern Munich) 3+"
+     },
+     {
+      "id": "pre:playerprops:74165980:227672:4",
+      "odds": "160.00",
+      "probability": "0.0032000000",
+      "isActive": 1,
+      "desc": "Tah, Jonathan (Bayern Munich) 4+"
+     },
+     {
+      "id": "pre:playerprops:74165980:227672:5",
+      "odds": "250.00",
+      "probability": "0.0017000000",
+      "isActive": 1,
+      "desc": "Tah, Jonathan (Bayern Munich) 5+"
+     }
+    ]
+   },
+   {
+    "id": "778",
+    "specifier": "variant=pre:playerprops:74165980:108579",
+    "desc": "Player passes (incl. overtime)",
+    "name": "Player passes",
+    "group": "Players",
+    "status": 0,
+    "outcomes": [
+     {
+      "id": "pre:playerprops:74165980:108579:26",
+      "odds": "1.37",
+      "probability": "0.6243000000",
+      "isActive": 1,
+      "desc": "Kane, Harry (Bayern Munich) 26+"
+     },
+     {
+      "id": "pre:playerprops:74165980:108579:30",
+      "odds": "1.65",
+      "probability": "0.5049000000",
+      "isActive": 1,
+      "desc": "Kane, Harry (Bayern Munich) 30+"
+     },
+     {
+      "id": "pre:playerprops:74165980:108579:34",
+      "odds": "2.00",
+      "probability": "0.4051000000",
+      "isActive": 1,
+      "desc": "Kane, Harry (Bayern Munich) 34+"
+     },
+     {
+      "id": "pre:playerprops:74165980:108579:38",
+      "odds": "2.50",
+      "probability": "0.3165000000",
+      "isActive": 1,
+      "desc": "Kane, Harry (Bayern Munich) 38+"
+     },
+     {
+      "id": "pre:playerprops:74165980:108579:42",
+      "odds": "3.00",
+      "probability": "0.2412000000",
+      "isActive": 1,
+      "desc": "Kane, Harry (Bayern Munich) 42+"
+     },
+     {
+      "id": "pre:playerprops:74165980:108579:46",
+      "odds": "4.00",
+      "probability": "0.1733000000",
+      "isActive": 1,
+      "desc": "Kane, Harry (Bayern Munich) 46+"
+     }
+    ]
+   },
+   {
+    "id": "778",
+    "specifier": "variant=pre:playerprops:74165980:177177",
+    "desc": "Player passes (incl. overtime)",
+    "name": "Player passes",
+    "group": "Players",
+    "status": 0,
+    "outcomes": [
+     {
+      "id": "pre:playerprops:74165980:177177:46",
+      "odds": "1.43",
+      "probability": "0.6105000000",
+      "isActive": 1,
+      "desc": "Grimaldo, Alex (Atletico Madrid) 46+"
+     },
+     {
+      "id": "pre:playerprops:74165980:177177:50",
+      "odds": "1.71",
+      "probability": "0.4896000000",
+      "isActive": 1,
+      "desc": "Grimaldo, Alex (Atletico Madrid) 50+"
+     },
+     {
+      "id": "pre:playerprops:74165980:177177:54",
+      "odds": "2.10",
+      "probability": "0.3930000000",
+      "isActive": 1,
+      "desc": "Grimaldo, Alex (Atletico Madrid) 54+"
+     },
+     {
+      "id": "pre:playerprops:74165980:177177:58",
+      "odds": "2.60",
+      "probability": "0.3064000000",
+      "isActive": 1,
+      "desc": "Grimaldo, Alex (Atletico Madrid) 58+"
+     },
+     {
+      "id": "pre:playerprops:74165980:177177:62",
+      "odds": "3.20",
+      "probability": "0.2266000000",
+      "isActive": 1,
+      "desc": "Grimaldo, Alex (Atletico Madrid) 62+"
+     },
+     {
+      "id": "pre:playerprops:74165980:177177:66",
+      "odds": "4.10",
+      "probability": "0.1654000000",
+      "isActive": 1,
+      "desc": "Grimaldo, Alex (Atletico Madrid) 66+"
+     }
+    ]
+   },
+   {
+    "id": "778",
+    "specifier": "variant=pre:playerprops:74165980:227672",
+    "desc": "Player passes (incl. overtime)",
+    "name": "Player passes",
+    "group": "Players",
+    "status": 0,
+    "outcomes": [
+     {
+      "id": "pre:playerprops:74165980:227672:78",
+      "odds": "1.54",
+      "probability": "0.5683000000",
+      "isActive": 1,
+      "desc": "Tah, Jonathan (Bayern Munich) 78+"
+     },
+     {
+      "id": "pre:playerprops:74165980:227672:82",
+      "odds": "1.72",
+      "probability": "0.4986000000",
+      "isActive": 1,
+      "desc": "Tah, Jonathan (Bayern Munich) 82+"
+     },
+     {
+      "id": "pre:playerprops:74165980:227672:86",
+      "odds": "1.88",
+      "probability": "0.4436000000",
+      "isActive": 1,
+      "desc": "Tah, Jonathan (Bayern Munich) 86+"
+     },
+     {
+      "id": "pre:playerprops:74165980:227672:90",
+      "odds": "2.05",
+      "probability": "0.3911000000",
+      "isActive": 1,
+      "desc": "Tah, Jonathan (Bayern Munich) 90+"
+     },
+     {
+      "id": "pre:playerprops:74165980:227672:94",
+      "odds": "2.35",
+      "probability": "0.3401000000",
+      "isActive": 1,
+      "desc": "Tah, Jonathan (Bayern Munich) 94+"
+     },
+     {
+      "id": "pre:playerprops:74165980:227672:98",
+      "odds": "2.70",
+      "probability": "0.2913000000",
+      "isActive": 1,
+      "desc": "Tah, Jonathan (Bayern Munich) 98+"
+     }
+    ]
+   },
+   {
+    "id": "778",
+    "specifier": "variant=pre:playerprops:74165980:259117",
+    "desc": "Player passes (incl. overtime)",
+    "name": "Player passes",
+    "group": "Players",
+    "status": 0,
+    "outcomes": [
+     {
+      "id": "pre:playerprops:74165980:259117:100",
+      "odds": "1.69",
+      "probability": "0.5017000000",
+      "isActive": 1,
+      "desc": "Kimmich, Joshua (Bayern Munich) 100+"
+     },
+     {
+      "id": "pre:playerprops:74165980:259117:104",
+      "odds": "1.88",
+      "probability": "0.4363000000",
+      "isActive": 1,
+      "desc": "Kimmich, Joshua (Bayern Munich) 104+"
+     },
+     {
+      "id": "pre:playerprops:74165980:259117:108",
+      "odds": "2.15",
+      "probability": "0.3743000000",
+      "isActive": 1,
+      "desc": "Kimmich, Joshua (Bayern Munich) 108+"
+     },
+     {
+      "id": "pre:playerprops:74165980:259117:112",
+      "odds": "2.50",
+      "probability": "0.3165000000",
+      "isActive": 1,
+      "desc": "Kimmich, Joshua (Bayern Munich) 112+"
+     },
+     {
+      "id": "pre:playerprops:74165980:259117:116",
+      "odds": "2.90",
+      "probability": "0.2668000000",
+      "isActive": 1,
+      "desc": "Kimmich, Joshua (Bayern Munich) 116+"
+     },
+     {
+      "id": "pre:playerprops:74165980:259117:96",
+      "odds": "1.48",
+      "probability": "0.5845000000",
+      "isActive": 1,
+      "desc": "Kimmich, Joshua (Bayern Munich) 96+"
+     }
+    ]
+   },
+   {
+    "id": "780",
+    "specifier": "variant=pre:playerprops:74165980:84539",
+    "desc": "Player tackles (incl. overtime)",
+    "name": "Player tackles",
+    "group": "Players",
+    "status": 0,
+    "outcomes": [
+     {
+      "id": "pre:playerprops:74165980:84539:2",
+      "odds": "1.28",
+      "probability": "0.7093000000",
+      "isActive": 1,
+      "desc": "Koke (Atletico Madrid) 2+"
+     },
+     {
+      "id": "pre:playerprops:74165980:84539:3",
+      "odds": "2.10",
+      "probability": "0.3911000000",
+      "isActive": 1,
+      "desc": "Koke (Atletico Madrid) 3+"
+     },
+     {
+      "id": "pre:playerprops:74165980:84539:4",
+      "odds": "3.20",
+      "probability": "0.2492000000",
+      "isActive": 1,
+      "desc": "Koke (Atletico Madrid) 4+"
+     },
+     {
+      "id": "pre:playerprops:74165980:84539:5",
+      "odds": "5.10",
+      "probability": "0.1453000000",
+      "isActive": 1,
+      "desc": "Koke (Atletico Madrid) 5+"
+     },
+     {
+      "id": "pre:playerprops:74165980:84539:6",
+      "odds": "8.80",
+      "probability": "0.0790000000",
+      "isActive": 1,
+      "desc": "Koke (Atletico Madrid) 6+"
+     },
+     {
+      "id": "pre:playerprops:74165980:84539:7",
+      "odds": "14.50",
+      "probability": "0.0460000000",
+      "isActive": 1,
+      "desc": "Koke (Atletico Madrid) 7+"
+     }
+    ]
+   },
+   {
+    "id": "780",
+    "specifier": "variant=pre:playerprops:74165980:108579",
+    "desc": "Player tackles (incl. overtime)",
+    "name": "Player tackles",
+    "group": "Players",
+    "status": 0,
+    "outcomes": [
+     {
+      "id": "pre:playerprops:74165980:108579:2",
+      "odds": "3.10",
+      "probability": "0.2337000000",
+      "isActive": 1,
+      "desc": "Kane, Harry (Bayern Munich) 2+"
+     },
+     {
+      "id": "pre:playerprops:74165980:108579:3",
+      "odds": "4.50",
+      "probability": "0.1617000000",
+      "isActive": 1,
+      "desc": "Kane, Harry (Bayern Munich) 3+"
+     },
+     {
+      "id": "pre:playerprops:74165980:108579:4",
+      "odds": "8.20",
+      "probability": "0.0839000000",
+      "isActive": 1,
+      "desc": "Kane, Harry (Bayern Munich) 4+"
+     },
+     {
+      "id": "pre:playerprops:74165980:108579:5",
+      "odds": "13.50",
+      "probability": "0.0495000000",
+      "isActive": 1,
+      "desc": "Kane, Harry (Bayern Munich) 5+"
+     }
+    ]
+   },
+   {
+    "id": "780",
+    "specifier": "variant=pre:playerprops:74165980:177177",
+    "desc": "Player tackles (incl. overtime)",
+    "name": "Player tackles",
+    "group": "Players",
+    "status": 0,
+    "outcomes": [
+     {
+      "id": "pre:playerprops:74165980:177177:2",
+      "odds": "1.22",
+      "probability": "0.7538000000",
+      "isActive": 1,
+      "desc": "Grimaldo, Alex (Atletico Madrid) 2+"
+     },
+     {
+      "id": "pre:playerprops:74165980:177177:3",
+      "odds": "1.95",
+      "probability": "0.4316000000",
+      "isActive": 1,
+      "desc": "Grimaldo, Alex (Atletico Madrid) 3+"
+     },
+     {
+      "id": "pre:playerprops:74165980:177177:4",
+      "odds": "2.90",
+      "probability": "0.2765000000",
+      "isActive": 1,
+      "desc": "Grimaldo, Alex (Atletico Madrid) 4+"
+     },
+     {
+      "id": "pre:playerprops:74165980:177177:5",
+      "odds": "4.90",
+      "probability": "0.1531000000",
+      "isActive": 1,
+      "desc": "Grimaldo, Alex (Atletico Madrid) 5+"
+     },
+     {
+      "id": "pre:playerprops:74165980:177177:6",
+      "odds": "8.10",
+      "probability": "0.0866000000",
+      "isActive": 1,
+      "desc": "Grimaldo, Alex (Atletico Madrid) 6+"
+     },
+     {
+      "id": "pre:playerprops:74165980:177177:7",
+      "odds": "13.50",
+      "probability": "0.0495000000",
+      "isActive": 1,
+      "desc": "Grimaldo, Alex (Atletico Madrid) 7+"
+     }
+    ]
+   },
+   {
+    "id": "780",
+    "specifier": "variant=pre:playerprops:74165980:227672",
+    "desc": "Player tackles (incl. overtime)",
+    "name": "Player tackles",
+    "group": "Players",
+    "status": 0,
+    "outcomes": [
+     {
+      "id": "pre:playerprops:74165980:227672:2",
+      "odds": "2.10",
+      "probability": "0.3726000000",
+      "isActive": 1,
+      "desc": "Tah, Jonathan (Bayern Munich) 2+"
+     },
+     {
+      "id": "pre:playerprops:74165980:227672:3",
+      "odds": "3.33",
+      "probability": "0.2266000000",
+      "isActive": 1,
+      "desc": "Tah, Jonathan (Bayern Munich) 3+"
+     },
+     {
+      "id": "pre:playerprops:74165980:227672:4",
+      "odds": "5.90",
+      "probability": "0.1206000000",
+      "isActive": 1,
+      "desc": "Tah, Jonathan (Bayern Munich) 4+"
+     },
+     {
+      "id": "pre:playerprops:74165980:227672:5",
+      "odds": "10.50",
+      "probability": "0.0639000000",
+      "isActive": 1,
+      "desc": "Tah, Jonathan (Bayern Munich) 5+"
+     },
+     {
+      "id": "pre:playerprops:74165980:227672:6",
+      "odds": "16.00",
+      "probability": "0.0402000000",
+      "isActive": 1,
+      "desc": "Tah, Jonathan (Bayern Munich) 6+"
+     }
+    ]
+   },
+   {
+    "id": "800291",
+    "specifier": null,
+    "desc": "Player Fouls",
+    "name": "Player Fouls",
+    "group": "Players",
+    "status": 0,
+    "outcomes": [
+     {
+      "id": "pre:playerprops:74165980:1008301:1:2",
+      "odds": "1.49",
+      "probability": "0.5567000000",
+      "isActive": 1,
+      "desc": "Alphonso Davies (Bayern Munich) 1+"
+     },
+     {
+      "id": "pre:playerprops:74165980:1008301:2:2",
+      "odds": "3.30",
+      "probability": "0.2040000000",
+      "isActive": 1,
+      "desc": "Alphonso Davies (Bayern Munich) 2+"
+     },
+     {
+      "id": "pre:playerprops:74165980:1008301:3:2",
+      "odds": "8.89",
+      "probability": "0.0635000000",
+      "isActive": 1,
+      "desc": "Alphonso Davies (Bayern Munich) 3+"
+     },
+     {
+      "id": "pre:playerprops:74165980:1008301:4:2",
+      "odds": "17.72",
+      "probability": "0.0282000000",
+      "isActive": 1,
+      "desc": "Alphonso Davies (Bayern Munich) 4+"
+     },
+     {
+      "id": "pre:playerprops:74165980:1058215:1:1",
+      "odds": "1.28",
+      "probability": "0.6851000000",
+      "isActive": 1,
+      "desc": "Morten Hjulmand (Atletico Madrid) 1+"
+     },
+     {
+      "id": "pre:playerprops:74165980:1058215:2:1",
+      "odds": "2.26",
+      "probability": "0.3263000000",
+      "isActive": 1,
+      "desc": "Morten Hjulmand (Atletico Madrid) 2+"
+     },
+     {
+      "id": "pre:playerprops:74165980:1058215:3:1",
+      "odds": "5.24",
+      "probability": "0.1232000000",
+      "isActive": 1,
+      "desc": "Morten Hjulmand (Atletico Madrid) 3+"
+     },
+     {
+      "id": "pre:playerprops:74165980:1058215:4:1",
+      "odds": "11.83",
+      "probability": "0.0491000000",
+      "isActive": 1,
+      "desc": "Morten Hjulmand (Atletico Madrid) 4+"
+     },
+     {
+      "id": "pre:playerprops:74165980:108579:1:2",
+      "odds": "1.49",
+      "probability": "0.5579000000",
+      "isActive": 1,
+      "desc": "Harry Kane (Bayern Munich) 1+"
+     },
+     {
+      "id": "pre:playerprops:74165980:108579:2:2",
+      "odds": "3.28",
+      "probability": "0.2051000000",
+      "isActive": 1,
+      "desc": "Harry Kane (Bayern Munich) 2+"
+     },
+     {
+      "id": "pre:playerprops:74165980:108579:3:2",
+      "odds": "8.84",
+      "probability": "0.0640000000",
+      "isActive": 1,
+      "desc": "Harry Kane (Bayern Munich) 3+"
+     },
+     {
+      "id": "pre:playerprops:74165980:108579:4:2",
+      "odds": "17.67",
+      "probability": "0.0283000000",
+      "isActive": 1,
+      "desc": "Harry Kane (Bayern Munich) 4+"
+     }
+    ]
+   },
+   {
+    "id": "800297",
+    "specifier": null,
+    "desc": "Player Saves",
+    "name": "Player Saves",
+    "group": "Players",
+    "status": 0,
+    "outcomes": [
+     {
+      "id": "pre:playerprops:74165980:2197136:3:2",
+      "odds": "1.38",
+      "probability": "0.6403000000",
+      "isActive": 1,
+      "desc": "Jonas Urbig (Bayern Munich) 3+"
+     },
+     {
+      "id": "pre:playerprops:74165980:2197136:4:2",
+      "odds": "1.92",
+      "probability": "0.4210000000",
+      "isActive": 1,
+      "desc": "Jonas Urbig (Bayern Munich) 4+"
+     },
+     {
+      "id": "pre:playerprops:74165980:2197136:5:2",
+      "odds": "3.04",
+      "probability": "0.2419000000",
+      "isActive": 1,
+      "desc": "Jonas Urbig (Bayern Munich) 5+"
+     },
+     {
+      "id": "pre:playerprops:74165980:2197136:6:2",
+      "odds": "5.38",
+      "probability": "0.1247000000",
+      "isActive": 1,
+      "desc": "Jonas Urbig (Bayern Munich) 6+"
+     },
+     {
+      "id": "pre:playerprops:74165980:2259513:3:1",
+      "odds": "1.32",
+      "probability": "0.6871000000",
+      "isActive": 1,
+      "desc": "Salvi Esquivel (Atletico Madrid) 3+"
+     },
+     {
+      "id": "pre:playerprops:74165980:2259513:4:1",
+      "odds": "1.78",
+      "probability": "0.4739000000",
+      "isActive": 1,
+      "desc": "Salvi Esquivel (Atletico Madrid) 4+"
+     },
+     {
+      "id": "pre:playerprops:74165980:2259513:5:1",
+      "odds": "2.73",
+      "probability": "0.2873000000",
+      "isActive": 1,
+      "desc": "Salvi Esquivel (Atletico Madrid) 5+"
+     },
+     {
+      "id": "pre:playerprops:74165980:2259513:6:1",
+      "odds": "4.72",
+      "probability": "0.1562000000",
+      "isActive": 1,
+      "desc": "Salvi Esquivel (Atletico Madrid) 6+"
+     },
+     {
+      "id": "pre:playerprops:74165980:2259533:3:1",
+      "odds": "1.32",
+      "probability": "0.6871000000",
+      "isActive": 1,
+      "desc": "Alvaro Moreno (Atletico Madrid) 3+"
+     },
+     {
+      "id": "pre:playerprops:74165980:2259533:4:1",
+      "odds": "1.78",
+      "probability": "0.4739000000",
+      "isActive": 1,
+      "desc": "Alvaro Moreno (Atletico Madrid) 4+"
+     },
+     {
+      "id": "pre:playerprops:74165980:2259533:5:1",
+      "odds": "2.73",
+      "probability": "0.2873000000",
+      "isActive": 1,
+      "desc": "Alvaro Moreno (Atletico Madrid) 5+"
+     },
+     {
+      "id": "pre:playerprops:74165980:2259533:6:1",
+      "odds": "4.72",
+      "probability": "0.1562000000",
+      "isActive": 1,
+      "desc": "Alvaro Moreno (Atletico Madrid) 6+"
+     }
+    ]
+   },
+   {
+    "id": "800289",
+    "specifier": null,
+    "desc": "To Score or Assist",
+    "name": "Player To Score or Assist",
+    "group": "Players",
+    "status": 0,
+    "outcomes": [
+     {
+      "id": "pre:playerprops:74165980:1008301:2",
+      "odds": "2.73",
+      "probability": "0.2554000000",
+      "isActive": 1,
+      "desc": "Alphonso Davies (Bayern Munich)"
+     },
+     {
+      "id": "pre:playerprops:74165980:1058215:1",
+      "odds": "5.61",
+      "probability": "0.1197000000",
+      "isActive": 0,
+      "desc": "Morten Hjulmand (Atletico Madrid)"
+     },
+     {
+      "id": "pre:playerprops:74165980:108579:2",
+      "odds": "1.61",
+      "probability": "0.5037000000",
+      "isActive": 1,
+      "desc": "Harry Kane (Bayern Munich)"
+     }
+    ]
+   },
+   {
+    "id": "800292",
+    "specifier": null,
+    "desc": "Player Total Accurate Passes",
+    "name": "Player Passes",
+    "group": "Players",
+    "status": 0,
+    "outcomes": [
+     {
+      "id": "pre:playerprops:74165980:1058215:55:1",
+      "odds": "1.53",
+      "probability": "0.2500000000",
+      "isActive": 1,
+      "desc": "Morten Hjulmand (Atletico Madrid) 55+"
+     },
+     {
+      "id": "pre:playerprops:74165980:1058215:60:1",
+      "odds": "1.88",
+      "probability": "0.1674000000",
+      "isActive": 1,
+      "desc": "Morten Hjulmand (Atletico Madrid) 60+"
+     },
+     {
+      "id": "pre:playerprops:74165980:1058215:65:1",
+      "odds": "2.42",
+      "probability": "0.1086000000",
+      "isActive": 1,
+      "desc": "Morten Hjulmand (Atletico Madrid) 65+"
+     },
+     {
+      "id": "pre:playerprops:74165980:1058215:70:1",
+      "odds": "3.26",
+      "probability": "0.0695000000",
+      "isActive": 1,
+      "desc": "Morten Hjulmand (Atletico Madrid) 70+"
+     },
+     {
+      "id": "pre:playerprops:74165980:108579:25:2",
+      "odds": "1.65",
+      "probability": "0.2137000000",
+      "isActive": 1,
+      "desc": "Harry Kane (Bayern Munich) 25+"
+     },
+     {
+      "id": "pre:playerprops:74165980:108579:30:2",
+      "odds": "2.22",
+      "probability": "0.1273000000",
+      "isActive": 1,
+      "desc": "Harry Kane (Bayern Munich) 30+"
+     },
+     {
+      "id": "pre:playerprops:74165980:108579:35:2",
+      "odds": "3.28",
+      "probability": "0.0727000000",
+      "isActive": 1,
+      "desc": "Harry Kane (Bayern Munich) 35+"
+     },
+     {
+      "id": "pre:playerprops:74165980:1134923:45:2",
+      "odds": "1.45",
+      "probability": "0.2839000000",
+      "isActive": 1,
+      "desc": "Luis Diaz (Bayern Munich) 45+"
+     },
+     {
+      "id": "pre:playerprops:74165980:1134923:50:2",
+      "odds": "1.80",
+      "probability": "0.1802000000",
+      "isActive": 1,
+      "desc": "Luis Diaz (Bayern Munich) 50+"
+     },
+     {
+      "id": "pre:playerprops:74165980:1134923:55:2",
+      "odds": "2.41",
+      "probability": "0.1096000000",
+      "isActive": 1,
+      "desc": "Luis Diaz (Bayern Munich) 55+"
+     },
+     {
+      "id": "pre:playerprops:74165980:1134923:60:2",
+      "odds": "3.39",
+      "probability": "0.0657000000",
+      "isActive": 1,
+      "desc": "Luis Diaz (Bayern Munich) 60+"
+     }
+    ]
+   }
+  ]
+ },
+ "_note": "Trimmed capture of GET /factsCenter/event?eventId=sr:match:74165980 (Atletico Madrid v Bayern Munich, 3 Nov 2026): player markets only, four players per per-player market, three players (plus Kane) on the all-player markets."
+}

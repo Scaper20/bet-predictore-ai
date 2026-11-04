@@ -8,7 +8,10 @@ import { getPreferencesFor, hasOnboarded } from "@/lib/preferences";
 import { LEAGUES, leagueByCode } from "@/lib/leagues";
 import { signOut } from "@/app/actions/auth";
 import { signOutAllDevices } from "@/app/actions/account";
-import { Badge, ButtonLink, SectionHeading } from "@/components/ui/primitives";
+import { ButtonLink, SectionHeading } from "@/components/ui/primitives";
+import { PlanCard } from "@/components/account/plan-card";
+import { offerStateFor } from "@/lib/offers-server";
+import { sportPath } from "@/lib/routes";
 import { Container } from "@/components/ui/container";
 import { StatCard } from "@/components/ui/stat-card";
 import { ProfileForm } from "@/components/account/profile-form";
@@ -31,11 +34,16 @@ const INTENT_LABEL = {
 
 const SECTIONS = [
   { id: "overview", label: "Overview" },
-  { id: "preferences", label: "Preferences" },
-  { id: "notifications", label: "Notifications" },
-  { id: "billing", label: "Plan & billing" },
+  { id: "preferences", label: "Feed" },
+  { id: "notifications", label: "Alerts" },
   { id: "security", label: "Security" },
-  { id: "danger", label: "Danger zone" },
+];
+
+const QUICK_LINKS = [
+  { href: sportPath("predictions"), label: "Today's picks", icon: "◎" },
+  { href: sportPath("trackedSlips"), label: "My combos", icon: "≡" },
+  { href: sportPath("codeHub"), label: "Code Hub", icon: "#" },
+  { href: "/help", label: "Help", icon: "?" },
 ];
 
 /**
@@ -71,11 +79,12 @@ export default async function AccountPage() {
 
   if (!user) redirect("/account/login?next=/account");
 
-  const [entitlement, subscription, profileResult, preferences] = await Promise.all([
-    getEntitlement(),
+  const entitlement = await getEntitlement();
+  const [subscription, profileResult, preferences, offerState] = await Promise.all([
     getSubscriptionRow(supabase, user.id),
     supabase.from("profiles").select("display_name, created_at").eq("id", user.id).maybeSingle(),
     getPreferencesFor(supabase, user.id),
+    offerStateFor(entitlement),
   ]);
 
 
@@ -89,80 +98,86 @@ export default async function AccountPage() {
 
   return (
     <Container width="shell" className="py-4 sm:py-10">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="font-display text-3xl font-bold sm:text-4xl">
-            {displayName ? `Welcome back, ${displayName}` : "Your account"}
-          </h1>
-          <p className="mt-2 text-sm text-ink-muted">{user.email}</p>
+      {/* Who and what: the person, their plan, and the four places they go most. */}
+      <div className="grid gap-4 lg:grid-cols-[1fr_1.15fr]">
+        <div className="card flex items-center gap-4 p-5 sm:p-6">
+          <span
+            aria-hidden
+            className="grid size-14 shrink-0 place-items-center rounded-2xl bg-brand/15 font-display text-2xl font-bold text-brand"
+          >
+            {(displayName || user.email || "?").trim().charAt(0).toUpperCase()}
+          </span>
+          <div className="min-w-0">
+            <h1 className="truncate font-display text-2xl font-bold tracking-tight sm:text-[28px]">
+              {displayName ? `Hi, ${displayName}` : "Your account"}
+            </h1>
+            <p className="truncate text-sm text-ink-muted">{user.email}</p>
+            {createdAt && (
+              <p className="mt-0.5 text-xs text-ink-dim">
+                Member since {new Date(createdAt).toLocaleDateString("en-NG", { month: "long", year: "numeric" })}
+              </p>
+            )}
+          </div>
         </div>
-        <ButtonLink href="/account/billing" variant={paid ? "secondary" : "primary"}>
-          {paid ? "Manage plan" : "See plans"}
-        </ButtonLink>
+
+        <PlanCard tier={entitlement.tier} offer={offerState} passOnly={Boolean(entitlement.passOnly)} />
       </div>
+
+      <nav aria-label="Shortcuts" className="mt-4 grid grid-cols-4 gap-2 sm:gap-3">
+        {QUICK_LINKS.map((q) => (
+          <Link
+            key={q.href}
+            href={q.href}
+            className="card card-hover flex flex-col items-center justify-center gap-1.5 px-2 py-3.5 text-center sm:flex-row sm:gap-2.5 sm:py-4"
+          >
+            <span aria-hidden className="grid size-8 place-items-center rounded-lg bg-surface-2 font-mono text-sm font-bold text-ink">
+              {q.icon}
+            </span>
+            <span className="text-[12px] font-semibold leading-tight text-ink sm:text-sm">{q.label}</span>
+          </Link>
+        ))}
+      </nav>
 
       <div className="mt-6">
         <AccountSectionNav sections={SECTIONS} />
       </div>
 
       {/*
-        Someone who skipped the questionnaire gets one unobtrusive offer to
-        finish it, rather than being redirected into it on every visit.
-        Forcing it would cost more accounts than the answers are worth.
+        Someone who skipped the questionnaire (or went straight to a checkout)
+        gets one unobtrusive offer to finish it, rather than being redirected
+        into it on every visit.
       */}
       {!hasOnboarded(preferences) && (
-        <div className="card mt-8 flex flex-wrap items-center gap-4 border-brand/25 p-5">
-          <div className="min-w-[16rem] flex-1">
-            <p className="text-sm font-semibold">Finish setting up your feed</p>
-            <p className="mt-1 text-xs text-ink-muted">
-              Three quick questions and your leagues lead everything you see.
-            </p>
+        <div className="card mt-6 flex flex-wrap items-center gap-4 border-brand/25 p-5">
+          <div className="min-w-[14rem] flex-1">
+            <p className="text-sm font-semibold">Make the feed yours</p>
+            <p className="mt-1 text-xs text-ink-muted">Three taps: your leagues lead everything you see.</p>
           </div>
           <ButtonLink href="/onboarding?next=/account" variant="secondary" className="px-4 py-2">
-            Pick up where you left off
+            Set it up
           </ButtonLink>
         </div>
       )}
 
-      <section id="overview" className="scroll-mt-[calc(var(--header-h)+4rem)] pt-10">
-        <SectionHeading eyebrow="Overview" title="At a glance" />
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard
-            label="Plan"
-            value={TIER_LABEL[entitlement.tier]}
-            sublabel={paid ? "Manage it under Plan & billing." : "Upgrade whenever you like."}
-          />
+      <section id="overview" className="scroll-mt-[calc(var(--header-h)+4rem)] pt-8">
+        <div className="grid gap-3 sm:grid-cols-3">
           <StatCard
             label="Leagues followed"
             value={String(followed.length)}
-            sublabel={
-              followed.length > 0
-                ? followed.map((l) => l.shortName).join(", ")
-                : "Pick some under Preferences to shape your feed."
-            }
+            sublabel={followed.length > 0 ? followed.map((l) => l.shortName).join(", ") : "Pick some under Feed."}
           />
           <StatCard
             label="You use it for"
             value={preferences.usageIntent ? INTENT_LABEL[preferences.usageIntent] : "—"}
-            sublabel="Decides which numbers we lead with."
+            sublabel="Decides which numbers lead."
           />
-          <StatCard
-            label="Member since"
-            value={
-              createdAt
-                ? new Date(createdAt).toLocaleDateString("en-NG", {
-                    month: "short",
-                    year: "numeric",
-                  })
-                : "—"
-            }
-          />
+          <StatCard label="Plan" value={TIER_LABEL[entitlement.tier]} sublabel={entitlement.passOnly ? "A one-off pass: nothing renews and there's nothing to cancel." : paid ? "Billing, invoices and cancelling live under Manage plan." : "Every match and 27 competitions, free."} />
         </div>
       </section>
 
       <section id="preferences" className="scroll-mt-[calc(var(--header-h)+4rem)] pt-14">
         <SectionHeading
-          eyebrow="Preferences"
+          eyebrow="Feed"
           title="Your feed and your details"
           description="Shapes what you see first."
         />
@@ -185,26 +200,6 @@ export default async function AccountPage() {
         />
         <div className="card mt-6 max-w-2xl p-5 sm:p-7">
           <NotificationControls />
-        </div>
-      </section>
-
-      <section id="billing" className="scroll-mt-[calc(var(--header-h)+4rem)] pt-14">
-        <SectionHeading eyebrow="Plan & billing" title="What you're on" />
-        <div className="card mt-6 flex flex-wrap items-center gap-5 p-5 sm:p-7">
-          <div className="min-w-[14rem] flex-1">
-            <Badge tone={paid ? "brand" : "neutral"}>{TIER_LABEL[entitlement.tier]}</Badge>
-            <p className="mt-3 text-sm text-ink-muted">
-              {paid
-                ? "Invoices, payment method and cancellation all live on the billing page."
-                : "Free covers every match, and every pick in 27 competitions. Pro adds picks in the 15 Pro leagues before kick-off, corners, cards and shots predictions, Strong pick alerts, the full breakdowns, half-time predictions, winning margins and more from Forge and Ask KiqStat."}
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <ButtonLink href="/pricing" variant="secondary">
-              Compare plans
-            </ButtonLink>
-            <ButtonLink href="/account/billing">{paid ? "Manage billing" : "Upgrade"}</ButtonLink>
-          </div>
         </div>
       </section>
 
@@ -246,6 +241,15 @@ export default async function AccountPage() {
               </form>
             </div>
 
+            <details className="group mt-6 border-t border-line pt-5">
+              <summary className="cursor-pointer list-none text-sm font-semibold text-rose marker:hidden">
+                Delete account <span className="text-ink-dim group-open:hidden">›</span>
+              </summary>
+              <div className="mt-4">
+                <DeleteAccountForm hasActiveSubscription={hasActiveSubscription} />
+              </div>
+            </details>
+
             <p className="mt-6 border-t border-line pt-5 text-xs leading-relaxed text-ink-dim">
               Need a hand?{" "}
               <Link href="/responsible-use" className="underline underline-offset-2">
@@ -257,12 +261,6 @@ export default async function AccountPage() {
         </div>
       </section>
 
-      <section id="danger" className="scroll-mt-[calc(var(--header-h)+4rem)] pb-4 pt-14">
-        <SectionHeading eyebrow="Danger zone" title="Delete account" />
-        <div className="card mt-6 max-w-2xl border-rose/25 p-5 sm:p-7">
-          <DeleteAccountForm hasActiveSubscription={hasActiveSubscription} />
-        </div>
-      </section>
     </Container>
   );
 }

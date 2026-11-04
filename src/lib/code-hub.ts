@@ -219,7 +219,8 @@ export function hubSettings(tier: HubTier): ForgeSettings {
     picksPerGame: 1,
     markets: HUB_FORGE_MARKETS,
     when: "today",
-    leagues: "all",
+    days: null,
+    leagues: [],
     stake: 1000,
   };
 }
