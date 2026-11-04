@@ -109,3 +109,36 @@ export interface PaystackPlan {
 export function fetchPlan(planCode: string) {
   return paystackFetch<PaystackPlan>(`/plan/${encodeURIComponent(planCode)}`, { method: "GET", signal: AbortSignal.timeout(6_000) });
 }
+
+export interface PaystackSubscription {
+  subscription_code: string;
+  /** active | non-renewing | attention | completed | cancelled */
+  status: string;
+  next_payment_date: string | null;
+  customer: { id: number; customer_code: string; email: string };
+  plan: { plan_code: string; interval: string; amount: number };
+}
+
+/** One card subscription as Paystack holds it. Read-only; used by the daily subscription check. */
+export function fetchSubscription(code: string) {
+  return paystackFetch<PaystackSubscription>(`/subscription/${encodeURIComponent(code)}`, {
+    method: "GET",
+    signal: AbortSignal.timeout(8_000),
+  });
+}
+
+export interface PaystackCharge {
+  reference: string;
+  /** Kobo. */
+  amount: number;
+  status: string;
+  paid_at: string | null;
+  currency?: string;
+  fees?: number | null;
+}
+
+/** A customer's successful charges since `from` (ISO), newest first. Read-only. */
+export function listSuccessfulCharges(customerId: number, from: string) {
+  const q = new URLSearchParams({ customer: String(customerId), status: "success", from, perPage: "50" });
+  return paystackFetch<PaystackCharge[]>(`/transaction?${q}`, { method: "GET", signal: AbortSignal.timeout(8_000) });
+}
