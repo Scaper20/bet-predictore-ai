@@ -1,0 +1,75 @@
+name: Off-site database backup
+
+# A weekly encrypted logical dump of the production database, kept as a
+# workflow artifact for 8 days, so a copy exists outside Supabase. Supabase
+# Pro already keeps daily backups for 7 days; this is the second copy.
+# See docs/backup-recovery.md.
+#
+# Needs two repository secrets (Settings > Secrets and variables > Actions):
+#   SUPABASE_DB_URL     the session pooler connection string, with password
+#   BACKUP_PASSPHRASE   a long random passphrase, also kept in the password manager
+# Without them the job says so and stops, so it is safe to merge first.
+
+on:
+  schedule:
+    - cron: "17 2 * * 0" # Sundays 02:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dump:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check secrets
+        id: check
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          PASS: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          if [ -z "$DB_URL" ] || [ -z "$PASS" ]; then
+            echo "::warning::SUPABASE_DB_URL or BACKUP_PASSPHRASE is not set; no backup taken."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install the Postgres 17 client
+        if: steps.check.outputs.ready == 'true'
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSo /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client-17
+
+      - name: Dump and encrypt
+        if: steps.check.outputs.ready == 'true'
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          PASS: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          stamp=$(date -u +%Y%m%dT%H%MZ)
+          # public (the app), auth (accounts) and storage metadata. raw_payloads is a
+          # three-day cache of provider responses: its rows are skipped, its table kept.
+          /usr/lib/postgresql/17/bin/pg_dump "$DB_URL" --format=custom --compress=9 --no-owner --no-privileges \
+            --schema=public --schema=auth --schema=storage \
+            --exclude-table-data=public.raw_payloads \
+            --file="kiqstat-$stamp.dump"
+          /usr/lib/postgresql/17/bin/pg_restore --list "kiqstat-$stamp.dump" > /dev/null # the archive reads back
+          gpg --batch --yes --pinentry-mode loopback --passphrase "$PASS" --symmetric --cipher-algo AES256 \
+            --output "kiqstat-$stamp.dump.gpg" "kiqstat-$stamp.dump"
+          rm "kiqstat-$stamp.dump"
+          ls -lh kiqstat-*.gpg
+          echo "FILE=kiqstat-$stamp.dump.gpg" >> "$GITHUB_ENV"
+
+      - name: Keep for 8 days
+        if: steps.check.outputs.ready == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.FILE }}
+          path: ${{ env.FILE }}
+          retention-days: 8
+          compression-level: 0
