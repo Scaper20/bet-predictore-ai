@@ -10,7 +10,7 @@ the checklist so it is visible next to the code. Owners: Claude (code, data, rep
 - [x] 1.2 Ask preflight green in production, offline tests pass, Ask switch confirmed on (Claude, 4 Nov)
 - [ ] 1.3 Database backup and recovery: runbook, nightly backup, test restore; Supabase Pro decision (Both)
 - [ ] 1.4 Real ₦500 VIP Pass purchase, receipt and refund checked end to end (Both)
-- [ ] 1.5 VIP renewal anomaly: daily Paystack subscription check added (`src/lib/paystack/subscription-check.ts`, runs in the `expire-pending-payments` cron); Paystack dashboard check of the 24 Oct subscription pending (Both)
+- [ ] 1.5 VIP renewal anomaly: renewal handling made robust (docs/renewals.md), admin page /admin/renewals and a dashboard alert added; Paystack webhook log for the 24 Oct charge pending (Both)
 - [ ] 1.6 Personal booking codes and live win-probability bar verified live (Both)
 
 ## 2. Financial baseline

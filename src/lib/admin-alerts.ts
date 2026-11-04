@@ -22,6 +22,8 @@ export interface AlertInputs {
   /** Lagos hour now, 0-23: the morning build runs before 07:00. */
   lagosHour?: number;
   checkout?: { started: number; paid: number };
+  /** Card plans that have lapsed, are failing or have no paid-through date (lib/renewals-view.ts). */
+  renewals?: { attention: number };
   maintenance?: boolean;
   minShare?: number;
 }
@@ -81,6 +83,16 @@ export function alertsFor(i: AlertInputs): AlertItem[] {
     if (i.hubTiers && (i.lagosHour ?? 12) >= 8 && i.hub.length < i.hubTiers) {
       out.push({ tone: "cyan", title: `${i.hub.length} of ${i.hubTiers} Code Hub codes built today`, detail: "A tier with no build in reach of its odds is left out.", href: "/admin/parsebot" });
     }
+  }
+
+  // A card plan that lapsed unrenewed is a paying member who just lost access.
+  if (i.renewals && i.renewals.attention > 0) {
+    out.push({
+      tone: "rose",
+      title: `${i.renewals.attention} card ${i.renewals.attention === 1 ? "renewal needs" : "renewals need"} attention`,
+      detail: "Lapsed without a recorded renewal, failing, or missing a paid-through date.",
+      href: "/admin/renewals",
+    });
   }
 
   // Below a third completing, with enough checkouts to mean something.

@@ -216,6 +216,7 @@ export const NAV_SECTIONS: NavSection[] = [
     label: "Business",
     items: [
       { href: "/admin/payments", label: "Payments", icon: "card", permission: "finance.view" },
+      { href: "/admin/renewals", label: "Renewals", icon: "pulse", permission: "finance.view" },
       { href: "/admin/partners", label: "Partners", icon: "handshake", permission: "partners.view" },
       { href: "/admin/offers", label: "Offers & pricing", icon: "star", permission: "offers.manage" },
     ],

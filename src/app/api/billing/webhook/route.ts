@@ -3,14 +3,15 @@ import { NextResponse } from "next/server";
 import crypto from "node:crypto";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { computePassExpiry, passLength } from "@/lib/paystack/pass-window";
-import { tierFromPlanCode } from "@/lib/paystack/plan-codes";
+import { cycleFromPlanCode, tierFromPlanCode } from "@/lib/paystack/plan-codes";
 import { sendEmail } from "@/lib/email";
-import { receiptEmail, subscriptionCanceledEmail } from "@/lib/email-templates";
+import { receiptEmail, renewalFailedEmail, subscriptionCanceledEmail } from "@/lib/email-templates";
 import type { Tier } from "@/lib/entitlements";
 import { recordCommission } from "@/lib/partner-commission";
 import { grantPaystackOnce } from "@/lib/paystack/once";
 import { grantPass } from "@/lib/offers-server";
 import { cycleFromInterval, renewedPeriodEnd } from "@/lib/paystack/renewal";
+import { chargeKind, resolveCycle } from "@/lib/paystack/charge-kind";
 
 // Node's crypto module, not Edge-safe — Proxy (formerly middleware) already
 // excludes this route from its matcher (see src/proxy.ts) so no session
@@ -100,15 +101,27 @@ export async function POST(request: Request) {
       const metadata = asRecord(data.metadata);
       const amount = typeof data.amount === "number" ? data.amount : undefined;
 
+      // Our own checkout writes a payments row under this reference before the
+      // customer pays, so a reference we have never seen is a charge Paystack
+      // made by itself: a renewal, whatever metadata it carries (charge-kind.ts).
+      const { data: knownRow } = reference
+        ? await admin.from("payments").select("id").eq("paystack_reference", reference).maybeSingle()
+        : { data: null };
+      const kind = chargeKind({
+        onceFlag: metadata?.once === "1",
+        offerFlag: typeof metadata?.offer === "string",
+        knownReference: !!knownRow,
+      });
+
       // Pay once: re-verified and granted as a prepaid period, before the
       // generic success update below (which would make the grant think it
       // had already run).
-      if (reference && metadata?.once === "1") {
+      if (reference && kind === "once") {
         await grantPaystackOnce(reference);
         break;
       }
       // An offer's pass: the same re-verified, once-only grant (lib/offers-server.ts).
-      if (reference && typeof metadata?.offer === "string") {
+      if (reference && kind === "offer") {
         await grantPass(reference);
         break;
       }
@@ -179,7 +192,7 @@ export async function POST(request: Request) {
         break;
       }
 
-      if (metaUserId && (metaTier === "pro" || metaTier === "vip")) {
+      if (metaUserId && (metaTier === "pro" || metaTier === "vip") && kind === "first") {
         // Recorded for subscription.create (fires alongside this on the
         // first charge) to attach the customer_code — needed so renewal
         // charges, which carry no metadata of ours, can still be matched.
@@ -199,36 +212,20 @@ export async function POST(request: Request) {
         break;
       }
 
-      // No metadata → this is a recurring-plan renewal charge, not our
-      // initial checkout. Paystack renewal charges aren't guaranteed to
-      // carry the metadata from the original transaction, so identity here
-      // comes from customer_code (set on the row above during the first
-      // charge) or, failing that, an email match against profiles.
-      let renewing: { user_id: string; current_period_end: string | null } | null = null;
-      if (customerCode) {
-        const { data: sub } = await admin
-          .from("subscriptions")
-          .select("user_id, current_period_end")
-          .eq("paystack_customer_code", customerCode)
-          .maybeSingle();
-        renewing = sub;
-      }
+      // Everything left is a renewal charge, or a first charge that arrived
+      // without our metadata. Find the member by the id on the charge if it has
+      // one, then by customer_code (saved on the first charge), then by email.
+      const memberBy = (column: "user_id" | "paystack_customer_code", value: string) =>
+        admin.from("subscriptions").select("user_id, tier, current_period_end").eq(column, value).maybeSingle();
+      let renewing: { user_id: string; tier: string; current_period_end: string | null } | null = null;
+      if (metaUserId) renewing = (await memberBy("user_id", metaUserId)).data;
+      if (!renewing && customerCode) renewing = (await memberBy("paystack_customer_code", customerCode)).data;
       if (!renewing && customerEmail) {
-        const { data: profile } = await admin
-          .from("profiles")
-          .select("id")
-          .ilike("email", customerEmail)
-          .maybeSingle();
-        if (profile) {
-          const { data: sub } = await admin
-            .from("subscriptions")
-            .select("user_id, current_period_end")
-            .eq("user_id", profile.id)
-            .maybeSingle();
-          renewing = sub;
-        }
+        const { data: profile } = await admin.from("profiles").select("id").ilike("email", customerEmail).maybeSingle();
+        if (profile) renewing = (await memberBy("user_id", profile.id)).data;
       }
 
+      let receiptTier: "pro" | "vip" | undefined;
       if (renewing) {
         // The renewal pays for the next cycle: extend the paid-through date
         // here, not only on invoice.update, whose fields are unverified (see
@@ -236,8 +233,25 @@ export async function POST(request: Request) {
         // in October 2026. Recorded once per reference, so a redelivered event
         // neither extends twice nor duplicates the billing history.
         const plan = asRecord(data.plan);
-        const tier = tierFromPlanCode(readPlanCode(data));
-        const cycle = cycleFromInterval(asString(plan?.interval));
+        const planCode = readPlanCode(data);
+        const tier = tierFromPlanCode(planCode) ?? (renewing.tier === "pro" || renewing.tier === "vip" ? renewing.tier : undefined);
+        receiptTier = tier;
+        const interval = asString(plan?.interval);
+        const codeCycle = cycleFromPlanCode(planCode);
+        // Only ask for the last payment when the charge and the plan code say nothing.
+        let lastPlanLabel: string | null = null;
+        if (!cycleFromInterval(interval) && !codeCycle) {
+          const { data: last } = await admin
+            .from("payments")
+            .select("plan")
+            .eq("user_id", renewing.user_id)
+            .eq("status", "success")
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          lastPlanLabel = (last?.plan as string | undefined) ?? null;
+        }
+        const { cycle, source } = resolveCycle({ interval, codeCycle, lastPlanLabel });
         const { data: seen } = reference
           ? await admin.from("payments").select("id").eq("paystack_reference", reference).maybeSingle()
           : { data: null };
@@ -249,8 +263,20 @@ export async function POST(request: Request) {
             amount_kobo: amount ?? 0,
             plan: tier && cycle ? `${tier}:${cycle}` : "renewal",
             status: "success",
+            provider: "paystack",
             raw_event: event,
           });
+          if (!cycle) {
+            alertSupport(
+              "A renewal was paid but its plan period could not be worked out",
+              `Paystack charged ${customerEmail ?? customerCode ?? "a member"} (reference ${reference}, ₦${((amount ?? 0) / 100).toLocaleString("en-NG")}) ` +
+                `but neither the charge, its plan code nor the member's last payment names a billing cycle. The payment is recorded; ` +
+                `the paid-through date was NOT moved. Set it by hand in /admin, then look at /admin/renewals.`,
+              `renewal-unresolved:${reference}`,
+            );
+          } else if (source !== "interval") {
+            console.warn(`renewal ${reference}: cycle ${cycle} taken from ${source}, not from the plan interval`);
+          }
         }
         const periodEnd =
           firstDelivery && cycle
@@ -264,13 +290,21 @@ export async function POST(request: Request) {
           .from("subscriptions")
           .update({ status: "active", ...(periodEnd ? { current_period_end: periodEnd } : {}), updated_at: now })
           .eq("user_id", renewing.user_id);
+      } else if (kind === "renewal") {
+        alertSupport(
+          "Paystack charged a customer but no member matched",
+          `A charge arrived for ${customerEmail ?? "an unknown email"} (customer ${customerCode ?? "unknown"}, reference ${reference ?? "none"}, ` +
+            `₦${((amount ?? 0) / 100).toLocaleString("en-NG")}) that is not one of our checkouts, and no member could be matched by id, ` +
+            `customer code or email. Nothing was granted. Find them in /admin/users and set their plan by hand.`,
+          `renewal-unmatched:${reference ?? customerCode ?? customerEmail}`,
+        );
       }
 
       if (customerEmail && reference) {
         void sendEmail({
           to: customerEmail,
           idempotencyKey: `receipt:paystack:${reference}`,
-          ...receiptEmail({ amountKobo: amount ?? 0, reference, date: now }),
+          ...receiptEmail({ tier: receiptTier, amountKobo: amount ?? 0, reference, date: now }),
         });
       }
       break;
@@ -361,6 +395,7 @@ export async function POST(request: Request) {
           .from("subscriptions")
           .update({ status: "past_due", updated_at: now })
           .eq("paystack_subscription_code", subscriptionCode);
+        if (data.status === "failed") await notifyRenewalFailed(admin, subscriptionCode);
       }
       break;
     }
@@ -374,6 +409,7 @@ export async function POST(request: Request) {
           .from("subscriptions")
           .update({ status: "past_due", updated_at: now })
           .eq("paystack_subscription_code", subscriptionCode);
+        await notifyRenewalFailed(admin, subscriptionCode);
       }
       break;
     }
@@ -425,4 +461,36 @@ export async function POST(request: Request) {
 
   // Always 200 fast — no slow work, and Paystack redelivers on non-2xx.
   return NextResponse.json({ received: true });
+}
+
+/** A failed renewal means a member may be about to lose access: tell the inbox, and tell them. */
+async function notifyRenewalFailed(admin: ReturnType<typeof supabaseAdmin>, subscriptionCode: string) {
+  const { data: sub } = await admin
+    .from("subscriptions")
+    .select("tier, current_period_end, profiles(email)")
+    .eq("paystack_subscription_code", subscriptionCode)
+    .maybeSingle();
+  if (!sub) return;
+  const profile = Array.isArray(sub.profiles) ? sub.profiles[0] : sub.profiles;
+  const period = String(sub.current_period_end ?? "none");
+  if (profile?.email) {
+    void sendEmail({
+      to: profile.email,
+      idempotencyKey: `renewal-failed:${subscriptionCode}:${period}`,
+      ...renewalFailedEmail({ tier: sub.tier as Tier, accessUntil: sub.current_period_end }),
+    });
+  }
+  alertSupport(
+    "A renewal charge failed",
+    `Paystack could not renew ${profile?.email ?? subscriptionCode} (${sub.tier}, paid through ${period}). They have been emailed. See /admin/renewals.`,
+    `renewal-failed-alert:${subscriptionCode}:${period}`,
+  );
+}
+
+/** Logs, and emails the support inbox once per key. Never throws: a webhook must still answer 200. */
+function alertSupport(subject: string, body: string, key: string) {
+  console.error(`[billing-alert] ${subject}: ${body}`);
+  const to = process.env.ASK_ALERT_EMAIL?.trim() || process.env.SUPPORT_INBOX_EMAIL?.trim() || "support@kiqstat.app";
+  const html = `<p>${body.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]!)}</p>`;
+  void sendEmail({ to, idempotencyKey: key, subject, html });
 }

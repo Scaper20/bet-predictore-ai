@@ -3,6 +3,15 @@ import { alertsFor, openableAlerts } from "./admin-alerts";
 
 const hub = (name: string, odds: number, target: number, booked = true) => ({ name, odds, target, share: odds / target, booked });
 
+describe("alertsFor: renewals", () => {
+  it("raises one rose alert when card renewals need attention, and stays quiet otherwise", () => {
+    expect(alertsFor({ renewals: { attention: 0 } })).toEqual([]);
+    const [one] = alertsFor({ renewals: { attention: 1 } });
+    expect(one).toMatchObject({ tone: "rose", title: "1 card renewal needs attention", href: "/admin/renewals" });
+    expect(alertsFor({ renewals: { attention: 3 } })[0].title).toBe("3 card renewals need attention");
+  });
+});
+
 describe("alertsFor", () => {
   it("is quiet when nothing is wrong", () => {
     expect(
