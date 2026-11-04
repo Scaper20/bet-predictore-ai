@@ -9,7 +9,7 @@
  */
 
 import { calibrateResult, type ResultCalibration } from "./result-calibration";
-import { sweetSpotPick } from "./sweet-spots";
+import { sweetSpotPick, type SweetSpot } from "./sweet-spots";
 import { pausedByRule, PAUSED_PICK_MARKETS } from "./paused";
 import { override } from "./selections";
 import type { EngineRead } from "./headline-engine";
@@ -241,6 +241,33 @@ export interface ModelOptions {
   goalScale?: number;
   /** Widens the gap between the sides (log of home/away rate times this), total kept (1 = off). Lab knob. */
   strengthStretch?: number;
+  /**
+   * Moves both goal rates with the competition's RECENT scoring level: the
+   * weighted goals per team-match at `halfLifeDays`, against the fit's own
+   * (slower) level. `weight` is the share of the gap applied; the factor is
+   * kept within 1 +- `clamp` (default 0.1). The fit's half-life lags a league
+   * whose scoring level is moving (audit, Nov 2026: the model sat 0.1-0.2
+   * goals a game low through Aug-Oct 2026). Off when absent.
+   */
+  levelAdjust?: { halfLifeDays: number; weight: number; clamp?: number };
+  /** Added to the headline ranking score of every over selection (0 = off). */
+  overTilt?: number;
+  /** Replaces HEADLINE_MIN_PROBABILITY entries for these markets (e.g. "ou:over:2.5"). */
+  minProbability?: Record<string, number>;
+  /** Neutral venues: shrink the total toward the league mean without home advantage, not with it. */
+  neutralTotals?: boolean;
+  /**
+   * No headline pick below this chance. Ranker picks stated at 60-65% landed
+   * ~61% in three separate samples (replay 2025-26 60.5% of 243, Sep-Oct 2026
+   * replay 61.0% of 41, live since 7 Oct 63.3% of 49) against 77% overall;
+   * 65% and up landed at or above the stated chance. Costs about 4% of games
+   * their pick. 0 or absent = off.
+   */
+  headlineFloor?: number;
+  /** Competitions that publish no headline pick (league codes). */
+  headlineHold?: readonly string[];
+  /** Sweet-spot rule tables to use in place of SWEET_SPOTS / SWEET_SPOT_FILLERS. */
+  sweetSpotRules?: { main: readonly SweetSpot[]; fillers: readonly SweetSpot[] };
 }
 
 export function buildPrediction(
@@ -264,8 +291,10 @@ export function buildPrediction(
   const awayName = options.ratingNames?.away ?? match.away.name;
   const rates = expectedRates(fit, homeName, awayName);
   const { homeRating, awayRating } = rates;
-  const shrunk = calibrateTotals(rates.lambda, rates.mu, fit, options.totalsShrink ?? TOTALS_SHRINK);
-  const goalScale = options.goalScale ?? 1;
+  // The league mean total includes home advantage; a neutral venue has none.
+  const meanScale = neutralVenue && options.neutralTotals ? 2 / (Math.exp(fitted.homeAdvantage) + 1) : 1;
+  const shrunk = calibrateTotals(rates.lambda, rates.mu, fit, options.totalsShrink ?? TOTALS_SHRINK, meanScale);
+  const goalScale = (options.goalScale ?? 1) * (options.levelAdjust ? levelFactor(results, fit, options.levelAdjust) : 1);
   const stretched = stretchStrength(shrunk.lambda, shrunk.mu, options.strengthStretch ?? 1);
   const lambda = stretched.lambda * goalScale;
   const mu = stretched.mu * goalScale;
@@ -292,7 +321,7 @@ export function buildPrediction(
   const baselines = empiricalBaselines(results);
   const ranked = rankPicks(markets, asianHandicap, dataQuality, uncertainty, baselines, options);
   // Where a sweet spot applies it heads the list, so the pick and the ranking agree.
-  const spot = options.sweetSpots === false ? null : sweetSpotPick(ranked, match.league.code, options.excludeHeadline, asianHandicap, options.statChances);
+  const spot = options.sweetSpots === false ? null : sweetSpotPick(ranked, match.league.code, options.excludeHeadline, asianHandicap, options.statChances, options.sweetSpotRules);
   const sweet = spot
     ? ranked.find((p) => p.market === spot.market && p.probability === spot.probability) ?? {
         ...spot,
@@ -309,7 +338,8 @@ export function buildPrediction(
   );
 
   // A pick is only surfaced when the history behind it justifies one.
-  const topPick = sufficiency.publishable ? picks[0] ?? null : null;
+  const lead = sufficiency.publishable ? picks[0] ?? null : null;
+  const topPick = lead && heldBack(lead, match.league.code, options) ? null : lead;
   const insights = buildInsights({ match, results, fit, markets, topPick, baselines, neutralVenue });
 
   return {
@@ -339,6 +369,24 @@ export function buildPrediction(
   };
 }
 
+/** True when the options keep this headline pick from going out (floor or held competition). */
+export function heldBack(
+  pick: Pick,
+  leagueCode: string | undefined,
+  o: Pick2<ModelOptions, "headlineFloor" | "headlineHold">,
+): boolean {
+  if (o.headlineFloor && pick.probability < o.headlineFloor) return true;
+  return Boolean(leagueCode && o.headlineHold?.includes(leagueCode));
+}
+
+/** The prediction with a headline the options hold back removed. Run last, after any market or board swap. */
+export function guardHeadline(p: Prediction, o: Pick2<ModelOptions, "headlineFloor" | "headlineHold">): Prediction {
+  if (!p.topPick || !heldBack(p.topPick, p.match.league.code, o)) return p;
+  return { ...p, topPick: null, sweetSpot: false };
+}
+
+type Pick2<T, K extends keyof T> = { [P in K]?: T[P] };
+
 /**
  * How far a fixture's projected total goals may sit from its competition's
  * average: 1 keeps the raw projection, 0 flattens every match to the mean.
@@ -354,13 +402,40 @@ export function buildPrediction(
  */
 export const TOTALS_SHRINK = 0.8;
 
-function calibrateTotals(lambda: number, mu: number, fit: LeagueFit, shrink: number): { lambda: number; mu: number } {
+function calibrateTotals(lambda: number, mu: number, fit: LeagueFit, shrink: number, meanScale = 1): { lambda: number; mu: number } {
   if (fit.matchesUsed === 0) return { lambda, mu };
   const total = lambda + mu;
-  const mean = 2 * fit.observedGoalRate;
+  const mean = 2 * fit.observedGoalRate * meanScale;
   const target = mean + shrink * (total - mean);
   const scale = target / total;
   return { lambda: lambda * scale, mu: mu * scale };
+}
+
+/**
+ * Factor on both goal rates from the competition's recent scoring level
+ * (ModelOptions.levelAdjust). Weights are relative, so the reference date does
+ * not matter and a walk-forward replay needs no clock.
+ */
+export function levelFactor(
+  results: ResultRow[],
+  fit: LeagueFit,
+  cfg: { halfLifeDays: number; weight: number; clamp?: number },
+): number {
+  if (results.length === 0 || !(fit.observedGoalRate > 0)) return 1;
+  let newest = 0;
+  for (const r of results) if (r.date > newest) newest = r.date;
+  const decay = Math.log(2) / (cfg.halfLifeDays * 86_400_000);
+  let w = 0;
+  let g = 0;
+  for (const r of results) {
+    const x = Math.exp(-decay * (newest - r.date));
+    w += 2 * x;
+    g += x * (r.homeGoals + r.awayGoals);
+  }
+  if (!(w > 0)) return 1;
+  const ratio = g / w / fit.observedGoalRate;
+  const c = cfg.clamp ?? 0.1;
+  return Math.min(1 + c, Math.max(1 - c, 1 + cfg.weight * (ratio - 1)));
 }
 
 /** The same total goals, split with the log of the home/away ratio multiplied by `k`. */
@@ -626,12 +701,12 @@ export const HEADLINE_MIN_PROBABILITY: Readonly<Record<string, number>> = {
   "ou:over:2.5": 0.7,
 };
 
-export function headlineEligible(p: Pick): boolean {
+export function headlineEligible(p: Pick, minProbability: Readonly<Record<string, number>> = HEADLINE_MIN_PROBABILITY): boolean {
   if (p.probability > HEADLINE_MAX_PROBABILITY) return false;
   // Switched by the owner (model/selections.ts): on is eligible under the same cap, off never.
   const o = override(p.market, "headline");
   if (o !== undefined) return o;
-  if (p.probability < (HEADLINE_MIN_PROBABILITY[p.market] ?? 0)) return false;
+  if (p.probability < (minProbability[p.market] ?? 0)) return false;
   return headlineByRule(p.market);
 }
 
@@ -673,8 +748,10 @@ function pickScore(p: Pick, baselines: Record<string, number>, options: ModelOpt
   const value = valueScore(p, baselines, options.familyReliability);
   // Ineligible selections keep their relative order, below every eligible one.
   const barred = (options.excludeHeadline ?? HEADLINE_EXCLUDED).includes(p.market);
-  if (!headlineEligible(p) || barred) return value - 10;
-  return p.probability + value / 0.6;
+  const min = options.minProbability ? { ...HEADLINE_MIN_PROBABILITY, ...options.minProbability } : HEADLINE_MIN_PROBABILITY;
+  if (!headlineEligible(p, min) || barred) return value - 10;
+  const tilt = p.market.startsWith("ou:over:") ? options.overTilt ?? 0 : 0;
+  return p.probability + value / 0.6 + tilt;
 }
 
 /** Edge over the competition's own base rate, discounted by family reliability. */

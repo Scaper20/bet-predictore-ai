@@ -19,7 +19,9 @@ import { boardChecked } from "@/lib/market-check";
 import { engineRead, withEngineHeadline } from "@/lib/engine-feed";
 import { switchOn } from "@/lib/switches";
 import { listingsFor, type SportyBetEvent } from "@/lib/odds/sportybet";
-import { buildPrediction, HEADLINE_EXCLUDED, HEADLINE_MAX_PROBABILITY, type ModelOptions, type Prediction } from "@/lib/model/predict";
+import { trainingAsOf } from "@/lib/model/as-of";
+import { paramsFor, type ParamSet } from "@/lib/model/params";
+import { buildPrediction, guardHeadline, HEADLINE_EXCLUDED, HEADLINE_MAX_PROBABILITY, type ModelOptions, type Prediction } from "@/lib/model/predict";
 import { applySelectionPolicy } from "@/lib/selection-policy";
 import { extraPicks } from "@/lib/selection-extras";
 import { listedOn } from "@/lib/board-pick";
@@ -98,6 +100,21 @@ type Training = {
   /** UEFA cups only: clubs in the five biggest leagues, for the host guard (lib/cup-guard.ts). */
   topFive?: ReadonlySet<string>;
 };
+
+/**
+ * The training as it stood at this fixture's kickoff. Only a game already
+ * played has anything to drop (as-of.ts); a game to come gets the same object.
+ */
+function asOf(match: Match, training: Training): Training {
+  const canon = (name: string) => training.book?.canonical.get(looseKey(name)) ?? name;
+  const rows = trainingAsOf(
+    training.rows,
+    Date.parse(match.kickoff),
+    [match.home.name, canon(match.home.name)],
+    [match.away.name, canon(match.away.name)],
+  );
+  return rows === training.rows ? training : { ...training, rows };
+}
 
 /**
  * Training rows per competition, cached for half an hour. Assembling them
@@ -182,7 +199,10 @@ function modelOptions(
   training: { rows: ResultRow[]; book?: NameBook; topFive?: ReadonlySet<string> },
   stats?: Record<string, number>,
 ): ModelOptions {
-  const prefit = sharedFit(match, training.rows);
+  // Games before the cutover keep the parameters they were published under (model/params.ts).
+  const def = match.league.code ? leagueByCode(match.league.code) : undefined;
+  const params = paramsFor(match.kickoff, Boolean(def?.confederation || def?.cupPool));
+  const prefit = sharedFit(match, training.rows, params);
   const book = training.book;
   const ratingNames = book && book.canonical.size > 0
     ? { home: book.canonical.get(looseKey(match.home.name)) ?? match.home.name, away: book.canonical.get(looseKey(match.away.name)) ?? match.away.name }
@@ -196,6 +216,7 @@ function modelOptions(
   );
   return {
     prefit,
+    ...params.options,
     ...(ratingNames ? { ratingNames } : {}),
     ...(barred.length ? { excludeHeadline: [...HEADLINE_EXCLUDED, ...barred] } : {}),
     ...(stats ? { statChances: stats } : {}),
@@ -210,13 +231,13 @@ function modelOptions(
  */
 const fits = new Map<string, { at: number; fit: LeagueFit }>();
 const FIT_TTL = 30 * 60_000;
-function sharedFit(match: Match, rows: ResultRow[]): LeagueFit {
+function sharedFit(match: Match, rows: ResultRow[], params: ParamSet): LeagueFit {
   let newest = 0;
   for (const r of rows) if (r.date > newest) newest = r.date;
-  const key = `${match.league.code ?? `raw:${match.league.id}`}|${rows.length}|${newest}`;
+  const key = `${match.league.code ?? `raw:${match.league.id}`}|${rows.length}|${newest}|${params.id}|${JSON.stringify(params.fit)}`;
   const hit = fits.get(key);
   if (hit && Date.now() - hit.at < FIT_TTL) return hit.fit;
-  const fit = fitLeague(rows);
+  const fit = fitLeague(rows, params.fit);
   if (fits.size > 200) fits.clear();
   fits.set(key, { at: Date.now(), fit });
   return fit;
@@ -287,7 +308,8 @@ export async function matchDetail(id: string): Promise<MatchDetail | null> {
     const match = await getMatch(id);
     if (!match) return null;
 
-    const [training, h2h, stats] = await Promise.all([trainingRows(match), getH2H(match), sweetSpotStats(match)]);
+    const [full, h2h, stats] = await Promise.all([trainingRows(match), getH2H(match), sweetSpotStats(match)]);
+    const training = asOf(match, full);
     const options = modelOptions(match, training, stats);
     // The same check the predictions list runs, so the page and the list agree.
     const [prediction] = await marketChecked([{ prediction: buildPrediction(match, training.rows, h2h, options), options }]);
@@ -316,7 +338,8 @@ export async function matchPrediction(id: string): Promise<Prediction | null> {
   return cached(`prediction:${id}`, 10 * 60_000, async () => {
     const match = await getMatch(id);
     if (!match) return null;
-    const [training, h2h, stats] = await Promise.all([trainingRows(match), getH2H(match), sweetSpotStats(match)]);
+    const [full, h2h, stats] = await Promise.all([trainingRows(match), getH2H(match), sweetSpotStats(match)]);
+    const training = asOf(match, full);
     const options = modelOptions(match, training, stats);
     const [checked] = await marketChecked([{ prediction: buildPrediction(match, training.rows, h2h, options), options }]);
     return checked;
@@ -348,22 +371,24 @@ async function marketChecked(built: { prediction: Prediction; options: ModelOpti
     publishedPicks(built.map((b) => b.prediction.match.id)),
   ]);
   return Promise.all(
-    built.map(async ({ prediction, options }) => {
-      const markets = listings.get(prediction.match.id)?.markets;
-      // A competition whose board wasn't read in time says nothing about the
-      // game: its picks stand as the model made them, as they always did.
-      if (!markets && !known.has(prediction.match.league.code ?? "")) return prediction;
-      // The lines are priced only in the divisions those picks were tested in
-      // (sweet-spots.ts), where the headline engine reads them too.
-      const lines =
-        markets?.length && sweetSpotLeague(prediction.match.league.code)
-          ? await pricedListedLines(prediction.match, prediction, markets)
-          : [];
-      const checked = withExtras(boardChecked(prediction, markets, lines, options.excludeHeadline ?? HEADLINE_EXCLUDED), markets);
-      const withEngine = { ...checked, engine: engineRead(prediction, markets, lines, true) };
-      return engineOn ? withEngineHeadline(withEngine) : withEngine;
-    }),
+    built.map(async ({ prediction, options }) => guardHeadline(await checkedOne(prediction, options), options)),
   ).then((out) => out.map((p) => holdPublished(p, logged.get(p.match.id))));
+
+  async function checkedOne(prediction: Prediction, options: ModelOptions): Promise<Prediction> {
+    const markets = listings.get(prediction.match.id)?.markets;
+    // A competition whose board wasn't read in time says nothing about the
+    // game: its picks stand as the model made them, as they always did.
+    if (!markets && !known.has(prediction.match.league.code ?? "")) return prediction;
+    // The lines are priced only in the divisions those picks were tested in
+    // (sweet-spots.ts), where the headline engine reads them too.
+    const lines =
+      markets?.length && sweetSpotLeague(prediction.match.league.code)
+        ? await pricedListedLines(prediction.match, prediction, markets)
+        : [];
+    const checked = withExtras(boardChecked(prediction, markets, lines, options.excludeHeadline ?? HEADLINE_EXCLUDED), markets);
+    const withEngine = { ...checked, engine: engineRead(prediction, markets, lines, true) };
+    return engineOn ? withEngineHeadline(withEngine) : withEngine;
+  }
 }
 
 /**
@@ -454,7 +479,7 @@ export async function liveWinProbability(matchId: string): Promise<LiveProbabili
   const match = await getMatch(matchId);
   if (!match || !isLive(match)) return null;
 
-  const training = await trainingRows(match);
+  const training = asOf(match, await trainingRows(match));
   const prediction = buildPrediction(match, training.rows, [], modelOptions(match, training));
   const { home: lambda, away: mu } = prediction.markets.expectedGoals;
 
@@ -504,8 +529,9 @@ async function predictSlice(slice: Match[]): Promise<Prediction[]> {
       // One training fetch and one fit per competition, reused across its fixtures.
       const [training, stats] = await Promise.all([trainingRows(group[0]), Promise.all(group.map(sweetSpotStats))]);
       group.forEach((m, i) => {
-        const options = modelOptions(m, training, stats[i]);
-        built.push({ prediction: buildPrediction(m, training.rows, [], options), options });
+        const trained = asOf(m, training);
+        const options = modelOptions(m, trained, stats[i]);
+        built.push({ prediction: buildPrediction(m, trained.rows, [], options), options });
       });
     }),
   );
