@@ -297,6 +297,31 @@ export function subscriptionCanceledEmail(opts: {
   };
 }
 
+/**
+ * Paystack could not charge a card subscription's renewal. It retries for a few
+ * days, so this says so plainly, how long access lasts, and where to fix the card.
+ */
+export function renewalFailedEmail(opts: { tier?: Tier; accessUntil?: string | null }): { subject: string; html: string } {
+  const label = opts.tier ? TIER_LABEL[opts.tier] : "plan";
+  const end = opts.accessUntil ? Date.parse(opts.accessUntil) : NaN;
+  const until =
+    Number.isFinite(end) && end > Date.now()
+      ? new Date(end).toLocaleDateString("en-GB", { day: "numeric", month: "long", timeZone: "Africa/Lagos" })
+      : null;
+  return {
+    subject: `We couldn't renew your KiqStat ${label}`,
+    html: emailLayout(`
+      <p style="margin:0 0 12px;font-size:17px;font-weight:700;">We couldn't renew your ${label} plan</p>
+      <p style="margin:0;">Your card was declined when we tried to renew. ${
+        until ? `You still have full access until ${until}. ` : ""
+      }We'll try again over the next few days, and nothing more is needed if it goes through.</p>
+      <p style="margin:12px 0 0;">If you'd rather fix it now, update your card or pay once on your billing page.</p>
+      ${button(`${SITE_URL}/account/billing`, "Update your card")}
+      <p style="margin:20px 0 0;font-size:13px;color:#6b7670;">If something looks wrong, message us from the Help page.</p>
+    `),
+  };
+}
+
 /* --------------------------------------------------------- Outreach campaign */
 
 export function warmCheckInEmail(opts: { unsubscribeUrl: string }): { subject: string; html: string } {

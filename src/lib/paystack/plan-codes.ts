@@ -64,3 +64,18 @@ export function planCodeOrNull(tier: "pro" | "vip", cycle: BillingCycle): string
   const key = PLAN_ENV[tier][cycle];
   return key ? (process.env[key] ?? null) : null;
 }
+
+/**
+ * Which billing cycle one of our configured Paystack plan codes is. A renewal
+ * charge does not always say its interval; the plan code always says which of
+ * our plans it is. Retired codes (PAYSTACK_LEGACY_PLAN_CODES) carry no cycle.
+ */
+export function cycleFromPlanCode(planCode: string | undefined): BillingCycle | undefined {
+  if (!planCode) return undefined;
+  for (const tier of ["pro", "vip"] as const) {
+    for (const [cycle, key] of Object.entries(PLAN_ENV[tier]) as [BillingCycle, string][]) {
+      if (process.env[key] === planCode) return cycle;
+    }
+  }
+  return undefined;
+}

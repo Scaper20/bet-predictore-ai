@@ -170,6 +170,7 @@ export function OwnerView({ d, ctx }: { d: OwnerDashboard; ctx: DashContext }) {
       hubTiers: HUB_LIVE_TIERS.length,
       lagosHour: ctx.lagosHour,
       checkout: d.checkout,
+      renewals: d.renewals,
       minShare: HUB_MIN_TARGET_SHARE,
     }),
     ctx.canOpen,

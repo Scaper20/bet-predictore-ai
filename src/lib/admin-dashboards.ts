@@ -5,6 +5,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { paidUserIds } from "@/lib/paid-users";
 import { HUB_MIN_TARGET_SHARE, HUB_TIERS, hubDay } from "@/lib/code-hub";
 import { paymentAmount } from "@/lib/payments/markets";
+import { getRenewalsView } from "@/lib/admin-renewals";
 import {
   byDay, change, channelOf, hitRate, hoursBetween, rank, sumBetween, type DayPoint,
 } from "@/lib/admin-metrics";
@@ -325,13 +326,14 @@ export interface OwnerDashboard {
   tickets: TicketQueue;
   ingest: IngestSummary;
   hub: HubCodeCheck[];
+  renewals: { attention: number; dueSoon: number };
 }
 
 export async function ownerDashboard(now = Date.now()): Promise<OwnerDashboard> {
   const admin = supabaseAdmin();
   const cur = now - WINDOW * DAY;
   const prev = now - 2 * WINDOW * DAY;
-  const [payments, profiles, picks, payingIds, subs, audit, tickets, ingest, hub] = await Promise.all([
+  const [payments, profiles, picks, payingIds, subs, audit, tickets, ingest, hub, renewals] = await Promise.all([
     recentPayments(),
     allProfiles(),
     recentPicks(),
@@ -341,6 +343,7 @@ export async function ownerDashboard(now = Date.now()): Promise<OwnerDashboard> 
     ticketQueue(),
     ingestSummary(),
     hubToday(),
+    getRenewalsView().catch(() => null),
   ]);
 
   const success = payments.filter(isSuccess);
@@ -391,6 +394,7 @@ export async function ownerDashboard(now = Date.now()): Promise<OwnerDashboard> 
     tickets,
     ingest,
     hub,
+    renewals: { attention: renewals?.needsAttention.length ?? 0, dueSoon: renewals?.dueSoon.length ?? 0 },
   };
 }
 
