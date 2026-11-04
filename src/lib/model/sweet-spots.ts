@@ -177,9 +177,10 @@ export function sweetSpotPick(
   barred: readonly string[] = [],
   ah: readonly AsianHandicapLine[] = [],
   stats?: Readonly<Record<string, number>>,
+  rules?: { main: readonly SweetSpot[]; fillers: readonly SweetSpot[] },
 ): SweetSpotPick | null {
   if (!sweetSpotLeague(leagueCode)) return null;
-  for (const tier of [SWEET_SPOTS, SWEET_SPOT_FILLERS]) {
+  for (const tier of [rules?.main ?? SWEET_SPOTS, rules?.fillers ?? SWEET_SPOT_FILLERS]) {
     let best: { rule: SweetSpot; p: number } | null = null;
     for (const rule of tier) {
       if (barred.includes(rule.market) || isPausedPick(rule.market)) continue;

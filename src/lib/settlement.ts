@@ -2,8 +2,11 @@
  * Grades a logged pick against a fixture's final score.
  *
  * Covers every market a published pick can carry, Asian handicap included:
- * the digest and Code Hub may use half-goal handicap lines, and quarter lines
- * settle as a push when they half-win or half-lose (the slip tracker's rule).
+ * the digest and Code Hub may use half-goal handicap lines. A quarter line
+ * (-0.75, +0.25, over 2.25) is graded by its more favourable half when one half
+ * is refunded: a half win is a win and a half loss is a loss, never a push
+ * (the slip tracker's rule, pinned by slip-tracker.test.ts). Quarter totals
+ * fall out of the plain-line comparison below and agree with that rule.
  */
 export type PickResult = "win" | "lose" | "push";
 
@@ -84,7 +87,7 @@ export function evaluatePick(
   return null;
 }
 
-/** An Asian handicap line against a score; a quarter line that splits settles as a push. */
+/** An Asian handicap line against a score; a quarter line grades by the half that is not refunded (see the file header). */
 export function gradeHandicap(side: "home" | "away", line: number, home: number, away: number): PickResult {
   const quarter = Math.abs((line * 4) % 2) === 1;
   if (quarter) {

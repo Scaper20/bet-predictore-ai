@@ -30,7 +30,7 @@ walk-forward myself against football-data.co.uk (8 divisions, seasons
    (0.8pp, 1pp, 5pp) are inside the noise of the sample they were found on.
 4. **Two evaluation shortcuts overstate the market check**: closing prices
    stand in for the price at publish, and the live check has 12 samples.
-5. **A few concrete defects** (below): quarter-line settlement, no kickoff
+5. **A few concrete defects** (below): no kickoff
    cutoff on match pages, extra-time scores in the national-team pool,
    neutral-venue totals bias, unvalidated newcomer prior on pooled
    competitions.
@@ -57,28 +57,16 @@ different numbers. **Fix**: when `match.status` is `finished`, read the logged
 prediction, or filter `rows` to `date < kickoff` before fitting (and key the
 fit cache on the cutoff).
 
-### A2 (M) `gradeHandicap` collapses quarter lines; comment says otherwise
+### A2 (retracted) Quarter-line grading is intended; only the comment was wrong
 
-`settlement.ts` documents quarter lines as settling "as a push when they
-half-win or half-lose". The code returns the non-push side instead
-(`a === "push" ? b : b === "push" ? a : "push"`), so a half-win grades as a full
-**win** and a half-loss as a full **loss**. Checked directly:
-
-| Bet | Score | Real result | `gradeHandicap` |
-|---|---|---|---|
-| Home −0.25 | 1-1 | half loss | `lose` |
-| Home +0.25 | 1-1 | half win | `win` |
-| Home −0.75 | 1-0 | half win | `win` |
-
-The `win/lose` fallback branch is unreachable (adjacent lines can never be win
-and lose). `evaluatePick` also grades quarter *totals* (`ou:over:2.25`) as a
-plain line (total 2 → full loss, real half loss). No test covers either.
-`leg-pricing.ts` already works around this correctly (it splits quarter lines
-itself), and headline picks only use half/whole lines, so the published record
-is unaffected; slip tracking (`slip-tracker.ts`), `raw-grades.ts` (quarter
-lines are skipped there) and anything that calls `evaluatePick` on a quarter
-line would be. **Fix**: either return a proper half-win/half-loss grade or make
-`evaluatePick` return `null` for quarter lines; add tests.
+The first version of this audit called `gradeHandicap`'s quarter-line result a
+bug. It is not. `slip-tracker.test.ts` pins the rule on purpose: a half win
+grades as a win and a half loss as a loss (-0.75 on a one-goal win is a win,
++0.25 on a draw is a win), and plain-line grading of quarter totals gives the
+same answers. Only the comment in `settlement.ts` ("settle as a push") was
+wrong. Fixed the comment and added tests that pin the real behaviour. I had
+changed the grading first; the existing test caught it and the change was
+reverted.
 
 ### A3 (M) National-team training pool mixes 120-minute and 90-minute scores
 
@@ -310,8 +298,7 @@ What this says:
 
 ## F. Recommended work, in order
 
-1. **Fix A1** (cutoff for finished games) and **A2** (quarter-line grading +
-   tests). Small, contained, no model change.
+1. **Fix A1** (cutoff for finished games). Small, contained, no model change. (Done, section G.)
 2. **Freeze a holdout.** From now on, nothing tuned on data after a fixed date
    (suggest 1 Nov 2026) until a rule is final; evaluate every pick-layer
    change once on it. Re-evaluate the market check on publish-time SportyBet
@@ -340,6 +327,60 @@ What this says:
 ## Reproduce
 
     npx vitest run src/lib/model src/lib/settlement
+    npx tsx scripts/audit-eval.ts --cfg=legacy --out=<dir>/legacy.json   # also --cfg=next, ns_*, see CONFIGS
+    npx tsx scripts/audit-report.ts --dir=<dir> --base=legacy --cfgs=next --win=A|H|B|M
+    npx tsx scripts/audit-layer.ts --dir=<dir> --cfgs=ns_legacy,ns_c11   # refit the sweet-spot layer
     npx tsx scripts/model-lab.ts --from=2425 --to=2425
     npx tsx scripts/model-lab.ts --from=2526 --to=2627
     npx tsx scripts/market-audit.ts       # per-family calibration and skill
+
+## G. What was done on 4 Nov 2026 (follow-up)
+
+Everything below is gated on kickoff: games before **5 Nov 2026 00:00 Lagos**
+keep the parameters they were published under, to the millisecond
+(`src/lib/model/params.ts`, tests in `params.test.ts`). Today's picks do not move.
+
+**Shipped (from 5 Nov)**
+
+| Change | Evidence |
+|---|---|
+| No headline pick below 65% | Ranker picks stated 60-65% landed 60.5% (replay 2025-26, n=243), 61.0% (Sep-Oct 2026 replay, n=41), 63.3% (live since 7 Oct, n=49); 65%+ landed at or above stated. Hit rate +0.53 / +0.73 / +0.63 points on the three samples. Costs ~4% of games their pick. |
+| Overs tilt 0.02 in the headline ranking | Owner's request. Neutral on replay (+0.16 and 0.00 points, interval includes 0); adds ~30% more over picks. A 0.04 tilt and a 65% bar for over 2.5 were tested and not better. |
+| CAF Champions League: no headline pick | 9 of 23 live picks landed against 64% stated (thin pooled history; the Oct audit's market check already flagged its over-goals picks). Reversible: `headlineHold` in `params.ts`. |
+| Neutral-venue totals fix (A4) | Arithmetic and unit test; no replay data for tournaments. |
+| Promoted-club prior off for pooled competitions (A5) | Principle only; it was never tested outside domestic leagues. |
+| Finished games predict from results before kickoff (A1) | Unit tests (`as-of.test.ts`). |
+| Quarter-line comment fixed, behaviour pinned by tests (A2) | See A2. |
+
+**End to end through the real `buildPrediction`** (`audit-eval.ts --cfg=next`
+against `--cfg=legacy`; 17 divisions, walk-forward):
+
+| Sample | Fixtures | Hit: before | after | Change (95%) | Picks kept |
+|---|---|---|---|---|---|
+| A: Aug 2023 - Jun 2026 | 17,857 | 77.2% | 77.8% | +0.64 (0.40 to 0.89) | 96.5% |
+| A held out: 2025-26 | 5,911 | 77.1% | 78.0% | +0.87 (0.35 to 1.44) | 96.3% |
+| B: Sep - Oct 2026 | 1,165 | 78.0% | 78.4% | +0.47 (-0.37 to 1.52) | 97.0% |
+
+Probabilities (log loss) are unchanged by the shipped set; it works on which
+picks go out.
+
+**Tested and not shipped**
+
+| Change | Result |
+|---|---|
+| Lower regularisation + strength stretch 1.1 / 1.2 | 1X2 log loss -0.0024 to -0.0028 (interval excludes 0), but pick hit -0.7 to -1.2 points. With the sweet-spot rules refitted on its own numbers (derive 2023-25, score 2025-26) hit was 76.4% against 77.3% for the current model refitted the same way. Better probabilities, not better picks. |
+| Recent scoring-level adjustment (60 / 90-day) | No change on A (O/U log loss 0.6821 against 0.6820); a small gain only on Sep-Oct. |
+| Over 2.5 bar at 65% instead of 70% | Hit -0.69 on B. |
+
+**Where the decline came from.** Live, `goals-v1` (to 6 Oct) landed 66.3% against
+69.9% stated, and picks with no league code (trained on 15-35 results)
+57.8% against 72.3% (n=166). Since the switch to `goals-v2` on 6 Oct:
+75.8% against 75.2% stated on 1,032 picks. Replaying `goals-v2` on September
+and October fixtures gives 76.8% and 78.9%, so the model change had already
+fixed most of it. Unders landed 56.1% against 72.4% in Sep-Oct (paused 16 Oct).
+
+**Still open:** A3 (extra-time scores in the national-team data; the source
+carries no flag to separate them), corners picks overstated live (75.0% against
+81.8% stated, n=48), Liga MX 62.8% against 74.0% (n=43), the market check's
+evidence (closing prices stand in for publish-time prices), and the frozen
+holdout recommended in section F.

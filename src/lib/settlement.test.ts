@@ -84,3 +84,15 @@ describe("evaluateStatPick", () => {
     expect(evaluatePick("corners:under:12.5", 1, 0)).toBeNull();
   });
 });
+
+describe("quarter lines", () => {
+  it("grades a half win as a win and a half loss as a loss, handicaps and totals alike", () => {
+    expect(evaluatePick("ah:home:-0.25", 1, 1)).toBe("lose"); // half loses, half refunded
+    expect(evaluatePick("ah:home:0.25", 1, 1)).toBe("win"); // half wins, half refunded
+    expect(evaluatePick("ah:home:-0.75", 1, 0)).toBe("win");
+    expect(evaluatePick("ou:over:2.25", 1, 1)).toBe("lose"); // over 2.0 refunds, over 2.5 loses
+    expect(evaluatePick("ou:under:2.25", 1, 1)).toBe("win");
+    expect(evaluatePick("ou:under:2.75", 2, 1)).toBe("lose"); // under 3.0 refunds, under 2.5 loses
+    expect(evaluatePick("ou:over:2.75", 2, 1)).toBe("win");
+  });
+});
