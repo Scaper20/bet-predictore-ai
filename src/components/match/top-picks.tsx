@@ -43,8 +43,8 @@ export async function TopPicks({
         </h2>
         <SharePicksButton matchId={prediction.match.id} label={`${prediction.match.home.name} v ${prediction.match.away.name}`} />
       </div>
-      {picks.map((p) => (
-        <PickCard key={p.market} pick={p} strong={p.headline && strong} match={prediction.match}>
+      {picks.map((p, i) => (
+        <PickCard key={p.market} n={i + 1} pick={p} strong={p.headline && strong} match={prediction.match}>
           {p.headline ? notes : null}
         </PickCard>
       ))}
@@ -63,23 +63,28 @@ const OUTCOME = {
  * the combo. The reasons stay as chips; the other lines and the why fold
  * into one drawer, so three picks read at a glance.
  */
-function PickCard({ pick, strong, match, children }: { pick: TopPick; strong: boolean; match: Match; children?: React.ReactNode }) {
+function PickCard({ n, pick, strong, match, children }: { n: number; pick: TopPick; strong: boolean; match: Match; children?: React.ReactNode }) {
   const outcome = pick.outcome ? OUTCOME[pick.outcome] : null;
   const asPick = { market: pick.market, label: pick.label, group: pick.group, probability: pick.probability, fairOdds: pick.probability > 0 ? 1 / pick.probability : 0, confidence: 0 };
   return (
-    <article className={`card rounded-2xl p-4 ${pick.headline ? "orbit-border" : ""}`}>
+    <article className="card rounded-2xl p-4">
       <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0">
+        <div className="flex min-w-0 items-start gap-3">
+          <span aria-label={`Pick ${n}`} className="mt-0.5 inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-brand/15 font-mono text-[12px] font-bold text-brand">
+            {n}
+          </span>
+          <div className="min-w-0">
           <p className="flex flex-wrap items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-ink-dim">
-            {pick.headline ? "Our pick" : pick.group}
+            {pick.group}
             {strong && <StrongBadge />}
             <RiskBadge pick={pick} />
             {outcome && <span className={`inline-flex h-5 items-center rounded-full px-2 text-[10px] font-semibold normal-case tracking-normal ${outcome.tone}`}>{outcome.text}</span>}
           </p>
-          <h3 className={`mt-1 font-display font-bold leading-snug text-ink ${pick.headline ? "text-xl sm:text-2xl" : "text-base sm:text-lg"}`}>{pick.label}</h3>
+          <h3 className="mt-1 font-display text-base font-bold leading-snug text-ink sm:text-lg">{pick.label}</h3>
+          </div>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1.5">
-          <span className={`tnum font-mono font-semibold tracking-tight text-brand ${pick.headline ? "text-2xl" : "text-lg"}`}>{percent(pick.probability)}</span>
+          <span className="tnum font-mono text-lg font-semibold tracking-tight text-brand">{percent(pick.probability)}</span>
           <PickAction match={match} pick={asPick} />
         </div>
       </div>

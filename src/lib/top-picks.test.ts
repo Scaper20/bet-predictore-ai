@@ -153,6 +153,18 @@ describe("ordered top picks (from the 6 Nov 2026 cutover)", () => {
     expect(t.map((x) => x.market)).toEqual(["dc:home-draw", "ou:over:1.5", "btts:yes"]);
   });
 
+  it("still returns three when almost nothing clears the floor", () => {
+    const sparse = [
+      pk("dc:home-draw", 0.7, "Double Chance", "Home or Draw", 60),
+      pk("ou:over:1.5", 0.7, "Goals", "Over 1.5 Goals", 55),
+      pk("btts:yes", 0.48, "Both Teams To Score", "Both Teams To Score", 30),
+      pk("ah:home:-0.5", 0.52, "Asian Handicap", "Home -0.5 handicap", 40),
+    ];
+    const t = buildTopPicks({ prediction: at(AFTER, { picks: sparse }) });
+    expect(t).toHaveLength(3);
+    expect(t.map((x) => x.market)).toEqual(["dc:home-draw", "ou:over:1.5", "ah:home:-0.5"]);
+  });
+
   it("keeps unders out while they are paused, and never pairs BTTS no with an over", () => {
     const t = buildTopPicks({
       prediction: at(AFTER, {

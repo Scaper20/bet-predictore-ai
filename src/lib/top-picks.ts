@@ -347,6 +347,20 @@ export function orderedPicks(pr: Prediction, head: Pick): Pick[] {
   while (chosen.length < 3 && take(slot("exotic", ORDER_RELAXED_FLOOR).sort(byChance))) {
     /* keeps taking the next likeliest unusual market */
   }
+  // Last resorts, so a game never shows two: the half-goal handicaps, then anything
+  // still likely enough to be a reasonable lean that does not contradict the rest.
+  if (chosen.length < 3) {
+    const handicaps = pr.picks.filter((x) => x.group === "Asian Handicap" && !isPausedPick(x.market) && !chosen.includes(x) && x.probability >= 0.5 && x.probability <= ORDER_CAP);
+    while (chosen.length < 3 && take(handicaps.sort(byChance))) {
+      /* the likeliest handicap first */
+    }
+  }
+  if (chosen.length < 3) {
+    const rest = pool.filter((x) => x.probability >= 0.45 && x.probability <= ORDER_CAP).sort(byChance);
+    while (chosen.length < 3 && take(rest)) {
+      /* the likeliest of what is left */
+    }
+  }
 
   // A fourth, rarely: another unusual market that is very likely.
   if (chosen.length === 3 && filled.size === 3) take(slot("exotic", FOURTH_FLOOR).sort(byChance));
