@@ -1,3 +1,4 @@
+import { ViewerPlanTag } from "@/components/ui/plan-tag";
 import Link from "next/link";
 import { ProTag } from "@/components/entitlements/locked-pick";
 import { percent } from "@/lib/format";
@@ -20,7 +21,7 @@ export function MorePredictions({ prediction }: { prediction: ViewedPrediction }
   return (
     <section aria-label="More predictions" className="card p-5 sm:p-6">
       <div className="flex items-baseline justify-between gap-3">
-        <h2 className="font-sans text-sm font-semibold uppercase tracking-wider text-ink-muted">More predictions</h2>
+        <h2 className="flex items-center gap-2 font-sans text-sm font-semibold uppercase tracking-wider text-ink-muted">More predictions <ViewerPlanTag /></h2>
         <p className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-ink-dim">Best per market · 1.20+</p>
       </div>
       <ul className="mt-4 divide-y divide-line/70">

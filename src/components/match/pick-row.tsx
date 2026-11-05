@@ -9,6 +9,8 @@ import { RISK, riskFor } from "@/lib/model/risk";
 import { LockedSelection, ProTag } from "@/components/entitlements/locked-pick";
 import { PickAction, useLiveScore } from "@/components/match/pick-action";
 import { LiveDot } from "@/components/ui/primitives";
+import { ViewerPlanTag } from "@/components/ui/plan-tag";
+import { isProLeague } from "@/lib/pro-leagues";
 import { liveState, type LiveState } from "@/lib/live-state";
 import { isStatMarket } from "@/lib/model/sweet-spots";
 import type { PickRowData } from "@/lib/pick-list";
@@ -84,6 +86,7 @@ export function PickRow({ row }: { row: PickRowData }) {
             {shortPickLabel(pick.label)}
           </span>
         )}
+        {!locked && isProLeague(row.league.code) && <ViewerPlanTag />}
         {standing && <span className={`pr-st pr-st-${standing}`}>{STANDING[standing]}</span>}
         {row.strong && !standing && <span className="pr-strong">★ Strong</span>}
         {risk && <span className={`pr-risk pr-${risk} pr-narrow`}>{RISK[risk].label.replace(" risk", "")}</span>}

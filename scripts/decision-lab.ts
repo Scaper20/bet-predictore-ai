@@ -44,6 +44,7 @@ import { isQuotable } from "../src/lib/odds/markets";
 import { digestPick } from "../src/lib/whatsapp-digest";
 import { twinsOf } from "../src/lib/odds/bookable";
 import { csv, parse, priceFor, toMatch, toResultRow, type Row } from "./lib/football-data-uk";
+import { clampEnd } from "./lib/holdout";
 
 const DAY = 86_400_000;
 const TRAIN_CAP = 1200;
@@ -90,7 +91,8 @@ async function load(div: string): Promise<Row[]> {
 }
 
 function walk(d: (typeof DIVS)[number], rows: Row[], days: number): Graded[] {
-  const end = Date.now();
+  // Stops at 31 Oct 2026 unless --final: the frozen holdout (scripts/lib/holdout.ts).
+  const end = Math.min(Date.now(), Date.parse(clampEnd(undefined, process.argv.includes("--final"))) + DAY);
   const target = rows.filter((r) => r.date >= end - days * DAY && r.date <= end);
   const league = { code: d.code, label: d.label };
   const fits = new Map<number, ReturnType<typeof fitLeague>>();

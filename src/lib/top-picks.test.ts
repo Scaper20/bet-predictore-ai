@@ -114,3 +114,91 @@ describe("top picks", () => {
     expect(t[1].market).toBe("ou:over:1.5");
   });
 });
+
+describe("ordered top picks (from the 6 Nov 2026 cutover)", () => {
+  const AFTER = "2026-11-06T15:00:00Z";
+  const BEFORE = "2026-11-05T15:00:00Z";
+  const at = (kickoff: string, over: Partial<Prediction> & { picks: Pick[] }) => {
+    const p = pred(over);
+    (p.match as { kickoff: string }).kickoff = kickoff;
+    return p;
+  };
+  const pool = [
+    pk("ou:over:2.5", 0.7, "Goals", "Over 2.5 Goals", 62),
+    pk("1x2:home", 0.62, "Match Result", "Home Win", 52),
+    pk("dc:home-draw", 0.84, "Double Chance", "Home or Draw", 70),
+    pk("btts:yes", 0.69, "Both Teams To Score", "Both Teams To Score", 55),
+    pk("ou:over:1.5", 0.86, "Goals", "Over 1.5 Goals", 64),
+  ];
+
+  it("keeps games before the cutover exactly as they were", () => {
+    const t = buildTopPicks({ prediction: at(BEFORE, { picks: pool }) });
+    expect(t.map((x) => x.market)).toEqual(["ou:over:2.5", "dc:home-draw", "btts:yes"]);
+  });
+
+  it("orders result or double chance, then goals, then the likeliest unusual market", () => {
+    const t = buildTopPicks({ prediction: at(AFTER, { picks: pool }) });
+    expect(t.map((x) => x.market)).toEqual(["dc:home-draw", "ou:over:2.5", "btts:yes"]);
+    // The published headline keeps its badge wherever the order puts it.
+    expect(t.find((x) => x.headline)?.market).toBe("ou:over:2.5");
+  });
+
+  it("always returns three, relaxing the floor rather than leaving a slot empty", () => {
+    const thin = [
+      pk("dc:home-draw", 0.8, "Double Chance", "Home or Draw", 70),
+      pk("btts:yes", 0.58, "Both Teams To Score", "Both Teams To Score", 40),
+      pk("ou:over:1.5", 0.6, "Goals", "Over 1.5 Goals", 45),
+    ];
+    const t = buildTopPicks({ prediction: at(AFTER, { picks: thin }) });
+    expect(t.map((x) => x.market)).toEqual(["dc:home-draw", "ou:over:1.5", "btts:yes"]);
+  });
+
+  it("still returns three when almost nothing clears the floor", () => {
+    const sparse = [
+      pk("dc:home-draw", 0.7, "Double Chance", "Home or Draw", 60),
+      pk("ou:over:1.5", 0.7, "Goals", "Over 1.5 Goals", 55),
+      pk("btts:yes", 0.48, "Both Teams To Score", "Both Teams To Score", 30),
+      pk("ah:home:-0.5", 0.52, "Asian Handicap", "Home -0.5 handicap", 40),
+    ];
+    const t = buildTopPicks({ prediction: at(AFTER, { picks: sparse }) });
+    expect(t).toHaveLength(3);
+    expect(t.map((x) => x.market)).toEqual(["dc:home-draw", "ou:over:1.5", "ah:home:-0.5"]);
+  });
+
+  it("keeps unders out while they are paused, and never pairs BTTS no with an over", () => {
+    const t = buildTopPicks({
+      prediction: at(AFTER, {
+        picks: [
+          pk("dc:home-draw", 0.84, "Double Chance", "Home or Draw", 70),
+          pk("ou:under:2.5", 0.7, "Goals", "Under 2.5 Goals", 60),
+          pk("ou:over:1.5", 0.8, "Goals", "Over 1.5 Goals", 62),
+          pk("btts:no", 0.72, "Both Teams To Score", "Both Teams To Score - No", 58),
+        ],
+      }),
+    });
+    expect(t.map((x) => x.market)).not.toContain("ou:under:2.5");
+    expect(t.map((x) => x.market)).not.toContain("btts:no");
+  });
+
+  it("takes the likeliest unusual market third, and a fourth only when a second is also very likely", () => {
+    const one = [...pool, pk("raw:450001::3", 0.87, "Goals", "Goal bounds 0-3", 60)];
+    const t = buildTopPicks({ prediction: at(AFTER, { picks: one }) });
+    expect(t.map((x) => x.market)).toEqual(["dc:home-draw", "ou:over:2.5", "raw:450001::3"]);
+
+    const two = [...one, pk("raw:900984::74", 0.86, "Goals", "Both halves over 0.5", 58)];
+    const four = buildTopPicks({ prediction: at(AFTER, { picks: two }) });
+    expect(four.map((x) => x.market)).toEqual(["dc:home-draw", "ou:over:2.5", "raw:450001::3", "raw:900984::74"]);
+    expect(buildTopPicks({ prediction: at(AFTER, { picks: pool }) })).toHaveLength(3);
+  });
+
+  it("serves the frozen picks exactly as published, whatever the live picks now say", () => {
+    const p = at(AFTER, { picks: pool });
+    p.frozenTopPicks = [
+      { market: "dc:home-draw", label: "Home or Draw", group: "Double Chance", probability: 0.8 },
+      { market: "ou:over:2.5", label: "Over 2.5 Goals", group: "Goals", probability: 0.66 },
+      { market: "btts:yes", label: "Both Teams To Score", group: "Both Teams To Score", probability: 0.64 },
+    ];
+    const t = buildTopPicks({ prediction: p });
+    expect(t.map((x) => [x.market, x.probability])).toEqual([["dc:home-draw", 0.8], ["ou:over:2.5", 0.66], ["btts:yes", 0.64]]);
+  });
+});

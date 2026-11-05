@@ -7,8 +7,8 @@ import { getEntitlement } from "@/lib/entitlements";
 import { viewerForTier } from "@/lib/viewer";
 import { viewPrediction } from "@/lib/access";
 import { fixtureStatMarkets } from "@/lib/stat-markets-service";
-import { buildTopPicks, type LiveState, type TopPick } from "@/lib/top-picks";
-import { withStatOutcomes } from "@/lib/stat-results";
+import type { LiveState, TopPick } from "@/lib/top-picks";
+import { topPicksForView } from "@/lib/top-picks-view";
 import { RISK, riskFor } from "@/lib/model/risk";
 import { isStrong } from "@/lib/model/tiers";
 import { flagUrl } from "@/lib/flags";
@@ -222,19 +222,18 @@ function StandingChip({ c, s }: { c: Pal; s: Standing }) {
   }
 }
 
-function PickCard({ c, pick, strong, home, away, phase }: { c: Pal; pick: TopPick; strong: boolean; home: string; away: string; phase: "before" | "live" | "over" }) {
+function PickCard({ n, c, pick, strong, home, away, phase }: { n: number; c: Pal; pick: TopPick; strong: boolean; home: string; away: string; phase: "before" | "live" | "over" }) {
   const level = riskFor(pick.probability);
   const s = standingOf(pick, phase);
   const good = s === "won" || s === "winning";
   const bad = s === "lost" || s === "losing";
-  const edge = s === "won" ? c.accent : s === "lost" ? c.signal : good ? c.accentEdge : bad ? c.signal : pick.headline ? c.accentEdge : c.line;
+  const edge = s === "won" ? c.accent : s === "lost" ? c.signal : good ? c.accentEdge : bad ? c.signal : c.line;
   const fill = s === "won" ? c.accentSoft : s === "lost" ? c.signalSoft : c.card;
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 28, padding: "30px 32px", borderRadius: 32, background: fill, border: `${s === "won" || s === "lost" ? 3 : 2}px solid ${edge}` }}>
       <div style={{ display: "flex", flexDirection: "column", flex: 1, gap: 12 }}>
         <div style={{ ...MONO, display: "flex", alignItems: "center", gap: 14, fontSize: 20, letterSpacing: 2.5, color: c.muted }}>
-          {pick.headline ? <div style={{ display: "flex", color: c.accent }}>KiqStat pick</div> : null}
-          {pick.headline ? <div style={{ display: "flex", color: c.dim }}>/</div> : null}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 40, height: 40, borderRadius: 20, background: c.accentSoft, color: c.accent, fontWeight: 700, fontSize: 24 }}>{n}</div>
           <div style={{ display: "flex" }}>{pick.group}</div>
         </div>
         <div style={{ display: "flex", fontFamily: "Space Grotesk", fontWeight: 700, fontSize: 46, lineHeight: 1.1, color: s === "lost" ? c.muted : c.text, textDecoration: s === "lost" ? "line-through" : "none" }}>
@@ -271,8 +270,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const prediction = viewPrediction(detail.prediction, viewer);
   const { match } = detail;
   const extra = viewer.paid && !prediction.locked.proLeague ? await fixtureStatMarkets(match, detail.prediction).catch(() => null) : null;
-  // Corners and shots grade from ESPN minutes after full time, not days later.
-  const picks = await withStatOutcomes(buildTopPicks({ prediction, corners: extra?.stats.corners }), match);
+  // The same function the match page builds its Top picks block with, so the image shows exactly those picks.
+  const picks = await topPicksForView(prediction, extra?.stats.corners);
   if (picks.length === 0) return new Response("No picks to share for this match yet", { status: 404 });
 
   const [fontList, homeCrest, awayCrest] = await Promise.all([
@@ -364,8 +363,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
           {tally ? <div style={{ ...MONO, display: "flex", fontSize: 21, letterSpacing: 2, color: c.accent }}>{tally}</div> : null}
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 22, marginTop: 28 }}>
-          {picks.map((p) => (
-            <PickCard key={p.market} c={c} pick={p} strong={p.headline && strong} home={match.home.name} away={match.away.name} phase={live ? "live" : match.status === "finished" ? "over" : "before"} />
+          {picks.map((p, i) => (
+            <PickCard key={p.market} n={i + 1} c={c} pick={p} strong={p.headline && strong} home={match.home.name} away={match.away.name} phase={live ? "live" : match.status === "finished" ? "over" : "before"} />
           ))}
         </div>
 

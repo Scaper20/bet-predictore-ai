@@ -1,3 +1,4 @@
+import { buildTopPicks, TOP_PICKS_ORDER_FROM } from "@/lib/top-picks";
 import { NextResponse } from "next/server";
 import { fairChanceOn, priceInSnapshot } from "@/lib/odds/market-prob";
 import { priceOn, toSportyBet } from "@/lib/odds/markets";
@@ -51,6 +52,11 @@ export async function GET(request: Request) {
   return NextResponse.json({ logged, settled });
 }
 
+/** The picks the page would lead with for this game, in order, as stored. */
+function frozenFor(p: Awaited<ReturnType<typeof predictBatch>>[number]) {
+  return buildTopPicks({ prediction: p }).map(({ market, label, group, probability }) => ({ market, label, group, probability }));
+}
+
 async function logUpcomingPicks(admin: ReturnType<typeof supabaseAdmin>): Promise<number> {
   const { matches: feed } = await upcomingFeed(2);
   // Only games that have not started. A game is logged once: the first run
@@ -89,6 +95,10 @@ async function logUpcomingPicks(admin: ReturnType<typeof supabaseAdmin>): Promis
       // record is only honest because nothing decides a tier after a result.
       confidence: Math.round(p.topPick!.confidence),
       pick_tier: pickTier(p.topPick!.confidence, p.match.league.code),
+      // The match page's top picks, frozen with the headline from the cutover
+      // on (top-picks.ts), so none of the three changes before, during or
+      // after the game. Null for earlier games, which keep the old behaviour.
+      top_picks: Date.parse(p.match.kickoff) >= TOP_PICKS_ORDER_FROM ? frozenFor(p) : null,
     }));
 
   if (rows.length === 0) return 0;
