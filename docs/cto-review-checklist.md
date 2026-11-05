@@ -21,7 +21,7 @@ the checklist so it is visible next to the code. Owners: Claude (code, data, rep
 - [ ] 2.5 Allowance versus cap decision per plan, then implemented (Founder decides, Claude implements)
 
 ## 3. AI sustainability
-- [ ] 3.1 Offline verification incl. cancelled-call cost booking (Claude)
+- [x] 3.1 Offline verification incl. cancelled-call cost booking: cancelled calls now booked for streamed text and sent prompt (Claude, 5 Nov)
 - [ ] 3.2 Live benchmark, 40 questions × 5 configurations, ≤ about US$4; needs `ANTHROPIC_TEST_API_KEY` (Both)
 - [ ] 3.3 Ledger reconciled with Anthropic billing; overrun rule (Both)
 - [ ] 3.4 Margin and abnormal-usage alerts (Claude)

@@ -23,6 +23,7 @@ interface Script {
     usage: Partial<Usage>;
     stop?: string;
     fail?: unknown;
+    noUsage?: boolean;
   };
 }
 
@@ -50,10 +51,10 @@ function fakeClient(script: Script) {
               listeners.push(cb);
               return this;
             },
-            currentMessage: { usage },
+            currentMessage: r.noUsage ? undefined : { usage },
             async finalMessage() {
-              if (r.fail) throw r.fail;
               if (r.text) for (const l of listeners) l(r.text);
+              if (r.fail) throw r.fail;
               const content = r.tool && req.tool_choice?.type !== "none"
                 ? [{ type: "tool_use", id: `t${requests.length}`, name: "get_prediction", input: { match_id: "x" } }]
                 : [{ type: "text", text: r.text ?? "" }];
@@ -127,6 +128,36 @@ describe("runAsk", () => {
     expect(r.outcome).toBe("aborted");
     expect(r.calls[0].aborted).toBe(true);
     expect(r.costMicros).toBe(2500 * 0.1 + 180 * 0.5);
+  });
+
+  it("books a cancelled call for the text it had streamed, not the first-event count", async () => {
+    const controller = new AbortController();
+    const text = "x".repeat(2500); // about 1,000 tokens
+    const { client } = fakeClient({
+      reply: () => {
+        controller.abort();
+        // The SDK's snapshot of a half-finished stream still shows the opening output count.
+        return { text, usage: { input_tokens: 2500, output_tokens: 1 }, fail: new Anthropic.APIUserAbortError() };
+      },
+    });
+    const r = await runAsk({ client, config: askConfig({}), messages: question, toolContext: ctx, emit: () => {}, signal: controller.signal, ceilingMicros: null, enforce: false });
+    expect(r.outcome).toBe("aborted");
+    expect(r.calls[0].output).toBe(1000);
+    expect(r.costMicros).toBe(2500 * 0.1 + 1000 * 0.5);
+  });
+
+  it("books a call cancelled before the message started for the prompt it sent", async () => {
+    const controller = new AbortController();
+    const { client } = fakeClient({
+      reply: () => {
+        controller.abort();
+        return { usage: {}, fail: new Anthropic.APIUserAbortError(), noUsage: true };
+      },
+    });
+    const r = await runAsk({ client, config: askConfig({}), messages: question, toolContext: ctx, emit: () => {}, signal: controller.signal, ceilingMicros: null, enforce: false });
+    expect(r.outcome).toBe("aborted");
+    expect(r.calls[0].aborted).toBe(true);
+    expect(r.costMicros).toBeGreaterThan(0);
   });
 
   it("flags an empty credit balance as a billing failure", async () => {
