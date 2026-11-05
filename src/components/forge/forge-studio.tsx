@@ -1,5 +1,6 @@
 "use client";
 
+import { ViewerPlanTag } from "@/components/ui/plan-tag";
 import { utmUrl } from "@/lib/utm";
 import { CANONICAL_ORIGIN } from "@/lib/site-url";
 import Link from "next/link";
@@ -480,7 +481,10 @@ function SettingsPanel({
                     on ? "border-brand/40 bg-brand/12 text-brand" : "border-line text-ink-muted hover:border-line-strong hover:text-ink"
                   }`}
                 >
-                  <span className="truncate">{m.label}</span>
+                  <span className="flex min-w-0 items-center gap-1.5">
+                    <span className="truncate">{m.label}</span>
+                    {m.paid && <ViewerPlanTag />}
+                  </span>
                   <span aria-hidden className={`grid size-4 shrink-0 place-items-center rounded-full border text-[9px] ${on ? "border-brand bg-brand text-brand-ink" : "border-line-strong"}`}>
                     {on ? "✓" : ""}
                   </span>

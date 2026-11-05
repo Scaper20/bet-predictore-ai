@@ -8,7 +8,7 @@
 
 import type { FormEntry, Pick, Prediction } from "@/lib/model/predict";
 import type { StatMarkets } from "@/lib/model/match-stats";
-import { evaluatePick } from "@/lib/settlement";
+import { gradePick, halftimeOf } from "@/lib/pick-grade";
 import { sweetSpotLabel } from "@/lib/model/sweet-spots";
 import { isPausedPick } from "@/lib/model/paused";
 import { bestListedLine, type ListedLine } from "@/lib/board-pick";
@@ -412,7 +412,7 @@ export function buildTopPicks({ prediction: pr, corners, listed }: TopPicksInput
     return live ? { live } : {};
   };
   return chosen.map((p) => {
-    const outcome = finished && familyOf(p.market) !== "corners" ? evaluatePick(p.market, pr.match.score.home ?? 0, pr.match.score.away ?? 0) : null;
+    const outcome = finished && familyOf(p.market) !== "corners" ? gradePick(p.market, pr.match.score.home ?? 0, pr.match.score.away ?? 0, halftimeOf(pr.match.halftime)) : null;
     return {
       market: p.market,
       label: p.group === "Asian Handicap" ? sweetSpotLabel(p.market) : p.label,

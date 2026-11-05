@@ -4,10 +4,11 @@ import { percent } from "@/lib/format";
 import { isStrong } from "@/lib/model/tiers";
 import type { ViewedPrediction } from "@/lib/access";
 import type { StatMarkets } from "@/lib/model/match-stats";
-import { buildTopPicks, type TopPick } from "@/lib/top-picks";
-import { listedLinesFor } from "@/lib/sportybet-lines";
-import { withStatOutcomes } from "@/lib/stat-results";
+import type { TopPick } from "@/lib/top-picks";
+import { topPicksForView } from "@/lib/top-picks-view";
 import { SharePicksButton } from "@/components/match/share-picks-button";
+import { ViewerPlanTag } from "@/components/ui/plan-tag";
+import { isProLeague } from "@/lib/pro-leagues";
 import { PickAction } from "@/components/match/pick-action";
 import type { Match } from "@/lib/types";
 
@@ -27,10 +28,7 @@ export async function TopPicks({
   /** Shown under the headline pick: why it isn't the model's first lean, thin data, and so on. */
   notes?: React.ReactNode;
 }) {
-  // Corners and shots grade from ESPN minutes after full time, not days later.
-  // Only Pro sees the corners slot, so only then is SportyBet's board read for it.
-  const listed = corners ? await listedLinesFor(prediction.match, prediction).catch(() => null) : undefined;
-  const picks = await withStatOutcomes(buildTopPicks({ prediction, corners, listed }), prediction.match);
+  const picks = await topPicksForView(prediction, corners);
   if (picks.length === 0) return null;
   const strong = isStrong(prediction.topPick, prediction.match.league.code);
 
@@ -40,6 +38,7 @@ export async function TopPicks({
         <h2 className="flex items-center gap-2 font-sans text-sm font-semibold uppercase tracking-wider text-ink-muted">
           Top picks
           <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-brand/15 px-1.5 text-[11px] font-bold text-brand">{picks.length}</span>
+          {isProLeague(prediction.match.league.code) && <ViewerPlanTag />}
         </h2>
         <SharePicksButton matchId={prediction.match.id} label={`${prediction.match.home.name} v ${prediction.match.away.name}`} />
       </div>

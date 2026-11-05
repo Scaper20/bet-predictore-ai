@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Badge, type Tone } from "@/components/ui/primitives";
+import { PlanTag } from "@/components/ui/plan-tag";
 import { LocalTime } from "@/components/ui/local-time";
 import { CodeBox } from "@/components/code-hub/code-box";
 import { APP_TIMEZONE, odds, percent } from "@/lib/format";
@@ -72,11 +73,7 @@ export function HubCard(props: HubCardProps) {
               <div className="flex flex-wrap items-center gap-2">
                 <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-brand">{tier.name}</p>
                 {status && <Badge tone={status.tone}>{status.text}</Badge>}
-                {props.plan && (
-                  <Badge tone={props.plan === "vip" ? "violet" : "cyan"} className="px-1.5 py-0 text-[9px] uppercase tracking-[0.12em]">
-                    {props.plan}
-                  </Badge>
-                )}
+                {props.plan && <PlanTag plan={props.plan} />}
               </div>
               <p className="mt-1 text-xs text-ink-muted">
                 {props.legs.length} games{tier.days > 1 && <> over {daySpan(props.legs)}</>} · chance{" "}

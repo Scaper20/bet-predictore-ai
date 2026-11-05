@@ -12,6 +12,7 @@ import { lastSnapshotBefore } from "@/lib/odds/sportybet-links";
 import { looseKey, nameBook, nameScope } from "@/lib/teams/canonical";
 import type { Match } from "@/lib/types";
 import { settleStep, type SettleOpts } from "@/lib/settlement-timing";
+import { gradePick, halftimeOf } from "@/lib/pick-grade";
 
 /**
  * Service-role I/O for settlement + the match-results archive — kept out of
@@ -65,6 +66,14 @@ export async function captureMatchResults(
   }));
   const { error } = await admin.from("match_results").upsert(rows, { onConflict: "match_id" });
   if (error) return;
+  // The half-time score, kept for the markets settled on the halves. Written
+  // apart from the rows above so a later capture that lacks it (a feed with no
+  // half-time score) can never wipe the one stored while the game was at the
+  // break: the score at the break IS the half-time score.
+  for (const m of matches) {
+    const ht = halftimeOf(m.halftime) ?? (m.status === "halftime" ? halftimeOf(m.score) : null);
+    if (ht) await admin.from("match_results").update({ ht_home: ht.home, ht_away: ht.away }).eq("match_id", m.id);
+  }
   for (const m of matches) {
     // Re-inserting moves it to the newest end, so the oldest are the ones dropped.
     captured.delete(m.id);
@@ -115,9 +124,10 @@ export async function runSettlementPass(
   // The scores already stored, in one read.
   const { data: stored } = await admin
     .from("match_results")
-    .select("match_id, status, home_goals, away_goals")
+    .select("match_id, status, home_goals, away_goals, ht_home, ht_away")
     .in("match_id", [...new Set(pending.map((r) => r.match_id as string))]);
   const results = new Map((stored ?? []).map((r) => [r.match_id as string, r]));
+  const archive = new Map<string, ArchiveHalf[]>();
 
   let settledCount = 0;
   let refetchesLeft = opts.maxRefetch ?? Number.POSITIVE_INFINITY;
@@ -161,7 +171,7 @@ export async function runSettlementPass(
           statCache,
           espnCache,
         )
-      : evaluatePick(market, homeGoals, awayGoals);
+      : await gradeAny(admin, { market, league_code: row.league_code, home_name: row.home_name, away_name: row.away_name, kickoff: row.kickoff, hg: homeGoals, ag: awayGoals }, halftimeOf({ home: cached?.ht_home ?? null, away: cached?.ht_away ?? null }), archive);
     if (!result) continue;
 
     const closing = await closingFor(matchId, row.kickoff as string, market);
@@ -217,7 +227,7 @@ export async function settleShadowPicks(admin: SupabaseClient): Promise<number> 
   const ids = [...new Set(rows.map((r) => r.match_id as string))];
   const { data: results } = await admin
     .from("match_results")
-    .select("match_id, home_goals, away_goals")
+    .select("match_id, home_goals, away_goals, ht_home, ht_away")
     .in("match_id", ids)
     .eq("status", "finished");
   const scores = new Map((results ?? []).map((r) => [r.match_id as string, r]));
@@ -242,7 +252,8 @@ export async function settleShadowPicks(admin: SupabaseClient): Promise<number> 
     // Provider ids (sdb:, fd:) have no row in matches; the archive's goal
     // timelines (ESPN, nightly) carry their half-time score.
     const ht = isRawMarket(market)
-      ? (halves.get(row.match_id as string) ??
+      ? (halftimeOf({ home: s.ht_home ?? null, away: s.ht_away ?? null }) ??
+        halves.get(row.match_id as string) ??
         (await archiveHalfTime(admin, { league_code: row.league_code, home_name: row.home_name, away_name: row.away_name, kickoff: row.kickoff, hg: s.home_goals, ag: s.away_goals }, archive)))
       : null;
     const graded = isRawMarket(market)
@@ -294,10 +305,11 @@ export async function settleEnginePicks(admin: SupabaseClient, opts: SettleOpts 
   const ids = [...new Set(rows.map((r) => r.match_id as string))];
   const { data: results } = await admin
     .from("match_results")
-    .select("match_id, home_goals, away_goals")
+    .select("match_id, home_goals, away_goals, ht_home, ht_away")
     .in("match_id", ids)
     .eq("status", "finished");
   const scores = new Map((results ?? []).map((r) => [r.match_id as string, r]));
+  const archive = new Map<string, ArchiveHalf[]>();
 
   const statCache = new Map<string, StatGame[]>();
   // Inside the cron's 120 s, after the published picks have had theirs.
@@ -317,7 +329,7 @@ export async function settleEnginePicks(admin: SupabaseClient, opts: SettleOpts 
           statCache,
           espnCache,
         )
-      : evaluatePick(market, s.home_goals, s.away_goals);
+      : await gradeAny(admin, { market, league_code: row.league_code, home_name: row.home_name, away_name: row.away_name, kickoff: row.kickoff, hg: s.home_goals, ag: s.away_goals }, halftimeOf({ home: s.ht_home ?? null, away: s.ht_away ?? null }), archive);
     if (!result) continue;
     const { error } = await admin
       .from("engine_picks")
@@ -327,6 +339,23 @@ export async function settleEnginePicks(admin: SupabaseClient, opts: SettleOpts 
     if (!error) n++;
   }
   return n;
+}
+
+/**
+ * Any logged pick's grade: our own markets and the stat markets as before, the
+ * halves markets from the half-time score stored at the break (match_results),
+ * else from the nightly archive. Null while a halves market has no half-time
+ * score yet; the next pass tries again.
+ */
+async function gradeAny(
+  admin: SupabaseClient,
+  row: StatRow,
+  stored: { home: number; away: number } | null,
+  archive: Map<string, ArchiveHalf[]>,
+): Promise<PickResult | null> {
+  if (!isRawMarket(row.market)) return gradePick(row.market, row.hg, row.ag);
+  const ht = stored ?? (await archiveHalfTime(admin, row, archive));
+  return gradePick(row.market, row.hg, row.ag, ht);
 }
 
 interface ArchiveHalf {

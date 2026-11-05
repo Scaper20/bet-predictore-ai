@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { getByDate, upcomingDates } from "@/lib/providers";
+import { getByDate, getLive, upcomingDates } from "@/lib/providers";
 import { captureMatchResults, runSettlementPass } from "@/lib/settlement-runner";
 import type { Match } from "@/lib/types";
 
@@ -19,7 +19,8 @@ export const maxDuration = 120;
  *   1. Store the final score of every game that has finished today or
  *      yesterday (match_results), writing only what changed. The Code Hub,
  *      tracked slips and the track record all read the stored score.
- *   2. Settle every logged pick whose game is over, headline and engine picks
+ *   2. Store the score of any game at half-time (the half-time score).
+ *   3. Settle every logged pick whose game is over, headline and engine picks
  *      alike, corners and shots included once ESPN has the counts.
  *
  * Same CRON_SECRET gate as the other cron routes: it writes to the database.
@@ -36,6 +37,11 @@ export async function GET(request: Request) {
   const days = [upcomingDates(1, now)[0], upcomingDates(1, new Date(now.getTime() - 86_400_000))[0]];
   const games = (await Promise.all(days.map((d) => getByDate(d).catch(() => [] as Match[])))).flat();
   const stored = await captureChanged(admin, games.filter((m) => m.status === "finished"));
+
+  // Games at the break: the score then is the half-time score, which the markets
+  // on the halves are graded from. Stored only while such a pick is waiting.
+  const atBreak = (await getLive().catch(() => [] as Match[])).filter((m) => m.status === "halftime");
+  if (atBreak.length) await captureMatchResults(admin, atBreak);
 
   // From 95 minutes after kickoff a game can be over, so only then is it looked up; at most 25 look-ups a minute.
   const settled = await runSettlementPass(admin, { maxAgeHours: 8, refetchAfterMinutes: 95, maxRefetch: 25, withStats: true });

@@ -8,6 +8,8 @@ import { Crest } from "@/components/ui/crest";
 import { matchPath } from "@/lib/routes";
 import { isLockedPick } from "@/lib/access";
 import { ProTag } from "@/components/entitlements/locked-pick";
+import { ViewerPlanTag } from "@/components/ui/plan-tag";
+import { isProLeague } from "@/lib/pro-leagues";
 
 /** Compact fixture row used on the live and fixtures lists. */
 export function MatchCard({ match, prediction }: { match: Match; prediction?: Prediction }) {
@@ -77,8 +79,9 @@ export function MatchCard({ match, prediction }: { match: Match; prediction?: Pr
       {prediction && prediction.sufficiency.publishable && (
         <div className="mt-4 border-t border-line pt-4">
           <div className="mb-2.5 flex items-center justify-between gap-2">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-dim">
+            <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-ink-dim">
               Model read
+              {prediction.topPick && !isLockedPick(prediction.topPick) && isProLeague(match.league.code) && <ViewerPlanTag />}
             </span>
             {prediction.topPick &&
               (isLockedPick(prediction.topPick) ? <ProTag /> : <Badge tone="brand">{prediction.topPick.label}</Badge>)}

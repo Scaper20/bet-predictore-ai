@@ -1,5 +1,6 @@
 "use client";
 
+import { PlanTag } from "@/components/ui/plan-tag";
 import { useEffect, useRef, useState } from "react";
 import { Badge, LiveDot, ProbabilityBar } from "@/components/ui/primitives";
 import { percent } from "@/lib/format";
@@ -116,7 +117,7 @@ export function LiveWinProbabilityPanel({ matchId }: { matchId: string }) {
   return (
     <div className="card px-4 py-3">
       <div className="flex items-center justify-between gap-3">
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">Live win probability</span>
+        <span className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-ink-muted">Live win probability <PlanTag plan="vip" /></span>
         <span className="flex items-center gap-2.5">
           <span className="tnum text-sm font-bold">
             {data.currentScore.home}–{data.currentScore.away}

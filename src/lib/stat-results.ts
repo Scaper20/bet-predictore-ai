@@ -4,6 +4,8 @@ import { cached } from "@/lib/providers/cache";
 import { espnDay, espnStatsComplete, findEspnGame, type EspnResult } from "@/lib/archive/espn-shots";
 import { leagueByCode } from "@/lib/leagues";
 import { evaluateStatPick, statKindOf, type PickResult } from "@/lib/settlement";
+import { gradePick, halftimeOf } from "@/lib/pick-grade";
+import { isRawMarket } from "@/lib/odds/markets";
 import type { Match } from "@/lib/types";
 
 /**
@@ -61,17 +63,43 @@ export function statOutcome(market: string, counts: StatCounts | null): PickResu
   return evaluateStatPick(market, h, a);
 }
 
-/** Fills in the outcome of any stat pick on a finished match that has none yet. */
+/** Fills in the outcome of any stat pick, and of any halves pick, on a finished match that has none yet. */
 export async function withStatOutcomes<T extends { market: string; outcome?: PickResult }>(
   picks: T[],
-  m: Pick<Match, "kickoff" | "home" | "away" | "score" | "league" | "status">,
+  m: Pick<Match, "id" | "kickoff" | "home" | "away" | "score" | "league" | "status" | "halftime">,
 ): Promise<T[]> {
-  if (m.status !== "finished" || !picks.some((p) => !p.outcome && statKindOf(p.market))) return picks;
+  if (m.status !== "finished") return picks;
+  let out = picks;
+
+  // Halves markets: the half-time score stored at the break (match_results).
+  if (out.some((p) => !p.outcome && isRawMarket(p.market)) && m.score.home !== null && m.score.away !== null) {
+    const ht = halftimeOf(m.halftime) ?? (await storedHalfTime(m.id));
+    out = out.map((p) => {
+      if (p.outcome || !isRawMarket(p.market)) return p;
+      const outcome = gradePick(p.market, m.score.home!, m.score.away!, ht);
+      return outcome ? { ...p, outcome } : p;
+    });
+  }
+
+  if (!out.some((p) => !p.outcome && statKindOf(p.market))) return out;
   const counts = await espnCountsFor(m).catch(() => null);
-  if (!counts) return picks;
-  return picks.map((p) => {
+  if (!counts) return out;
+  return out.map((p) => {
     if (p.outcome || !statKindOf(p.market)) return p;
     const outcome = statOutcome(p.market, counts);
     return outcome ? { ...p, outcome } : p;
   });
+}
+
+/** The half-time score stored with the final score, if it was captured at the break. */
+async function storedHalfTime(matchId: string): Promise<{ home: number; away: number } | null> {
+  try {
+    const { supabasePublic } = await import("@/lib/supabase/public");
+    const db = supabasePublic();
+    if (!db) return null;
+    const { data } = await db.from("match_results").select("ht_home, ht_away").eq("match_id", matchId).maybeSingle();
+    return halftimeOf({ home: data?.ht_home ?? null, away: data?.ht_away ?? null });
+  } catch {
+    return null;
+  }
 }

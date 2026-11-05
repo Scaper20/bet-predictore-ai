@@ -54,3 +54,26 @@ Fix (migration 0100, `/api/cron/settle-finished`):
 What it cannot speed up: the score source. Final scores come from the `matches` table, refreshed every minute
 from the live-score feed; a provider that is slow to mark a game finished delays settlement by the same time.
 Postponed games stay pending until they are played, by design.
+
+## Which markets settle at full time
+
+Checked 5 Nov 2026. `gradePick` (`src/lib/pick-grade.ts`) is the one grader for every pick we publish; the
+headline log, engine picks, shadow picks and the top-picks cards all use it.
+
+| Market | Needs | Settles |
+| --- | --- | --- |
+| 1X2, double chance, draw no bet, both teams to score, over/under, handicaps, team goals, correct score | Final score | At full time |
+| Goal bounds 0-3 and 1-4 | Final score | At full time |
+| 1st half over 0.5, 2nd half over 0.5, both halves over 0.5 | Half-time score | At full time, once the half-time score is stored |
+| Corners, shots, shots on target | ESPN's counts | Minutes after full time, once ESPN has them |
+
+Before this change the headline and engine settlement did not grade the raw (SportyBet-style) markets at all,
+so a halves or goal-bounds pick would have stayed open for ever. None is logged today: the owner's selection
+switches keep them off for the headline. The new top-picks rule can use them once they are switched on, so
+they had to be covered first.
+
+**Half-time score.** Taken, in order, from the score stored at the break (`match_results.ht_home/ht_away`,
+migration 0101: the settlement route stores the score of any game at half-time, and football-data's own
+half-time score when it has one), then the nightly ESPN archive. With a halves pick waiting, the settlement job
+keeps running through the game so the break is not missed. A halves pick with no half-time score is left
+open and retried, never guessed.

@@ -11,7 +11,8 @@
 -- pick whose game started 95 minutes to 8 hours ago and is not settled, a
 -- pick whose final score is already stored but not graded (a game played on a
 -- new date), or a game that finished in the last ten minutes. A quiet night
--- makes no call at all.
+-- makes no call at all. A pick on the halves keeps it running through the game,
+-- so the half-time score is stored at the break.
 --
 -- No tables, no grants: a function and a schedule. Apply after the route is deployed.
 
@@ -47,6 +48,18 @@ begin
     or exists (
       select 1 from public.matches m
        where m.status = 'finished' and m.updated_at > now() - interval '10 minutes'
+    )
+    -- A pick on the halves waits for the half-time score, which is only there
+    -- if it is stored while the game is at the break: run through the game.
+    or exists (
+      select 1 from public.predictions_log pl
+       where pl.settled_at is null and pl.kickoff between now() - interval '3 hours' and now()
+         and pl.market like '%raw:%'
+    )
+    or exists (
+      select 1 from public.engine_picks e
+       where e.settled_at is null and e.kickoff between now() - interval '3 hours' and now()
+         and e.market like '%raw:%'
     )
   ) then
     return;
