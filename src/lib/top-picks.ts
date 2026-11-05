@@ -13,6 +13,7 @@ import { sweetSpotLabel } from "@/lib/model/sweet-spots";
 import { isPausedPick } from "@/lib/model/paused";
 import { bestListedLine, type ListedLine } from "@/lib/board-pick";
 import { LEG_MARKET_GAP } from "@/lib/market-check";
+import { NEXT_MODEL_FROM } from "@/lib/model/params";
 
 export interface Variation {
   label: string;
@@ -247,10 +248,117 @@ function cornersPick(c: StatMarkets, listed?: ListedLine[] | null): Pick | null 
   return best ? { market: best.market, label: best.label, group: "Corners", probability: best.p, fairOdds: 1 / best.p, confidence: 0 } : null;
 }
 
-export function buildTopPicks({ prediction: pr, corners, listed }: TopPicksInput): TopPick[] {
-  const head = pr.topPick;
-  if (!head || head.market === "locked" || !pr.sufficiency.publishable) return [];
 
+/**
+ * From this kickoff the page leads with picks in a fixed order (CTO review
+ * follow-up, 5 Nov 2026): the match result or double chance, then a goals
+ * line when one is favoured, then the likeliest unusual market, always three,
+ * and a fourth only when another unusual market is very likely. It is gated on
+ * KICKOFF, like the model parameters (model/params.ts), so a game people have
+ * already seen keeps the picks it was published with. 00:00 Lagos on 6 Nov.
+ */
+export const TOP_PICKS_ORDER_FROM = Math.max(NEXT_MODEL_FROM, Date.parse("2026-11-06T00:00:00+01:00"));
+
+const ORDER_FLOOR = 0.66;
+const ORDER_RELAXED_FLOOR = 0.55;
+const ORDER_CAP = 0.88;
+/** The rare fourth pick: an unusual market this likely, and no more than the cap. */
+const FOURTH_FLOOR = 0.85;
+
+type Slot = "result" | "goals" | "exotic";
+const SLOT_RANK: Record<Slot, number> = { result: 0, goals: 1, exotic: 2 };
+
+function slotOf(market: string): Slot {
+  const f = market.split(":")[0];
+  if (f === "1x2" || f === "dc") return "result";
+  if (f === "ou") return "goals";
+  return "exotic";
+}
+
+/** Two picks that say opposite things, or the same thing twice. */
+function conflicts(x: Pick, chosen: readonly Pick[]): boolean {
+  const has = (re: RegExp) => chosen.some((c) => re.test(c.market));
+  const m = x.market;
+  if (m === "btts:no" && has(/^ou:over:/)) return true;
+  if (m.startsWith("ou:over:") && has(/^btts:no$/)) return true;
+  if (m === "btts:yes" && has(/^ou:under:/)) return true;
+  if (m.startsWith("ou:under:") && has(/^btts:yes$/)) return true;
+  // "0-3 goals" against "over 3.5".
+  if (/^raw:450001:/.test(m) && has(/^ou:over:3\.5$/)) return true;
+  if (m === "ou:over:3.5" && has(/^raw:450001:/)) return true;
+  return false;
+}
+
+/** The picks as they were published, in the order they were published. */
+function frozenPicks(pr: Prediction, head: Pick): Pick[] {
+  return (pr.frozenTopPicks ?? []).map((f) => {
+    const live = pr.picks.find((x) => x.market === f.market);
+    return {
+      market: f.market,
+      label: f.label,
+      group: f.group,
+      probability: f.probability,
+      fairOdds: f.probability > 0 ? 1 / f.probability : 0,
+      confidence: live?.confidence ?? (f.market === head.market ? head.confidence : 0),
+    };
+  });
+}
+
+export function orderedPicks(pr: Prediction, head: Pick): Pick[] {
+  if (pr.frozenTopPicks?.length) return frozenPicks(pr, head);
+
+  const pool = pr.picks.filter(
+    (x) =>
+      x.market !== head.market &&
+      x.group !== "Asian Handicap" &&
+      x.group !== "Correct Score" &&
+      x.market !== "1x2:draw" &&
+      (x.market !== "dc:home-away" || head.market === "dc:home-away") &&
+      !isPausedPick(x.market) &&
+      !/^ou:(over|under):(0\.5|4\.5)$/.test(x.market),
+  );
+  const inBand = (x: Pick, floor: number) => x.probability >= floor && x.probability <= ORDER_CAP;
+  const byConfidence = (a: Pick, b: Pick) => b.confidence - a.confidence;
+  const byChance = (a: Pick, b: Pick) => b.probability - a.probability;
+
+  const chosen: Pick[] = [head];
+  const filled = new Set<Slot>([slotOf(head.market)]);
+  const take = (list: Pick[]): boolean => {
+    const x = list.find((c) => !chosen.includes(c) && !conflicts(c, chosen));
+    if (!x) return false;
+    chosen.push(x);
+    filled.add(slotOf(x.market));
+    return true;
+  };
+  const slot = (s: Slot, floor: number) => pool.filter((x) => slotOf(x.market) === s && inBand(x, floor));
+
+  // 1. The match result or double chance, the model's own ranking among them.
+  if (!filled.has("result") && !take(slot("result", ORDER_FLOOR).sort(byConfidence))) take(slot("result", ORDER_RELAXED_FLOOR).sort(byConfidence));
+  // 2. A goals line, only when one is favoured.
+  if (!filled.has("goals")) take(slot("goals", ORDER_FLOOR).sort(byConfidence));
+  // 3. The likeliest unusual market.
+  if (!filled.has("exotic") && !take(slot("exotic", ORDER_FLOOR).sort(byChance))) take(slot("exotic", ORDER_RELAXED_FLOOR).sort(byChance));
+
+  // Always three: what is still missing, kind by kind, then any unusual market.
+  for (const s of ["result", "goals", "exotic"] as const) {
+    if (chosen.length >= 3) break;
+    if (!filled.has(s)) take(slot(s, ORDER_RELAXED_FLOOR).sort(s === "exotic" ? byChance : byConfidence));
+  }
+  while (chosen.length < 3 && take(slot("exotic", ORDER_RELAXED_FLOOR).sort(byChance))) {
+    /* keeps taking the next likeliest unusual market */
+  }
+
+  // A fourth, rarely: another unusual market that is very likely.
+  if (chosen.length === 3 && filled.size === 3) take(slot("exotic", FOURTH_FLOOR).sort(byChance));
+
+  return chosen
+    .map((p, i) => ({ p, i }))
+    .sort((a, b) => SLOT_RANK[slotOf(a.p.market)] - SLOT_RANK[slotOf(b.p.market)] || a.i - b.i)
+    .map((x) => x.p);
+}
+
+/** How the three were chosen before the ordered rule: the headline, then the best of other kinds of market. */
+function legacyPicks(pr: Prediction, head: Pick, corners: StatMarkets | null | undefined, listed: ListedLine[] | null | undefined): Pick[] {
   const chosen: Pick[] = [head];
   const taken = new Set<Family>([familyOf(head.market)]);
 
@@ -274,6 +382,14 @@ export function buildTopPicks({ prediction: pr, corners, listed }: TopPicksInput
     taken.add(fam);
   }
   if (stat && chosen.length < MAX_PICKS && !taken.has("corners")) chosen.push(stat);
+  return chosen;
+}
+
+export function buildTopPicks({ prediction: pr, corners, listed }: TopPicksInput): TopPick[] {
+  const head = pr.topPick;
+  if (!head || head.market === "locked" || !pr.sufficiency.publishable) return [];
+
+  const chosen = Date.parse(pr.match.kickoff) >= TOP_PICKS_ORDER_FROM ? orderedPicks(pr, head) : legacyPicks(pr, head, corners, listed);
 
   const finished = pr.match.status === "finished" && pr.match.score.home !== null && pr.match.score.away !== null;
   const inPlay = (pr.match.status === "live" || pr.match.status === "halftime") && pr.match.score.home !== null && pr.match.score.away !== null;
@@ -288,7 +404,7 @@ export function buildTopPicks({ prediction: pr, corners, listed }: TopPicksInput
       label: p.group === "Asian Handicap" ? sweetSpotLabel(p.market) : p.label,
       group: p.group,
       probability: p.probability,
-      headline: p === head,
+      headline: p.market === head.market,
       reasons: reasonsFor(p, pr, corners),
       variations: variationsFor(p, pr, corners),
       why: whyFor(p, pr, corners),

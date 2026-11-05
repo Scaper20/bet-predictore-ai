@@ -405,7 +405,7 @@ async function publishedPicks(ids: string[]): Promise<Map<string, LoggedPick>> {
     for (let i = 0; i < ids.length; i += 100) {
       const { data, error } = await c
         .from("predictions_log")
-        .select("match_id, market, label, probability, fair_odds, confidence")
+        .select("match_id, market, label, probability, fair_odds, confidence, top_picks")
         .in("match_id", ids.slice(i, i + 100));
       if (error) throw error;
       for (const r of data ?? []) out.set(r.match_id as string, r as LoggedPick);

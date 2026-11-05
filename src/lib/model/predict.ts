@@ -78,7 +78,17 @@ export interface Pick {
   confidence: number;
 }
 
+/** A top pick as it stood when the game's pick was published (predictions_log.top_picks). */
+export interface FrozenTopPick {
+  market: string;
+  label: string;
+  group: Pick["group"];
+  probability: number;
+}
+
 export interface Prediction {
+  /** The top picks as published, once the game is logged; the match page serves these, never a rebuild. */
+  frozenTopPicks?: FrozenTopPick[];
   match: Match;
   league: LeagueDef | null;
   markets: MarketProbabilities;

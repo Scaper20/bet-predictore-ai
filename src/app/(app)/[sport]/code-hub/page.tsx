@@ -40,6 +40,8 @@ export default async function CodeHubPage() {
 
   const [today, running, live, past] = await Promise.all([todayHub(), runningHub(), bookingAvailable(), pastHub(7)]);
   const paid = meets(entitlement.tier, "pro");
+  // Pro members see a PRO tag on their codes and VIP members a VIP tag.
+  const plan = entitlement.tier === "vip" ? "vip" : entitlement.tier === "pro" ? "pro" : undefined;
   const now = today.now;
   // Today's codes, then earlier four-day codes whose games are still on.
   const all = [...today.codes, ...running];
@@ -103,6 +105,7 @@ export default async function CodeHubPage() {
                     probability={c.probability}
                     firstKickoff={c.firstKickoff}
                     access={hubAccess(c.tier, c.firstKickoff, paid, now)}
+                    plan={plan}
                     status={hubStatus(results, c.firstKickoff, now)}
                     results={results}
                     code={codeState({ bookingCode: c.bookingCode, deadline: c.bookingDeadline }, c.firstKickoff, now)}

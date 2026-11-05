@@ -9,7 +9,7 @@
  * rows.
  */
 
-import type { Pick, Prediction } from "@/lib/model/predict";
+import type { FrozenTopPick, Pick, Prediction } from "@/lib/model/predict";
 
 export interface LoggedPick {
   match_id: string;
@@ -19,6 +19,8 @@ export interface LoggedPick {
   fair_odds: number;
   /** Null on rows logged before 0040. */
   confidence: number | null;
+  /** The top picks as published, for games from the ordered-picks cutover; null before. */
+  top_picks?: FrozenTopPick[] | null;
 }
 
 function groupOf(market: string): Pick["group"] {
@@ -34,8 +36,9 @@ function groupOf(market: string): Pick["group"] {
 }
 
 /** The prediction with its logged pick at the head, or as it was when nothing is logged. */
-export function holdPublished(prediction: Prediction, logged: LoggedPick | undefined): Prediction {
-  if (!logged) return prediction;
+export function holdPublished(built: Prediction, logged: LoggedPick | undefined): Prediction {
+  if (!logged) return built;
+  const prediction: Prediction = logged.top_picks?.length ? { ...built, frozenTopPicks: logged.top_picks } : built;
   if (prediction.topPick?.market === logged.market) return prediction;
   const current = prediction.picks.find((p) => p.market === logged.market);
   const held: Pick = {
