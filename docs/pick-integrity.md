@@ -32,3 +32,25 @@ game is first logged. `holdPublished` attaches them and `buildTopPicks` serves e
 cutover keep the old behaviour, so nothing already published changes.
 
 Not fixed: gap 1, and the legacy secondary picks for games before the cutover.
+
+## When picks settle
+
+Measured 5 Nov 2026 on production, last 7 days: 241 of 246 headline picks settled about two hours after
+kickoff, and 5 at the 03:00 UTC sweep, up to 62 hours late. The fast ones were settled by a visitor's
+live-board poll (`/api/live`), so settlement depended on someone watching. Three picks sit unsettled: two
+games postponed to later dates, and Kortrijk v Mechelen, played 4 Nov but logged under its original
+23 Oct kickoff, which the six-hour window of the quick pass could not see.
+
+Fix (migration 0100, `/api/cron/settle-finished`):
+
+- **pg_cron calls the route every minute, only while something is waiting:** a pick or engine pick whose game
+  started 95 minutes to 8 hours ago, a pick whose final score is stored but not graded, or a game that finished
+  in the last ten minutes. A quiet night makes no call.
+- **Stores the final score** of every game that finished today or yesterday (only what changed), which is what
+  the Code Hub, tracked slips and the track record read.
+- **Settles every logged pick** whose game is over, whatever its logged kickoff, and engine picks too, corners
+  and shots included once ESPN has the counts.
+
+What it cannot speed up: the score source. Final scores come from the `matches` table, refreshed every minute
+from the live-score feed; a provider that is slow to mark a game finished delays settlement by the same time.
+Postponed games stay pending until they are played, by design.

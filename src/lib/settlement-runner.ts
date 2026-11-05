@@ -11,6 +11,7 @@ import { priceInSnapshot } from "@/lib/odds/market-prob";
 import { lastSnapshotBefore } from "@/lib/odds/sportybet-links";
 import { looseKey, nameBook, nameScope } from "@/lib/teams/canonical";
 import type { Match } from "@/lib/types";
+import { settleStep, type SettleOpts } from "@/lib/settlement-timing";
 
 /**
  * Service-role I/O for settlement + the match-results archive — kept out of
@@ -91,21 +92,18 @@ export function resetCapturedMatches() {
  */
 export async function runSettlementPass(
   admin: SupabaseClient,
-  opts: { maxAgeHours?: number } = {},
+  opts: SettleOpts = {},
 ): Promise<number> {
-  let query = admin
+  // Every unsettled pick whose game has started. A game moved to another day
+  // keeps the kickoff it was logged with, so the age of a row is not used to
+  // leave it out here: settleStep decides what each row may cost.
+  const { data: pending, error } = await admin
     .from("predictions_log")
     .select("id, match_id, market, league_code, home_name, away_name, kickoff")
     .is("settled_at", null)
     .lt("kickoff", new Date().toISOString())
-    .order("kickoff", { ascending: false });
-
-  if (opts.maxAgeHours) {
-    query = query.gt("kickoff", new Date(Date.now() - opts.maxAgeHours * 60 * 60 * 1000).toISOString());
-  }
-
-  // Corners and shots picks wait days for their stats, so the sweep reads past them.
-  const { data: pending, error } = await query.limit(600);
+    .order("kickoff", { ascending: false })
+    .limit(600);
   if (error) throw error;
   if (!pending || pending.length === 0) {
     await settleShadowPicks(admin).catch(() => 0);
@@ -114,7 +112,15 @@ export async function runSettlementPass(
     return 0;
   }
 
+  // The scores already stored, in one read.
+  const { data: stored } = await admin
+    .from("match_results")
+    .select("match_id, status, home_goals, away_goals")
+    .in("match_id", [...new Set(pending.map((r) => r.match_id as string))]);
+  const results = new Map((stored ?? []).map((r) => [r.match_id as string, r]));
+
   let settledCount = 0;
+  let refetchesLeft = opts.maxRefetch ?? Number.POSITIVE_INFINITY;
   const statCache = new Map<string, StatGame[]>();
   // The pass behind a live poll gets a short ESPN budget; the daily sweep a long one.
   const espnCache: EspnCache = { games: new Map(), until: Date.now() + (opts.maxAgeHours ? ESPN_QUICK_BUDGET_MS : ESPN_BUDGET_MS) };
@@ -124,26 +130,24 @@ export async function runSettlementPass(
     // the counts minutes after); before that there is nothing to grade on.
     if (statKindOf(row.market as string) && Date.now() - Date.parse(row.kickoff as string) < STAT_READY_MS) continue;
 
-    const { data: cached } = await admin
-      .from("match_results")
-      .select("status, home_goals, away_goals")
-      .eq("match_id", matchId)
-      .maybeSingle();
+    const cached = results.get(matchId);
+    const cachedFinished = cached?.status === "finished" && typeof cached.home_goals === "number" && typeof cached.away_goals === "number";
+    const step = settleStep({ cachedFinished, ageMs: Date.now() - Date.parse(row.kickoff as string), refetchesLeft }, opts);
+    if (step === "skip") continue;
 
     let status = cached?.status;
     let homeGoals = cached?.home_goals ?? null;
     let awayGoals = cached?.away_goals ?? null;
 
-    // No cached result, or it hadn't finished yet as of when it was
-    // captured — fall back to a live re-fetch, same as before.
-    if (!cached || status !== "finished") {
+    // No stored score yet: look the game up, and store what comes back so a
+    // retry (this row or another) doesn't ask the provider again.
+    if (step === "refetch") {
+      refetchesLeft--;
       const match = await getMatch(matchId).catch(() => null);
       if (!match) continue;
       status = match.status;
       homeGoals = match.score.home;
       awayGoals = match.score.away;
-      // Cache it now that we've paid for the fetch, so a future retry
-      // (this row or another) doesn't need to hit the provider again.
       await captureMatchResults(admin, [match]);
     }
 
@@ -277,7 +281,7 @@ export async function settleShadowPicks(admin: SupabaseClient): Promise<number> 
  * that settles its predictions_log row. Corners and shots are graded only by
  * the daily sweep, so a live poll never waits on ESPN for them.
  */
-export async function settleEnginePicks(admin: SupabaseClient, opts: { maxAgeHours?: number } = {}): Promise<number> {
+export async function settleEnginePicks(admin: SupabaseClient, opts: SettleOpts = {}): Promise<number> {
   const { data: rows } = await admin
     .from("engine_picks")
     .select("match_id, slot, market, league_code, home_name, away_name, kickoff")
@@ -305,7 +309,7 @@ export async function settleEnginePicks(admin: SupabaseClient, opts: { maxAgeHou
     const market = row.market as string;
     const stat = statKindOf(market);
     // Corners and shots wait for the daily sweep: the pass behind a live poll stays quick.
-    if (stat && (opts.maxAgeHours || Date.now() - Date.parse(row.kickoff as string) < STAT_READY_MS)) continue;
+    if (stat && ((opts.maxAgeHours && !opts.withStats) || Date.now() - Date.parse(row.kickoff as string) < STAT_READY_MS)) continue;
     const result = stat
       ? await gradeFromStats(
           admin,
