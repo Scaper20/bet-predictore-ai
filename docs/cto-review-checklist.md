@@ -14,7 +14,7 @@ the checklist so it is visible next to the code. Owners: Claude (code, data, rep
 - [ ] 1.6 Personal booking codes and live win-probability bar verified live (Both)
 
 ## 2. Financial baseline
-- [ ] 2.1 Same-period revenue statement (Claude)
+- [x] 2.1 Same-period revenue statement: docs/reports/revenue-statement-2026-10 (Claude, 5 Nov; Paystack export and invoices pending from founder)
 - [ ] 2.2 October cost invoices (Founder)
 - [ ] 2.3 Plan-by-plan model as a script: 6 recurring options + passes, at three exchange rates, 0/20/35% commission, 25% target (Claude)
 - [ ] 2.4 Free-tier cost and operating profit (Claude)
