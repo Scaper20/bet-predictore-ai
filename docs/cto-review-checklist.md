@@ -27,8 +27,8 @@ the checklist so it is visible next to the code. Owners: Claude (code, data, rep
 - [x] 3.4 Margin and abnormal-usage alerts: daily cron /api/cron/ask-watch, rules in src/lib/ask/watch.ts (Claude, 5 Nov)
 
 ## 4. Analytics, growth and marketing
-- [ ] 4.1 Human-traffic verification; bot filtering on signup source (Claude)
-- [ ] 4.2 Acquisition source carried through to payment (Claude)
+- [~] 4.1 Signups verified as people and filtered (Claude, 5 Nov); site visits need GA4/Vercel/Mixpanel figures from founder
+- [x] 4.2 Acquisition source carried through to payment: Revenue by source on Admin Traffic (Claude, 5 Nov)
 - [ ] 4.3 Pass conversion and upgrade report (Claude)
 - [ ] 4.4 X captions, posting sequence, tagged links (Claude drafts, Founder approves)
 - [ ] 4.5 48-hour and 7-day campaign reviews (Claude)

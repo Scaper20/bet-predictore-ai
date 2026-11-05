@@ -3,6 +3,8 @@ import "server-only";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { APP_TIMEZONE } from "@/lib/format";
 import { paymentAmount } from "@/lib/payments/markets";
+import { classifySignup, isEngaged } from "@/lib/signup-quality";
+import { revenueBySource, type SourceRow } from "@/lib/source-revenue";
 
 /**
  * Every function here trusts its caller already ran requireAdmin()/
@@ -523,6 +525,12 @@ export interface TrafficSources {
   byCampaign: ChannelBreakdown[];
   untrackedCount: number;
   trackedCount: number;
+  /** Accounts on our own domains (staff, tests), left out of every count above. */
+  internalCount: number;
+  /** Mistyped or throwaway addresses, left out of every count above. */
+  suspectCount: number;
+  /** Real accounts seen again after the visit they signed up in. */
+  engagedCount: number;
   recentSignups: AttributedSignup[];
 }
 
@@ -530,6 +538,7 @@ interface AttributionRow {
   id: string;
   email: string | null;
   created_at: string;
+  last_seen_at: string | null;
   signup_referrer_host: string | null;
   signup_utm_source: string | null;
   signup_utm_medium: string | null;
@@ -560,16 +569,20 @@ export async function getTrafficSources(): Promise<TrafficSources> {
   // thousand rows at most today, and both breakdowns need every row
   // in-memory to count correctly, not just one page of the most recent
   // signups.
-  const { data, count } = await admin
+  const { data } = await admin
     .from("profiles")
     .select(
-      "id, email, created_at, signup_referrer_host, signup_utm_source, signup_utm_medium, signup_utm_campaign, signup_landing_page",
-      { count: "exact" },
+      "id, email, created_at, last_seen_at, signup_referrer_host, signup_utm_source, signup_utm_medium, signup_utm_campaign, signup_landing_page",
     )
     .order("created_at", { ascending: false })
     .limit(5000);
 
-  const rows = (data ?? []) as AttributionRow[];
+  const all = (data ?? []) as AttributionRow[];
+  // Count people: set our own accounts and unusable addresses aside (lib/signup-quality.ts).
+  const rows = all.filter((r) => classifySignup(r.email) === "real");
+  const internalCount = all.filter((r) => classifySignup(r.email) === "internal").length;
+  const suspectCount = all.length - rows.length - internalCount;
+  const engagedCount = rows.filter((r) => isEngaged(r.created_at, r.last_seen_at)).length;
 
   const referrerCounts = new Map<string, number>();
   const campaignCounts = new Map<string, number>();
@@ -603,10 +616,42 @@ export async function getTrafficSources(): Promise<TrafficSources> {
   return {
     byReferrer: rankByCount(referrerCounts),
     byCampaign: rankByCount(campaignCounts),
-    untrackedCount: (count ?? rows.length) - trackedCount,
+    untrackedCount: rows.length - trackedCount,
     trackedCount,
+    internalCount,
+    suspectCount,
+    engagedCount,
     recentSignups,
   };
+}
+
+/**
+ * Each source judged by what it paid (checklist 4.2): signups, how many paid,
+ * and the naira collected, from the first-touch source on the customer's
+ * profile. Naira payments only (the only currency taken so far).
+ */
+export async function getSourceRevenue(): Promise<SourceRow[]> {
+  const admin = supabaseAdmin();
+  const [profiles, payments] = await Promise.all([
+    admin
+      .from("profiles")
+      .select("id, email, signup_landing_page, signup_referrer_host, signup_utm_source, signup_utm_medium")
+      .limit(5000),
+    admin.from("payments").select("user_id, amount_minor, amount_kobo, currency").eq("status", "success").limit(5000),
+  ]);
+  return revenueBySource(
+    (profiles.data ?? []).map((r) => ({
+      id: r.id as string,
+      email: r.email as string | null,
+      signupLandingPage: r.signup_landing_page as string | null,
+      referrerHost: r.signup_referrer_host as string | null,
+      utmSource: r.signup_utm_source as string | null,
+      utmMedium: r.signup_utm_medium as string | null,
+    })),
+    (payments.data ?? [])
+      .filter((r) => !r.currency || r.currency === "NGN")
+      .map((r) => ({ userId: r.user_id as string | null, naira: Number(r.amount_minor ?? r.amount_kobo ?? 0) / 100 })),
+  );
 }
 
 /* --------------------------------------------------------- Survey responses */

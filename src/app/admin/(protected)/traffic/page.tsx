@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { getTrafficSources } from "@/lib/admin-analytics";
+import { getTrafficSources, getSourceRevenue } from "@/lib/admin-analytics";
 import { getGoogleTraffic, type GoogleTraffic } from "@/lib/analytics/ga4";
 import { getVercelTraffic, type VercelTraffic } from "@/lib/analytics/vercel-web";
 import { RANGE_DAYS, type Ranked, type SourceResult } from "@/lib/analytics/types";
@@ -17,7 +17,7 @@ const AGAINST = `vs prev ${RANGE_DAYS}d`;
 
 export default async function AdminTrafficPage() {
   await requirePermission("growth.view");
-  const [google, vercel, ours] = await Promise.all([getGoogleTraffic(), getVercelTraffic(), getTrafficSources()]);
+  const [google, vercel, ours, revenue] = await Promise.all([getGoogleTraffic(), getVercelTraffic(), getTrafficSources(), getSourceRevenue()]);
 
   return (
     <div>
@@ -31,7 +31,7 @@ export default async function AdminTrafficPage() {
         sections={[
           { key: "google", label: <TabLabel name="Google Analytics" result={google} />, node: <GoogleSection result={google} /> },
           { key: "vercel", label: <TabLabel name="Vercel" result={vercel} />, node: <VercelSection result={vercel} /> },
-          { key: "ours", label: "KiqStat signups", node: <OursSection traffic={ours} /> },
+          { key: "ours", label: "KiqStat signups", node: <OursSection traffic={ours} revenue={revenue} /> },
         ]}
       />
     </div>
@@ -212,7 +212,7 @@ function VercelSection({ result }: { result: SourceResult<VercelTraffic> }) {
 
 /* ------------------------------------------------------------------- ours */
 
-function OursSection({ traffic }: { traffic: Awaited<ReturnType<typeof getTrafficSources>> }) {
+function OursSection({ traffic, revenue }: { traffic: Awaited<ReturnType<typeof getTrafficSources>>; revenue: Awaited<ReturnType<typeof getSourceRevenue>> }) {
   const total = traffic.trackedCount + traffic.untrackedCount;
   const toBars = (rows: { label: string; count: number }[]): BarRow[] =>
     rows.map((r) => ({ label: r.label, value: r.count, display: total ? `${r.count} · ${Math.round((r.count / total) * 100)}%` : undefined }));
@@ -223,8 +223,12 @@ function OursSection({ traffic }: { traffic: Awaited<ReturnType<typeof getTraffi
         <p className="mb-4 max-w-3xl text-sm text-ink-muted">
           Where every account came from, captured on its first visit (referrer plus any {code("utm_")} tags) and never overwritten by a later one.
         </p>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+        <p className="mb-4 max-w-3xl text-sm text-ink-muted">
+          Counts are people: {traffic.internalCount} account{traffic.internalCount === 1 ? "" : "s"} on our own domains and {traffic.suspectCount} with a mistyped or throwaway address are left out.
+        </p>
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <KpiTile label="Accounts" value={total.toLocaleString()} icon="users" />
+          <KpiTile label="Came back" value={traffic.engagedCount.toLocaleString()} hint={total ? `${Math.round((traffic.engagedCount / total) * 100)}% returned after signup` : undefined} tone="neutral" icon="users" />
           <KpiTile label="Known source" value={traffic.trackedCount.toLocaleString()} hint={total ? `${Math.round((traffic.trackedCount / total) * 100)}% of accounts` : undefined} tone="cyan" icon="target" />
           <KpiTile label="Direct / untracked" value={traffic.untrackedCount.toLocaleString()} hint="No referrer or UTM tag on first visit" tone="neutral" icon="link" />
         </div>
@@ -237,6 +241,36 @@ function OursSection({ traffic }: { traffic: Awaited<ReturnType<typeof getTraffi
           <BarList rows={toBars(traffic.byCampaign)} tone="cyan" empty="No tagged-link signups yet." />
         </Panel>
       </div>
+      <Panel title="Revenue by source" meta="what each source paid" flush>
+        {revenue.length === 0 ? (
+          <p className="py-10 text-center text-xs text-ink-dim">Paid orders will show here against the source of their customer.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="text-xs text-ink-dim">
+                  <th className="px-4 py-2 font-medium">Source</th>
+                  <th className="px-4 py-2 text-right font-medium">Signups</th>
+                  <th className="px-4 py-2 text-right font-medium">Paid</th>
+                  <th className="px-4 py-2 text-right font-medium">Conversion</th>
+                  <th className="px-4 py-2 text-right font-medium">Collected</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {revenue.map((r) => (
+                  <tr key={r.source}>
+                    <td className="px-4 py-2 text-ink">{r.source}</td>
+                    <td className="px-4 py-2 text-right tabular-nums text-ink-muted">{r.signups}</td>
+                    <td className="px-4 py-2 text-right tabular-nums text-ink-muted">{r.payers}</td>
+                    <td className="px-4 py-2 text-right tabular-nums text-ink-muted">{Math.round(r.conversion * 100)}%</td>
+                    <td className="px-4 py-2 text-right tabular-nums text-ink">₦{r.naira.toLocaleString("en-NG")}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Panel>
       <Panel title="Recent signups" meta="exact source" flush>
         {traffic.recentSignups.length === 0 ? (
           <p className="py-10 text-center text-xs text-ink-dim">Attribution for new accounts will show up here.</p>
