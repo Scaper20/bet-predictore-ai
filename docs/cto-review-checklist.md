@@ -24,7 +24,7 @@ the checklist so it is visible next to the code. Owners: Claude (code, data, rep
 - [x] 3.1 Offline verification incl. cancelled-call cost booking: cancelled calls now booked for streamed text and sent prompt (Claude, 5 Nov)
 - [ ] 3.2 Live benchmark, 40 questions × 5 configurations, ≤ about US$4; needs `ANTHROPIC_TEST_API_KEY` (Both)
 - [ ] 3.3 Ledger reconciled with Anthropic billing; overrun rule (Both)
-- [ ] 3.4 Margin and abnormal-usage alerts (Claude)
+- [x] 3.4 Margin and abnormal-usage alerts: daily cron /api/cron/ask-watch, rules in src/lib/ask/watch.ts (Claude, 5 Nov)
 
 ## 4. Analytics, growth and marketing
 - [ ] 4.1 Human-traffic verification; bot filtering on signup source (Claude)

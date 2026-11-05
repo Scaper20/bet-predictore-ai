@@ -205,7 +205,7 @@ export async function logQuestion(q: QuestionLog): Promise<string | null> {
 const ALERT_TO = () => process.env.ASK_ALERT_EMAIL?.trim() || process.env.SUPPORT_INBOX_EMAIL?.trim() || "support@kiqstat.app";
 
 /** Sends an alert unless the same one went out within `everyMs`. */
-async function alertOnce(key: string, everyMs: number, subject: string, lines: string[]): Promise<void> {
+export async function alertOnce(key: string, everyMs: number, subject: string, lines: string[]): Promise<void> {
   try {
     const admin = supabaseAdmin();
     const cutoff = new Date(Date.now() - everyMs).toISOString();
