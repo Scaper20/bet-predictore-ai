@@ -200,3 +200,11 @@ describe("outputRoom", () => {
     expect(worstCallMicros("claude-haiku-5-5", 10_000, room + 2)).toBeGreaterThan(5_250);
   });
 });
+
+describe("the system prompt", () => {
+  it("tells the model to answer once and say nothing after the pick cards", async () => {
+    const { ASK_SYSTEM_PROMPT } = await import("@/lib/ask/prompt");
+    expect(ASK_SYSTEM_PROMPT).toContain("Write your answer once, then call show_picks");
+    expect(ASK_SYSTEM_PROMPT).toContain("write nothing more after the cards appear");
+  });
+});

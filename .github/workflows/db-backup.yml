@@ -83,7 +83,7 @@ jobs:
         env:
           DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
-          set -uo pipefail
+          set -uxo pipefail
           docker run -d --name scratch -e POSTGRES_PASSWORD=scratch -p 55432:5432 postgres:17 > /dev/null
           SCR="postgresql://postgres:scratch@localhost:55432/postgres"
           for i in $(seq 1 40); do /usr/lib/postgresql/17/bin/pg_isready -h localhost -p 55432 -U postgres > /dev/null && break; sleep 2; done
