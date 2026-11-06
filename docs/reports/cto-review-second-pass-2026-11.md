@@ -16,7 +16,7 @@ subtitle: "What your Paystack export, backups screenshot, decisions and ticks ch
 # 2. What your inputs closed
 
 | Item | Result |
-|---|---|
+|------------------------------|----------------------------------------------------------------------|
 | 1.3 Backups | Closed. Screenshot received: daily physical backups every night at about 00:28 UTC, 30 October to 6 November. The weekly off-site copy was restored into a scratch database and matched production on all seven tables (section 5) |
 | 1.4 ₦500 pass refund | Waived by you; the purchase itself is confirmed in Paystack (31 Oct, ₦500, settled 1 Nov) |
 | 1.5 Renewal anomaly | Closed: the charge was reversed by the card issuer (section 3) |
@@ -31,7 +31,7 @@ subtitle: "What your Paystack export, backups screenshot, decisions and ticks ch
 Source: your Paystack export for 1 to 31 October, 72 rows. Three rows are our own `@kiqstat.app` test checkouts and are left out.
 
 | Paystack status | Count | Notes |
-|---|---|---|
+|----------------------|------------------------------|------------------------------------------------|
 | Successful | 14 | ₦77,750, identical to our payments table, including the ₦500 test pass |
 | Abandoned | 53 | The buyer opened checkout and left, or never sent the transfer |
 | Failed | 1 | A transfer closed by timeout |
@@ -39,7 +39,7 @@ Source: your Paystack export for 1 to 31 October, 72 rows. Three rows are our ow
 
 **Fees.** Paystack's fees total ₦2,393.60. Four early payments (4 and 8 October) carried fees paid by us: ₦573.75. From 19 October the checkout adds the fee to the customer's price (₦5,177.67 for a ₦5,000 plan), so the ten payments after that cost us nothing. Real money received from real customers: **₦76,676**, against the ₦74,891 I estimated earlier.
 
-**What this means for pricing and partners.** With the buyer paying the fee, a ₦5,000 Pro sale brings in the full ₦5,000. Break-even on the estimated costs is therefore about 19 to 22 Pro sales a month with no partner. Partner commission is still calculated on price minus an *estimated* fee, which slightly understates what the buyer actually paid; that is a small difference in the partner's favour of the fee and needs no change now.
+**What this means for pricing and partners.** With the buyer paying the fee, a ₦5,000 Pro sale brings in the full ₦5,000. Break-even on the estimated costs is therefore about 19 to 22 Pro sales a month with no partner. Partner commission is still calculated on the price minus an *estimated* fee, even though the buyer now pays that fee, so partners are paid slightly less than a price-based rule would give (about 3% less on a ₦5,000 sale). It needs no change now, but raise it when the Partner Agreement V2 is written.
 
 **The 24 October renewal, in full.** Paystack charged the card at 1:15 PM ("Approved by Financial Institution"), then the status became reversed. The member's period ended that day, so access ended with it, correctly. The daily subscription check now recognises a reversed charge and says so in its email, so it will stop calling this "unexplained". The member has already been given a gifted month. Paystack still shows the subscription active with the next charge on 24 November.
 
@@ -52,7 +52,7 @@ I cannot judge the ad's return without its cost. **Please send the ad spend** an
 ## 3.2 Payment method
 
 | Method | Attempts | Successful | Rate |
-|---|---|---|---|
+|--------|------------------------|--------------|------------------------------------------------------|
 | Card | 48 | 2 | 4% (both on 8 October) |
 | Bank (OPay and others) | 9 | 7 | 78% |
 | Bank transfer (PalmPay, OPay, others) | 12 | 5 | 42% |
@@ -64,7 +64,7 @@ Of the 25 card attempts after 19 October, none succeeded; 45 of 48 card attempts
 # 4. Money position (final on the accepted costs)
 
 | | ₦ per month |
-|---|---|
+|------------------------------|----------------------------------------------------------------------|
 | October collected from real customers | 77,250 |
 | Received after the fees we bore | 76,676 |
 | Estimated fixed costs (accepted as real) | 95,000 to 108,000 |
@@ -78,7 +78,7 @@ October had 13 paid orders; 9 were one-off. The free tier costs next to nothing 
 **Result: the backup restores, and the restored copy matches production.** I ran the weekly off-site backup from GitHub (run 4, `dev` copy of the workflow), then restored that dump into a throwaway database inside the GitHub runner and counted rows. Nothing touched production except read-only counts. Production was not restored over, and nothing of yours can be damaged by it.
 
 | Table | Production | Restored copy | Result |
-|---|---|---|---|
+|--------|------------------------|--------------|------------------------------------------------------|
 | profiles | 269 | 269 | match |
 | subscriptions | 21 | 21 | match |
 | payments | 117 | 117 | match |
@@ -98,7 +98,7 @@ October had 13 paid orders; 9 were one-off. The free tier costs next to nothing 
 **What the lab holds.** One run only: 40 questions on one preset ("capped") on 5 November, costing US$0.032 (about US$0.0008 a question), with no ratings entered. I found no data for the other four presets, so the five-way comparison (3.2) has not happened. 39 of the 40 questions were answered; one gave no answer.
 
 | Question type | Questions | Average cost (US$) | Model calls | Answer length |
-|---|---|---|---|---|
+|--------------------|--------------------|--------------------|--------------------|--------------------|
 | Combo | 6 | 0.00116 | 3.2 | 836 characters |
 | Tool-heavy | 6 | 0.00117 | 3.8 | 528 |
 | Analysis | 6 | 0.00086 | 3.7 | 572 |
@@ -116,7 +116,7 @@ The most expensive single question cost US$0.0019, so the daily caps are never t
 # 7. What was built since the first pass (all on `dev`)
 
 | Change | Why |
-|---|---|
+|------------------------------|----------------------------------------------------------------------|
 | Daily subscription check recognises a charge reversed by the card issuer | 1.5: no more "unexplained" alert for the 24 October case |
 | An email to the founder whenever a Paystack refund reverses a partner commission, saying whether it was cancelled or needs deducting from the next manual payout | Partners are paid by hand; you must know |
 | Partner commission ceiling lowered from 50% to 30% | 5.2 |
@@ -133,7 +133,7 @@ Your pay-once decision needed no change: pay-once is already the main button on 
 # 8. What is still open
 
 | Item | Needs |
-|---|---|
+|------------------------------|----------------------------------------------------------------------|
 | Merge `dev` and promote | You. Nothing above is live until then |
 | 2.5 follow-up | Nothing; done in code after the merge |
 | 3.2 Ask lab | Run all five presets and rate the answers |
