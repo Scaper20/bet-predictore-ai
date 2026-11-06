@@ -2,8 +2,12 @@
 
 import { useActionState } from "react";
 import {
+  cancelRateChange,
   createPartner,
   creditAccountToPartner,
+  forfeitReferral,
+  scheduleRateChange,
+  terminatePartner,
   payOutPartner,
   reverseCommission,
   setPartnerStatus,
@@ -60,9 +64,15 @@ export function PartnerForm({ partner }: { partner?: PartnerDefaults }) {
         <Field label="KiqStat account email" htmlFor={`p-acct-${key}`} hint="The account they sign in with to see their dashboard. Optional for now.">
           <Input id={`p-acct-${key}`} name="accountEmail" type="email" defaultValue={partner?.accountEmail ?? ""} />
         </Field>
-        <Field label="Commission rate (%)" htmlFor={`p-rate-${key}`} hint="Applies to payments from now on. Earned commissions keep their rate.">
-          <Input id={`p-rate-${key}`} name="ratePercent" type="number" min={0} max={50} step="0.5" defaultValue={partner?.ratePercent ?? "20"} required />
-        </Field>
+        {partner ? (
+          <Field label="Commission rate" htmlFor={`p-rate-${key}`} hint="Change it with “Change the rate” below, which sends the notice.">
+            <Input id={`p-rate-${key}`} value={`${partner.ratePercent}%`} readOnly disabled />
+          </Field>
+        ) : (
+          <Field label="Commission rate (%)" htmlFor={`p-rate-${key}`} hint="The standard rate is 20%. Never above 30%.">
+            <Input id={`p-rate-${key}`} name="ratePercent" type="number" min={0} max={30} step="0.5" defaultValue="20" required />
+          </Field>
+        )}
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
@@ -146,6 +156,100 @@ export function CreditSignupForm({ partnerId }: { partnerId: string }) {
       <Input name="email" type="email" placeholder="Their account email" aria-label="Account email" className="w-64 py-1.5 text-xs" required />
       <Button type="submit" variant="secondary" disabled={pending} className="px-3 py-1.5 text-xs">
         Credit to this partner
+      </Button>
+      <Result state={state} />
+    </form>
+  );
+}
+
+/** Schedules a rate change for new customers: 30 days' notice, or at once with the partner's written agreement. */
+export function RateChangeForm({ partnerId, currentPercent }: { partnerId: string; currentPercent: string }) {
+  const [state, action, pending] = useActionState(scheduleRateChange, initial);
+  return (
+    <form action={action} className="card space-y-3 p-5">
+      <input type="hidden" name="id" value={partnerId} />
+      <div>
+        <h3 className="text-sm font-semibold text-ink">Change the rate</h3>
+        <p className="mt-1 text-xs text-ink-muted">
+          Now {currentPercent}%. The new rate reaches customers attributed from the effective date; people already attributed keep theirs. Needs 30 days&apos; notice unless the partner has agreed in writing. The partner is emailed the notice.
+        </p>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Field label="New rate (%)" htmlFor={`rc-rate-${partnerId}`}>
+          <Input id={`rc-rate-${partnerId}`} name="ratePercent" type="number" min={0} max={30} step="0.5" required />
+        </Field>
+        <Field label="Effective date (optional)" htmlFor={`rc-date-${partnerId}`} hint="Blank = earliest allowed.">
+          <Input id={`rc-date-${partnerId}`} name="effectiveDate" type="date" />
+        </Field>
+        <Field label="Reason (optional)" htmlFor={`rc-reason-${partnerId}`}>
+          <Input id={`rc-reason-${partnerId}`} name="reason" maxLength={300} />
+        </Field>
+      </div>
+      <label className="flex items-center gap-2 text-xs text-ink">
+        <input type="checkbox" name="agreed" className="size-4" /> The partner has agreed to this change in writing (allows an earlier date)
+      </label>
+      <div className="flex flex-wrap items-center gap-3">
+        <Button type="submit" variant="primary" disabled={pending} className="px-4 py-2 text-xs">
+          {pending ? "Scheduling…" : "Schedule and send notice"}
+        </Button>
+        <Result state={state} />
+      </div>
+    </form>
+  );
+}
+
+export function CancelRateChangeForm({ id, partnerId }: { id: string; partnerId: string }) {
+  const [state, action, pending] = useActionState(cancelRateChange, initial);
+  return (
+    <form action={action} className="flex items-center gap-2">
+      <input type="hidden" name="id" value={id} />
+      <input type="hidden" name="partnerId" value={partnerId} />
+      <Button type="submit" variant="ghost" disabled={pending} className="px-3 py-1.5 text-xs">
+        Cancel
+      </Button>
+      <Result state={state} />
+    </form>
+  );
+}
+
+/** Ends the relationship: 30 days' notice (7 in the pilot), or at once for cause. */
+export function TerminateForm({ partnerId }: { partnerId: string }) {
+  const [state, action, pending] = useActionState(terminatePartner, initial);
+  return (
+    <form action={action} className="card space-y-3 border-rose/30 p-5">
+      <input type="hidden" name="id" value={partnerId} />
+      <div>
+        <h3 className="text-sm font-semibold text-ink">Terminate the agreement</h3>
+        <p className="mt-1 text-xs text-ink-muted">
+          Without cause: 30 days&apos; notice (7 days in the first 90 days). For cause (established fraud, serious unlawful promotion, security misuse, a legal requirement): at once. From the date, no new accounts are credited; customers who already paid keep earning to the end of their own 12 months; the partner is paid with no minimum. The partner is emailed the notice.
+        </p>
+      </div>
+      <Field label="Reason (sent to the partner)" htmlFor={`t-reason-${partnerId}`}>
+        <Input id={`t-reason-${partnerId}`} name="reason" maxLength={300} required />
+      </Field>
+      <label className="flex items-center gap-2 text-xs text-ink">
+        <input type="checkbox" name="forCause" className="size-4" /> For cause: takes effect immediately
+      </label>
+      <div className="flex flex-wrap items-center gap-3">
+        <Button type="submit" variant="danger" disabled={pending} className="px-4 py-2 text-xs">
+          {pending ? "Working…" : "Terminate and send notice"}
+        </Button>
+        <Result state={state} />
+      </div>
+    </form>
+  );
+}
+
+/** Forfeits one referral's commission after termination for breach or fraud (clause 11.3). */
+export function ForfeitForm({ partnerId }: { partnerId: string }) {
+  const [state, action, pending] = useActionState(forfeitReferral, initial);
+  return (
+    <form action={action} className="flex flex-wrap items-center gap-2">
+      <input type="hidden" name="partnerId" value={partnerId} />
+      <Input name="email" type="email" placeholder="Referral's account email" aria-label="Account email" className="w-60 py-1.5 text-xs" required />
+      <Input name="reason" placeholder="Reason" maxLength={300} aria-label="Reason" className="w-60 py-1.5 text-xs" required />
+      <Button type="submit" variant="danger" disabled={pending} className="px-3 py-1.5 text-xs">
+        Forfeit commission
       </Button>
       <Result state={state} />
     </form>

@@ -112,7 +112,10 @@ export interface CommissionRow {
 
 export type CommissionResult =
   | { ok: true; row: CommissionRow }
-  | { ok: false; reason: "payment_not_successful" | "outside_window" | "nothing_to_pay" };
+  | { ok: false; reason: "payment_not_successful" | "outside_window" | "nothing_to_pay" | "not_a_plan" };
+
+/** Passes and trial offers ("pass:day", "offer:vip-day-pass") earn no commission under the Partner Agreement V2 (clause 4.2). */
+export const earnsCommission = (plan: string | null | undefined): boolean => !/^(pass|offer):/.test(plan ?? "");
 
 /** Calendar months later, clamped to the month's last day (29 Feb + 12 months is 28 Feb, as the agreement says). */
 export function addMonths(d: Date, months: number): Date {
@@ -137,6 +140,7 @@ export function inCommissionWindow(firstPaidAt: Date, paidAt: Date): boolean {
 export function buildCommission(input: CommissionInput): CommissionResult {
   const { partner, userId, payment, firstPaidAt } = input;
   if (payment.status !== "success") return { ok: false, reason: "payment_not_successful" };
+  if (!earnsCommission(payment.plan)) return { ok: false, reason: "not_a_plan" };
   if (!inCommissionWindow(firstPaidAt, payment.paidAt)) return { ok: false, reason: "outside_window" };
 
   const fee = payment.feeMinor ?? estimateFeeMinor(payment.provider, payment.currency, payment.grossMinor);
@@ -193,7 +197,8 @@ export interface Balance {
 }
 
 /** Balances per currency from a partner's commission rows. */
-export function balances(rows: CommissionRecord[], now = Date.now()): Balance[] {
+/** `noMinimum`: a terminated partner is paid whatever is payable, however small (agreement clause 11.4). */
+export function balances(rows: CommissionRecord[], now = Date.now(), noMinimum = false): Balance[] {
   const by = new Map<string, Balance>();
   for (const r of rows) {
     const b = by.get(r.currency) ?? { currency: r.currency, held: 0, payable: 0, paid: 0, payoutDue: false };
@@ -203,7 +208,7 @@ export function balances(rows: CommissionRecord[], now = Date.now()): Balance[] 
     else if (s === "payable") b.payable += r.amount_minor;
     else if (s === "paid") b.paid += r.amount_minor;
   }
-  for (const b of by.values()) b.payoutDue = b.payable > 0 && b.payable >= minPayout(b.currency);
+  for (const b of by.values()) b.payoutDue = b.payable > 0 && (noMinimum || b.payable >= minPayout(b.currency));
   return [...by.values()].sort((a, b) => (a.currency === "NGN" ? -1 : b.currency === "NGN" ? 1 : a.currency.localeCompare(b.currency)));
 }
 

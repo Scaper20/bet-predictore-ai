@@ -2,6 +2,7 @@ import "server-only";
 
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { buildCommission } from "@/lib/partners";
+import { earnsAfterTermination } from "@/lib/partner-terms";
 
 export interface PaymentForCommission {
   userId: string;
@@ -28,12 +29,16 @@ export async function recordCommission(p: PaymentForCommission): Promise<void> {
     if (!(p.grossMinor > 0)) return;
     const admin = supabaseAdmin();
 
-    const { data: profile } = await admin.from("profiles").select("referred_by_partner").eq("id", p.userId).maybeSingle();
+    const { data: profile } = await admin.from("profiles").select("referred_by_partner, referred_rate_bps").eq("id", p.userId).maybeSingle();
     const partnerId = profile?.referred_by_partner as string | null | undefined;
     if (!partnerId) return;
 
-    const { data: partner } = await admin.from("partners").select("id, rate_bps").eq("id", partnerId).maybeSingle();
+    const { data: partner } = await admin.from("partners").select("id, rate_bps, terminated_at").eq("id", partnerId).maybeSingle();
     if (!partner) return;
+
+    // A forfeited referral earns nothing (agreement clause 11.3, termination for breach or fraud).
+    const { data: forfeited } = await admin.from("partner_forfeitures").select("user_id").eq("partner_id", partnerId).eq("user_id", p.userId).maybeSingle();
+    if (forfeited) return;
 
     const paidAt = p.paidAt ?? new Date();
 
@@ -51,8 +56,14 @@ export async function recordCommission(p: PaymentForCommission): Promise<void> {
     ]);
     const firstPaidAt = first?.created_at ? new Date(Math.min(Date.parse(first.created_at as string), paidAt.getTime())) : paidAt;
 
+    // After termination only a customer who had already paid keeps earning (clause 11.3).
+    const terminatedAt = partner.terminated_at ? new Date(partner.terminated_at as string) : null;
+    if (!earnsAfterTermination({ terminatedAt, firstPaidAt, paidAt })) return;
+
+    // The rate in force when the customer was attributed (clause 4.6); a partner's later rate applies to later customers.
+    const rateBps = (profile?.referred_rate_bps as number | null | undefined) ?? (partner.rate_bps as number);
     const result = buildCommission({
-      partner: { id: partner.id as string, rateBps: partner.rate_bps as number },
+      partner: { id: partner.id as string, rateBps },
       userId: p.userId,
       payment: {
         reference: p.reference,

@@ -36,6 +36,6 @@ the checklist so it is visible next to the code. Owners: Claude (code, data, rep
 
 ## 5. Partner Agreement V2 (on hold until section 2 closes)
 - [ ] 5.1 Founder's questionnaire answers recovered (Founder)
-- [x] 5.2 Commission schedule: approved by the founder 6 Nov: 20% of net standard, 25% named partners, 30% ceiling (code ceiling lowered from 50% to 30% on dev); no 35%
+- [x] 5.2 Commission schedule approved 6 Nov (20% standard, 25% named, 30% ceiling; passes excluded from commission). Partner Agreement V2 written for kingbra (20%) and squid (25%), ready to send once the blanks are filled
 - [ ] 5.3 Legal and tax items (Founder + legal adviser)
 - [x] 5.4 Referral tracking verified (Claude, 6 Nov): chain checked, Paystack refund now reverses the commission; first real payment still to be seen

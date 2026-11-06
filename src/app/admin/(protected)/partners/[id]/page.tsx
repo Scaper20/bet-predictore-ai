@@ -7,7 +7,8 @@ import { SITE_URL } from "@/lib/site-url";
 import { AdminTable, AdminTableHead, AdminTableRow, AdminTableCell } from "@/components/admin/admin-table";
 import { StatCard } from "@/components/admin/stat-card";
 import { CopyButton } from "@/components/admin/copy-button";
-import { CreditSignupForm, PartnerForm, PartnerStatusForm, PayoutForm, ReverseForm } from "@/components/admin/partner-forms";
+import { CancelRateChangeForm, CreditSignupForm, ForfeitForm, PartnerForm, PartnerStatusForm, PayoutForm, RateChangeForm, ReverseForm, TerminateForm } from "@/components/admin/partner-forms";
+import { INSPECTION_DAYS, inPilot, inspectionDue, isTerminated } from "@/lib/partner-terms";
 import { Badge, EmptyState, type Tone } from "@/components/ui/primitives";
 import { requirePermission } from "@/lib/admin";
 import { can } from "@/lib/admin-access";
@@ -24,7 +25,14 @@ export default async function AdminPartnerPage({ params }: { params: Promise<{ i
   const { id } = await params;
   const detail = await getPartnerDetail(id);
   if (!detail) notFound();
-  const { partner, balances, commissions, payouts, signups, signupCount, accountEmail } = detail;
+  const { partner, balances, commissions, payouts, signups, signupCount, accountEmail, rateChanges, forfeitures } = detail;
+  const now = new Date();
+  const ended = isTerminated(partner.terminatedAt ? new Date(partner.terminatedAt) : null, now);
+  const activated = partner.activatedAt ? new Date(partner.activatedAt) : null;
+  const piloting = inPilot(activated, now);
+  const inspectAt = inspectionDue(activated);
+  const canManage = can(me.roles, "partners.manage");
+  const shownStatus = ended ? "terminated" : partner.status;
   const link = partnerLink(SITE_URL, partner.slug);
 
   return (
@@ -36,7 +44,7 @@ export default async function AdminPartnerPage({ params }: { params: Promise<{ i
         <p className="mt-3 font-mono text-[10.5px] uppercase tracking-[0.16em] text-brand">Business · Partner</p>
         <div className="mt-1.5 flex flex-wrap items-center gap-3">
           <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-[28px]">{partner.name}</h1>
-          <Badge tone={partner.status === "active" ? "brand" : "rose"}>{partner.status}</Badge>
+          <Badge tone={shownStatus === "active" ? "brand" : "rose"}>{shownStatus}</Badge>
           <Badge tone="neutral">{pctText(partner.rateBps)}</Badge>
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-3">
@@ -44,6 +52,21 @@ export default async function AdminPartnerPage({ params }: { params: Promise<{ i
           <CopyButton text={link} label="Copy link" />
         </div>
       </div>
+
+      {partner.terminatedAt && (
+        <div className="rounded-2xl border border-rose/30 bg-rose/5 p-4 text-sm text-ink">
+          {ended ? "Terminated" : "Termination set"} {ended ? "on" : "for"} {date(partner.terminatedAt)}
+          {partner.terminationForCause ? " (for cause)" : ""}. {partner.terminationReason}
+          <p className="mt-1 text-xs text-ink-muted">
+            No new accounts are credited from that date. Customers who had already paid keep earning to the end of their own 12 months, and the partner is paid with no minimum.
+          </p>
+        </div>
+      )}
+      {piloting && inspectAt && !partner.terminatedAt && (
+        <div className="rounded-2xl border border-line bg-surface-2 p-4 text-sm text-ink">
+          In the 90-day pilot. {INSPECTION_DAYS}-day inspection {inspectAt.getTime() <= now.getTime() ? "was due" : "is due"} {date(inspectAt.toISOString())}: check referrals, refunds and chargebacks, and the promotion itself; then keep, change the rate for new customers, or end the pilot (7 days&apos; notice).
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard label="Signups" value={String(signupCount)} sublabel={`${signups.filter((s) => s.paid).length} paid (of the latest ${signups.length})`} />
@@ -162,6 +185,46 @@ export default async function AdminPartnerPage({ params }: { params: Promise<{ i
       </section>
 
       <section className="space-y-3">
+        <h2 className="text-sm font-semibold text-ink">Rate and agreement</h2>
+        {rateChanges.length > 0 && (
+          <AdminTable>
+            <AdminTableHead columns={["Notified", "Change", "Effective", "Status", ""]} />
+            <tbody>
+              {rateChanges.map((c) => (
+                <AdminTableRow key={c.id}>
+                  <AdminTableCell className="whitespace-nowrap text-ink-muted">{date(c.notifiedAt)}</AdminTableCell>
+                  <AdminTableCell className="tnum">
+                    {pctText(c.fromBps)} to {pctText(c.toBps)}
+                    {c.agreedInWriting && <span className="ml-2 text-[11px] text-ink-dim">agreed in writing</span>}
+                  </AdminTableCell>
+                  <AdminTableCell className="whitespace-nowrap text-ink-muted">{date(c.effectiveAt)}</AdminTableCell>
+                  <AdminTableCell>
+                    <Badge tone={c.cancelledAt ? "neutral" : c.appliedAt ? "brand" : "amber"}>{c.cancelledAt ? "cancelled" : c.appliedAt ? "in force" : "scheduled"}</Badge>
+                  </AdminTableCell>
+                  <AdminTableCell>{canManage && !c.appliedAt && !c.cancelledAt && <CancelRateChangeForm id={c.id} partnerId={partner.id} />}</AdminTableCell>
+                </AdminTableRow>
+              ))}
+            </tbody>
+          </AdminTable>
+        )}
+        {canManage && shownStatus !== "terminated" && <RateChangeForm partnerId={partner.id} currentPercent={String(partner.rateBps / 100)} />}
+        {canManage && !partner.terminatedAt && <TerminateForm partnerId={partner.id} />}
+        {canManage && (partner.terminatedAt || forfeitures.length > 0) && (
+          <div className="space-y-2">
+            <h3 className="text-sm font-semibold text-ink">Forfeited referrals</h3>
+            <ForfeitForm partnerId={partner.id} />
+            {forfeitures.length > 0 && (
+              <ul className="space-y-1 text-xs text-ink-muted">
+                {forfeitures.map((f) => (
+                  <li key={f.userId}>{f.email ?? f.userId}: {f.reason} ({date(f.createdAt)})</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+      </section>
+
+      <section className="space-y-3">
         <h2 className="text-sm font-semibold text-ink">Details</h2>
         <PartnerForm
           partner={{
@@ -177,7 +240,7 @@ export default async function AdminPartnerPage({ params }: { params: Promise<{ i
             notes: partner.notes,
           }}
         />
-        <PartnerStatusForm id={partner.id} status={partner.status} />
+        {shownStatus !== "terminated" && <PartnerStatusForm id={partner.id} status={partner.status === "suspended" ? "suspended" : "active"} />}
       </section>
     </div>
   );

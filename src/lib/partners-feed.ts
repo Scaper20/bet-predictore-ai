@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { balances, minPayout, type Balance, type CommissionRecord, type PayoutLine } from "@/lib/partners";
+import { isTerminated } from "@/lib/partner-terms";
 
 export interface PartnerRow {
   id: string;
@@ -12,15 +13,24 @@ export interface PartnerRow {
   email: string | null;
   userId: string | null;
   rateBps: number;
-  status: "active" | "suspended";
+  status: "active" | "suspended" | "terminated";
   bankName: string | null;
   accountNumber: string | null;
   accountName: string | null;
   notes: string | null;
   createdAt: string;
+  activatedAt: string | null;
+  terminationNoticeAt: string | null;
+  /** When the termination takes (or took) effect; null if none is set. */
+  terminatedAt: string | null;
+  terminationReason: string | null;
+  terminationForCause: boolean;
 }
 
-const PARTNER_COLUMNS = "id, slug, name, email, user_id, rate_bps, status, bank_name, account_number, account_name, notes, created_at";
+/** Whether this partner's termination has taken effect, so it is paid with no minimum. */
+export const partnerEnded = (p: Pick<PartnerRow, "terminatedAt">, at = new Date()): boolean => isTerminated(p.terminatedAt ? new Date(p.terminatedAt) : null, at);
+
+const PARTNER_COLUMNS = "id, slug, name, email, user_id, rate_bps, status, bank_name, account_number, account_name, notes, created_at, activated_at, termination_notice_at, terminated_at, termination_reason, termination_for_cause";
 
 function partnerFrom(r: Record<string, unknown>): PartnerRow {
   return {
@@ -30,12 +40,17 @@ function partnerFrom(r: Record<string, unknown>): PartnerRow {
     email: (r.email as string | null) ?? null,
     userId: (r.user_id as string | null) ?? null,
     rateBps: r.rate_bps as number,
-    status: r.status as "active" | "suspended",
+    status: r.status as "active" | "suspended" | "terminated",
     bankName: (r.bank_name as string | null) ?? null,
     accountNumber: (r.account_number as string | null) ?? null,
     accountName: (r.account_name as string | null) ?? null,
     notes: (r.notes as string | null) ?? null,
     createdAt: r.created_at as string,
+    activatedAt: (r.activated_at as string | null) ?? null,
+    terminationNoticeAt: (r.termination_notice_at as string | null) ?? null,
+    terminatedAt: (r.terminated_at as string | null) ?? null,
+    terminationReason: (r.termination_reason as string | null) ?? null,
+    terminationForCause: Boolean(r.termination_for_cause),
   };
 }
 
@@ -79,7 +94,7 @@ export async function getPartnersOverview(): Promise<PartnersOverview> {
     const p = partnerFrom(raw as Record<string, unknown>);
     const mine = commissions.filter((c) => c.partner_id === p.id);
     const payers = new Set(mine.filter((c) => c.kind === "commission" && c.status !== "reversed" && c.user_id).map((c) => c.user_id));
-    return { ...p, signups: signupCount.get(p.id) ?? 0, subscribers: payers.size, balances: balances(mine) };
+    return { ...p, signups: signupCount.get(p.id) ?? 0, subscribers: payers.size, balances: balances(mine, Date.now(), partnerEnded(p)) };
   });
 
   return {
@@ -137,14 +152,33 @@ export interface PartnerDetail {
   signups: SignupView[];
   signupCount: number;
   accountEmail: string | null;
+  rateChanges: RateChangeView[];
+  forfeitures: { userId: string; email: string | null; reason: string; createdAt: string }[];
+}
+
+export interface RateChangeView {
+  id: string;
+  fromBps: number;
+  toBps: number;
+  notifiedAt: string;
+  effectiveAt: string;
+  appliedAt: string | null;
+  cancelledAt: string | null;
+  reason: string | null;
+  agreedInWriting: boolean;
 }
 
 export async function getPartnerDetail(id: string): Promise<PartnerDetail | null> {
   if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
   const admin = supabaseAdmin();
+  await admin.rpc("partner_apply_rate_changes");
   const { data: raw } = await admin.from("partners").select(PARTNER_COLUMNS).eq("id", id).maybeSingle();
   if (!raw) return null;
   const partner = partnerFrom(raw as Record<string, unknown>);
+  const [changesRes, forfeitRes] = await Promise.all([
+    admin.from("partner_rate_changes").select("id, from_bps, to_bps, notified_at, effective_at, applied_at, cancelled_at, reason, agreed_in_writing").eq("partner_id", id).order("created_at", { ascending: false }).limit(20),
+    admin.from("partner_forfeitures").select("user_id, reason, created_at, profiles(email)").eq("partner_id", id).order("created_at", { ascending: false }).limit(50),
+  ]);
 
   const [commissionsRes, payoutsRes, signupsRes, signupCount, account] = await Promise.all([
     admin
@@ -167,7 +201,7 @@ export async function getPartnerDetail(id: string): Promise<PartnerDetail | null
 
   return {
     partner,
-    balances: balances(rows as unknown as CommissionRecord[]),
+    balances: balances(rows as unknown as CommissionRecord[], Date.now(), partnerEnded(partner)),
     commissions: rows.slice(0, 200).map((r) => ({
       id: r.id as string,
       kind: r.kind as "commission" | "clawback",
@@ -206,6 +240,23 @@ export async function getPartnerDetail(id: string): Promise<PartnerDetail | null
     })),
     signupCount: signupCount.count ?? 0,
     accountEmail: (account.data as { email: string | null } | null)?.email ?? null,
+    rateChanges: (changesRes.data ?? []).map((c) => ({
+      id: c.id as string,
+      fromBps: c.from_bps as number,
+      toBps: c.to_bps as number,
+      notifiedAt: c.notified_at as string,
+      effectiveAt: c.effective_at as string,
+      appliedAt: (c.applied_at as string | null) ?? null,
+      cancelledAt: (c.cancelled_at as string | null) ?? null,
+      reason: (c.reason as string | null) ?? null,
+      agreedInWriting: Boolean(c.agreed_in_writing),
+    })),
+    forfeitures: ((forfeitRes.data ?? []) as unknown as { user_id: string; reason: string; created_at: string; profiles: { email: string | null } | { email: string | null }[] | null }[]).map((f) => ({
+      userId: f.user_id,
+      email: (Array.isArray(f.profiles) ? f.profiles[0]?.email : f.profiles?.email) ?? null,
+      reason: f.reason,
+      createdAt: f.created_at,
+    })),
   };
 }
 
@@ -213,10 +264,10 @@ export async function getPartnerDetail(id: string): Promise<PartnerDetail | null
 export async function getPayoutSheet(): Promise<PayoutLine[]> {
   const { partners } = await getPartnersOverview();
   return partners
-    .filter((p) => p.status === "active")
+    .filter((p) => p.status === "active" || p.status === "terminated")
     .flatMap((p) =>
       p.balances
-        .filter((b) => b.payoutDue && b.payable >= minPayout(b.currency))
+        .filter((b) => b.payoutDue && (partnerEnded(p) || b.payable >= minPayout(b.currency)))
         .map((b) => ({
           partner: p.name,
           slug: p.slug,
@@ -247,7 +298,7 @@ export interface PartnerDashboard {
   name: string;
   slug: string;
   rateBps: number;
-  status: "active" | "suspended";
+  status: "active" | "suspended" | "terminated";
   signups: number;
   subscribers: number;
   balances: Balance[];
@@ -299,7 +350,7 @@ export async function getPartnerDashboard(userId: string): Promise<PartnerDashbo
     status: p.status,
     signups: signups.count ?? 0,
     subscribers: payers.size,
-    balances: balances(rows),
+    balances: balances(rows, Date.now(), partnerEnded(p)),
     commissions: rows.slice(0, 100).map((r) => ({
       ref: anonRef(p.id, r.user_id),
       plan: r.plan,

@@ -70,6 +70,19 @@ describe("what a payment earns", () => {
   });
 });
 
+describe("passes and trial offers", () => {
+  it("earn no commission, while plans do", async () => {
+    const { buildCommission, earnsCommission } = await import("./partners");
+    expect(earnsCommission("pass:day")).toBe(false);
+    expect(earnsCommission("offer:vip-day-pass")).toBe(false);
+    expect(earnsCommission("pro:monthly:once")).toBe(true);
+    expect(earnsCommission(null)).toBe(true);
+    const base = { partner: { id: "p", rateBps: 2000 }, userId: "u", firstPaidAt: new Date("2026-11-01"), payment: { reference: "r", currency: "NGN", grossMinor: 50_000, status: "success", paidAt: new Date("2026-11-01") } };
+    expect(buildCommission({ ...base, payment: { ...base.payment, plan: "offer:vip-day-pass" } })).toEqual({ ok: false, reason: "not_a_plan" });
+    expect(buildCommission({ ...base, payment: { ...base.payment, plan: "vip:monthly", grossMinor: 1_200_000 } }).ok).toBe(true);
+  });
+});
+
 describe("the link", () => {
   it("cleans a name into a code and checks one", () => {
     expect(slugify("Ada Tips!")).toBe("ada-tips");
