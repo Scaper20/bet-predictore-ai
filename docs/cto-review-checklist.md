@@ -30,7 +30,7 @@ the checklist so it is visible next to the code. Owners: Claude (code, data, rep
 - [~] 4.1 Signups verified as people and filtered (Claude, 5 Nov); site visits need GA4/Vercel/Mixpanel figures from founder
 - [x] 4.2 Acquisition source carried through to payment: Revenue by source on Admin Traffic (Claude, 5 Nov)
 - [ ] 4.3 Pass conversion and upgrade report (Claude)
-- [ ] 4.4 X captions, posting sequence, tagged links (Claude drafts, Founder approves)
+- [~] 4.4 X captions, posting sequence, tagged links (Claude drafts, Founder approves): 14 captions, 14-day sequence and tagged links drafted in docs/reports/x-pack-2026-11.md, awaiting founder approval
 - [ ] 4.5 48-hour and 7-day campaign reviews (Claude)
 - [ ] 4.6 SEO plan for NPFL, CAF, AFCON (Claude)
 
