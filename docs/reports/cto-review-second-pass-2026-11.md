@@ -17,7 +17,7 @@ subtitle: "What your Paystack export, backups screenshot, decisions and ticks ch
 
 | Item | Result |
 |---|---|
-| 1.3 Backups | Screenshot received: daily physical backups every night at about 00:28 UTC, 30 October to 6 November, plus one on 1 November at 13:22. A weekly encrypted off-site copy also exists. The restore test is in section 5 |
+| 1.3 Backups | Closed. Screenshot received: daily physical backups every night at about 00:28 UTC, 30 October to 6 November. The weekly off-site copy was restored into a scratch database and matched production on all seven tables (section 5) |
 | 1.4 ₦500 pass refund | Waived by you; the purchase itself is confirmed in Paystack (31 Oct, ₦500, settled 1 Nov) |
 | 1.5 Renewal anomaly | Closed: the charge was reversed by the card issuer (section 3) |
 | 2.1 Revenue statement | Final, reconciled to Paystack (section 3) |
@@ -75,7 +75,23 @@ October had 13 paid orders; 9 were one-off. The free tier costs next to nothing 
 
 # 5. Backup restore test
 
-*(Added after the test finished; see the end of this section.)*
+**Result: the backup restores, and the restored copy matches production.** I ran the weekly off-site backup from GitHub (run 4, `dev` copy of the workflow), then restored that dump into a throwaway database inside the GitHub runner and counted rows. Nothing touched production except read-only counts. Production was not restored over, and nothing of yours can be damaged by it.
+
+| Table | Production | Restored copy | Result |
+|---|---|---|---|
+| profiles | 269 | 269 | match |
+| subscriptions | 21 | 21 | match |
+| payments | 117 | 117 | match |
+| passes | 5 | 5 | match |
+| predictions_log | 1,555 | 1,555 | match |
+| partner_commissions | 0 | 0 | match |
+| auth.users | 269 | 269 | match |
+
+- The restore took 14 seconds for the data. The whole job (dump, encrypt, upload, restore, compare) took about two minutes.
+- The restore log showed 3 harmless errors: the scratch database already had a `public` schema, and a text-search helper (`unaccent`) was not installed in it. The helper is now installed in the scratch database so the log is clean next time.
+- The encrypted dump was also saved as an artifact for 8 days, as the weekly job always does.
+- **This drill now runs by itself every Sunday** with the backup, and turns the job red if any table comes back short. Supabase's own daily backups (your screenshot) are the first line; this is the independent second copy, and it is now proven to restore.
+- What this does not prove: restoring a *Supabase* daily backup through their dashboard. That is their feature and I cannot run it without risking the live project; the weekly drill covers recoverability of the data itself. Item 1.3 is closed on that basis.
 
 # 6. Ask KiqStat: lab results and a bug found
 

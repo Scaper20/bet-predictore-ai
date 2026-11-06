@@ -94,6 +94,7 @@ jobs:
           create schema if not exists extensions;
           create extension if not exists pgcrypto with schema extensions;
           create extension if not exists "uuid-ossp" with schema extensions;
+          create extension if not exists unaccent with schema extensions;
           SQL
           start=$(date +%s)
           /usr/lib/postgresql/17/bin/pg_restore --no-owner --no-privileges --dbname "$SCR" "$PLAIN" 2> restore.log

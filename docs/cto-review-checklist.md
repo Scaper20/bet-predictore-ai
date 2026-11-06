@@ -8,7 +8,7 @@ the checklist so it is visible next to the code. Owners: Claude (code, data, rep
 ## 1. Production safety
 - [x] 1.1 Anthropic workspace hard spending limit set (Founder/CTO)
 - [x] 1.2 Ask preflight green in production, offline tests pass, Ask switch confirmed on (Claude, 4 Nov)
-- [ ] 1.3 Database backup and recovery: runbook, nightly backup, test restore; Supabase Pro decision (Both)
+- [x] 1.3 Backup and recovery (Both, 6 Nov): Supabase daily backups confirmed by screenshot; weekly off-site dump restored into a scratch database and matched production on 7 tables (restore drill now automatic every Sunday)
 - [x] 1.4 Real ₦500 VIP Pass purchase, receipt and refund (Both): purchase confirmed in Paystack and our records; refund test waived by the founder, 6 Nov
 - [x] 1.5 VIP renewal anomaly (Both, 6 Nov): root cause found in the Paystack export: the 24 Oct charge was reversed by the card issuer, so no money was kept and no webhook was lost. Renewal handling stays robust; the daily check now reports reversed charges as such
 - [x] 1.6 Personal booking codes and live win-probability bar verified live (Both)
