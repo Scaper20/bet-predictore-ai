@@ -213,7 +213,7 @@ function VercelSection({ result }: { result: SourceResult<VercelTraffic> }) {
 /* ------------------------------------------------------------------- ours */
 
 function OursSection({ traffic, revenue }: { traffic: Awaited<ReturnType<typeof getTrafficSources>>; revenue: Awaited<ReturnType<typeof getSourceRevenue>> }) {
-  const total = traffic.trackedCount + traffic.untrackedCount;
+  const total = traffic.trackedCount + traffic.directCount + traffic.noDataCount;
   const toBars = (rows: { label: string; count: number }[]): BarRow[] =>
     rows.map((r) => ({ label: r.label, value: r.count, display: total ? `${r.count} · ${Math.round((r.count / total) * 100)}%` : undefined }));
   return (
@@ -226,11 +226,12 @@ function OursSection({ traffic, revenue }: { traffic: Awaited<ReturnType<typeof 
         <p className="mb-4 max-w-3xl text-sm text-ink-muted">
           Counts are people: {traffic.internalCount} account{traffic.internalCount === 1 ? "" : "s"} on our own domains and {traffic.suspectCount} with a mistyped or throwaway address are left out.
         </p>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
           <KpiTile label="Accounts" value={total.toLocaleString()} icon="users" />
           <KpiTile label="Came back" value={traffic.engagedCount.toLocaleString()} hint={total ? `${Math.round((traffic.engagedCount / total) * 100)}% returned after signup` : undefined} tone="neutral" icon="users" />
           <KpiTile label="Known source" value={traffic.trackedCount.toLocaleString()} hint={total ? `${Math.round((traffic.trackedCount / total) * 100)}% of accounts` : undefined} tone="cyan" icon="target" />
-          <KpiTile label="Direct / untracked" value={traffic.untrackedCount.toLocaleString()} hint="No referrer or UTM tag on first visit" tone="neutral" icon="link" />
+          <KpiTile label="Direct" value={traffic.directCount.toLocaleString()} hint="Visit recorded, no referrer or tag" tone="neutral" icon="link" />
+          <KpiTile label="No source recorded" value={traffic.noDataCount.toLocaleString()} hint="Joined before first-visit capture worked" tone="neutral" icon="link" />
         </div>
       </section>
       <div className="grid gap-4 lg:grid-cols-2">
@@ -241,7 +242,7 @@ function OursSection({ traffic, revenue }: { traffic: Awaited<ReturnType<typeof 
           <BarList rows={toBars(traffic.byCampaign)} tone="cyan" empty="No tagged-link signups yet." />
         </Panel>
       </div>
-      <Panel title="Revenue by source" meta="what each source paid" flush>
+      <Panel title="Revenue by source" meta="all time · what each source paid" flush>
         {revenue.length === 0 ? (
           <p className="py-10 text-center text-xs text-ink-dim">Paid orders will show here against the source of their customer.</p>
         ) : (
@@ -267,6 +268,15 @@ function OursSection({ traffic, revenue }: { traffic: Awaited<ReturnType<typeof 
                   </tr>
                 ))}
               </tbody>
+              <tfoot>
+                <tr className="border-t border-line text-xs font-medium text-ink">
+                  <td className="px-4 py-2">Total</td>
+                  <td className="px-4 py-2 text-right tabular-nums">{revenue.reduce((n, r) => n + r.signups, 0)}</td>
+                  <td className="px-4 py-2 text-right tabular-nums">{revenue.reduce((n, r) => n + r.payers, 0)}</td>
+                  <td className="px-4 py-2" />
+                  <td className="px-4 py-2 text-right tabular-nums">₦{revenue.reduce((n, r) => n + r.naira, 0).toLocaleString("en-NG")}</td>
+                </tr>
+              </tfoot>
             </table>
           </div>
         )}
@@ -287,7 +297,7 @@ function OursSection({ traffic, revenue }: { traffic: Awaited<ReturnType<typeof 
                     </span>
                   </div>
                   <p className="mt-1 truncate text-xs text-ink-muted">
-                    {s.referrerHost ?? "Direct"}
+                    {s.referrerHost ?? (s.landingPage ? "Direct" : "No data")}
                     {s.utmSource && ` · ${s.utmSource}${s.utmMedium ? ` / ${s.utmMedium}` : ""}${s.utmCampaign ? ` (${s.utmCampaign})` : ""}`}
                   </p>
                   <p className="mt-0.5 truncate font-mono text-[11px] text-ink-dim">{s.landingPage ?? "—"}</p>
@@ -301,7 +311,7 @@ function OursSection({ traffic, revenue }: { traffic: Awaited<ReturnType<typeof 
                   {traffic.recentSignups.map((s) => (
                     <AdminTableRow key={s.id}>
                       <AdminTableCell>{s.email ?? "—"}</AdminTableCell>
-                      <AdminTableCell className="text-ink-muted">{s.referrerHost ?? "Direct"}</AdminTableCell>
+                      <AdminTableCell className="text-ink-muted">{s.referrerHost ?? (s.landingPage ? "Direct" : "No data")}</AdminTableCell>
                       <AdminTableCell className="text-ink-muted">{s.utmSource ?? "—"}</AdminTableCell>
                       <AdminTableCell className="text-ink-muted">{s.utmMedium ?? "—"}</AdminTableCell>
                       <AdminTableCell className="text-ink-muted">{s.utmCampaign ?? "—"}</AdminTableCell>

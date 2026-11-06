@@ -4,7 +4,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { APP_TIMEZONE } from "@/lib/format";
 import { paymentAmount } from "@/lib/payments/markets";
 import { classifySignup, isEngaged } from "@/lib/signup-quality";
-import { revenueBySource, type SourceRow } from "@/lib/source-revenue";
+import { DIRECT, NO_DATA, revenueBySource, type SourceRow } from "@/lib/source-revenue";
 
 /**
  * Every function here trusts its caller already ran requireAdmin()/
@@ -523,7 +523,10 @@ export interface AttributedSignup {
 export interface TrafficSources {
   byReferrer: ChannelBreakdown[];
   byCampaign: ChannelBreakdown[];
-  untrackedCount: number;
+  /** Captured on the first visit, but no referrer and no tag: typed the address, a bookmark or a private app. */
+  directCount: number;
+  /** Joined before first-visit capture worked: nothing was recorded, so it is not direct traffic. */
+  noDataCount: number;
   trackedCount: number;
   /** Accounts on our own domains (staff, tests), left out of every count above. */
   internalCount: number;
@@ -587,13 +590,18 @@ export async function getTrafficSources(): Promise<TrafficSources> {
   const referrerCounts = new Map<string, number>();
   const campaignCounts = new Map<string, number>();
   let trackedCount = 0;
+  let directCount = 0;
+  let noDataCount = 0;
 
   for (const r of rows) {
     const hasReferrer = !!r.signup_referrer_host;
     const hasCampaign = !!r.signup_utm_source;
+    const captured = !!r.signup_landing_page || hasReferrer || hasCampaign;
     if (hasReferrer || hasCampaign) trackedCount++;
+    else if (captured) directCount++;
+    else noDataCount++;
 
-    const referrerLabel = hasReferrer ? r.signup_referrer_host! : "Direct / no referrer";
+    const referrerLabel = hasReferrer ? r.signup_referrer_host! : captured ? DIRECT : NO_DATA;
     referrerCounts.set(referrerLabel, (referrerCounts.get(referrerLabel) ?? 0) + 1);
 
     if (hasCampaign) {
@@ -616,7 +624,8 @@ export async function getTrafficSources(): Promise<TrafficSources> {
   return {
     byReferrer: rankByCount(referrerCounts),
     byCampaign: rankByCount(campaignCounts),
-    untrackedCount: rows.length - trackedCount,
+    directCount,
+    noDataCount,
     trackedCount,
     internalCount,
     suspectCount,
