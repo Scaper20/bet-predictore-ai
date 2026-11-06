@@ -15,6 +15,9 @@ import { getPlans } from "@/lib/plan-prices";
 import { flutterwaveConfigured } from "@/lib/flutterwave/client";
 import { weeklyCodeAllowance } from "@/lib/code-hub-plans";
 import { formatMoney, marketFor, NIGERIA } from "@/lib/payments/markets";
+import { JsonLd } from "@/components/seo/json-ld";
+import { pricingJsonLd } from "@/lib/seo/pricing-jsonld";
+import { SITE_URL } from "@/lib/site-url";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/pricing" },
@@ -75,6 +78,7 @@ export default async function PricingPage({ searchParams }: PageProps<"/pricing"
 
   return (
     <>
+      <JsonLd data={pricingJsonLd(plans, SITE_URL, `${SITE_URL}/pricing`)} />
       <PageHeader
         eyebrow="Pricing"
         title="Priced for where you are"
