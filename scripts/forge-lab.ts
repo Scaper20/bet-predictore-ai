@@ -17,6 +17,7 @@ import { fitLeague } from "../src/lib/model/fit";
 import { candidatesFor, type ForgeSettings, type PoolEntry, type ForgeLeg } from "../src/lib/forge";
 import { forgeSolve } from "../src/lib/forge-solve";
 import { gradeMarket } from "../src/lib/slip-tracker";
+import { deVig } from "../src/lib/model/backtest";
 import { twinsOf } from "../src/lib/odds/bookable";
 import { isQuotable } from "../src/lib/odds/markets";
 import { csv, parse, priceFor, toMatch, toResultRow, type Row } from "./lib/football-data-uk";
@@ -68,7 +69,12 @@ async function walk(): Promise<G[]> {
       const prior = rows.slice(Math.max(0, i - TRAIN_CAP), i).map(toResultRow);
       let fit = fits.get(day);
       if (!fit) fits.set(day, (fit = fitLeague(prior)));
-      const p = buildPrediction(toMatch(row, league), prior, [], { prefit: fit });
+      const mt = process.argv.find((a) => a.startsWith("--mt="))?.split("=")[1];
+      const p = buildPrediction(toMatch(row, league), prior, [], {
+        prefit: fit,
+        // --mt=1: the closing over 2.5 sets the total (ModelOptions.marketOver25); 0.5 takes half of it.
+        ...(mt && row.closeOu ? { marketOver25: deVig([row.closeOu.over, row.closeOu.under])[0], marketTotalWeight: Number(mt) } : {}),
+      });
       if (p.sufficiency.publishable) out.push({ day, row, p });
     }
     process.stderr.write(`${d.div} `);
