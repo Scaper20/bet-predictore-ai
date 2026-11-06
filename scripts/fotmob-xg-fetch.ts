@@ -22,6 +22,8 @@ const GAP_MS = 1000;
 const END = Date.parse(TUNING_END) + 86_400_000;
 const UA = { "User-Agent": "Mozilla/5.0 (KiqStatResearch)" };
 
+// FotMob's JSON is untyped and unofficial: read defensively, never trust a shape.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function get(url: string, tries = 3): Promise<any> {
   for (let i = 0; i < tries; i++) {
     try {
@@ -36,6 +38,7 @@ async function get(url: string, tries = 3): Promise<any> {
   return null;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const xgOf = (m: any): [number, number] | null => {
   for (const g of m?.content?.stats?.Periods?.All?.stats ?? [])
     for (const s of g.stats ?? [])
