@@ -1,13 +1,14 @@
 import type { MetadataRoute } from "next";
 import { LEAGUES } from "@/lib/leagues";
 import { SITE_URL as SITE } from "@/lib/site-url";
-import { matchPath, playerPath, sportPath, scoresPath, teamPath } from "@/lib/routes";
+import { competitionPath, matchPath, playerPath, sportPath, scoresPath, teamPath } from "@/lib/routes";
 import { seasonLeaders } from "@/lib/team-page";
 import type { Leader } from "@/lib/team-page-core";
 import { leagueTeams, type TeamRef } from "@/lib/stats/queries";
 import { upcomingFeed } from "@/lib/service";
 import { publicLiveOffers } from "@/lib/offers-server";
 import { offerPath } from "@/lib/offers";
+import { ARTICLES } from "@/lib/guides/articles";
 
 /**
  * Static routes, a landing page per league, and the next few days of match
@@ -63,6 +64,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE}/about`, changeFrequency: "monthly", priority: 0.6 },
     { url: `${SITE}/how-it-works`, changeFrequency: "monthly", priority: 0.5 },
     { url: `${SITE}/guides`, changeFrequency: "monthly", priority: 0.5 },
+    ...ARTICLES.map((a) => ({ url: `${SITE}/guides/${a.slug}`, changeFrequency: "monthly" as const, priority: 0.6 })),
     { url: `${SITE}/help`, changeFrequency: "monthly", priority: 0.4 },
     { url: `${SITE}${sportPath("trackRecord")}`, lastModified: now, changeFrequency: "daily", priority: 0.6 },
     { url: `${SITE}/pricing`, changeFrequency: "monthly", priority: 0.8 },
@@ -119,6 +121,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
    * that hour rather than all of them. Tables always have standings to show.
    */
   const leagues: MetadataRoute.Sitemap = LEAGUES.flatMap((l) => [
+    // The permanent hub is listed year-round, fixtures or not (CTO checklist 4.6).
+    { url: `${SITE}${competitionPath(l.code, l.sport)}`, changeFrequency: "daily" as const, priority: 0.7 },
     ...(l.confederation
       ? []
       : [{

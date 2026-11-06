@@ -199,8 +199,10 @@ export async function runAsk(input: RunAskInput): Promise<AskRunResult> {
         },
         { signal },
       );
+      let turnChars = 0;
       turn.on("text", (delta) => {
         answered = true;
+        turnChars += delta.length;
         text += delta;
         emit({ type: "text", delta });
       });
@@ -210,7 +212,21 @@ export async function runAsk(input: RunAskInput): Promise<AskRunResult> {
         message = await turn.finalMessage();
       } catch (err) {
         const aborted = Boolean(signal?.aborted);
-        record(round, "turn", turn.currentMessage?.usage, t0, {
+        // A cancelled stream is still billed for what it read and wrote, but the
+        // SDK only learns the final output count in the last event, so the usage
+        // on a half-finished message under-reads: floor the output at what was
+        // actually streamed, and the input at the prompt we sent when the
+        // message never started. Both estimates err high; the ledger would rather
+        // over-book a cancelled call than let it spend unseen.
+        const seen = turn.currentMessage?.usage;
+        const usage = aborted
+          ? ({
+              ...seen,
+              input_tokens: seen ? seen.input_tokens : promptEstimate,
+              output_tokens: Math.max(seen?.output_tokens ?? 0, tokensFromChars(turnChars)),
+            } as Anthropic.Beta.BetaUsage)
+          : seen;
+        record(round, "turn", usage, t0, {
           aborted,
           error: aborted ? "cancelled" : err instanceof Error ? err.message.slice(0, 200) : String(err),
         });

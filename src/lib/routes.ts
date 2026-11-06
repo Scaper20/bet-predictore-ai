@@ -113,3 +113,8 @@ export function isCheckoutPath(next: string): boolean {
   const path = next.split("?")[0];
   return path.startsWith("/offer/") || path === "/account/billing";
 }
+
+/** A competition's permanent hub page (table, fixtures, results, its own track record). */
+export function competitionPath(code: string, sport: SportId = DEFAULT_SPORT): string {
+  return `/${sport}/competition/${encodeURIComponent(code)}`;
+}

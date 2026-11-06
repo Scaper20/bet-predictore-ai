@@ -577,3 +577,95 @@ the model's and the market's chance.
 
 Reproduce: `npx tsx scripts/decision-lab.ts --hub=18 --examples`,
 `npx tsx scripts/forge-lab.ts`. The live table is graded by `scripts/sql/code-hub-live-grade.sql`.
+
+## J. Training data, market-informed totals and xG (6 Nov 2026)
+
+**Matches per competition against the 200 bar.** The gate (`MIN_PUBLISHABLE_MATCHES`)
+counts every row the fit is given, however old. All 42 football competitions pass
+it. The fit forgets with a 180-day half-life, so I also counted the *effective*
+sample (each row weighted by its age). Domestic leagues and pooled competitions as
+production trains them (cup pools: last 730 days; national teams: the confederation
+pool plus friendlies and the World Cup):
+
+| Competition | Rows | Effective |
+|---|---|---|
+| CAF Champions League | 1,248 | 136 |
+| Scottish Premiership | 1,616 | 155 |
+| Greek Super League | 1,731 | 157 |
+| Bundesliga | 7,416 | 196 |
+| Ligue 1 / NPFL / 2. Bundesliga / Belgian / Primeira / Ligue 2 / Eredivisie / Super Lig | 2,175 to 8,878 | 202 to 212 |
+| Premier League / Liga MX / Serie B | 2,451 to 9,210 | 241 to 249 |
+| Serie A / La Liga / Brasileirao / La Liga 2 / League One / Championship | 3,365 to 13,416 | 254 to 372 |
+| Argentina / MLS | 2,724 / 3,784 | 386 / 434 |
+| Coppa Italia, UEFA cups, English cups (pools) | 1,582 to 4,240 | 504 to 1,369 |
+| National-team competitions (pools) | 13,470 to 25,395 | 355 to 649 |
+
+(UEFA pool rows use TheSportsDB alone and the English-cup pools only ties with a league
+club, so their true counts are somewhat lower.) The three lowest effective samples are also
+the three weakest live leagues (CAF 9 of 23, Greek 65% and Scottish 69% against about
+76% stated, 23 to 26 picks each), which looked like a thin-data effect. **The replay
+does not support that.** Walk-forward over 17 divisions, 17,636 picks, by the
+effective sample at the moment of each fixture:
+
+| Effective sample | Picks | Landed | Stated | Gap |
+|---|---|---|---|---|
+| under 150 | 453 | 77.3% | 75.9% | +1.3 |
+| 150 to 200 | 2,545 | 78.6% | 76.8% | +1.8 |
+| 200 to 250 | 7,025 | 78.4% | 76.5% | +1.9 |
+| 250 to 300 | 4,217 | 76.6% | 75.2% | +1.4 |
+| 300 and over | 4,898 | 75.6% | 74.2% | +1.4 |
+
+Scottish (effective 159, 738 picks) landed at its stated rate and Greek (165) 3.4
+points above it. An effective sample of 150 is enough; the live shortfalls in those
+leagues are small samples, and CAF Champions League has no replay (its pool is
+different, and it stays held). The 200-row gate is not too lenient.
+
+**Market-informed totals (point 1).** Scaling both goal rates until the grid's over 2.5
+equals the closing market's, `scripts/audit-market-total.ts` (17 divisions, closing
+prices as an upper bound on what SportyBet's price at publish gives):
+
+| Log loss, fully market total | Current | Market total | Change |
+|---|---|---|---|
+| Over 1.5 (all games, 17,857) | 0.5444 | 0.5377 | -0.0067 |
+| Over 3.5 | 0.5936 | 0.5871 | -0.0065 |
+| Both teams to score | 0.6865 | 0.6841 | -0.0024 |
+| 1X2 | 1.0081 | 1.0057 | -0.0024 (interval -0.0027 to -0.0019) |
+| Sep-Oct 2026, over 3.5 | 0.6445 | 0.6303 | -0.0142 |
+
+Over 2.5 is set from the price, so it is not a test. The probabilities clearly improve.
+**The picks do not.** Hit rate with the rules unchanged: -0.08 (all), -0.07 (2025-26),
+-1.28 (Sep-Oct); with the sweet-spot rules refitted on its numbers: 77.5% against
+77.3% (2025-26) and 77.6% against 77.8% (Sep-Oct), inside noise. In the Code Hub
+replay at least one code landed on 58% of days against 67%, and Forge was mixed
+(`--mt=1` on `decision-lab.ts` and `forge-lab.ts`). Not shipped. This is the same
+result as the stretch (section E): better probabilities, no better picks, because
+the pick layer is fitted to the existing numbers. `ModelOptions.marketOver25` stays as
+a lab option, off. Shipping it would also need the SportyBet board read before the
+prediction (today it is read after), which makes a game's numbers depend on whether
+the board answered in time.
+
+**xG (point 3).** xG is already stored: `match_team_stats` holds team xG for 7,200
+matches (Premier League, La Liga, Serie A, Ligue 1, Bundesliga and the three UEFA cups
+from Aug 2023), and nowhere else. Predicting a team's next-match goals from its trailing
+ten (12,584 team-matches, R2):
+
+| Predictor | Goals scored | Goals conceded |
+|---|---|---|
+| Goals | 0.0571 | 0.0167 |
+| Shots on target | 0.0619 | 0.0231 |
+| xG | 0.0669 | 0.0256 |
+| Shipped: goals and shots on target half and half | 0.0660 | 0.0222 |
+| Goals and xG half and half | 0.0675 | 0.0233 |
+| 25% goals, 75% xG | 0.0694 | |
+| Goals, xG, shots on target a third each | 0.0701 | |
+
+xG is the best single signal, and the best blend beats the shipped one by about 6% in R2.
+By the shots precedent (a 16% R2 gain became about 0.003 of log loss), that is worth about
+0.001 to 0.002 on the five leagues that have it, where the model is already best.
+`FitOptions.xgWeight` and `ResultRow.homeXg/awayXg` are in, off by default and tested; the
+data is not yet in the training rows (it lives in `match_team_stats`, keyed by match, while
+the fit reads `historical_results`). Before turning it on: join it into the training rows
+app-side by date and canonical team name, then walk-forward test it. That test has little
+power on three seasons of five leagues (the standard error of a log-loss difference is
+about 0.003), so a deeper xG history is the real gate. Given section E and this section,
+the likelier return is in the explanations on match and team pages than in the picks.

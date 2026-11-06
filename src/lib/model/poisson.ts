@@ -252,3 +252,28 @@ export function deriveLiveWinProbability(
 
   return { home, draw, away };
 }
+
+/**
+ * The factor on both goal rates that makes the grid's over 2.5 equal `overFair`
+ * (a market's over 2.5, margin removed), keeping the split between the sides.
+ * Null when the target is out of reach (outside 5-95%, or the factor would be
+ * extreme). Bisection: the grid's over 2.5 only rises with the rates.
+ */
+export function totalScaleFor(home: number, away: number, rho: number, overFair: number): number | null {
+  if (!(overFair > 0.05 && overFair < 0.95) || !(home > 0) || !(away > 0)) return null;
+  const over = (k: number) => {
+    const g = scoreMatrix(home * k, away * k, rho);
+    let p = 0;
+    for (let x = 0; x < g.length; x++) for (let y = 0; y < g[x].length; y++) if (x + y >= 3) p += g[x][y];
+    return p;
+  };
+  let lo = 0.3;
+  let hi = 3;
+  for (let i = 0; i < 40; i++) {
+    const mid = (lo + hi) / 2;
+    if (over(mid) < overFair) lo = mid;
+    else hi = mid;
+  }
+  const k = (lo + hi) / 2;
+  return k > 0.31 && k < 2.99 ? k : null;
+}

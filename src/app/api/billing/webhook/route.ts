@@ -421,6 +421,22 @@ export async function POST(request: Request) {
       const reference = asString(data.transaction_reference) ?? asString(asRecord(data.transaction)?.reference);
       if (!reference) break;
       await admin.from("payments").update({ status: "refunded" }).eq("paystack_reference", reference);
+      // A partner is not paid on money that went back (CTO checklist 5.4): cancel
+      // the held commission, or leave a clawback on the next payout if it was paid.
+      // A partial refund reverses the whole commission; the admin can see why.
+      try {
+        const { data: commission } = await admin
+          .from("partner_commissions")
+          .select("id")
+          .eq("payment_reference", reference)
+          .eq("kind", "commission")
+          .maybeSingle();
+        if (commission?.id) {
+          await admin.rpc("partner_reverse_commission", { p_commission: commission.id as string, p_reason: "refunded (Paystack)" });
+        }
+      } catch (err) {
+        console.error("commission reversal on refund failed", reference, err);
+      }
       await admin
         .from("passes")
         .update({ expires_at: now })

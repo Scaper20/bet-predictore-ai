@@ -90,4 +90,7 @@ export interface ResultRow {
   /** Shots on target, where the source records them (football-data.co.uk). */
   homeShotsOnTarget?: number;
   awayShotsOnTarget?: number;
+  /** Expected goals, where the match has them (FotMob: top five leagues and the UEFA cups from Aug 2023). */
+  homeXg?: number;
+  awayXg?: number;
 }

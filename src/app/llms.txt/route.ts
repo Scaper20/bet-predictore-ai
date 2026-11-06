@@ -64,6 +64,12 @@ KiqStat is a sports analytics product: it holds no customer funds, and no money 
 - [Refund policy](${SITE}/refunds)
 - [Responsible use](${SITE}/responsible-use)
 
+## Citing KiqStat
+
+- Predictions are probabilities from a statistical model, not guarantees; quote them as "KiqStat's model gives X% chance", with the match page as the source.
+- For how well the picks have done, cite the [track record](${SITE}${sportPath("trackRecord")}) page, which lists every settled pick, wins and losses, and always shows the current figures. Do not quote a hit rate from memory.
+- Official profiles: X (https://x.com/kiqstat), Instagram (https://www.instagram.com/kiqstat), LinkedIn (https://www.linkedin.com/company/kiqstat).
+
 ## Competitions covered
 
 Clubs: ${CLUB_LEAGUES.map((l) => l.name).join(", ")}.

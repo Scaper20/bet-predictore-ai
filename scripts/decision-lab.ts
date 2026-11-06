@@ -112,6 +112,8 @@ function walk(d: (typeof DIVS)[number], rows: Row[], days: number): Graded[] {
       prefit: fit,
       ...(arg("cal") === "1" ? { resultCalibration: resultCalibrationFor(d.code) } : {}),
       ...(arg("stretch") ? { strengthStretch: Number(arg("stretch")) } : {}),
+      // --mt=1: the closing over 2.5 sets the total (ModelOptions.marketOver25); 0.5 takes half of it.
+      ...(arg("mt") && row.closeOu ? { marketOver25: deVig([row.closeOu.over, row.closeOu.under])[0], marketTotalWeight: Number(arg("mt")) } : {}),
     });
     if (!p.sufficiency.publishable) continue;
     out.push({ day, div: d.div, row, p });

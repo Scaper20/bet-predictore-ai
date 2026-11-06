@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { DocPage, DocCard, Example } from "@/components/guides/doc-page";
 import { sportPath } from "@/lib/routes";
+import { ARTICLES } from "@/lib/guides/articles";
 
 export const metadata: Metadata = {
   title: "Football Prediction Guides: Probabilities and Prediction Types Explained",
@@ -51,6 +52,19 @@ export default function GuidesPage() {
         </>
       }
       sections={[
+        {
+          id: "questions",
+          title: "Common questions",
+          body: (
+            <ul className="list-disc space-y-2 pl-5">
+              {ARTICLES.map((a) => (
+                <li key={a.slug}>
+                  <Link href={`/guides/${a.slug}`} className="font-semibold text-brand hover:underline">{a.title}</Link>
+                </li>
+              ))}
+            </ul>
+          ),
+        },
         {
           id: "types",
           title: "The prediction types",

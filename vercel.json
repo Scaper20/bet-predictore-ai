@@ -31,6 +31,14 @@
     {
       "path": "/api/cron/code-hub",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/indexnow",
+      "schedule": "40 8 * * *"
+    },
+    {
+      "path": "/api/cron/ask-watch",
+      "schedule": "20 8 * * *"
     }
   ]
 }
