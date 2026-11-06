@@ -20,7 +20,8 @@ import { engineRead, withEngineHeadline } from "@/lib/engine-feed";
 import { switchOn } from "@/lib/switches";
 import { listingsFor, type SportyBetEvent } from "@/lib/odds/sportybet";
 import { trainingAsOf } from "@/lib/model/as-of";
-import { paramsFor, type ParamSet } from "@/lib/model/params";
+import { marketGoals } from "@/lib/model/market-goals";
+import { marketCoverage, paramsFor, type ParamSet } from "@/lib/model/params";
 import { buildPrediction, guardHeadline, HEADLINE_EXCLUDED, HEADLINE_MAX_PROBABILITY, type ModelOptions, type Prediction } from "@/lib/model/predict";
 import { applySelectionPolicy } from "@/lib/selection-policy";
 import { extraPicks } from "@/lib/selection-extras";
@@ -201,7 +202,7 @@ function modelOptions(
 ): ModelOptions {
   // Games before the cutover keep the parameters they were published under (model/params.ts).
   const def = match.league.code ? leagueByCode(match.league.code) : undefined;
-  const params = paramsFor(match.kickoff, Boolean(def?.confederation || def?.cupPool));
+  const params = paramsFor(match.kickoff, Boolean(def?.confederation || def?.cupPool), marketCoverage(training.rows, match.kickoff));
   const prefit = sharedFit(match, training.rows, params);
   const book = training.book;
   const ratingNames = book && book.canonical.size > 0
@@ -344,6 +345,35 @@ export async function matchPrediction(id: string): Promise<Prediction | null> {
     const [checked] = await marketChecked([{ prediction: buildPrediction(match, training.rows, h2h, options), options }]);
     return checked;
   });
+}
+
+/**
+ * The shadow run for anchoring (scripts and cron/anchor-shadow): the model's
+ * 1X2 and over 2.5 chances for a fixture as served, and the same with its goal
+ * rates pulled toward the goals a bookmaker's prices imply. Never published.
+ */
+export async function anchorShadow(
+  matchId: string,
+  prices: { oneXTwo: { home: number; draw: number; away: number }; overUnder: { over: number; under: number } },
+  weight = 0.5,
+): Promise<{ league: string | null; kickoff: string; plain: Record<string, number>; anchored: Record<string, number> } | null> {
+  const match = await getMatch(matchId);
+  if (!match) return null;
+  const [full, h2h] = await Promise.all([trainingRows(match), getH2H(match)]);
+  const training = asOf(match, full);
+  const options = modelOptions(match, training);
+  const goals = marketGoals(prices.oneXTwo, prices.overUnder);
+  if (!goals) return null;
+  const read = (o: ModelOptions) => {
+    const p = buildPrediction(match, training.rows, h2h, o);
+    return { home: p.markets.home, draw: p.markets.draw, away: p.markets.away, o25: p.markets.over["2.5"] };
+  };
+  return {
+    league: match.league.code ?? null,
+    kickoff: match.kickoff,
+    plain: read(options),
+    anchored: read({ ...options, marketRates: goals, marketRatesWeight: weight }),
+  };
 }
 
 /**

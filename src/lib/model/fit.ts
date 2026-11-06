@@ -91,6 +91,12 @@ export interface FitOptions {
    * walk-forward tested, and only those competitions have xG (docs/model-audit-teams-2026-11.md, section J).
    */
   xgWeight?: number;
+  /**
+   * Share of each team-match's scoring signal taken from the goals the market's
+   * closing prices implied for it (ResultRow.homeMkt/awayMkt), where the row has
+   * them. Same blending and cap as shots and xG.
+   */
+  mktWeight?: number;
 }
 
 /** Appearances at which a newcomer's prior counts half as much as at zero. */
@@ -114,6 +120,7 @@ const DEFAULTS: Required<FitOptions> = {
   newcomerPrior: 0.2,
   shotWeight: 0.5,
   xgWeight: 0,
+  mktWeight: 0,
 };
 
 export function fitLeague(results: ResultRow[], opts: FitOptions = {}): LeagueFit {
@@ -163,6 +170,8 @@ export function fitLeague(results: ResultRow[], opts: FitOptions = {}): LeagueFi
   const SA: (number | undefined)[] = [];
   const GH: (number | undefined)[] = [];
   const GA: (number | undefined)[] = [];
+  const MH: (number | undefined)[] = [];
+  const MA: (number | undefined)[] = [];
 
   for (const r of rows) {
     const h = idFor(r.homeId, r.homeName);
@@ -186,6 +195,11 @@ export function fitLeague(results: ResultRow[], opts: FitOptions = {}): LeagueFi
     const hasXg = Number.isFinite(xh) && Number.isFinite(xa) && (xh as number) >= 0 && (xa as number) >= 0;
     GH.push(hasXg ? xh : undefined);
     GA.push(hasXg ? xa : undefined);
+    const mh = r.homeMkt;
+    const ma = r.awayMkt;
+    const hasMkt = Number.isFinite(mh) && Number.isFinite(ma) && (mh as number) > 0 && (ma as number) > 0;
+    MH.push(hasMkt ? mh : undefined);
+    MA.push(hasMkt ? ma : undefined);
 
     played[h]++;
     played[a]++;
@@ -202,13 +216,10 @@ export function fitLeague(results: ResultRow[], opts: FitOptions = {}): LeagueFi
   // target where present. X/Y stay the real goals (rho reads those).
   const XR = X.slice();
   const YR = Y.slice();
-  if (cfg.shotWeight > 0 || cfg.xgWeight > 0) {
-    // Goals per shot on target and per xG over the rows that carry each, so
-    // a blended row keeps the level of goals.
-    let g = 0;
-    let sot = 0;
-    let gx = 0;
-    let xg = 0;
+  if (cfg.shotWeight > 0 || cfg.xgWeight > 0 || cfg.mktWeight > 0) {
+    // Goals per shot on target, per xG and per market-implied goal over the rows
+    // that carry each, so a blended row keeps the level of goals.
+    let g = 0, sot = 0, gx = 0, xg = 0, gm = 0, mk = 0;
     for (let k = 0; k < m; k++) {
       if (SH[k] !== undefined && SA[k] !== undefined) {
         g += X[k] + Y[k];
@@ -218,19 +229,26 @@ export function fitLeague(results: ResultRow[], opts: FitOptions = {}): LeagueFi
         gx += X[k] + Y[k];
         xg += (GH[k] as number) + (GA[k] as number);
       }
+      if (MH[k] !== undefined && MA[k] !== undefined) {
+        gm += X[k] + Y[k];
+        mk += (MH[k] as number) + (MA[k] as number);
+      }
     }
     const conversion = sot > 0 ? g / sot : 0;
     const xgScale = xg > 0 ? gx / xg : 0;
+    const mktScale = mk > 0 ? gm / mk : 0;
     for (let k = 0; k < m; k++) {
       const wS = SH[k] !== undefined && SA[k] !== undefined && conversion > 0 ? cfg.shotWeight : 0;
       const wX = GH[k] !== undefined && GA[k] !== undefined && xgScale > 0 ? cfg.xgWeight : 0;
-      if (wS === 0 && wX === 0) continue;
-      const total = wS + wX;
+      const wM = MH[k] !== undefined && MA[k] !== undefined && mktScale > 0 ? cfg.mktWeight : 0;
+      if (wS === 0 && wX === 0 && wM === 0) continue;
+      const total = wS + wX + wM;
       const scale = total > 1 ? 1 / total : 1;
       const s = wS * scale;
       const x = wX * scale;
-      XR[k] = (1 - s - x) * X[k] + s * (SH[k] ?? 0) * conversion + x * (GH[k] ?? 0) * xgScale;
-      YR[k] = (1 - s - x) * Y[k] + s * (SA[k] ?? 0) * conversion + x * (GA[k] ?? 0) * xgScale;
+      const mm = wM * scale;
+      XR[k] = (1 - s - x - mm) * X[k] + s * (SH[k] ?? 0) * conversion + x * (GH[k] ?? 0) * xgScale + mm * (MH[k] ?? 0) * mktScale;
+      YR[k] = (1 - s - x - mm) * Y[k] + s * (SA[k] ?? 0) * conversion + x * (GA[k] ?? 0) * xgScale + mm * (MA[k] ?? 0) * mktScale;
     }
   }
 

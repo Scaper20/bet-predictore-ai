@@ -203,6 +203,25 @@ def test_write_match_writes_every_table_and_details_last():
     assert len(db.tables["match_lineup_players"]) == len({r.fotmob_player_id for r in b.lineup_rows})
 
 
+def test_team_stats_only_keeps_the_team_row_and_a_header_with_no_empty_sections():
+    db = MemoryDb()
+    b = fm.parse_match(load("match_4193569"))
+    n = write_match(db, "m1", b, team_stats_only=True)
+    assert n == 2
+    assert db.tables["match_team_stats"] and db.tables["match_details"]
+    for table in ("players", "match_lineups", "match_lineup_players", "player_match_stats", "match_shots", "match_events"):
+        assert not db.tables.get(table), table
+    head = db.tables["match_details"][0]
+    assert head["has_lineups"] is False and head["has_player_stats"] is False and head["has_shotmap"] is False
+    assert db.calls[-1][1] == "match_details"
+
+
+def test_matches_job_can_backfill_team_stats_only(ctx):
+    jobs.job_fotmob_matches(ctx, limit=3, team_stats_only=True)
+    assert len(ctx.db.tables["match_details"]) == 3
+    assert not ctx.db.tables.get("player_match_stats")
+
+
 def test_player_ids_are_stable():
     assert player_uuid(737066) == player_uuid(737066) != player_uuid(737067)
 
@@ -282,6 +301,24 @@ def test_disabled_source_is_never_called(ctx):
     ctx.db.tables["ingest_sources"] = [{"id": "fotmob", "enabled": False}]
     jobs.job_fotmob_matches(ctx, limit=5)
     assert ctx.fake.match_calls == []
+
+
+def test_season_labels_resolve_to_fotmobs_own_names():
+    eu = ["2026/2027", "2025/2026", "2024/2025"]
+    assert jobs.resolve_season_names(eu, "2025/2026") == ["2025/2026"]
+    # MLS and Brazil: a calendar year.
+    assert jobs.resolve_season_names(["2026", "2025", "2024"], "2025/2026") == ["2025"]
+    # Argentina: two tournaments a year.
+    arg = ["2026 - Clausura", "2025 - Clausura", "2025 - Apertura", "2024"]
+    assert jobs.resolve_season_names(arg, "2025/2026") == ["2025 - Clausura", "2025 - Apertura"]
+    assert jobs.resolve_season_names(arg, "2024/2025") == ["2024"]
+    # Liga MX: season and tournament.
+    mx = ["2026/2027 - Apertura", "2025/2026 - Clausura", "2025/2026 - Apertura"]
+    assert jobs.resolve_season_names(mx, "2025/2026") == ["2025/2026 - Clausura", "2025/2026 - Apertura"]
+    # The current season, a feed with no list, and a season it does not have.
+    assert jobs.resolve_season_names(eu, None) == [None]
+    assert jobs.resolve_season_names([], "2025/2026") == ["2025/2026"]
+    assert jobs.resolve_season_names(["2026"], "2010/2011") == []
 
 
 def test_backfill_seasons_are_named_like_fotmob():

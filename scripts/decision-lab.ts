@@ -45,6 +45,9 @@ import { digestPick } from "../src/lib/whatsapp-digest";
 import { twinsOf } from "../src/lib/odds/bookable";
 import { csv, parse, priceFor, toMatch, toResultRow, type Row } from "./lib/football-data-uk";
 import { clampEnd } from "./lib/holdout";
+import { mktRows } from "./lib/mkt-rows";
+import { fair3, fairOu, impliedRates } from "./lib/improve-core";
+import { VARIANTS } from "./improve-lab";
 
 const DAY = 86_400_000;
 const TRAIN_CAP = 1200;
@@ -95,16 +98,19 @@ function walk(d: (typeof DIVS)[number], rows: Row[], days: number): Graded[] {
   const end = Math.min(Date.now(), Date.parse(clampEnd(undefined, process.argv.includes("--final"))) + DAY);
   const target = rows.filter((r) => r.date >= end - days * DAY && r.date <= end);
   const league = { code: d.code, label: d.label };
+  const mkt = mktRows(d.div, process.env.MKT_CACHE ?? "/tmp");
   const fits = new Map<number, ReturnType<typeof fitLeague>>();
   const out: Graded[] = [];
   let i = 0;
   for (const row of target) {
     const day = Math.floor(row.date / DAY) * DAY;
     while (i < rows.length && rows[i].date < day) i++;
-    const prior = rows.slice(Math.max(0, i - TRAIN_CAP), i).map(toResultRow);
+    // --variant=<name>: an improve-lab variant (fit options, stretch), with market-implied goals attached to the training rows.
+    const variant = arg("variant") ? VARIANTS[arg("variant")!] : undefined;
+    const prior = rows.slice(Math.max(0, i - TRAIN_CAP), i).map(variant?.fit?.mktWeight ? mkt.rr : toResultRow);
     let fit = fits.get(day);
     if (!fit) {
-      fit = fitLeague(prior, arg("halflife") ? { halfLifeDays: Number(arg("halflife")) } : undefined);
+      fit = fitLeague(prior, variant?.fit ?? (arg("halflife") ? { halfLifeDays: Number(arg("halflife")) } : undefined));
       fits.set(day, fit);
     }
     // --cal=1: the straight-win correction production applies to these divisions.
@@ -112,12 +118,18 @@ function walk(d: (typeof DIVS)[number], rows: Row[], days: number): Graded[] {
       prefit: fit,
       ...(arg("cal") === "1" ? { resultCalibration: resultCalibrationFor(d.code) } : {}),
       ...(arg("stretch") ? { strengthStretch: Number(arg("stretch")) } : {}),
+      ...(arg("variant") ? VARIANTS[arg("variant")!]?.opts ?? {} : {}),
+      // --anchor=<w>: pull the model's rates toward those the market's early-week prices imply (ModelOptions.marketRates).
+      ...(arg("anchor") && row.open && row.openOu
+        ? { marketRates: impliedRates(fair3(row.open)[0], fair3(row.open)[2], fairOu(row.openOu), fit.rho, [1.4, 1.1]), marketRatesWeight: Number(arg("anchor")) }
+        : {}),
       // --mt=1: the closing over 2.5 sets the total (ModelOptions.marketOver25); 0.5 takes half of it.
       ...(arg("mt") && row.closeOu ? { marketOver25: deVig([row.closeOu.over, row.closeOu.under])[0], marketTotalWeight: Number(arg("mt")) } : {}),
     });
     if (!p.sufficiency.publishable) continue;
     out.push({ day, div: d.div, row, p });
   }
+  mkt.save();
   return out;
 }
 

@@ -168,8 +168,26 @@ def write_players(db: Database, bundle: MatchBundle) -> int:
     return db.upsert("players", rows, on_conflict="fotmob_id") if rows else 0
 
 
-def write_match(db: Database, match_id: str, bundle: MatchBundle) -> int:
-    """Everything FotMob has on one game. Returns rows written."""
+def write_match(db: Database, match_id: str, bundle: MatchBundle, team_stats_only: bool = False) -> int:
+    """Everything FotMob has on one game. Returns rows written.
+
+    ``team_stats_only`` keeps just the team figures (xG, shots, possession) and
+    the match header: no players, lineups, shots or events. It is for backfilling
+    years of history where only the team numbers feed the model; the header's
+    lineup, player-stat and shot-map flags are then false, so no page shows a
+    section that is empty. A later ``--refresh`` run fills in the rest.
+    """
+    if team_stats_only:
+        n = 0
+        if bundle.team_stats:
+            n += db.upsert("match_team_stats", [{
+                "match_id": match_id, **bundle.team_stats["columns"], "stats": bundle.team_stats["stats"],
+            }], on_conflict="match_id")
+        details = {**bundle.details, "has_lineups": False, "has_player_stats": False, "has_shotmap": False}
+        n += db.upsert("match_details", [{
+            "match_id": match_id, "fotmob_match_id": bundle.fotmob_id, **details, "fetched_at": _now(),
+        }], on_conflict="match_id")
+        return n
     n = write_players(db, bundle)
 
     lineups = [{"match_id": match_id, "side": side, **cols} for side, cols in bundle.lineups.items()]
