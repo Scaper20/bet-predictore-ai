@@ -669,3 +669,41 @@ app-side by date and canonical team name, then walk-forward test it. That test h
 power on three seasons of five leagues (the standard error of a log-loss difference is
 about 0.003), so a deeper xG history is the real gate. Given section E and this section,
 the likelier return is in the explanations on match and team pages than in the picks.
+
+## K. xG walk-forward on the top five leagues (6 Nov 2026)
+
+Data: FotMob team xG for 7,514 of 7,516 finished matches in the Premier League, La Liga,
+Serie A, Bundesliga and Ligue 1, 2022/23 to 31 Oct 2026 (`scripts/fotmob-xg-fetch.ts`),
+matched to the football-data rows by day, score and club name (every row of the fetched
+seasons matched). Walk-forward as everywhere else (fit on results before each matchday),
+5,202 fixtures from Aug 2023 to Jun 2026. The fit's response blends goals with shots on
+target and xG (`xgWeight`, section J); the shipped model is goals and shots on target half and half.
+
+| Blend (shots on target / xG) | 1X2 log loss vs shipped | Over/under 2.5 | Pick hit (95%) |
+|---|---|---|---|
+| shipped: 0.5 / 0 | 0.9887 | 0.6755 | 79.5% |
+| 0.5 / 0.25 | +0.0002 | -0.0006 | +0.2 (-0.2 to +0.7) |
+| 0.33 / 0.33 | -0.0016 (-0.0024 to -0.0008) | -0.0009 | +0.2 (-0.3 to +0.7) |
+| 0.25 / 0.5 | -0.0019 (-0.0031 to -0.0007) | -0.0011 | +0.5 (-0.1 to +1.2) |
+| **0 / 0.5** | **-0.0036 (-0.0051 to -0.0020)** | -0.0009 | -0.3 (-1.0 to +0.3) |
+| 0 / 0.75 | -0.0032 (-0.0050 to -0.0015) | -0.0013 | +0.4 (-0.3 to +1.2) |
+
+By season, change in 1X2 log loss for the 0 / 0.5 blend: 2023/24 -0.0056, 2024/25 -0.0056,
+**2025/26 +0.0005, Aug-Oct 2026 -0.0004**. The gain is large and consistent in the first two
+seasons and absent in the last two (the seasons are about 1,700 games each, so each estimate
+is good to about 0.003). Over/under improves a little in every window (-0.0004 to -0.0042).
+Picks: no significant change in any window.
+
+**Reading.** Replacing shots on target with xG helps the top-five 1X2 by about 0.004 over the
+whole period, which is the size of the shots-on-target gain in October, but the gain has not
+shown in the most recent season and a half. The xG data itself did not change (goals per xG
+0.99 to 1.02, correlation with results 0.59 to 0.64 every season). With the picks flat, and
+the same picture as the stretch and the market total (better numbers, same picks), it is not
+switched on. Two things would settle it: the 2020/21 and 2021/22 seasons (about 3,800 more
+matches, 30 minutes of fetching) to see whether the early gain is real, and a few more weeks
+of the 2026/27 season. The best blend to test in production, if it holds, is 0 / 0.5.
+
+**What was built.** FotMob league ids for 16 more leagues, a `--team-stats-only` backfill,
+a season-name fix for MLS, Brazil, Argentina and Liga MX, and a staged runbook
+(`docs/fotmob-xg-backfill.md`). Only nine leagues' history can be backfilled into
+`matches`; for the other twelve the deeper xG needs a `historical_results` column (see the runbook).

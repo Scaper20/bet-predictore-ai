@@ -38,6 +38,12 @@ async function get(url: string, tries = 3): Promise<any> {
   return null;
 }
 
+/** "2 - 1" -> [2, 1]; the final score is on the status line, not on the team objects. */
+const scoreOf = (s: unknown): [number, number] => {
+  const m = /^\s*(\d+)\s*-\s*(\d+)\s*$/.exec(String(s ?? ""));
+  return m ? [Number(m[1]), Number(m[2])] : [NaN, NaN];
+};
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const xgOf = (m: any): [number, number] | null => {
   for (const g of m?.content?.stats?.Periods?.All?.stats ?? [])
@@ -62,7 +68,7 @@ async function main() {
         if (!x.status?.finished || done.has(String(x.id))) continue;
         const t = Date.parse(x.status.utcTime);
         if (!(t < END)) continue;
-        jobs.push({ league, season, id: x.id, date: x.status.utcTime, home: x.home?.name, away: x.away?.name, hg: Number(x.home?.score), ag: Number(x.away?.score) });
+        jobs.push({ league, season, id: x.id, date: x.status.utcTime, home: x.home?.name, away: x.away?.name, hg: scoreOf(x.status?.scoreStr)[0], ag: scoreOf(x.status?.scoreStr)[1] });
       }
       await new Promise((res) => setTimeout(res, GAP_MS));
     }
