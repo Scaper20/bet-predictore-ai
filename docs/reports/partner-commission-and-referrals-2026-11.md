@@ -35,6 +35,8 @@ Checklist items 5.2 and 5.4 · 6 November 2026 · for the Partner Agreement V2, 
 | VIP quarterly | 32,400 | 586 | 31,814 | 6,363 |
 | VIP yearly | 115,200 | 1,828 | 113,372 | 22,674 |
 
+**Note (6 Nov):** this table assumes the fee is deducted from the price. Since 19 October pay-once buyers pay Paystack's fee on top, and the code uses the fee Paystack reports, so on those payments the net equals the price and the partner earns the full 20% of it (₦1,000 on Pro monthly, ₦2,400 on VIP monthly). The table is right for payments where we bear the fee, such as card subscriptions.
+
 So a partner who brings one Pro customer who pays once earns ₦965; one who stays on VIP monthly for the full 12 months earns about ₦28,000. To reach the ₦10,000 minimum payout, a partner needs roughly eleven Pro monthly sales.
 
 ### What the model allows (from the plan economics report, ₦1,550 to the dollar)
