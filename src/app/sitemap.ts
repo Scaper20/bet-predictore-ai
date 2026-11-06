@@ -8,6 +8,7 @@ import { leagueTeams, type TeamRef } from "@/lib/stats/queries";
 import { upcomingFeed } from "@/lib/service";
 import { publicLiveOffers } from "@/lib/offers-server";
 import { offerPath } from "@/lib/offers";
+import { ARTICLES } from "@/lib/guides/articles";
 
 /**
  * Static routes, a landing page per league, and the next few days of match
@@ -63,6 +64,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE}/about`, changeFrequency: "monthly", priority: 0.6 },
     { url: `${SITE}/how-it-works`, changeFrequency: "monthly", priority: 0.5 },
     { url: `${SITE}/guides`, changeFrequency: "monthly", priority: 0.5 },
+    ...ARTICLES.map((a) => ({ url: `${SITE}/guides/${a.slug}`, changeFrequency: "monthly" as const, priority: 0.6 })),
     { url: `${SITE}/help`, changeFrequency: "monthly", priority: 0.4 },
     { url: `${SITE}${sportPath("trackRecord")}`, lastModified: now, changeFrequency: "daily", priority: 0.6 },
     { url: `${SITE}/pricing`, changeFrequency: "monthly", priority: 0.8 },
