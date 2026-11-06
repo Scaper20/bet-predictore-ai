@@ -9,7 +9,7 @@
  * (Aug 2022 to Jun 2025), HELD (2025-26) and OWNER (Sep-Oct 2026).
  */
 import {
-  AnchorCache, anchoredBlend, blendRates, devig, fair3, fairOu, fmt, fmtDiff, impliedRates, inWindow, ll, loadLab, meanSe, probsOf, result3,
+  AnchorCache, anchoredBlend, blendRates, fair3, fairOu, fmt, fmtDiff, inWindow, ll, loadLab, meanSe, probsOf, result3,
   type Devig, type Fixture, type Probs,
 } from "./lib/improve-core";
 
@@ -114,6 +114,21 @@ if (part === "anchor" || part === "all") {
   for (const w of [0.5, 1]) sources[`close-anchored w=${w}`] = (f) => anchoredBlend(f, cache, "close", w);
   sources["open-anchored w=1 (power devig)"] = (f) => anchoredBlend(f, cache, "open", 1, "base", "power");
   compare("Market-anchored goal rates (1X2 and O2.5 are set from the price; O1.5, O3.5 and BTTS are tests)", withMarket, sources, "base");
+  cache.save();
+}
+
+if (part === "anchor-m6") {
+  // Does pulling toward the early-week price add anything once the fit already uses market goals?
+  const M6 = "m60s20_hl120_reg005_st11";
+  const cache = new AnchorCache(`${dir}/../anchored.json`);
+  const withMarket = fixtures.filter((f) => f.open && f.openOu && f.v.base && f.v[M6]);
+  const sources: Record<string, (f: Fixture) => [number, number, number] | null> = {
+    base: baseRates,
+    M6: (f) => f.v[M6],
+    "base anchored 0.5": (f) => anchoredBlend(f, cache, "open", 0.5, "base"),
+  };
+  for (const w of [0.25, 0.5, 0.75, 1]) sources[`M6 anchored ${w}`] = (f) => anchoredBlend(f, cache, "open", w, M6);
+  compare("Anchoring on top of the market-informed fit (open prices)", withMarket, sources, "M6");
   cache.save();
 }
 

@@ -141,37 +141,9 @@ export const fairOu = (p: { over: number; under: number }, how: Devig = "proport
 
 /* ------------------------------------------------- the rates a market implies */
 
-/**
- * The goal rates whose grid reproduces a market's home-minus-away edge and over
- * 2.5, with the model's own low-score parameter. The total is found from the
- * over 2.5, the split from the gap between home and away win, alternating a few
- * times (each mostly governs one quantity, so it settles fast).
- */
-export function impliedRates(pH: number, pA: number, pOver25: number, rho: number, start: [number, number]): [number, number] {
-  let total = start[0] + start[1];
-  let ratio = start[0] / start[1];
-  const rates = (t: number, r: number): [number, number] => [(t * r) / (1 + r), t / (1 + r)];
-  for (let it = 0; it < 4; it++) {
-    let lo = 0.8, hi = 7;
-    for (let i = 0; i < 24; i++) {
-      const mid = (lo + hi) / 2;
-      const [l, m] = rates(mid, ratio);
-      if (probsOf(l, m, rho).o25 < pOver25) lo = mid; else hi = mid;
-    }
-    total = (lo + hi) / 2;
-    const target = pH - pA;
-    lo = Math.log(0.12);
-    hi = Math.log(9);
-    for (let i = 0; i < 24; i++) {
-      const mid = (lo + hi) / 2;
-      const [l, m] = rates(total, Math.exp(mid));
-      const q = probsOf(l, m, rho);
-      if (q.home - q.away < target) lo = mid; else hi = mid;
-    }
-    ratio = Math.exp((lo + hi) / 2);
-  }
-  return rates(total, ratio);
-}
+// The solver ships in the app (it fills the training archive), so the lab uses that very code.
+import { impliedRates } from "../../src/lib/model/market-goals";
+export { impliedRates };
 
 /* -------------------------------------------------------------------- stats */
 

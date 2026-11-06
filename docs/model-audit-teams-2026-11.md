@@ -707,3 +707,173 @@ of the 2026/27 season. The best blend to test in production, if it holds, is 0 /
 a season-name fix for MLS, Brazil, Argentina and Liga MX, and a staged runbook
 (`docs/fotmob-xg-backfill.md`). Only nine leagues' history can be backfilled into
 `matches`; for the other twelve the deeper xG needs a `historical_results` column (see the runbook).
+
+## L. The improvement search (6 Nov 2026)
+
+The brief: run every blend and iteration there is, and find what improves the model. About
+sixty model variants, three market de-vig methods, four ways of using the bookmaker's price,
+and the same candidates through the real pick layer, on three windows: 2022-25
+(17,922 games), 2025/26 (5,911) and Sep-Oct 2026 (1,165), 17 divisions, each game predicted
+from results before its matchday. Every difference below is paired on the same games with a
+95% interval. The frozen holdout (from 1 Nov 2026) was not touched.
+
+### L1. What held up, in order of size
+
+| | 1X2 log loss vs shipped (95% interval) | Over/under 2.5 | In production |
+|---|---|---|---|
+| **Fit the ratings partly to the goals the closing prices implied** (goals-v3) | -0.0084 (±0.0011), -0.0068 (±0.0019), -0.0131 (±0.0048) | -0.0023, -0.0020, -0.0030 | **shipped, gated, from 14 Nov** |
+| Pull the game's rates toward the early-week price (anchoring), on top of the above, weight 0.5 | a further -0.0048, -0.0053, -0.0070 | -0.0027, -0.0025, -0.0042 | not shipped: needs a live check (L4) |
+| Both together vs shipped | -0.013, -0.012, -0.020 | | |
+| Power or Shin de-vig instead of proportional (log loss of the margin-free price itself) | -0.0010, -0.0009, -0.0012 | none | not worth a change |
+| Stretch 1.1 and shrinkage 0.005 (the earlier finds) | -0.0019 and -0.0011 | none | part of goals-v3 |
+
+The columns are 2022-25, 2025/26 and Sep-Oct 2026. Every interval excludes zero.
+
+**Why the market fit works.** A game is one score drawn from a distribution; the closing price
+is an estimate of the distribution itself, with lineups and injuries in it. Fitting
+60% of each past game's scoring signal to the goals its closing 1X2 and over/under 2.5
+imply (and 20% to shots on target, 20% to the score) gives the ratings far less noise to carry.
+It also lets the fit forget faster (a 120-day half-life beat 180 once the signal was cleaner)
+and, with it, a lighter shrinkage. Weights tried for the market share: 0.25, 0.5, 0.75, 1.0
+(best 0.6 to 0.75; 1.0 is worse on 2022-25) and half-lives of 60, 90, 120, 150, 180 and 365
+days (60 and 90 broke the over/under; 120 is the best that did not).
+
+### L2. What did not work, so it is not tried again
+
+- Half-life 90 or 720 days, shot weight 0 or 0.75, shrinkage 0.02, total scale, rho scale,
+  ensembles of half-lives: none better than the shipped fit on all three windows.
+- xG, even with five seasons of it (2020/21 on) for the top five leagues: unstable between
+  seasons (the section K picture), and it adds nothing once the fit already leans on the
+  market's goals. The other eight leagues' xG fetch was still running (873 of 12,514 games)
+  and is not needed for any decision here.
+- Correcting the grid's shape (low-score parameter, total scale, draw inflation) after the fact:
+  worth nothing; the errors are in the means, not the shape.
+- Giving the model any weight against the market's own price for the lines the market prices:
+  taking the price alone (anchoring weight 1) was best on 1X2 and over/under 2.5, and the goal
+  rates it implies also scored better on over 1.5, over 3.5 and both teams to score.
+- Replaying Forge and Code Hub codes with the new probabilities: the code-level tier moved
+  3 to 5 points either way run to run, so no conclusion can be drawn from it.
+
+### L3. Through the real pick layer
+
+The same two sets run through `buildPrediction` with the sweet-spot rules, headline floor and
+over tilt live, 19,375 games from Aug 2023 to Oct 2026 (windows: Aug 2023-Jun 2026, 2025/26,
+Sep-Oct 2026). "Today" is the shipped 2026-11 set (goals-v2.1).
+
+| | Headline hit vs today (95%) | ROI at the closing price | Over share of headlines |
+|---|---|---|---|
+| today | 77.8%, 78.0%, 78.4% | -3.55%, -3.47%, -4.69% | 29%, 30%, 37% |
+| goals-v3, over tilt 0.02 | +0.11 (-0.26, +0.58), -0.17 (-1.02, +0.53), -0.31 (-1.93, +1.22) | -2.90%, -3.32%, -3.40% | 25%, 25%, 33% |
+| **goals-v3, over tilt 0.04 (shipped)** | +0.10, -0.01, -0.18 | -2.92%, -3.23%, -3.51% | 30%, 30%, 37% |
+| goals-v3, over tilt 0.08 | +0.29 (-0.12, +0.77), +0.26 (-0.54, +1.00), -0.20 | -2.68%, -2.86%, -2.77% | 39%, 40%, 45% |
+
+Plain reading: **the stated chances become more honest (log loss, intervals above), and the
+headline hit rate does not move.** That is the section C/D finding again: hit rate is set by
+the pick layer and the price cap, and the sweet-spot thresholds were tuned to the old numbers.
+The over share fell by four points under goals-v3 because the static over rules read the sharper
+probabilities differently; tilt 0.04 puts it back to today's level at the same hit rate.
+Tilt 0.08 gives about ten more points of overs with no measured cost (every hit difference is
+inside its interval, and ROI is better in all three windows), but it is a product preference,
+not an accuracy gain, so it is left as a one-line switch (`overTilt` in `MARKET_PARAMS`).
+
+Where the pick layer re-derives its rules every month from the trailing two years of the same
+probabilities (so it adapts to whatever model feeds it), the hit rate does move, a little and
+the same way in all three windows (one-pick-a-fixture universe: result, double chance, over
+1.5 / 2.5 / 3.5, draw no bet; floor 0.65, cap 0.80):
+
+| Source, rolling rules | 2023-25 | 2025/26 | Sep-Oct 2026 |
+|---|---|---|---|
+| shipped model | 76.9% | 77.0% | 77.6% |
+| goals-v3 fit | 77.3% | 77.1% | 78.1% |
+| goals-v3 fit + anchoring 0.5 | 77.6% | 78.0% | 78.0% |
+
+That is +0.4 to +1.0 points, each window's own error about 0.4, 0.5 and 1.2 points. Consistent
+in direction, not significant alone. It is the strongest argument for the next step (L5).
+
+### L4. The bookmaker's price, and what SportyBet's looks like
+
+- SportyBet's own early price is informative. On 538 finished games with price history (from
+  23 Oct): de-vigged 1X2 log loss 0.9565 at 40 hours before kickoff and 0.9538 at the last
+  snapshot; over/under 2.5 0.6749 and 0.6734. An early-week price is nearly as good as the
+  closing one, which is the property anchoring depends on. What has not been shown is that
+  pulling the model toward SportyBet's price improves the model on SportyBet's numbers; the
+  gains in L1 are on football-data's market-average prices.
+- Margins on the board now (about 355 events): 1X2 4.5%, double chance 6.3%, draw no bet 5.6%,
+  both teams to score 6.1%, over/under 5.7%, Asian handicap 6.0% to 6.5% by line. The same bet
+  priced two ways: draw no bet (5.6%) is cheaper than Asian handicap 0 (6.0%), half a point;
+  double chance and Asian handicap +0.5 are level. So there is nothing to gain from switching
+  twin markets except draw no bet for Asian 0. (The 538 games with price history, taken about a
+  day and a half before kickoff, average 3.9% on 1X2 and 5.0% on over/under, a little lower
+  than the whole board.)
+- The historical price feed has stopped. The last closing price stored is 19-20 Sep 2026 for 16
+  leagues and 28 Sep to 7 Oct for the other five, while results run to 4 Nov. It looks like a
+  one-off `backfill-football-data-uk` run with nothing behind it (I did not check the ingestion
+  host's scheduler). Anything that reads `odds_snapshots` for recent games gets nothing. goals-v3 therefore takes its market goals from the closing prices
+  on the same football-data row that carries each score (below), not from that table.
+
+### L5. What was shipped, what was not
+
+**Shipped (inactive until deployed and backfilled; nothing published changes):**
+
+- `src/lib/model/market-goals.ts`: the solver that turns closing 1X2 and over/under 2.5 prices
+  into the goals each side was expected to score. Checked against the lab's cache on 760 games:
+  identical to the last digit. 0.68 ms a game.
+- `fitLeague` takes `mktWeight` (defaults to 0, so every existing fit is byte-identical) and
+  rows carry `homeMkt`/`awayMkt`.
+- Migration `0102_market_implied_goals.sql`: two columns on `historical_results`,
+  `set_market_goals()`, and `upsert_historical_results()` extended with the columns (the 0076
+  "unchanged rows are not rewritten" guard is kept).
+- The nightly archive top-up now solves the goals from `AvgCH/CD/CA` and `AvgC>2.5/<2.5` on the
+  row it is already downloading, for all 17 football-data divisions. `/api/cron/refresh-archive`
+  also fills the other four leagues with prices (MLS, Liga MX, Argentina, Brazil) from
+  `odds_snapshots` for the last 60 days, and `?only=market&marketDays=400&marketSkip=N`
+  backfills it in windows.
+- `paramsFor(kickoff, pooled, coverage)`: **goals-v3 applies only to games kicking off from
+  00:00 Lagos on 14 Nov 2026, and only where at least 40% of the league's last-year training
+  rows carry market goals.** Otherwise the 2026-11 set stands, exactly as now. National-team
+  and cup pools never get it. The archive reader asks for the new columns and falls back to
+  the old column list if migration 0102 has not been applied, so a late migration cannot turn
+  into "no archive".
+- goals-v3 = market fit (market 0.6, shots on target 0.2, score 0.2), half-life 120 days,
+  shrinkage 0.005, strength stretch 1.1, over tilt 0.04, and everything else from the 2026-11 set.
+
+**Steps to turn it on, in order:**
+
+1. Merge, deploy, then apply `0102_market_implied_goals.sql`.
+2. Backfill the division files, four seasons a call:
+   `/api/cron/refresh-archive?seasons=2526,2425,2324,2223` (then `2122,2021` if wanted).
+3. Backfill the four country-file leagues: `?only=market&marketDays=400&marketSkip=0`, then
+   `marketSkip=400`, `800`.
+4. Check coverage in SQL: share of `historical_results` rows from the last 365 days with
+   `home_mkt_goals is not null`, by league (expect 90%+ for the division-file leagues).
+5. Games from 14 Nov pick it up on their own. If the steps are late, nothing breaks: a league
+   under 40% coverage stays on the 2026-11 set. If deployment slips past 14 Nov, move
+   `MARKET_MODEL_FROM`; the published-hold already protects picks on the record.
+
+**Rollback:** change `MARKET_MODEL_FROM` to a far date. No data needs undoing.
+
+**Not shipped, and why:**
+
+1. **Anchoring to the publish-time price (the next largest gain).** It needs the SportyBet board
+   read before the prediction is built, in all three call sites in `service.ts`
+   (`marketChecked` reads it after). `buildPrediction` already takes `marketRates` and
+   `marketRatesWeight`, so the model side is done. The step before turning it on is a shadow
+   run: log the anchored probabilities next to the live ones for three or four weeks against
+   SportyBet's price history, and enable it only if they beat the live ones as in L1.
+2. **Monthly re-derivation of the sweet-spot rules** (L3 rolling table): +0.4 to +1.0 points
+   of hit rate in the lab, and it would make any later model change safe to ship without
+   re-tuning the thresholds by hand. A nightly job and a rules table in the database.
+3. **Schedule the odds ingestion** (L4), so `odds_snapshots` is current again; useful for the
+   closing-line checks in section C2 regardless of the model.
+4. Draw no bet instead of Asian 0 in Forge legs (half a point of margin).
+
+### Reproduce
+
+```
+npx tsx scripts/improve-lab.ts --out=<dir>/E0.json ...        # per-fixture rates for every variant
+npx tsx scripts/improve-prob.ts --dir=<lab dirs> --part=custom --names=base,m60s20_hl120_reg005_st11
+npx tsx scripts/improve-prob.ts --dir=<lab dirs> --part=anchor-m6
+npx tsx scripts/improve-picks.ts --dir=<lab dirs> --sources=v:base,v:m60s20_hl120_reg005_st11,a:m60s20_hl120_reg005_st11:0.5
+npx tsx scripts/audit-eval.ts --cfg=v3 --mkt=<cache dir> --from=2023-08-01 --to=2026-10-31 --out=v3.json
+npx tsx scripts/audit-report.ts --dir=<dir> --base=next --cfgs=v3 --win=A
+```
