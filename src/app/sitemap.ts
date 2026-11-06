@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { LEAGUES } from "@/lib/leagues";
 import { SITE_URL as SITE } from "@/lib/site-url";
-import { matchPath, playerPath, sportPath, scoresPath, teamPath } from "@/lib/routes";
+import { competitionPath, matchPath, playerPath, sportPath, scoresPath, teamPath } from "@/lib/routes";
 import { seasonLeaders } from "@/lib/team-page";
 import type { Leader } from "@/lib/team-page-core";
 import { leagueTeams, type TeamRef } from "@/lib/stats/queries";
@@ -119,6 +119,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
    * that hour rather than all of them. Tables always have standings to show.
    */
   const leagues: MetadataRoute.Sitemap = LEAGUES.flatMap((l) => [
+    // The permanent hub is listed year-round, fixtures or not (CTO checklist 4.6).
+    { url: `${SITE}${competitionPath(l.code, l.sport)}`, changeFrequency: "daily" as const, priority: 0.7 },
     ...(l.confederation
       ? []
       : [{

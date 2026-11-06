@@ -27,7 +27,7 @@ the checklist so it is visible next to the code. Owners: Claude (code, data, rep
 - [x] 3.4 Margin and abnormal-usage alerts: daily cron /api/cron/ask-watch, rules in src/lib/ask/watch.ts (Claude, 5 Nov)
 
 ## 4. Analytics, growth and marketing
-- [~] 4.1 Signups verified as people and filtered (Claude, 5 Nov); site visits need GA4/Vercel/Mixpanel figures from founder
+- [~] 4.1 Signups verified as people and filtered (Claude, 5 Nov); site visits: Vercel shows Nigeria is 2,376 of 30,592 October visitors, the rest are non-human (see SEO plan); GA4 and Mixpanel bot filter still from founder
 - [x] 4.2 Acquisition source carried through to payment: Revenue by source on Admin Traffic (Claude, 5 Nov)
 - [ ] 4.3 Pass conversion and upgrade report (Claude)
 - [~] 4.4 X captions, posting sequence, tagged links (Claude drafts, Founder approves): 14 captions, 14-day sequence and tagged links drafted in docs/reports/x-pack-2026-11.md, awaiting founder approval
