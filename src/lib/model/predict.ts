@@ -16,7 +16,7 @@ import type { EngineRead } from "./headline-engine";
 import type { Match, ResultRow } from "@/lib/types";
 import { leagueByCode, type LeagueDef } from "@/lib/leagues";
 import {
-  deriveAsianHandicap, deriveMarkets, GOAL_LINES, outcomeEntropy, scoreMatrix,
+  deriveAsianHandicap, deriveMarkets, GOAL_LINES, outcomeEntropy, scoreMatrix, totalScaleFor,
   type AsianHandicapLine, type MarketProbabilities,
 } from "./poisson";
 import { expectedRates, fitLeague, normaliseKey, type FitOptions, type LeagueFit, type TeamRating } from "./fit";
@@ -267,6 +267,17 @@ export interface ModelOptions {
   /** Neutral venues: shrink the total toward the league mean without home advantage, not with it. */
   neutralTotals?: boolean;
   /**
+   * The market's over 2.5 for this game (margin removed). The two goal rates
+   * are scaled together until the grid's over 2.5 equals it, the split between
+   * the sides kept, so the total comes from the price and the sides from the
+   * ratings. Walk-forward on 17,857 games this cut log loss on lines the price
+   * was not set from (over 1.5 by 0.007, over 3.5 by 0.007, both teams to score
+   * by 0.002, 1X2 by 0.002). Absent or null = off.
+   */
+  marketOver25?: number | null;
+  /** How much of the market's total is taken, in log scale: 1 all of it, 0.5 halfway (default 1). */
+  marketTotalWeight?: number;
+  /**
    * No headline pick below this chance. Ranker picks stated at 60-65% landed
    * ~61% in three separate samples (replay 2025-26 60.5% of 243, Sep-Oct 2026
    * replay 61.0% of 41, live since 7 Oct 63.3% of 49) against 77% overall;
@@ -306,8 +317,16 @@ export function buildPrediction(
   const shrunk = calibrateTotals(rates.lambda, rates.mu, fit, options.totalsShrink ?? TOTALS_SHRINK, meanScale);
   const goalScale = (options.goalScale ?? 1) * (options.levelAdjust ? levelFactor(results, fit, options.levelAdjust) : 1);
   const stretched = stretchStrength(shrunk.lambda, shrunk.mu, options.strengthStretch ?? 1);
-  const lambda = stretched.lambda * goalScale;
-  const mu = stretched.mu * goalScale;
+  let lambda = stretched.lambda * goalScale;
+  let mu = stretched.mu * goalScale;
+  if (options.marketOver25 != null) {
+    const k = totalScaleFor(lambda, mu, fit.rho, options.marketOver25);
+    if (k !== null) {
+      const w = Math.exp((options.marketTotalWeight ?? 1) * Math.log(k));
+      lambda *= w;
+      mu *= w;
+    }
+  }
 
   const raw = inflateDraws(scoreMatrix(lambda, mu, fit.rho), options.drawInflation ?? 1);
   const grid = options.resultCalibration ? calibrateResult(raw, options.resultCalibration) : raw;

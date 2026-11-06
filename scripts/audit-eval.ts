@@ -21,6 +21,7 @@ import { NEXT_PARAMS } from "../src/lib/model/params";
 import { evaluatePick } from "../src/lib/settlement";
 import { csv, parse, toMatch, toResultRow, type Row } from "./lib/football-data-uk";
 import { clampEnd } from "./lib/holdout";
+import { deVig } from "../src/lib/model/backtest";
 
 const DAY = 86_400_000;
 const TRAIN_CAP = 1200;
@@ -46,7 +47,7 @@ export const DIVS: { div: string; code: string; label: string }[] = [
   { div: "F2", code: "ligue-2", label: "Ligue 2" },
 ];
 
-type Config = ModelOptions & { fitOpts?: FitOptions };
+type Config = ModelOptions & { fitOpts?: FitOptions; useMarketTotal?: number };
 
 export const CONFIGS: Record<string, Config> = {
   legacy: {},
@@ -76,6 +77,11 @@ export const CONFIGS: Record<string, Config> = {
   ns_c12: { sweetSpots: false, fitOpts: { regularisation: 0.005 }, strengthStretch: 1.2 },
   ns_c12_o02: { sweetSpots: false, fitOpts: { regularisation: 0.005 }, strengthStretch: 1.2, overTilt: 0.02 },
   ns_st11: { sweetSpots: false, strengthStretch: 1.1 },
+  // Market-informed totals: the closing over 2.5 sets the total (an upper bound on what a publish-time price gives).
+  mt1: { useMarketTotal: 1 },
+  mt05: { useMarketTotal: 0.5 },
+  ns_mt1: { sweetSpots: false, useMarketTotal: 1 },
+  ns_mt05: { sweetSpots: false, useMarketTotal: 0.5 },
   legacy_o02: { overTilt: 0.02 },
   legacy_o04: { overTilt: 0.04 },
   legacy_o04_m65: { overTilt: 0.04, minProbability: { "ou:over:2.5": 0.65 } },
@@ -111,6 +117,8 @@ export interface Rec {
   p: Record<string, number>;
   /** Whole-line handicap chances as win/(win+loss), keyed like the sweet-spot rules read them. */
   lambda: [number, number];
+  /** Effective training sample: the rows' weights added up at the 180-day half-life (what the fit really learns from). */
+  eff: number;
   pick?: { market: string; prob: number; outcome: "win" | "lose" | "push" | null; conf: number; sweet: boolean };
 }
 
@@ -123,7 +131,7 @@ async function main() {
   const to = Date.parse(clampEnd(arg("to") ?? "2026-06-30", process.argv.includes("--final"))) + DAY;
   const only = arg("only")?.split(",");
   const out: Rec[] = [];
-  const { fitOpts, ...options } = cfg;
+  const { fitOpts, useMarketTotal, ...options } = cfg;
 
   for (const d of DIVS) {
     if (only && !only.includes(d.div)) continue;
@@ -141,7 +149,10 @@ async function main() {
         fit = fitLeague(prior, fitOpts);
         fits.set(day, fit);
       }
-      const p = buildPrediction(toMatch(row, league), prior, [], { ...options, prefit: fit });
+      const overFair = useMarketTotal && row.closeOu ? deVig([row.closeOu.over, row.closeOu.under])[0] : null;
+      const p = buildPrediction(toMatch(row, league), prior, [], { ...options, prefit: fit, ...(overFair !== null ? { marketOver25: overFair, marketTotalWeight: useMarketTotal } : {}) });
+      let eff = 0;
+      for (const r of prior) eff += Math.exp((-Math.LN2 * (day - r.date)) / (180 * DAY));
       if (!p.sufficiency.publishable) continue;
       const kept: Record<string, number> = {};
       for (const pk of p.picks) if (KEEP.test(pk.market)) kept[pk.market] = pk.probability;
@@ -160,6 +171,7 @@ async function main() {
         closeOu: row.closeOu ? [row.closeOu.over, row.closeOu.under] : undefined,
         p: kept,
         lambda: [p.markets.expectedGoals.home, p.markets.expectedGoals.away],
+        eff,
         pick: top
           ? {
               market: top.market,
