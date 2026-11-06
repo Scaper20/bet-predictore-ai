@@ -23,7 +23,7 @@ This Agreement governs the Partner's promotion of KiqStat subscriptions and the 
 
 1.1 Operator: Betrix Data Technologies Ltd, a company registered in Nigeria (registration number [RC NUMBER]), of [REGISTERED ADDRESS], operating the KiqStat service at kiqstat.app (**KiqStat**). Notices email: support@kiqstat.app.
 
-1.2 Partner: [PARTNER FULL LEGAL NAME], [an individual / a company, with registration number if applicable], of [ADDRESS] (**Partner**). Notices email: [EMAIL]. KiqStat account email: [EMAIL]. Partner slug: [SLUG].
+1.2 Partner: [Partner name], [an individual / a company, with registration number if applicable], of [ADDRESS] (**Partner**). Notices email: [EMAIL]. KiqStat account email: [EMAIL]. Partner slug: [SLUG].
 
 1.3 Effective Date: [DATE], being no earlier than both parties' acceptance of the completed Agreement. The Agreement continues until terminated under clause 11. Referrals qualify only after KiqStat confirms activation of the Partner's account and link in writing (**Activation Date**). Pre-activation activity is excluded unless expressly agreed in writing.
 
