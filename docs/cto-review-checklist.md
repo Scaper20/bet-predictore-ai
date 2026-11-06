@@ -17,7 +17,7 @@ the checklist so it is visible next to the code. Owners: Claude (code, data, rep
 - [x] 2.1 Same-period revenue statement: docs/reports/revenue-statement-2026-10 (Claude, 5 Nov; Paystack export and invoices pending from founder)
 - [ ] 2.2 October cost invoices (Founder)
 - [x] 2.3 Plan-by-plan model as a script (scripts/plan-economics.ts, docs/reports/plan-economics-2026-11): 6 recurring options + passes, at three exchange rates, 0/20/35% commission, 25% target (Claude)
-- [ ] 2.4 Free-tier cost and operating profit (Claude)
+- [x] 2.4 Free-tier cost and operating profit (Claude, 6 Nov; operating profit is an estimate until 2.2 invoices)
 - [ ] 2.5 Allowance versus cap decision per plan, then implemented (Founder decides, Claude implements)
 
 ## 3. AI sustainability
@@ -29,7 +29,7 @@ the checklist so it is visible next to the code. Owners: Claude (code, data, rep
 ## 4. Analytics, growth and marketing
 - [~] 4.1 Signups verified as people and filtered (Claude, 5 Nov); site visits: Vercel shows Nigeria is 2,376 of 30,592 October visitors, the rest are non-human (see SEO plan); GA4 and Mixpanel bot filter still from founder
 - [x] 4.2 Acquisition source carried through to payment: Revenue by source on Admin Traffic (Claude, 5 Nov)
-- [ ] 4.3 Pass conversion and upgrade report (Claude)
+- [x] 4.3 Pass conversion and upgrade report (Claude, 6 Nov; the 500 naira pass upgrade check is due 8 Nov)
 - [~] 4.4 X captions, posting sequence, tagged links (Claude drafts, Founder approves): 14 captions, 14-day sequence and tagged links drafted in docs/reports/x-pack-2026-11.md, awaiting founder approval
 - [ ] 4.5 48-hour and 7-day campaign reviews (Claude)
 - [~] 4.6 SEO plan for NPFL, CAF, AFCON (Claude): widened to whole site plus GEO (Grok first); plan in docs/reports/seo-geo-plan-2026-11.md, needs founder inputs
