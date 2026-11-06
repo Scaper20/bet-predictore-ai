@@ -2,7 +2,7 @@ import "server-only";
 
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
-import { fetchSubscription, listSuccessfulCharges, type PaystackCharge } from "@/lib/paystack/client";
+import { fetchSubscription, listReversedCharges, listSuccessfulCharges, type PaystackCharge } from "@/lib/paystack/client";
 import { tierFromPlanCode } from "@/lib/paystack/plan-codes";
 import { cycleFromInterval, renewedPeriodEnd } from "@/lib/paystack/renewal";
 import { recordCommission } from "@/lib/partner-commission";
@@ -55,6 +55,9 @@ export async function checkPaystackSubscriptions(now = new Date()): Promise<Subs
       // Look back to a week before our period end, so a renewal charged on the day is caught.
       const from = new Date((end ?? now).getTime() - 7 * 86_400_000).toISOString();
       const charges = ps.customer?.id ? await listSuccessfulCharges(ps.customer.id, from) : [];
+      // Only worth asking when our period is over and no renewal came through: a reversed charge explains why.
+      const lapsed = !end || end.getTime() < now.getTime();
+      const reversed = lapsed && !charges.length && ps.customer?.id ? await listReversedCharges(ps.customer.id, from).catch(() => []) : [];
       const refs = charges.map((c) => c.reference);
       const { data: known } = refs.length
         ? await admin.from("payments").select("paystack_reference").in("paystack_reference", refs)
@@ -64,6 +67,7 @@ export async function checkPaystackSubscriptions(now = new Date()): Promise<Subs
         ours: { userId: sub.user_id as string, tier: sub.tier as string, status: sub.status as string, periodEnd: end },
         paystack: { status: ps.status, nextPaymentDate: ps.next_payment_date, planAmount: ps.plan?.amount ?? null },
         charges,
+        reversed,
         knownReferences: new Set((known ?? []).map((k) => k.paystack_reference as string)),
         now,
       });

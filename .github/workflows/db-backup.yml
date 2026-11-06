@@ -61,9 +61,9 @@ jobs:
           /usr/lib/postgresql/17/bin/pg_restore --list "kiqstat-$stamp.dump" > /dev/null # the archive reads back
           gpg --batch --yes --pinentry-mode loopback --passphrase "$PASS" --symmetric --cipher-algo AES256 \
             --output "kiqstat-$stamp.dump.gpg" "kiqstat-$stamp.dump"
-          rm "kiqstat-$stamp.dump"
           ls -lh kiqstat-*.gpg
           echo "FILE=kiqstat-$stamp.dump.gpg" >> "$GITHUB_ENV"
+          echo "PLAIN=kiqstat-$stamp.dump" >> "$GITHUB_ENV"
 
       - name: Keep for 8 days
         if: steps.check.outputs.ready == 'true'
@@ -73,3 +73,52 @@ jobs:
           path: ${{ env.FILE }}
           retention-days: 8
           compression-level: 0
+
+      # Restore drill (checklist 1.3): the dump just taken is restored into a throwaway Postgres
+      # inside this job and its row counts compared with production's. Nothing here writes to
+      # production, and the plain dump never leaves the runner. The job goes red if a copy would
+      # not restore, after the encrypted artifact is already saved.
+      - name: Restore drill
+        if: steps.check.outputs.ready == 'true'
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -uo pipefail
+          docker run -d --name scratch -e POSTGRES_PASSWORD=scratch -p 55432:5432 postgres:17 > /dev/null
+          SCR="postgresql://postgres:scratch@localhost:55432/postgres"
+          for i in $(seq 1 40); do /usr/lib/postgresql/17/bin/pg_isready -h localhost -p 55432 -U postgres > /dev/null && break; sleep 2; done
+          # Stand-ins for the roles and extensions a Supabase database brings with it.
+          psql "$SCR" -v ON_ERROR_STOP=0 -q <<'SQL'
+          create role anon nologin; create role authenticated nologin; create role service_role nologin;
+          create role supabase_auth_admin nologin; create role supabase_admin nologin; create role authenticator nologin;
+          create schema if not exists extensions;
+          create extension if not exists pgcrypto with schema extensions;
+          create extension if not exists "uuid-ossp" with schema extensions;
+          SQL
+          start=$(date +%s)
+          /usr/lib/postgresql/17/bin/pg_restore --no-owner --no-privileges --dbname "$SCR" "$PLAIN" 2> restore.log
+          secs=$(( $(date +%s) - start ))
+          errs=$(grep -c "error:" restore.log || true)
+          echo "restored in ${secs}s with ${errs} error lines (first ones below)"; grep "error:" restore.log | head -5 || true
+          {
+            echo "### Restore drill"
+            echo "Restored into a scratch database in ${secs}s; ${errs} error lines in the restore log."
+            echo ""
+            echo "| Table | Production now | Restored copy | Result |"
+            echo "|---|---|---|---|"
+          } >> "$GITHUB_STEP_SUMMARY"
+          fail=0
+          for t in public.profiles public.subscriptions public.payments public.passes public.predictions_log public.partner_commissions auth.users; do
+            live=$(psql "$DB_URL" -Atc "select count(*) from $t" 2>/dev/null || echo "?")
+            got=$(psql "$SCR" -Atc "select count(*) from $t" 2>/dev/null || echo "missing")
+            res="ok"
+            if [ "$live" = "?" ] || [ "$got" = "missing" ]; then res="FAIL (unreadable)"; fail=1
+            elif [ "$live" -gt 0 ] && [ $(( got * 100 )) -lt $(( live * 98 )) ]; then res="FAIL (short)"; fail=1
+            elif [ "$got" -gt "$live" ]; then res="FAIL (more than production)"; fail=1
+            fi
+            echo "$t: production $live, restored $got, $res"
+            echo "| $t | $live | $got | $res |" >> "$GITHUB_STEP_SUMMARY"
+          done
+          docker rm -f scratch > /dev/null
+          rm -f "$PLAIN"
+          exit $fail
