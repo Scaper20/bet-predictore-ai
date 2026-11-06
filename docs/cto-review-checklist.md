@@ -6,12 +6,12 @@ the checklist so it is visible next to the code. Owners: Claude (code, data, rep
 (dashboards, money, legal), Both.
 
 ## 1. Production safety
-- [ ] 1.1 Anthropic workspace hard spending limit set (Founder/CTO)
+- [x] 1.1 Anthropic workspace hard spending limit set (Founder/CTO)
 - [x] 1.2 Ask preflight green in production, offline tests pass, Ask switch confirmed on (Claude, 4 Nov)
 - [ ] 1.3 Database backup and recovery: runbook, nightly backup, test restore; Supabase Pro decision (Both)
 - [ ] 1.4 Real ₦500 VIP Pass purchase, receipt and refund checked end to end (Both)
 - [ ] 1.5 VIP renewal anomaly: renewal handling made robust (docs/renewals.md), admin page /admin/renewals and a dashboard alert added; Paystack webhook log for the 24 Oct charge pending (Both)
-- [ ] 1.6 Personal booking codes and live win-probability bar verified live (Both)
+- [x] 1.6 Personal booking codes and live win-probability bar verified live (Both)
 
 ## 2. Financial baseline
 - [x] 2.1 Same-period revenue statement: docs/reports/revenue-statement-2026-10 (Claude, 5 Nov; Paystack export and invoices pending from founder)
