@@ -22,9 +22,9 @@ import { isSportId, type SportId } from "@/lib/sports";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/football/track-record" },
-  title: "Track Record",
+  title: "Football Prediction Track Record: Every Pick Graded",
   description:
-    "Every headline pick KiqStat has published, graded against the final score once the match " +
+    "Every headline football pick KiqStat has published, graded against the final score once the match " +
     "finishes. No cherry-picking — settled automatically, win or lose.",
 };
 

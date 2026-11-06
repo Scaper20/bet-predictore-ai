@@ -32,7 +32,7 @@ the checklist so it is visible next to the code. Owners: Claude (code, data, rep
 - [ ] 4.3 Pass conversion and upgrade report (Claude)
 - [~] 4.4 X captions, posting sequence, tagged links (Claude drafts, Founder approves): 14 captions, 14-day sequence and tagged links drafted in docs/reports/x-pack-2026-11.md, awaiting founder approval
 - [ ] 4.5 48-hour and 7-day campaign reviews (Claude)
-- [ ] 4.6 SEO plan for NPFL, CAF, AFCON (Claude)
+- [~] 4.6 SEO plan for NPFL, CAF, AFCON (Claude): widened to whole site plus GEO (Grok first); plan in docs/reports/seo-geo-plan-2026-11.md, needs founder inputs
 
 ## 5. Partner Agreement V2 (on hold until section 2 closes)
 - [ ] 5.1 Founder's questionnaire answers recovered (Founder)
