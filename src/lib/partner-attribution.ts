@@ -3,6 +3,7 @@ import "server-only";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { parsePartnerRef } from "@/lib/partner-ref";
 import { recordCommission } from "@/lib/partner-commission";
+import { isTerminated } from "@/lib/partner-terms";
 
 /**
  * Credits a brand-new account to the partner whose link its owner first
@@ -18,18 +19,22 @@ export async function attributeSignup(userId: string, cookieValue: string | null
     if (!ref) return false;
     const admin = supabaseAdmin();
 
+    // Bring any rate change that has fallen due into force before the customer is credited at the current rate.
+    await admin.rpc("partner_apply_rate_changes");
     const [{ data: partner }, { data: profile }] = await Promise.all([
-      admin.from("partners").select("id, status, user_id").eq("slug", ref.slug).maybeSingle(),
+      admin.from("partners").select("id, status, user_id, rate_bps, terminated_at").eq("slug", ref.slug).maybeSingle(),
       admin.from("profiles").select("created_at, referred_by_partner").eq("id", userId).maybeSingle(),
     ]);
     if (!partner || partner.status !== "active" || partner.user_id === userId) return false;
+    // From the termination date no new accounts qualify (agreement clause 11.2).
+    if (isTerminated(partner.terminated_at ? new Date(partner.terminated_at as string) : null, new Date())) return false;
     if (!profile || profile.referred_by_partner) return false;
     // Existing accounts are not attributable: it must have been created after the click.
     if (Date.parse(profile.created_at as string) < ref.clickedAt - 60_000) return false;
 
     const { data: updated } = await admin
       .from("profiles")
-      .update({ referred_by_partner: partner.id, referred_at: new Date().toISOString() })
+      .update({ referred_by_partner: partner.id, referred_at: new Date().toISOString(), referred_rate_bps: partner.rate_bps as number })
       .eq("id", userId)
       .is("referred_by_partner", null)
       .select("id");

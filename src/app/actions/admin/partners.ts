@@ -4,7 +4,9 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { checkPermission, logAdminAction } from "@/lib/admin";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { MAX_RATE_BPS, minPayout, moneyText, slugify, validSlug } from "@/lib/partners";
+import { MAX_RATE_BPS, minPayout, moneyText, pctText, slugify, validSlug } from "@/lib/partners";
+import { isTerminated, planRateChange, planTermination } from "@/lib/partner-terms";
+import { sendEmail } from "@/lib/email";
 import { creditPastPayments } from "@/lib/partner-attribution";
 
 export type PartnerActionState = { error: string | null; message: string | null };
@@ -54,7 +56,7 @@ export async function createPartner(_prev: PartnerActionState, formData: FormDat
 
   const { data, error } = await supabaseAdmin()
     .from("partners")
-    .insert({ slug, name, email, user_id: account?.id ?? null, rate_bps: rateBps, notes: clean(formData.get("notes"), 500) || null, ...bankFields(formData) })
+    .insert({ slug, name, email, user_id: account?.id ?? null, rate_bps: rateBps, activated_at: new Date().toISOString(), notes: clean(formData.get("notes"), 500) || null, ...bankFields(formData) })
     .select("id")
     .single();
   if (error || !data) {
@@ -67,7 +69,10 @@ export async function createPartner(_prev: PartnerActionState, formData: FormDat
   redirect(`/admin/partners/${data.id}`);
 }
 
-/** Edits a partner. A new rate applies to payments from now on; earned commissions keep their own rate. */
+/**
+ * Edits a partner's details. The rate is not edited here: a change goes through
+ * scheduleRateChange so it carries a notice and reaches only new customers (agreement clause 4.6).
+ */
 export async function updatePartner(_prev: PartnerActionState, formData: FormData): Promise<PartnerActionState> {
   const gate = await checkPermission("partners.manage");
   if (!gate.ok) return { error: gate.error, message: null };
@@ -76,9 +81,7 @@ export async function updatePartner(_prev: PartnerActionState, formData: FormDat
   if (!UUID.test(id)) return { error: "Unknown partner.", message: null };
 
   const name = clean(formData.get("name"), 120);
-  const rateBps = rateFromPercent(clean(formData.get("ratePercent"), 8));
   if (!name) return { error: "Enter the partner's name.", message: null };
-  if (rateBps === null) return { error: `The rate must be between 0% and ${MAX_RATE_BPS / 100}%.`, message: null };
 
   const account = await accountByEmail(clean(formData.get("accountEmail"), 200));
   if (account === "missing") return { error: "No KiqStat account has that email.", message: null };
@@ -89,7 +92,6 @@ export async function updatePartner(_prev: PartnerActionState, formData: FormDat
       name,
       email: clean(formData.get("email"), 200).toLowerCase() || null,
       user_id: account?.id ?? null,
-      rate_bps: rateBps,
       notes: clean(formData.get("notes"), 500) || null,
       updated_at: new Date().toISOString(),
       ...bankFields(formData),
@@ -100,7 +102,7 @@ export async function updatePartner(_prev: PartnerActionState, formData: FormDat
     return { error: "Couldn't save. Try again.", message: null };
   }
 
-  await logAdminAction(gate.identity, "partner.updated", id, { rateBps });
+  await logAdminAction(gate.identity, "partner.updated", id);
   revalidatePath("/admin/partners");
   revalidatePath(`/admin/partners/${id}`);
   return { error: null, message: "Saved." };
@@ -114,6 +116,8 @@ export async function setPartnerStatus(_prev: PartnerActionState, formData: Form
   const status = clean(formData.get("status"), 12);
   if (!UUID.test(id) || (status !== "active" && status !== "suspended")) return { error: "Unknown partner.", message: null };
 
+  const { data: current } = await supabaseAdmin().from("partners").select("status").eq("id", id).maybeSingle();
+  if (current?.status === "terminated") return { error: "A terminated partner can't be reactivated here. Sign a new agreement and ask for it to be set up again.", message: null };
   const { error } = await supabaseAdmin().from("partners").update({ status, updated_at: new Date().toISOString() }).eq("id", id);
   if (error) return { error: "Couldn't update. Try again.", message: null };
 
@@ -132,12 +136,15 @@ export async function payOutPartner(_prev: PartnerActionState, formData: FormDat
   const currency = clean(formData.get("currency"), 3).toUpperCase();
   if (!UUID.test(id) || !/^[A-Z]{3}$/.test(currency)) return { error: "Unknown partner or currency.", message: null };
 
+  // After termination takes effect the partner is paid whatever is payable, with no minimum (agreement clause 11.4).
+  const { data: pt } = await supabaseAdmin().from("partners").select("terminated_at").eq("id", id).maybeSingle();
+  const ended = isTerminated(pt?.terminated_at ? new Date(pt.terminated_at as string) : null, new Date());
   const { data, error } = await supabaseAdmin().rpc("partner_pay_out", {
     p_partner: id,
     p_currency: currency,
     p_reference: clean(formData.get("reference"), 120),
     p_note: clean(formData.get("note"), 300),
-    p_min_minor: minPayout(currency),
+    p_min_minor: ended ? 0 : minPayout(currency),
     p_admin_email: gate.identity.email,
   });
   if (error) {
@@ -202,10 +209,11 @@ export async function creditAccountToPartner(_prev: PartnerActionState, formData
 
   const admin = supabaseAdmin();
   const [{ data: partner }, { data: profile }] = await Promise.all([
-    admin.from("partners").select("id, slug, user_id, created_at").eq("id", partnerId).maybeSingle(),
+    admin.from("partners").select("id, slug, user_id, created_at, status").eq("id", partnerId).maybeSingle(),
     admin.from("profiles").select("id, created_at, referred_by_partner").ilike("email", email).maybeSingle(),
   ]);
   if (!partner) return { error: "Unknown partner.", message: null };
+  if (partner.status === "terminated" || partner.status === "suspended") return { error: `This partner is ${partner.status}, so no new account can be credited.`, message: null };
   if (!profile) return { error: "No account with that email.", message: null };
   if (profile.id === partner.user_id) return { error: "That's the partner's own account.", message: null };
   if (profile.referred_by_partner) {
@@ -218,9 +226,11 @@ export async function creditAccountToPartner(_prev: PartnerActionState, formData
     return { error: "That account was created before this partner joined, so it can't have come through their link.", message: null };
   }
 
+  const { data: rateRow } = await admin.from("partners").select("rate_bps").eq("id", partner.id).maybeSingle();
+  const partnerRate = (rateRow?.rate_bps as number | undefined) ?? 2000;
   const { data: updated, error } = await admin
     .from("profiles")
-    .update({ referred_by_partner: partner.id, referred_at: new Date().toISOString() })
+    .update({ referred_by_partner: partner.id, referred_at: new Date().toISOString(), referred_rate_bps: partnerRate })
     .eq("id", profile.id)
     .is("referred_by_partner", null)
     .select("id");
@@ -234,4 +244,200 @@ export async function creditAccountToPartner(_prev: PartnerActionState, formData
     error: null,
     message: payments > 0 ? `Credited, with commission on ${payments} past payment${payments === 1 ? "" : "s"}.` : "Credited. Their future payments will earn commission.",
   };
+}
+
+/* ---------------------------------------------------- rate changes and terminations */
+
+const day = (d: Date) => d.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "Africa/Lagos" });
+
+/** Sends the partner a written notice (agreement clause 15.1) and the founder a copy. Returns whether the partner had an address. */
+async function sendNotice(partner: { name: string; email: string | null }, subject: string, paragraphs: string[], key: string): Promise<boolean> {
+  const html = `<p>Dear ${partner.name},</p>${paragraphs.map((p) => `<p>${p}</p>`).join("")}<p>KiqStat</p>`;
+  const copyTo = process.env.ASK_ALERT_EMAIL?.trim() || process.env.SUPPORT_INBOX_EMAIL?.trim() || "support@kiqstat.app";
+  if (partner.email) await sendEmail({ to: partner.email, subject, html, idempotencyKey: `partner-notice:${key}` }).catch(() => null);
+  await sendEmail({ to: copyTo, subject: `Copy: ${subject} (${partner.name})${partner.email ? "" : " - NO PARTNER EMAIL ON FILE, send it yourself"}`, html, idempotencyKey: `partner-notice-copy:${key}` }).catch(() => null);
+  return Boolean(partner.email);
+}
+
+/**
+ * Schedules a rate change (agreement clause 4.6): 30 days' notice, or at once with the partner's
+ * written agreement. It reaches only customers attributed on or after the effective date; customers
+ * already attributed keep the rate they started on.
+ */
+export async function scheduleRateChange(_prev: PartnerActionState, formData: FormData): Promise<PartnerActionState> {
+  const gate = await checkPermission("partners.manage");
+  if (!gate.ok) return { error: gate.error, message: null };
+
+  const id = clean(formData.get("id"), 40);
+  if (!UUID.test(id)) return { error: "Unknown partner.", message: null };
+  const newBps = rateFromPercent(clean(formData.get("ratePercent"), 8));
+  if (newBps === null) return { error: `The rate must be between 0% and ${MAX_RATE_BPS / 100}%.`, message: null };
+  const agreed = formData.get("agreed") === "on";
+  const reason = clean(formData.get("reason"), 300);
+  const dateRaw = clean(formData.get("effectiveDate"), 12);
+
+  const admin = supabaseAdmin();
+  await admin.rpc("partner_apply_rate_changes");
+  const { data: partner } = await admin.from("partners").select("id, name, email, rate_bps, status, terminated_at").eq("id", id).maybeSingle();
+  if (!partner) return { error: "Unknown partner.", message: null };
+  if (partner.status === "terminated") return { error: "This partner is terminated.", message: null };
+
+  const now = new Date();
+  const plan = planRateChange({
+    currentBps: partner.rate_bps as number,
+    newBps,
+    now,
+    agreedInWriting: agreed,
+    requestedEffectiveAt: dateRaw ? new Date(`${dateRaw}T00:00:00+01:00`) : null,
+  });
+  if (!plan.ok) return { error: plan.error, message: null };
+
+  const { error } = await admin.from("partner_rate_changes").insert({
+    partner_id: id,
+    from_bps: partner.rate_bps,
+    to_bps: newBps,
+    notified_at: now.toISOString(),
+    effective_at: plan.effectiveAt.toISOString(),
+    reason: reason || null,
+    agreed_in_writing: agreed,
+    created_by_email: gate.identity.email,
+  });
+  if (error) return { error: "Couldn't schedule it. Nothing was changed.", message: null };
+  await admin.rpc("partner_apply_rate_changes");
+
+  const upOrDown = newBps > (partner.rate_bps as number) ? "increase" : "decrease";
+  const hadEmail = await sendNotice(
+    { name: partner.name as string, email: (partner.email as string | null) ?? null },
+    `Change to your KiqStat commission rate from ${day(plan.effectiveAt)}`,
+    [
+      `This is notice under clause 4.6 of your Partner Referral Agreement that your commission rate will ${upOrDown} from ${pctText(partner.rate_bps as number)} to ${pctText(newBps)} of Net Payment, from ${day(plan.effectiveAt)}.`,
+      "The new rate applies to customers first attributed to you on or after that date. Customers already attributed to you keep the rate they started on for the rest of their 12-month earning period.",
+      ...(agreed ? ["This change has been agreed with you in writing."] : ["If you do not accept the change, you may end the agreement on 30 days' written notice under clause 11."]),
+    ],
+    `${id}:rate:${plan.effectiveAt.toISOString()}:${newBps}`,
+  );
+
+  await logAdminAction(gate.identity, "partner.rate_change_scheduled", id, { from: partner.rate_bps, to: newBps, effectiveAt: plan.effectiveAt.toISOString(), agreed });
+  revalidatePath("/admin/partners");
+  revalidatePath(`/admin/partners/${id}`);
+  const when = plan.effectiveAt.getTime() <= now.getTime() ? "from now" : `from ${day(plan.effectiveAt)}`;
+  return { error: null, message: `Rate ${upOrDown} to ${pctText(newBps)} ${when}, for new customers only. ${hadEmail ? "The partner has been sent the notice." : "No partner email is on file: send the notice yourself (a copy is in the support inbox)."}` };
+}
+
+/** Cancels a rate change that has not taken effect yet. */
+export async function cancelRateChange(_prev: PartnerActionState, formData: FormData): Promise<PartnerActionState> {
+  const gate = await checkPermission("partners.manage");
+  if (!gate.ok) return { error: gate.error, message: null };
+  const id = clean(formData.get("id"), 40);
+  const partnerId = clean(formData.get("partnerId"), 40);
+  if (!UUID.test(id) || !UUID.test(partnerId)) return { error: "Unknown change.", message: null };
+  const { data } = await supabaseAdmin()
+    .from("partner_rate_changes")
+    .update({ cancelled_at: new Date().toISOString() })
+    .eq("id", id)
+    .eq("partner_id", partnerId)
+    .is("applied_at", null)
+    .is("cancelled_at", null)
+    .select("id");
+  if (!data?.length) return { error: "That change has already taken effect or was cancelled.", message: null };
+  await logAdminAction(gate.identity, "partner.rate_change_cancelled", partnerId, { changeId: id });
+  revalidatePath(`/admin/partners/${partnerId}`);
+  return { error: null, message: "Cancelled. Tell the partner, since they were sent a notice." };
+}
+
+/**
+ * Terminates a partner (agreement clause 11). Without cause it takes effect after 30 days' notice (7
+ * in the pilot); for cause, at once. From then on no new account is credited, and only customers who
+ * had already paid keep earning, to the end of their own 12 months. The partner is paid what is
+ * payable with no minimum.
+ */
+export async function terminatePartner(_prev: PartnerActionState, formData: FormData): Promise<PartnerActionState> {
+  const gate = await checkPermission("partners.manage");
+  if (!gate.ok) return { error: gate.error, message: null };
+
+  const id = clean(formData.get("id"), 40);
+  if (!UUID.test(id)) return { error: "Unknown partner.", message: null };
+  const forCause = formData.get("forCause") === "on";
+  const reason = clean(formData.get("reason"), 300);
+
+  const admin = supabaseAdmin();
+  const { data: partner } = await admin.from("partners").select("id, name, email, status, activated_at, terminated_at").eq("id", id).maybeSingle();
+  if (!partner) return { error: "Unknown partner.", message: null };
+  if (partner.terminated_at) return { error: "This partner already has a termination set.", message: null };
+
+  const now = new Date();
+  const plan = planTermination({ now, activatedAt: partner.activated_at ? new Date(partner.activated_at as string) : null, forCause, reason });
+  if (!plan.ok) return { error: plan.error, message: null };
+
+  const effectiveNow = plan.effectiveAt.getTime() <= now.getTime();
+  const { error } = await admin
+    .from("partners")
+    .update({
+      termination_notice_at: now.toISOString(),
+      terminated_at: plan.effectiveAt.toISOString(),
+      termination_reason: reason,
+      termination_for_cause: forCause,
+      ...(effectiveNow ? { status: "terminated" } : {}),
+      updated_at: now.toISOString(),
+    })
+    .eq("id", id);
+  if (error) return { error: "Couldn't terminate. Nothing was changed.", message: null };
+  // Pending rate changes die with the partner.
+  await admin.from("partner_rate_changes").update({ cancelled_at: now.toISOString() }).eq("partner_id", id).is("applied_at", null).is("cancelled_at", null);
+
+  const hadEmail = await sendNotice(
+    { name: partner.name as string, email: (partner.email as string | null) ?? null },
+    effectiveNow ? "Your KiqStat Partner Referral Agreement has ended" : `Notice of termination of your KiqStat Partner Referral Agreement from ${day(plan.effectiveAt)}`,
+    [
+      effectiveNow
+        ? "This is notice under clause 11 of your Partner Referral Agreement that it has ended with immediate effect."
+        : `This is notice under clause 11 of your Partner Referral Agreement that it will end on ${day(plan.effectiveAt)}.`,
+      `Reason: ${reason}`,
+      "From the termination date no new accounts are credited to you. Commission on customers who had already made a first payment before that date continues to the end of each customer's 12-month earning period (clause 11.3), and any balance payable is paid monthly with no minimum (clause 11.4).",
+      ...(forCause ? ["Commission on customers acquired through the conduct that led to this termination may be forfeited (clause 11.3)."] : []),
+      "You must stop using your referral link and KiqStat branding (clause 11.2).",
+    ],
+    `${id}:terminate`,
+  );
+
+  await logAdminAction(gate.identity, "partner.terminated", id, { forCause, effectiveAt: plan.effectiveAt.toISOString(), reason });
+  revalidatePath("/admin/partners");
+  revalidatePath(`/admin/partners/${id}`);
+  return {
+    error: null,
+    message: `${effectiveNow ? "Terminated now." : `Termination set for ${day(plan.effectiveAt)} (${plan.noticeDays} days' notice).`} ${hadEmail ? "The partner has been sent the notice." : "No partner email is on file: send the notice yourself (a copy is in the support inbox)."}`,
+  };
+}
+
+/**
+ * Forfeits the commission on one referral (clause 11.3, termination for breach or fraud): later
+ * payments from that customer earn nothing, and commissions already booked are reversed (a paid one
+ * leaves a clawback on the next payout).
+ */
+export async function forfeitReferral(_prev: PartnerActionState, formData: FormData): Promise<PartnerActionState> {
+  const gate = await checkPermission("partners.manage");
+  if (!gate.ok) return { error: gate.error, message: null };
+
+  const partnerId = clean(formData.get("partnerId"), 40);
+  const email = clean(formData.get("email"), 254).toLowerCase();
+  const reason = clean(formData.get("reason"), 300);
+  if (!UUID.test(partnerId)) return { error: "Unknown partner.", message: null };
+  if (!email || !reason) return { error: "Enter the account's email and the reason.", message: null };
+
+  const admin = supabaseAdmin();
+  const { data: profile } = await admin.from("profiles").select("id, referred_by_partner").ilike("email", email).maybeSingle();
+  if (!profile || profile.referred_by_partner !== partnerId) return { error: "That account isn't one of this partner's referrals.", message: null };
+
+  const { error } = await admin.from("partner_forfeitures").upsert({ partner_id: partnerId, user_id: profile.id, reason, created_by_email: gate.identity.email }, { onConflict: "partner_id,user_id" });
+  if (error) return { error: "Couldn't record it. Nothing was changed.", message: null };
+
+  const { data: open } = await admin.from("partner_commissions").select("id").eq("partner_id", partnerId).eq("user_id", profile.id).eq("kind", "commission").neq("status", "reversed");
+  let reversed = 0;
+  for (const c of open ?? []) {
+    const { error: e } = await admin.rpc("partner_reverse_commission", { p_commission: c.id as string, p_reason: `forfeited: ${reason}` });
+    if (!e) reversed++;
+  }
+  await logAdminAction(gate.identity, "partner.referral_forfeited", partnerId, { userId: profile.id, reason, reversed });
+  revalidatePath(`/admin/partners/${partnerId}`);
+  return { error: null, message: `Forfeited. ${reversed} commission${reversed === 1 ? "" : "s"} reversed; later payments from this customer earn nothing.` };
 }

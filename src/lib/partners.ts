@@ -197,7 +197,8 @@ export interface Balance {
 }
 
 /** Balances per currency from a partner's commission rows. */
-export function balances(rows: CommissionRecord[], now = Date.now()): Balance[] {
+/** `noMinimum`: a terminated partner is paid whatever is payable, however small (agreement clause 11.4). */
+export function balances(rows: CommissionRecord[], now = Date.now(), noMinimum = false): Balance[] {
   const by = new Map<string, Balance>();
   for (const r of rows) {
     const b = by.get(r.currency) ?? { currency: r.currency, held: 0, payable: 0, paid: 0, payoutDue: false };
@@ -207,7 +208,7 @@ export function balances(rows: CommissionRecord[], now = Date.now()): Balance[] 
     else if (s === "payable") b.payable += r.amount_minor;
     else if (s === "paid") b.paid += r.amount_minor;
   }
-  for (const b of by.values()) b.payoutDue = b.payable > 0 && b.payable >= minPayout(b.currency);
+  for (const b of by.values()) b.payoutDue = b.payable > 0 && (noMinimum || b.payable >= minPayout(b.currency));
   return [...by.values()].sort((a, b) => (a.currency === "NGN" ? -1 : b.currency === "NGN" ? 1 : a.currency.localeCompare(b.currency)));
 }
 
