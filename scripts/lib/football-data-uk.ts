@@ -47,6 +47,10 @@ export interface Row {
   ast?: number;
   /** Closing over/under 2.5 prices, market average. */
   closeOu?: { over: number; under: number };
+  /** Earlier-in-the-week average prices (the file's Avg columns, collected a day or two before kickoff): a stand-in for what a market shows at publish time. */
+  open?: { home: number; draw: number; away: number };
+  openOu?: { over: number; under: number };
+  openAh?: { line: number; home: number; away: number };
   /** Closing Asian handicap: the home line and the market-average prices either side. */
   closeAh?: { line: number; home: number; away: number };
   /** Half-time score, where the file records it. */
@@ -115,6 +119,8 @@ export function parse(body: string, div: string): Row[] {
   const iCa = at("AvgCA");
   const iCo = at("AvgC>2.5");
   const iCu = at("AvgC<2.5");
+  const iOh = at("AvgH"), iOd = at("AvgD"), iOa = at("AvgA"), iOo = at("Avg>2.5"), iOu = at("Avg<2.5");
+  const iOahh = at("AvgAHH"), iOaha = at("AvgAHA"), iAhOpen = at("AHh");
   const iHst = at("HST");
   const iAst = at("AST");
   const iHth = at("HTHG");
@@ -150,6 +156,8 @@ export function parse(body: string, div: string): Row[] {
     const cu = num(iCu);
 
     const ahl = num(iAhl), ahh = num(iAhh), aha = num(iAha);
+    const oh = num(iOh), od = num(iOd), oa = num(iOa), oo = num(iOo), ou = num(iOu);
+    const oahl = num(iAhOpen), oahh = num(iOahh), oaha = num(iOaha);
     const hst = num(iHst);
     const ast = num(iAst);
     const hth = num(iHth);
@@ -185,6 +193,9 @@ export function parse(body: string, div: string): Row[] {
           : undefined,
       closeOu:
         Number.isFinite(co) && Number.isFinite(cu) ? { over: co, under: cu } : undefined,
+      open: oh > 1 && od > 1 && oa > 1 ? { home: oh, draw: od, away: oa } : undefined,
+      openOu: oo > 1 && ou > 1 ? { over: oo, under: ou } : undefined,
+      openAh: Number.isFinite(oahl) && f[iAhOpen]?.trim() !== "" && oahh > 1 && oaha > 1 ? { line: oahl, home: oahh, away: oaha } : undefined,
       closeAh:
         Number.isFinite(ahl) && f[iAhl]?.trim() !== "" && ahh > 1 && aha > 1 ? { line: ahl, home: ahh, away: aha } : undefined,
     });

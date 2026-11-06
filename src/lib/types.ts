@@ -93,4 +93,13 @@ export interface ResultRow {
   /** Expected goals, where the match has them (FotMob: top five leagues and the UEFA cups from Aug 2023). */
   homeXg?: number;
   awayXg?: number;
+  /**
+   * The goals the market's closing prices imply for each side (1X2 and over/under
+   * 2.5 solved for the two scoring rates). A far less noisy read of how strong
+   * each side was that day than the score, and it carries team news the score
+   * does not. Used as a fitting target (FitOptions.mktWeight), never as an input for the
+   * game being predicted.
+   */
+  homeMkt?: number;
+  awayMkt?: number;
 }

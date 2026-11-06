@@ -166,6 +166,10 @@ Backfilling FotMob history: from the Actions tab run `fotmob-backfill`
 (`--seasons 3 --limit 4000`); rerun it until every `fotmob-matches` row it
 records shows `remaining` 0. One league and season alone:
 `fotmob-matches --league premier-league --season 2023/2024 --limit 350`.
+`--team-stats-only` stores just the team figures (xG, shots, possession) and
+the match header, about 2 rows a game instead of 100: the way to backfill years
+of xG. The staged plan, which leagues can be reached and a coverage check are in
+`docs/fotmob-xg-backfill.md`.
 
 `--dry-run` fetches and transforms for real but writes to memory and prints
 one line per unit, which is the quickest way to check a source by hand.

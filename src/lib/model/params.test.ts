@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Match, ResultRow } from "@/lib/types";
 import { buildPrediction, guardHeadline, heldBack, levelFactor, type Pick } from "./predict";
 import { fitLeague } from "./fit";
-import { LEGACY_PARAMS, NEXT_MODEL_FROM, NEXT_PARAMS, paramsFor } from "./params";
+import { LEGACY_PARAMS, MARKET_COVERAGE_MIN, MARKET_MODEL_FROM, MARKET_PARAMS, NEXT_MODEL_FROM, NEXT_PARAMS, marketCoverage, paramsFor } from "./params";
 
 function rng(seed: number) {
   return () => {
@@ -86,6 +86,73 @@ describe("parameter gate (today's picks do not move)", () => {
     expect(gated.picks).toEqual(before.picks);
     expect(gated.topPick).toEqual(before.topPick);
     expect(gated.markets.home).toBe(before.markets.home);
+  });
+});
+
+describe("market-informed set (goals-v3)", () => {
+  const after = MARKET_MODEL_FROM + 3_600_000;
+  const priced = (n: number, share: number, end: number) =>
+    Array.from({ length: n }, (_, i) => ({
+      date: end - (i + 1) * 86_400_000 * 0.5,
+      ...(i < n * share ? { homeMkt: 1.4, awayMkt: 1.1 } : {}),
+    }));
+
+  it("starts at Lagos midnight on 14 Nov 2026", () => {
+    expect(MARKET_MODEL_FROM).toBe(Date.parse("2026-11-13T23:00:00Z"));
+    expect(MARKET_MODEL_FROM).toBeGreaterThan(NEXT_MODEL_FROM);
+  });
+
+  it("never reaches a game before its cutover, whatever the coverage", () => {
+    expect(paramsFor(MARKET_MODEL_FROM - 1, false, 1)).toBe(NEXT_PARAMS);
+    expect(paramsFor("2026-11-10T12:00:00Z", false, 1)).toBe(NEXT_PARAMS);
+    expect(paramsFor(NEXT_MODEL_FROM - 1, false, 1)).toBe(LEGACY_PARAMS);
+  });
+
+  it("applies from the cutover on where the league's training rows carry market goals", () => {
+    expect(paramsFor(MARKET_MODEL_FROM, false, MARKET_COVERAGE_MIN)).toBe(MARKET_PARAMS);
+    expect(paramsFor("2026-11-20T15:00:00Z", false, 0.9)).toBe(MARKET_PARAMS);
+  });
+
+  it("holds back where the prices are missing, so an unfinished backfill changes nothing", () => {
+    expect(paramsFor(after, false, 0)).toBe(NEXT_PARAMS);
+    expect(paramsFor(after, false, MARKET_COVERAGE_MIN - 0.01)).toBe(NEXT_PARAMS);
+    expect(paramsFor(after)).toBe(NEXT_PARAMS);
+  });
+
+  it("never applies to national-team and cup pools", () => {
+    const p = paramsFor(after, true, 1);
+    expect(p.id).toBe("goals-v2.1");
+    expect(p.fit.mktWeight).toBeUndefined();
+  });
+
+  it("keeps every other 2026-11 option and adds the stretch and the market fit", () => {
+    const { overTilt: _tilt, ...rest } = NEXT_PARAMS.options;
+    expect(MARKET_PARAMS.options).toMatchObject(rest);
+    // A higher tilt keeps the share of overs the sharper probabilities would otherwise cut.
+    expect(MARKET_PARAMS.options.overTilt).toBe(0.04);
+    expect(MARKET_PARAMS.options.strengthStretch).toBe(1.1);
+    expect(MARKET_PARAMS.fit).toMatchObject({ mktWeight: 0.6, shotWeight: 0.2, halfLifeDays: 120, regularisation: 0.005 });
+    expect(MARKET_PARAMS.id).not.toBe(NEXT_PARAMS.id);
+  });
+
+  it("measures coverage over the year before kickoff only", () => {
+    const end = after;
+    expect(marketCoverage(priced(400, 0.5, end), end)).toBeCloseTo(0.5, 2);
+    expect(marketCoverage(priced(400, 1, end), end)).toBe(1);
+    expect(marketCoverage(priced(400, 0, end), end)).toBe(0);
+    // Too few rows to judge.
+    expect(marketCoverage(priced(60, 1, end), end)).toBe(0);
+    // Rows older than a year, or after kickoff, do not count.
+    const old = Array.from({ length: 300 }, (_, i) => ({ date: end - 400 * 86_400_000 - i, homeMkt: 1, awayMkt: 1 }));
+    const future = Array.from({ length: 300 }, (_, i) => ({ date: end + 86_400_000 + i, homeMkt: 1, awayMkt: 1 }));
+    expect(marketCoverage([...old, ...future], end)).toBe(0);
+    expect(marketCoverage([], Number.NaN)).toBe(0);
+  });
+
+  it("needs both sides' goals on a row to count it", () => {
+    const end = after;
+    const rows = Array.from({ length: 200 }, (_, i) => ({ date: end - (i + 1) * 86_400_000, homeMkt: 1.2 }));
+    expect(marketCoverage(rows, end)).toBe(0);
   });
 });
 

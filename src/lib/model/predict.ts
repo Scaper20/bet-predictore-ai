@@ -278,6 +278,16 @@ export interface ModelOptions {
   /** How much of the market's total is taken, in log scale: 1 all of it, 0.5 halfway (default 1). */
   marketTotalWeight?: number;
   /**
+   * The goal rates the market's prices for this game imply (its 1X2 and over 2.5
+   * solved for the two rates), and how far to pull the model's rates toward
+   * them in log space (0 = the model, 1 = the market's; default 0.5). Walk-forward
+   * on 17,000 games, using the market's early-week prices, this took 1X2 log loss
+   * down by 0.010 at 0.5 and 0.016 at 1, and the lines the price was not set from
+   * (over 1.5, over 3.5, both teams to score) by 0.002 to 0.005. Absent = off.
+   */
+  marketRates?: [number, number];
+  marketRatesWeight?: number;
+  /**
    * No headline pick below this chance. Ranker picks stated at 60-65% landed
    * ~61% in three separate samples (replay 2025-26 60.5% of 243, Sep-Oct 2026
    * replay 61.0% of 41, live since 7 Oct 63.3% of 49) against 77% overall;
@@ -319,7 +329,11 @@ export function buildPrediction(
   const stretched = stretchStrength(shrunk.lambda, shrunk.mu, options.strengthStretch ?? 1);
   let lambda = stretched.lambda * goalScale;
   let mu = stretched.mu * goalScale;
-  if (options.marketOver25 != null) {
+  if (options.marketRates) {
+    const w = options.marketRatesWeight ?? 0.5;
+    lambda = Math.exp((1 - w) * Math.log(lambda) + w * Math.log(options.marketRates[0]));
+    mu = Math.exp((1 - w) * Math.log(mu) + w * Math.log(options.marketRates[1]));
+  } else if (options.marketOver25 != null) {
     const k = totalScaleFor(lambda, mu, fit.rho, options.marketOver25);
     if (k !== null) {
       const w = Math.exp((options.marketTotalWeight ?? 1) * Math.log(k));

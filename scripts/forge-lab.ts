@@ -18,6 +18,9 @@ import { candidatesFor, type ForgeSettings, type PoolEntry, type ForgeLeg } from
 import { forgeSolve } from "../src/lib/forge-solve";
 import { gradeMarket } from "../src/lib/slip-tracker";
 import { deVig } from "../src/lib/model/backtest";
+import { mktRows } from "./lib/mkt-rows";
+import { VARIANTS } from "./improve-lab";
+import { fair3, fairOu, impliedRates } from "./lib/improve-core";
 import { twinsOf } from "../src/lib/odds/bookable";
 import { isQuotable } from "../src/lib/odds/markets";
 import { csv, parse, priceFor, toMatch, toResultRow, type Row } from "./lib/football-data-uk";
@@ -61,22 +64,29 @@ async function walk(): Promise<G[]> {
   for (const d of DIVS) {
     const rows = await load(d.div);
     const league = { code: d.code, label: d.label };
+    const mkt = mktRows(d.div, process.env.MKT_CACHE ?? "/tmp");
+    const variant = process.argv.find((a) => a.startsWith("--variant="))?.split("=")[1];
+    const anchor = process.argv.find((a) => a.startsWith("--anchor="))?.split("=")[1];
+    const v = variant ? VARIANTS[variant] : undefined;
     const fits = new Map<number, ReturnType<typeof fitLeague>>();
     let i = 0;
     for (const row of rows.filter((r) => r.date >= end - 365 * DAY && r.date < end)) {
       const day = Math.floor(row.date / DAY) * DAY;
       while (i < rows.length && rows[i].date < day) i++;
-      const prior = rows.slice(Math.max(0, i - TRAIN_CAP), i).map(toResultRow);
+      const prior = rows.slice(Math.max(0, i - TRAIN_CAP), i).map(v?.fit?.mktWeight ? mkt.rr : toResultRow);
       let fit = fits.get(day);
-      if (!fit) fits.set(day, (fit = fitLeague(prior)));
+      if (!fit) fits.set(day, (fit = fitLeague(prior, v?.fit)));
       const mt = process.argv.find((a) => a.startsWith("--mt="))?.split("=")[1];
       const p = buildPrediction(toMatch(row, league), prior, [], {
         prefit: fit,
+        ...(v?.opts ?? {}),
+        ...(anchor && row.open && row.openOu ? { marketRates: impliedRates(fair3(row.open)[0], fair3(row.open)[2], fairOu(row.openOu), fit.rho, [1.4, 1.1]), marketRatesWeight: Number(anchor) } : {}),
         // --mt=1: the closing over 2.5 sets the total (ModelOptions.marketOver25); 0.5 takes half of it.
         ...(mt && row.closeOu ? { marketOver25: deVig([row.closeOu.over, row.closeOu.under])[0], marketTotalWeight: Number(mt) } : {}),
       });
       if (p.sufficiency.publishable) out.push({ day, row, p });
     }
+    mkt.save();
     process.stderr.write(`${d.div} `);
   }
   return out;

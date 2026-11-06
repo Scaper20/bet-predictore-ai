@@ -35,6 +35,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--season", help="fotmob-link / fotmob-matches: FotMob season, e.g. 2023/2024 (default current)")
     p.add_argument("--limit", type=int, help="fotmob-matches / fotmob-teams: most detail requests this run")
     p.add_argument("--refresh", action="store_true", help="fotmob-matches: refetch games already held")
+    p.add_argument("--team-stats-only", action="store_true",
+                   help="fotmob-matches / fotmob-backfill: store team figures (xG, shots, possession) and the match header only")
     p.add_argument("--hours", type=int, help="fotmob-upcoming: look this many hours ahead (default 72)")
     p.add_argument("--dry-run", action="store_true", help="fetch and transform, write to memory only")
     p.add_argument("-v", "--verbose", action="store_true")
@@ -67,9 +69,9 @@ def main(argv: list[str] | None = None) -> int:
     elif a.job == "fotmob-link":
         kwargs = {"season": a.season}
     elif a.job == "fotmob-matches":
-        kwargs = {"season": a.season, "limit": a.limit or 300, "refresh": a.refresh}
+        kwargs = {"season": a.season, "limit": a.limit or 300, "refresh": a.refresh, "team_stats_only": a.team_stats_only}
     elif a.job == "fotmob-backfill":
-        kwargs = {"seasons": a.seasons or 3, "limit": a.limit or 4000}
+        kwargs = {"seasons": a.seasons or 3, "limit": a.limit or 4000, "team_stats_only": a.team_stats_only}
     elif a.job == "fotmob-upcoming":
         kwargs = {"hours": a.hours or 72}
     elif a.job == "fotmob-players":

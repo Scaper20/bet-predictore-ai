@@ -20,7 +20,7 @@ import { engineRead, withEngineHeadline } from "@/lib/engine-feed";
 import { switchOn } from "@/lib/switches";
 import { listingsFor, type SportyBetEvent } from "@/lib/odds/sportybet";
 import { trainingAsOf } from "@/lib/model/as-of";
-import { paramsFor, type ParamSet } from "@/lib/model/params";
+import { marketCoverage, paramsFor, type ParamSet } from "@/lib/model/params";
 import { buildPrediction, guardHeadline, HEADLINE_EXCLUDED, HEADLINE_MAX_PROBABILITY, type ModelOptions, type Prediction } from "@/lib/model/predict";
 import { applySelectionPolicy } from "@/lib/selection-policy";
 import { extraPicks } from "@/lib/selection-extras";
@@ -201,7 +201,7 @@ function modelOptions(
 ): ModelOptions {
   // Games before the cutover keep the parameters they were published under (model/params.ts).
   const def = match.league.code ? leagueByCode(match.league.code) : undefined;
-  const params = paramsFor(match.kickoff, Boolean(def?.confederation || def?.cupPool));
+  const params = paramsFor(match.kickoff, Boolean(def?.confederation || def?.cupPool), marketCoverage(training.rows, match.kickoff));
   const prefit = sharedFit(match, training.rows, params);
   const book = training.book;
   const ratingNames = book && book.canonical.size > 0
