@@ -877,3 +877,12 @@ npx tsx scripts/improve-picks.ts --dir=<lab dirs> --sources=v:base,v:m60s20_hl12
 npx tsx scripts/audit-eval.ts --cfg=v3 --mkt=<cache dir> --from=2023-08-01 --to=2026-10-31 --out=v3.json
 npx tsx scripts/audit-report.ts --dir=<dir> --base=next --cfgs=v3 --win=A
 ```
+
+### L6. Anchoring shadow run (6 Nov 2026)
+
+Migration `0103_anchor_shadow.sql`, daily cron `/api/cron/anchor-shadow` (05:50 UTC). For each game
+kicking off in the next three days with a SportyBet price, it stores once, at the first price seen:
+the model's 1X2 and over 2.5 chances as served, the same anchored halfway to the price, and the
+de-vigged price. Nothing published reads it. Score it with `scripts/sql/anchor-shadow-score.sql`
+after a few hundred games have finished (about three weeks). Enable anchoring only if "anchored"
+beats "plain" by clearly more than `se_1x2_diff`; on football-data prices the gain was about 0.005.
