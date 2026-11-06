@@ -79,6 +79,18 @@ export interface FitOptions {
    * taken; shots on target measure the chances themselves. 0 = goals only.
    */
   shotWeight?: number;
+  /**
+   * Share of each team-match's scoring signal taken from expected goals, where
+   * the row carries them. Added to shotWeight's share (the two together are
+   * capped at 1) and scaled by the sample's goals per xG so the level stays
+   * goals. Over 12,584 team-matches (top five leagues and UEFA cups, Aug 2023
+   * on) a trailing-10 average of xG predicted the next match's goals with R2
+   * 0.0669 against 0.0571 for goals and 0.0619 for shots on target; goals,
+   * xG and shots on target a third each reached 0.0701 (the shipped goals and
+   * shots-on-target half and half: 0.0660). Off by default: it has not been
+   * walk-forward tested, and only those competitions have xG (docs/model-audit-teams-2026-11.md, section J).
+   */
+  xgWeight?: number;
 }
 
 /** Appearances at which a newcomer's prior counts half as much as at zero. */
@@ -101,6 +113,7 @@ const DEFAULTS: Required<FitOptions> = {
   learningRate: 0.8,
   newcomerPrior: 0.2,
   shotWeight: 0.5,
+  xgWeight: 0,
 };
 
 export function fitLeague(results: ResultRow[], opts: FitOptions = {}): LeagueFit {
@@ -148,6 +161,8 @@ export function fitLeague(results: ResultRow[], opts: FitOptions = {}): LeagueFi
   const W: number[] = [];
   const SH: (number | undefined)[] = [];
   const SA: (number | undefined)[] = [];
+  const GH: (number | undefined)[] = [];
+  const GA: (number | undefined)[] = [];
 
   for (const r of rows) {
     const h = idFor(r.homeId, r.homeName);
@@ -166,6 +181,11 @@ export function fitLeague(results: ResultRow[], opts: FitOptions = {}): LeagueFi
     const hasShots = Number.isFinite(sh) && Number.isFinite(sa) && (sh as number) >= 0 && (sa as number) >= 0;
     SH.push(hasShots ? sh : undefined);
     SA.push(hasShots ? sa : undefined);
+    const xh = r.homeXg;
+    const xa = r.awayXg;
+    const hasXg = Number.isFinite(xh) && Number.isFinite(xa) && (xh as number) >= 0 && (xa as number) >= 0;
+    GH.push(hasXg ? xh : undefined);
+    GA.push(hasXg ? xa : undefined);
 
     played[h]++;
     played[a]++;
@@ -182,23 +202,35 @@ export function fitLeague(results: ResultRow[], opts: FitOptions = {}): LeagueFi
   // target where present. X/Y stay the real goals (rho reads those).
   const XR = X.slice();
   const YR = Y.slice();
-  if (cfg.shotWeight > 0) {
+  if (cfg.shotWeight > 0 || cfg.xgWeight > 0) {
+    // Goals per shot on target and per xG over the rows that carry each, so
+    // a blended row keeps the level of goals.
     let g = 0;
     let sot = 0;
+    let gx = 0;
+    let xg = 0;
     for (let k = 0; k < m; k++) {
       if (SH[k] !== undefined && SA[k] !== undefined) {
         g += X[k] + Y[k];
         sot += (SH[k] as number) + (SA[k] as number);
       }
+      if (GH[k] !== undefined && GA[k] !== undefined) {
+        gx += X[k] + Y[k];
+        xg += (GH[k] as number) + (GA[k] as number);
+      }
     }
     const conversion = sot > 0 ? g / sot : 0;
-    if (conversion > 0) {
-      const w = cfg.shotWeight;
-      for (let k = 0; k < m; k++) {
-        if (SH[k] === undefined || SA[k] === undefined) continue;
-        XR[k] = (1 - w) * X[k] + w * (SH[k] as number) * conversion;
-        YR[k] = (1 - w) * Y[k] + w * (SA[k] as number) * conversion;
-      }
+    const xgScale = xg > 0 ? gx / xg : 0;
+    for (let k = 0; k < m; k++) {
+      const wS = SH[k] !== undefined && SA[k] !== undefined && conversion > 0 ? cfg.shotWeight : 0;
+      const wX = GH[k] !== undefined && GA[k] !== undefined && xgScale > 0 ? cfg.xgWeight : 0;
+      if (wS === 0 && wX === 0) continue;
+      const total = wS + wX;
+      const scale = total > 1 ? 1 / total : 1;
+      const s = wS * scale;
+      const x = wX * scale;
+      XR[k] = (1 - s - x) * X[k] + s * (SH[k] ?? 0) * conversion + x * (GH[k] ?? 0) * xgScale;
+      YR[k] = (1 - s - x) * Y[k] + s * (SA[k] ?? 0) * conversion + x * (GA[k] ?? 0) * xgScale;
     }
   }
 
