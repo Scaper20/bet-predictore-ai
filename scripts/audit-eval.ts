@@ -21,9 +21,12 @@ import { NEXT_PARAMS } from "../src/lib/model/params";
 import { evaluatePick } from "../src/lib/settlement";
 import { csv, parse, toMatch, toResultRow, type Row } from "./lib/football-data-uk";
 import { clampEnd } from "./lib/holdout";
+import { loadXgRows, makeXgMatcher } from "./lib/xg-lookup";
 import { deVig } from "../src/lib/model/backtest";
 
 const DAY = 86_400_000;
+/** football-data division -> FotMob league id, for --xg. */
+const FOTMOB_ID: Record<string, number> = { E0: 47, SP1: 87, I1: 55, D1: 54, F1: 53 };
 const TRAIN_CAP = 1200;
 const SEASONS = ["2021", "2122", "2223", "2324", "2425", "2526", "2627"].filter((s) => s !== "2021");
 
@@ -51,6 +54,12 @@ type Config = ModelOptions & { fitOpts?: FitOptions; useMarketTotal?: number };
 
 export const CONFIGS: Record<string, Config> = {
   legacy: {},
+  // xG in the fit's response (needs --xg=<file>): shot weight, xG weight.
+  xg_a: { fitOpts: { shotWeight: 0.5, xgWeight: 0.25 } },
+  xg_b: { fitOpts: { shotWeight: 0.25, xgWeight: 0.5 } },
+  xg_c: { fitOpts: { shotWeight: 0, xgWeight: 0.5 } },
+  xg_d: { fitOpts: { shotWeight: 0.33, xgWeight: 0.33 } },
+  xg_e: { fitOpts: { shotWeight: 0, xgWeight: 0.75 } },
   // What ships for games from 5 Nov 2026 (model/params.ts), through the real buildPrediction.
   next: { ...NEXT_PARAMS.options, fitOpts: NEXT_PARAMS.fit },
   // Audit section E candidates, existing knobs only.
@@ -137,13 +146,25 @@ async function main() {
     if (only && !only.includes(d.div)) continue;
     const rows = await load(d.div);
     const league = { code: d.code, label: d.label };
+    // --xg=<jsonl from fotmob-xg-fetch.ts>: attach FotMob xG to the rows that have it.
+    const matcher = arg("xg") && FOTMOB_ID[d.div] ? makeXgMatcher(loadXgRows(arg("xg")!), FOTMOB_ID[d.div]) : null;
+    const withXg = new Map<Row, [number, number]>();
+    if (matcher) for (const r of rows) {
+      const x = matcher(r.date, r.home, r.away, r.homeGoals, r.awayGoals);
+      if (x) withXg.set(r, [x[0], x[1]]);
+    }
+    if (matcher) process.stderr.write(`${d.div}: xG on ${withXg.size} of ${rows.length} rows (ambiguous ${matcher.stats.ambiguous})\n`);
+    const rr = (r: Row) => {
+      const x = withXg.get(r);
+      return x ? { ...toResultRow(r), homeXg: x[0], awayXg: x[1] } : toResultRow(r);
+    };
     const target = rows.filter((r) => r.date >= from && r.date < to);
     const fits = new Map<number, ReturnType<typeof fitLeague>>();
     let i = 0;
     for (const row of target) {
       const day = Math.floor(row.date / DAY) * DAY;
       while (i < rows.length && rows[i].date < day) i++;
-      const prior = rows.slice(Math.max(0, i - TRAIN_CAP), i).map(toResultRow);
+      const prior = rows.slice(Math.max(0, i - TRAIN_CAP), i).map(rr);
       let fit = fits.get(day);
       if (!fit) {
         fit = fitLeague(prior, fitOpts);
