@@ -588,14 +588,46 @@ def _fotmob_leagues(ctx: Context) -> list[League]:
     return [lg for lg in ctx.ordered() if lg.ids.get("fotMob")]
 
 
+def resolve_season_names(available: list[str], season: str | None) -> list[str | None]:
+    """FotMob's names for a season we label "2024/2025".
+
+    European leagues use the label as is. MLS and the Brazilian league name a
+    season by its year ("2024"), Argentina by tournament ("2024 - Apertura",
+    "2024 - Clausura") and Liga MX by both ("2024/2025 - Apertura"). Asking for
+    a name FotMob does not have silently returns the current season, which
+    would make a backfill fetch today's games again instead of history, so the
+    label is matched against the league's own list. With no list (a feed that
+    omits it) the label is used as it stands; with a list and no match, nothing.
+    """
+    if not season:
+        return [None]
+    if not available:
+        return [season]
+    if season in available:
+        return [season]
+    year = season.split("/")[0]
+    return [n for n in available if n == year or n.startswith(f"{year} - ") or n.startswith(f"{season} - ")]
+
+
 def _fotmob_fixtures(fm, lg: League, season: str | None, r) -> list:
     from .sources.fotmob import check_shape, parse_league_fixtures
 
-    data = fm.league(lg.ids["fotMob"], season)
-    for path in check_shape(data, ["details.id", "fixtures.allMatches"]):
-        r.warn(f"league feed: missing {path}")
-    r.meta["season"] = (data.get("details") or {}).get("selectedSeason") or season
-    return parse_league_fixtures(data)
+    league_id = lg.ids["fotMob"]
+    names: list[str | None] = [season]
+    if season:
+        available = (fm.league(league_id) or {}).get("allAvailableSeasons") or []
+        names = resolve_season_names([str(x) for x in available], season)
+        if not names:
+            r.warn(f"league feed: no FotMob season matches {season}")
+            return []
+    fixtures: list = []
+    for name in names:
+        data = fm.league(league_id, name)
+        for path in check_shape(data, ["details.id", "fixtures.allMatches"]):
+            r.warn(f"league feed: missing {path}")
+        r.meta["season"] = (data.get("details") or {}).get("selectedSeason") or name
+        fixtures += parse_league_fixtures(data)
+    return fixtures
 
 
 def job_fotmob_link(ctx: Context, season: str | None = None) -> None:
@@ -612,11 +644,15 @@ def job_fotmob_link(ctx: Context, season: str | None = None) -> None:
             link_fixtures(ctx.db, ctx.resolver, lg, _fotmob_fixtures(fm, lg, season, r), r)
 
 
-def job_fotmob_matches(ctx: Context, season: str | None = None, limit: int = 300, refresh: bool = False) -> int:
+def job_fotmob_matches(
+    ctx: Context, season: str | None = None, limit: int = 300, refresh: bool = False, team_stats_only: bool = False,
+) -> int:
     """Details for finished games we do not hold yet: the backfill and the nightly top-up.
 
     ``limit`` caps detail requests per run (one request each, ~4 s apart), so a
     run fits GitHub's 30 minutes; rerun to continue where it stopped.
+    ``team_stats_only`` stores just the team figures and the match header (see
+    write_match): the way to backfill years of xG without the player tables.
     """
     from .fotmob_writer import details_state, link_fixtures, write_match
     from .sources.fotmob import parse_match
@@ -650,7 +686,7 @@ def job_fotmob_matches(ctx: Context, season: str | None = None, limit: int = 300
                     continue
                 for w in bundle.warnings[:3]:
                     r.warn(w)
-                r.rows_written += write_match(ctx.db, linked[f.fotmob_id]["match_id"], bundle)
+                r.rows_written += write_match(ctx.db, linked[f.fotmob_id]["match_id"], bundle, team_stats_only)
                 r.meta["fetched"] = r.meta.get("fetched", 0) + 1
             r.meta["remaining"] = max(0, len(todo) - r.meta.get("fetched", 0))
     return limit - budget
@@ -662,14 +698,14 @@ def fotmob_seasons(back: int, day: date | None = None) -> list[str | None]:
     return [None] + [f"{y - i}/{y - i + 1}" for i in range(1, back + 1)]
 
 
-def job_fotmob_backfill(ctx: Context, seasons: int = 3, limit: int = 4000) -> None:
+def job_fotmob_backfill(ctx: Context, seasons: int = 3, limit: int = 4000, team_stats_only: bool = False) -> None:
     """History: every league, current season and ``seasons`` before it, newest
     first, up to ``limit`` games a run. Resumable: rerun until nothing is left."""
     budget = limit
     for season in fotmob_seasons(seasons):
         if budget <= 0:
             break
-        budget -= job_fotmob_matches(ctx, season=season, limit=budget)
+        budget -= job_fotmob_matches(ctx, season=season, limit=budget, team_stats_only=team_stats_only)
 
 
 def job_fotmob_upcoming(ctx: Context, hours: int = 72) -> None:

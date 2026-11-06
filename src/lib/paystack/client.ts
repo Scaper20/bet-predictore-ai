@@ -137,6 +137,12 @@ export interface PaystackCharge {
   fees?: number | null;
 }
 
+/** A customer's charges the card issuer reversed since `from` (ISO): Paystack took the money, then it went back. Read-only. */
+export function listReversedCharges(customerId: number, from: string) {
+  const q = new URLSearchParams({ customer: String(customerId), status: "reversed", from, perPage: "50" });
+  return paystackFetch<PaystackCharge[]>(`/transaction?${q}`, { method: "GET", signal: AbortSignal.timeout(8_000) });
+}
+
 /** A customer's successful charges since `from` (ISO), newest first. Read-only. */
 export function listSuccessfulCharges(customerId: number, from: string) {
   const q = new URLSearchParams({ customer: String(customerId), status: "success", from, perPage: "50" });

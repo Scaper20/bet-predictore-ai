@@ -15,6 +15,8 @@ export type FindingKind =
   | "payment_failing"
   /** Our period is over and Paystack has ended the subscription. */
   | "ended"
+  /** Our period is over because the renewal charge was reversed by the card issuer: no money was received. */
+  | "charge_reversed"
   /** Our period is over, no charge, and Paystack still calls it active. */
   | "lapsed_unexplained"
   /** Still paid up, but Paystack will not renew it and we still say active. */
@@ -35,6 +37,8 @@ export interface ClassifyInput {
   paystack: { status: string; nextPaymentDate: string | null; planAmount: number | null };
   /** Paystack's successful charges for this customer around and after our period end. */
   charges: PaystackCharge[];
+  /** Charges the card issuer reversed around our period end (status "reversed" on Paystack). */
+  reversed?: PaystackCharge[];
   /** References already in our payments table. */
   knownReferences: Set<string>;
   now: Date;
@@ -70,6 +74,15 @@ export function classifySubscription(i: ClassifyInput): SubscriptionFinding {
       return i.ours.status === "cancelled"
         ? { ...base, kind: "ok", detail: "" }
         : { ...base, kind: "ended", detail: `period ended ${endText}; Paystack status ${ps}` };
+    }
+    const reversed = (i.reversed ?? []).filter((c) => i.paystack.planAmount == null || c.amount === i.paystack.planAmount);
+    if (reversed.length) {
+      const r = reversed[0];
+      return {
+        ...base,
+        kind: "charge_reversed",
+        detail: `period ended ${endText}; the renewal charge ${r.reference} (${r.amount / 100} ${r.currency ?? "NGN"}${r.paid_at ? `, ${r.paid_at.slice(0, 10)}` : ""}) was reversed by the card issuer, so no money was received; Paystack status ${ps}, next charge ${i.paystack.nextPaymentDate ?? "none"}`,
+      };
     }
     return { ...base, kind: "lapsed_unexplained", detail: `period ended ${endText}; no charge found; Paystack status ${ps}, next charge ${i.paystack.nextPaymentDate ?? "none"}` };
   }

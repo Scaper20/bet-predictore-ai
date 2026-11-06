@@ -55,7 +55,7 @@ below are close to zero and the margins are roughly price minus Paystack. "Heavy
 | Weekend pass | ₦1,000 | ₦15 | 10 questions, ₦600 | **₦385** | — |
 | Week pass | ₦2,000 | ₦30 | 15 questions, ₦900 | **₦1,070** | — |
 | Pro, monthly | ₦5,000 | ₦175 | 1 a day, ₦1,800 | **₦3,025** | 30 a day, ₦54,000 |
-| VIP, monthly | ₦12,000 | ₦280 | 3 a day, ₦5,400 | **₦6,320** | 100 a day, ₦180,000 |
+| VIP, monthly | ₦12,000 | ₦280 | 3 a day, ₦5,400 | **₦6,320** | 80 a day, ₦144,000 |
 
 At the old prices a Day pass (₦250) lost money on an ordinary user and Pro
 (₦3,500) kept about ₦1,550 a month. Break-even on fixed costs now needs about

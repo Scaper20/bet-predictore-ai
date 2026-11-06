@@ -13,7 +13,7 @@
 import { formatMoney } from "@/lib/payments/markets";
 
 export const DEFAULT_RATE_BPS = 2000; // 20%
-export const MAX_RATE_BPS = 5000;
+export const MAX_RATE_BPS = 3000; // 30%: the most the plan economics model allows on every plan in the worst case (CTO checklist 5.2)
 /** Days a commission is held before it can be paid: the refund window plus a margin for chargebacks. */
 export const HOLD_DAYS = 14;
 /** Months of a user's payments that earn a commission, counted from their first one. */

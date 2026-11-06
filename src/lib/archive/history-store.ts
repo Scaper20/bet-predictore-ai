@@ -48,12 +48,18 @@ export async function archivedResults(
     const supabase = supabasePublic();
     if (!supabase) return [];
 
-    let query = supabase
-      .from("historical_results")
-      .select("kickoff, home_name, away_name, home_goals, away_goals, home_shots_on_target, away_shots_on_target")
-      .eq("league_code", leagueCode);
-    if (source) query = query.eq("source", source);
-    const { data, error } = await query.order("kickoff", { ascending: false }).limit(MAX_ROWS);
+    const BASE = "kickoff, home_name, away_name, home_goals, away_goals, home_shots_on_target, away_shots_on_target";
+    const run = (columns: string) => {
+      let query = supabase.from("historical_results").select(columns).eq("league_code", leagueCode);
+      if (source) query = query.eq("source", source);
+      return query.order("kickoff", { ascending: false }).limit(MAX_ROWS);
+    };
+    // The goals the closing prices implied (0102) ride along where stored. Until
+    // that migration is applied the extra columns are an error, so the read
+    // falls back to the columns it always had: a missing column must never turn
+    // into "no archive".
+    let { data, error } = await run(`${BASE}, home_mkt_goals, away_mkt_goals`);
+    if (error) ({ data, error } = await run(BASE));
 
     // A missing table (0014 not applied yet) or a failed read degrades to "no
     // archive", and the caller falls back to the live providers exactly as it
@@ -61,7 +67,7 @@ export async function archivedResults(
     // an availability requirement.
     if (error || !data) return [];
 
-    return data.map((r) => ({
+    return (data as unknown as Record<string, unknown>[]).map((r) => ({
       // The fit keys teams on normaliseKey(name), so the name is the identity
       // that matters. Archives carry no stable club id and inventing one would
       // just be the name again with extra steps.
@@ -76,6 +82,9 @@ export async function archivedResults(
       // Null where the source had none; the fit uses goals alone for those rows.
       homeShotsOnTarget: (r.home_shots_on_target as number | null) ?? undefined,
       awayShotsOnTarget: (r.away_shots_on_target as number | null) ?? undefined,
+      // Null where the game has no closing prices; the fit then uses its score alone.
+      homeMkt: (r.home_mkt_goals as number | null | undefined) ?? undefined,
+      awayMkt: (r.away_mkt_goals as number | null | undefined) ?? undefined,
     }));
   });
 }
@@ -113,6 +122,8 @@ export async function storeResults(rows: ArchiveRow[], source: string): Promise<
     home_shots: r.homeShots ?? null,
     away_shots: r.awayShots ?? null,
     referee: r.referee ?? null,
+    home_mkt_goals: r.homeMktGoals ?? null,
+    away_mkt_goals: r.awayMktGoals ?? null,
     source,
   }));
 
@@ -161,7 +172,7 @@ export async function archivedStatRows(leagueCode: string): Promise<StatRow[]> {
     if (error || !data) return [];
     const pair = (a: unknown, b: unknown): [number, number] | undefined =>
       typeof a === "number" && typeof b === "number" ? [a, b] : undefined;
-    return data.map((r) => ({
+    return (data as unknown as Record<string, unknown>[]).map((r) => ({
       date: Date.parse(r.kickoff as string),
       homeName: r.home_name as string,
       awayName: r.away_name as string,

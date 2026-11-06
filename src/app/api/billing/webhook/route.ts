@@ -427,12 +427,14 @@ export async function POST(request: Request) {
       try {
         const { data: commission } = await admin
           .from("partner_commissions")
-          .select("id")
+          .select("id, amount_minor, currency, plan, partners(name, slug)")
           .eq("payment_reference", reference)
           .eq("kind", "commission")
           .maybeSingle();
         if (commission?.id) {
-          await admin.rpc("partner_reverse_commission", { p_commission: commission.id as string, p_reason: "refunded (Paystack)" });
+          const { data: result } = await admin.rpc("partner_reverse_commission", { p_commission: commission.id as string, p_reason: "refunded (Paystack)" });
+          // Partners are paid by hand, so the founder is told what to do about this one.
+          await notifyCommissionReversed(commission as unknown as ReversedCommission, reference, String(result ?? ""));
         }
       } catch (err) {
         console.error("commission reversal on refund failed", reference, err);
@@ -509,4 +511,31 @@ function alertSupport(subject: string, body: string, key: string) {
   const to = process.env.ASK_ALERT_EMAIL?.trim() || process.env.SUPPORT_INBOX_EMAIL?.trim() || "support@kiqstat.app";
   const html = `<p>${body.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]!)}</p>`;
   void sendEmail({ to, idempotencyKey: key, subject, html });
+}
+
+interface ReversedCommission {
+  amount_minor: number;
+  currency: string;
+  plan: string | null;
+  partners: { name?: string | null; slug?: string | null } | { name?: string | null; slug?: string | null }[] | null;
+}
+
+/** Emails the founder when a refund takes back a partner's commission, with what to do about the payout. */
+async function notifyCommissionReversed(c: ReversedCommission, reference: string, result: string) {
+  const partner = Array.isArray(c.partners) ? c.partners[0] : c.partners;
+  const who = partner?.name || partner?.slug || "a partner";
+  const amount = `${(c.amount_minor / 100).toLocaleString("en-NG")} ${c.currency}`;
+  const action =
+    result === "clawback"
+      ? "This commission had already been paid, so a deduction of the same amount is now held against the partner's next payout. Take it off when you pay them."
+      : result === "cancelled"
+        ? "It had not been paid yet, so it is cancelled. Nothing to do; do not include it in the next payout."
+        : "It was already reversed. Nothing to do.";
+  const to = process.env.ASK_ALERT_EMAIL?.trim() || process.env.SUPPORT_INBOX_EMAIL?.trim() || "support@kiqstat.app";
+  await sendEmail({
+    to,
+    idempotencyKey: `commission-reversed:${reference}`,
+    subject: `Refund reversed a partner commission: ${who}, ${amount}`,
+    html: `<p>Paystack refunded payment <code>${reference}</code>${c.plan ? ` (${c.plan})` : ""}. The commission it earned for <b>${who}</b> (${amount}) has been reversed.</p><p>${action}</p><p>Partner page: /admin/partners</p>`,
+  }).catch((err) => console.error("commission reversal email failed", reference, err));
 }

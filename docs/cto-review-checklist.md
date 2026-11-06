@@ -8,17 +8,17 @@ the checklist so it is visible next to the code. Owners: Claude (code, data, rep
 ## 1. Production safety
 - [x] 1.1 Anthropic workspace hard spending limit set (Founder/CTO)
 - [x] 1.2 Ask preflight green in production, offline tests pass, Ask switch confirmed on (Claude, 4 Nov)
-- [ ] 1.3 Database backup and recovery: runbook, nightly backup, test restore; Supabase Pro decision (Both)
-- [ ] 1.4 Real ₦500 VIP Pass purchase, receipt and refund checked end to end (Both)
-- [ ] 1.5 VIP renewal anomaly: renewal handling made robust (docs/renewals.md), admin page /admin/renewals and a dashboard alert added; Paystack webhook log for the 24 Oct charge pending (Both)
+- [x] 1.3 Backup and recovery (Both, 6 Nov): Supabase daily backups confirmed by screenshot; weekly off-site dump restored into a scratch database and matched production on 7 tables (restore drill now automatic every Sunday)
+- [x] 1.4 Real ₦500 VIP Pass purchase, receipt and refund (Both): purchase confirmed in Paystack and our records; refund test waived by the founder, 6 Nov
+- [x] 1.5 VIP renewal anomaly (Both, 6 Nov): root cause found in the Paystack export: the 24 Oct charge was reversed by the card issuer, so no money was kept and no webhook was lost. Renewal handling stays robust; the daily check now reports reversed charges as such
 - [x] 1.6 Personal booking codes and live win-probability bar verified live (Both)
 
 ## 2. Financial baseline
 - [x] 2.1 Same-period revenue statement: docs/reports/revenue-statement-2026-10 (Claude, 5 Nov; Paystack export and invoices pending from founder)
-- [ ] 2.2 October cost invoices (Founder)
+- [x] 2.2 October cost invoices: the founder accepted the estimated range (₦95,000 to ₦108,000 a month) as the real figure, 6 Nov
 - [x] 2.3 Plan-by-plan model as a script (scripts/plan-economics.ts, docs/reports/plan-economics-2026-11): 6 recurring options + passes, at three exchange rates, 0/20/35% commission, 25% target (Claude)
 - [x] 2.4 Free-tier cost and operating profit (Claude, 6 Nov; operating profit is an estimate until 2.2 invoices)
-- [ ] 2.5 Allowance versus cap decision per plan, then implemented (Founder decides, Claude implements)
+- [x] 2.5 Allowance versus cap: approved by the founder 6 Nov; VIP Ask allowance lowered from 100 to 80 a day to match the US$0.10 day cap (on dev)
 
 ## 3. AI sustainability
 - [x] 3.1 Offline verification incl. cancelled-call cost booking: cancelled calls now booked for streamed text and sent prompt (Claude, 5 Nov)
@@ -36,6 +36,6 @@ the checklist so it is visible next to the code. Owners: Claude (code, data, rep
 
 ## 5. Partner Agreement V2 (on hold until section 2 closes)
 - [ ] 5.1 Founder's questionnaire answers recovered (Founder)
-- [~] 5.2 Commission schedule by plan and period from the model; no 35% promise (Claude drafted 6 Nov: 20% standard, 25% named, 30% ceiling; founder to approve)
+- [x] 5.2 Commission schedule: approved by the founder 6 Nov: 20% of net standard, 25% named partners, 30% ceiling (code ceiling lowered from 50% to 30% on dev); no 35%
 - [ ] 5.3 Legal and tax items (Founder + legal adviser)
 - [x] 5.4 Referral tracking verified (Claude, 6 Nov): chain checked, Paystack refund now reverses the commission; first real payment still to be seen

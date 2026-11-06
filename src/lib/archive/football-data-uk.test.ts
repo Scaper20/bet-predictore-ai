@@ -50,6 +50,34 @@ describe("parseDivisionCsv shots on target", () => {
   });
 });
 
+describe("parseDivisionCsv market-implied goals", () => {
+  const head = "Div,Date,HomeTeam,AwayTeam,FTHG,FTAG,AvgCH,AvgCD,AvgCA,AvgC>2.5,AvgC<2.5";
+
+  it("solves the goals the closing prices implied and rounds them to the thousandth", () => {
+    const [row] = parseDivisionCsv([head, "E0,16/08/2025,Arsenal,Chelsea,2,1,1.85,3.9,4.4,1.72,2.15"].join("\n"), "premier-league");
+    // Home favoured, a fairly open game: more goals for the favourite, about 2.8 between them.
+    expect(row.homeMktGoals!).toBeGreaterThan(row.awayMktGoals!);
+    expect(row.homeMktGoals! + row.awayMktGoals!).toBeGreaterThan(2.4);
+    expect(row.homeMktGoals! + row.awayMktGoals!).toBeLessThan(3.4);
+    expect(row.homeMktGoals).toBe(Math.round(row.homeMktGoals! * 1000) / 1000);
+  });
+
+  it("leaves them unset when the file has no closing prices, or only some", () => {
+    const none = parseDivisionCsv(["Div,Date,HomeTeam,AwayTeam,FTHG,FTAG", "E0,16/08/2025,Arsenal,Chelsea,2,1"].join("\n"), "premier-league");
+    expect(none[0].homeMktGoals).toBeUndefined();
+    const noOu = parseDivisionCsv(["Div,Date,HomeTeam,AwayTeam,FTHG,FTAG,AvgCH,AvgCD,AvgCA", "E0,16/08/2025,Arsenal,Chelsea,2,1,1.85,3.9,4.4"].join("\n"), "premier-league");
+    expect(noOu[0].homeMktGoals).toBeUndefined();
+    const blank = parseDivisionCsv([head, "E0,16/08/2025,Arsenal,Chelsea,2,1,1.85,3.9,4.4,,"].join("\n"), "premier-league");
+    expect(blank[0].homeMktGoals).toBeUndefined();
+    expect(blank[0]).toMatchObject({ homeGoals: 2, awayGoals: 1 });
+  });
+
+  it("does not take a price that cannot be real", () => {
+    const [row] = parseDivisionCsv([head, "E0,16/08/2025,Arsenal,Chelsea,2,1,1.0,3.9,4.4,1.72,2.15"].join("\n"), "premier-league");
+    expect(row.homeMktGoals).toBeUndefined();
+  });
+});
+
 describe("parseDivisionCsv", () => {
   const csv = [
     "Div,Date,Time,HomeTeam,AwayTeam,FTHG,FTAG,FTR,AvgCH",

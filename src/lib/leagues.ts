@@ -301,7 +301,7 @@ export const LEAGUES: LeagueDef[] = [
     country: "England",
     flag: "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
     rank: 16,
-    ids: { footballData: "ELC", theSportsDb: "4329", apiFootball: 40, sportyBet: "sr:tournament:18", espn: "eng.2" },
+    ids: { footballData: "ELC", theSportsDb: "4329", apiFootball: 40, sportyBet: "sr:tournament:18", espn: "eng.2", fotMob: 48 },
     archive: { footballDataUk: "E1" },
   },
   {
@@ -312,7 +312,7 @@ export const LEAGUES: LeagueDef[] = [
     country: "Netherlands",
     flag: "🇳🇱",
     rank: 17,
-    ids: { footballData: "DED", theSportsDb: "4337", apiFootball: 88, sportyBet: "sr:tournament:37", espn: "ned.1" },
+    ids: { footballData: "DED", theSportsDb: "4337", apiFootball: 88, sportyBet: "sr:tournament:37", espn: "ned.1", fotMob: 57 },
     archive: { footballDataUk: "N1" },
   },
   {
@@ -323,7 +323,7 @@ export const LEAGUES: LeagueDef[] = [
     country: "Portugal",
     flag: "🇵🇹",
     rank: 18,
-    ids: { footballData: "PPL", theSportsDb: "4344", apiFootball: 94, espn: "por.1" },
+    ids: { footballData: "PPL", theSportsDb: "4344", apiFootball: 94, espn: "por.1", fotMob: 61 },
     archive: { footballDataUk: "P1" },
   },
   {
@@ -348,7 +348,7 @@ export const LEAGUES: LeagueDef[] = [
     country: "Brazil",
     flag: "🇧🇷",
     rank: 20,
-    ids: { footballData: "BSA", theSportsDb: "4351", apiFootball: 71, sportyBet: "sr:tournament:325", espn: "bra.1" },
+    ids: { footballData: "BSA", theSportsDb: "4351", apiFootball: 71, sportyBet: "sr:tournament:325", espn: "bra.1", fotMob: 268 },
     archive: { footballDataUkCountry: { file: "BRA", league: "Serie A" } },
   },
   {
@@ -377,7 +377,7 @@ export const LEAGUES: LeagueDef[] = [
     country: "Scotland",
     flag: "🏴󠁧󠁢󠁳󠁣󠁴󠁿",
     rank: 31,
-    ids: { theSportsDb: "4330", espn: "sco.1" },
+    ids: { theSportsDb: "4330", espn: "sco.1", fotMob: 64 },
     archive: { footballDataUk: "SC0" },
   },
   {
@@ -388,7 +388,7 @@ export const LEAGUES: LeagueDef[] = [
     country: "Turkey",
     flag: "🇹🇷",
     rank: 32,
-    ids: { theSportsDb: "4339", espn: "tur.1" },
+    ids: { theSportsDb: "4339", espn: "tur.1", fotMob: 71 },
     archive: { footballDataUk: "T1" },
   },
   {
@@ -399,7 +399,7 @@ export const LEAGUES: LeagueDef[] = [
     country: "United States",
     flag: "🇺🇸",
     rank: 33,
-    ids: { theSportsDb: "4346", espn: "usa.1" },
+    ids: { theSportsDb: "4346", espn: "usa.1", fotMob: 130 },
     archive: { footballDataUkCountry: { file: "USA", league: "MLS" } },
   },
   {
@@ -410,7 +410,7 @@ export const LEAGUES: LeagueDef[] = [
     country: "Belgium",
     flag: "🇧🇪",
     rank: 34,
-    ids: { theSportsDb: "4338", espn: "bel.1" },
+    ids: { theSportsDb: "4338", espn: "bel.1", fotMob: 40 },
     archive: { footballDataUk: "B1" },
   },
   {
@@ -421,7 +421,7 @@ export const LEAGUES: LeagueDef[] = [
     country: "Argentina",
     flag: "🇦🇷",
     rank: 35,
-    ids: { theSportsDb: "4406", espn: "arg.1" },
+    ids: { theSportsDb: "4406", espn: "arg.1", fotMob: 112 },
     archive: { footballDataUkCountry: { file: "ARG", league: "Liga Profesional" } },
   },
   {
@@ -432,7 +432,7 @@ export const LEAGUES: LeagueDef[] = [
     country: "Mexico",
     flag: "🇲🇽",
     rank: 36,
-    ids: { theSportsDb: "4350", espn: "mex.1" },
+    ids: { theSportsDb: "4350", espn: "mex.1", fotMob: 230 },
     archive: { footballDataUkCountry: { file: "MEX", league: "Liga MX" } },
   },
   {
@@ -443,7 +443,7 @@ export const LEAGUES: LeagueDef[] = [
     country: "Greece",
     flag: "🇬🇷",
     rank: 37,
-    ids: { theSportsDb: "4336", espn: "gre.1" },
+    ids: { theSportsDb: "4336", espn: "gre.1", fotMob: 135 },
     archive: { footballDataUk: "G1" },
   },
   {
@@ -454,7 +454,7 @@ export const LEAGUES: LeagueDef[] = [
     country: "England",
     flag: "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
     rank: 38,
-    ids: { theSportsDb: "4396", espn: "eng.3" },
+    ids: { theSportsDb: "4396", espn: "eng.3", fotMob: 108 },
     archive: { footballDataUk: "E2" },
   },
   {
@@ -465,7 +465,7 @@ export const LEAGUES: LeagueDef[] = [
     country: "Germany",
     flag: "🇩🇪",
     rank: 39,
-    ids: { theSportsDb: "4399", espn: "ger.2" },
+    ids: { theSportsDb: "4399", espn: "ger.2", fotMob: 146 },
     archive: { footballDataUk: "D2" },
   },
   {
@@ -476,7 +476,7 @@ export const LEAGUES: LeagueDef[] = [
     country: "Italy",
     flag: "🇮🇹",
     rank: 40,
-    ids: { theSportsDb: "4394", espn: "ita.2" },
+    ids: { theSportsDb: "4394", espn: "ita.2", fotMob: 86 },
     archive: { footballDataUk: "I2" },
   },
   {
@@ -487,7 +487,7 @@ export const LEAGUES: LeagueDef[] = [
     country: "Spain",
     flag: "🇪🇸",
     rank: 41,
-    ids: { theSportsDb: "4400", espn: "esp.2" },
+    ids: { theSportsDb: "4400", espn: "esp.2", fotMob: 140 },
     archive: { footballDataUk: "SP2" },
   },
   {
@@ -498,7 +498,7 @@ export const LEAGUES: LeagueDef[] = [
     country: "France",
     flag: "🇫🇷",
     rank: 42,
-    ids: { theSportsDb: "4401", espn: "fra.2" },
+    ids: { theSportsDb: "4401", espn: "fra.2", fotMob: 110 },
     archive: { footballDataUk: "F2" },
   },
 

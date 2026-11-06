@@ -22,6 +22,8 @@
  * results feed — see src/lib/model/backtest.ts, which already reads them.
  */
 
+import { marketGoals } from "@/lib/model/market-goals";
+
 export interface ArchiveRow {
   /** Catalogue slug. */
   leagueCode: string;
@@ -46,6 +48,13 @@ export interface ArchiveRow {
   awayShots?: number;
   /** Named in the English divisions' files. */
   referee?: string;
+  /**
+   * The goals the market-average closing 1X2 and over/under 2.5 prices implied
+   * (model/market-goals.ts), per-division files only. Fits the ratings partly to
+   * what the market expected, not just to the score (goals-v3, model/params.ts).
+   */
+  homeMktGoals?: number;
+  awayMktGoals?: number;
 }
 
 /** Splits a CSV line, honouring the quoted fields the referee column uses. */
@@ -116,6 +125,8 @@ export function parseDivisionCsv(body: string, leagueCode: string): ArchiveRow[]
   };
   const iHc = col("HC"), iAc = col("AC"), iHy = col("HY"), iAy = col("AY"), iHr = col("HR"), iAr = col("AR");
   const iHs = col("HS"), iAs = col("AS"), iRef = col("Referee");
+  const iCh = col("AvgCH"), iCd = col("AvgCD"), iCa = col("AvgCA"), iCo = col("AvgC>2.5"), iCu = col("AvgC<2.5");
+  const price = (f: string[], i: number) => (i >= 0 ? Number(f[i]?.trim()) : Number.NaN);
 
   const rows: ArchiveRow[] = [];
   for (const line of lines.slice(1)) {
@@ -148,6 +159,14 @@ export function parseDivisionCsv(body: string, leagueCode: string): ArchiveRow[]
     }
     const ref = iRef >= 0 ? f[iRef]?.trim() : "";
     if (ref) row.referee = ref.slice(0, 60);
+    const mkt = marketGoals(
+      { home: price(f, iCh), draw: price(f, iCd), away: price(f, iCa) },
+      { over: price(f, iCo), under: price(f, iCu) },
+    );
+    if (mkt) {
+      row.homeMktGoals = Math.round(mkt[0] * 1000) / 1000;
+      row.awayMktGoals = Math.round(mkt[1] * 1000) / 1000;
+    }
     rows.push(row);
   }
   return rows;

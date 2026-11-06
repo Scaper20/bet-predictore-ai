@@ -488,6 +488,9 @@ async function showPicks(input: Record<string, unknown>, ctx: ToolContext): Prom
   return {
     content: JSON.stringify({
       shown: cards.length,
+      // Without this the model wrote its answer again after the cards (4 of 40 benchmark answers, all of them
+      // on the pick-card path), so the user read it twice.
+      ...(cards.length ? { next: "The cards are on screen. If your answer is already written above, stop here and do not repeat or reword it; if you have not written it yet, write it once now." } : {}),
       ...(cards.length > 1 ? { combined_pct: pct(combined), combined_fair_odds: odds2(1 / combined) } : {}),
       ...(missing.length ? { not_shown: missing, note: "Those market ids don't exist for that fixture." } : {}),
       ...(thin.length ? { not_shown_thin_data: thin, thin_note: "Too little data to publish a pick; tell the user instead." } : {}),

@@ -6,6 +6,7 @@ const input = (o: Partial<ClassifyInput> & { end?: string | null; ps?: string; n
   ours: { userId: "u1", tier: "vip", status: o.ourStatus ?? "active", periodEnd: o.end === null ? null : new Date(o.end ?? "2026-10-24T13:04:00Z") },
   paystack: { status: o.ps ?? "active", nextPaymentDate: o.next === undefined ? "2026-11-24T13:04:00Z" : o.next, planAmount: 1_200_000 },
   charges: o.charges ?? [],
+  reversed: o.reversed,
   knownReferences: o.knownReferences ?? new Set(),
   now,
 });
@@ -30,6 +31,18 @@ describe("classifySubscription", () => {
 
   it("flags a lapsed period with no charge while Paystack still says active", () => {
     expect(classifySubscription(input({ ps: "active" })).kind).toBe("lapsed_unexplained");
+  });
+
+  it("explains a lapsed period whose renewal the card issuer reversed", () => {
+    const f = classifySubscription(input({ reversed: [{ ...charge("r-rev"), status: "reversed" }] }));
+    expect(f.kind).toBe("charge_reversed");
+    expect(f.detail).toContain("reversed by the card issuer");
+    expect(f.detail).toContain("r-rev");
+  });
+
+  it("ignores a reversed charge of another amount, and a real renewal still wins", () => {
+    expect(classifySubscription(input({ reversed: [{ ...charge("x", 50_000), status: "reversed" }] })).kind).toBe("lapsed_unexplained");
+    expect(classifySubscription(input({ charges: [charge("r-oct")], reversed: [{ ...charge("r-rev"), status: "reversed" }] })).kind).toBe("missed_renewal");
   });
 
   it("is quiet for a paid-up plan whose dates agree, and flags drift or a missed cancellation", () => {
