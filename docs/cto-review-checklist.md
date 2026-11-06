@@ -31,7 +31,7 @@ the checklist so it is visible next to the code. Owners: Claude (code, data, rep
 - [x] 4.2 Acquisition source carried through to payment: Revenue by source on Admin Traffic (Claude, 5 Nov)
 - [x] 4.3 Pass conversion and upgrade report (Claude, 6 Nov; the 500 naira pass upgrade check is due 8 Nov)
 - [~] 4.4 X captions, posting sequence, tagged links (Claude drafts, Founder approves): 14 captions, 14-day sequence and tagged links drafted in docs/reports/x-pack-2026-11.md, awaiting founder approval
-- [ ] 4.5 48-hour and 7-day campaign reviews (Claude)
+- [~] 4.5 48-hour and 7-day campaign reviews (Claude): query and procedure ready in docs/campaign-review.md; runs once the X posts go out
 - [~] 4.6 SEO plan for NPFL, CAF, AFCON (Claude): widened to whole site plus GEO (Grok first); plan in docs/reports/seo-geo-plan-2026-11.md, needs founder inputs
 
 ## 5. Partner Agreement V2 (on hold until section 2 closes)
