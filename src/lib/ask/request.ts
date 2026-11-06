@@ -15,7 +15,7 @@ export const ASK_GUEST_TOTAL = 2;
  * controls in lib/ask/ledger.ts cap what any one account can spend a day.
  */
 export const ASK_PAID_DAILY = 30;
-export const ASK_VIP_DAILY = 100;
+export const ASK_VIP_DAILY = 80;
 
 export const ASK_MAX_QUESTION = 500;
 const MAX_HISTORY = 12;

@@ -103,7 +103,7 @@ export const PLANS: PlanDefinition[] = [
       "Everything in Pro",
       "Live in-play win probability, updating as the match unfolds",
       `${VIP_CODES} SportyBet codes a week from your own picks`,
-      askAllowance("Ask KiqStat: 100 questions a day"),
+      askAllowance("Ask KiqStat: 80 questions a day"),
       "Priority support: your messages go to the front of the queue",
       "Pay monthly, every 3 months (save 10%) or yearly (save 20%)",
     ],
@@ -172,7 +172,7 @@ export const PLAN_MATRIX: MatrixGroup[] = [
     group: "Tools",
     rows: [
       { label: "Forge combo builder", values: { free: "5 a day, match result + two results", pro: "100 a day", vip: "100 a day" } },
-      { label: askAllowance("Ask KiqStat"), values: { free: "3 a day", pro: "30 a day", vip: "100 a day" } },
+      { label: askAllowance("Ask KiqStat"), values: { free: "3 a day", pro: "30 a day", vip: "80 a day" } },
       { label: "Selection builder and combo tracking", values: { free: true, pro: true, vip: true } },
       { label: "Shareable combo image", values: { free: false, pro: true, vip: true } },
     ],

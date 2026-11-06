@@ -5,9 +5,24 @@ subtitle: "Same-period statement. Cash basis, from the payments table, 5 Nov 202
 
 # Headline
 
-October 2026 collected **₦77,250** from real customers (₦77,750 including the ₦500 founder test pass, which is still to be refunded). After an estimated Paystack fee of about ₦2,360, **about ₦74,900 reached us**. That is 13 paid orders from 43 people who tried to pay.
+October 2026 collected **₦77,250** from real customers (₦77,750 including the ₦500 founder test pass, which is still to be refunded). **About ₦76,700 reached us** after the Paystack fees we ourselves paid (₦574; see the reconciliation below). That is 13 paid orders from 43 people who tried to pay.
 
-Against the fixed running costs in `docs/pricing.md` (about ₦95,000 to ₦108,000 a month once Vercel Pro, Supabase Pro and the data feed are all paid), October was **about ₦20,000 to ₦33,000 short before the invoices are in**. That cost range is the earlier estimate, not an invoice: item 2.2 (October cost invoices) is what turns it into a fact.
+Against the fixed running costs in `docs/pricing.md` (about ₦95,000 to ₦108,000 a month once Vercel Pro, Supabase Pro and the data feed are all paid), October was **about ₦18,000 to ₦31,000 short**. The founder has chosen to treat the cost range as the real figure, so no invoices are needed to close item 2.2.
+
+# Reconciliation against Paystack (6 November)
+
+The Paystack export for 1 to 31 October (72 rows, 3 of them our own `@kiqstat.app` test checkouts, left out) matches the payments table exactly: **14 successful payments, ₦77,750, the same amounts and the same people**. No successful charge is missing from our records.
+
+| Paystack, October | Count | Amount (₦) |
+|---|---|---|
+| Successful | 14 | 77,750 |
+| Abandoned (buyer left checkout) | 53 | |
+| Failed | 1 | |
+| Reversed by the card issuer | 1 | 12,000 (the 24 October VIP renewal, never kept) |
+
+- **Fees:** Paystack charged ₦2,393.60 on the 14 payments, but from 19 October the checkout adds the fee to what the customer pays (₦5,177.67 for a ₦5,000 plan), so **we paid only ₦573.75 of it** (four payments before the change) and received the full price on the ten after. My earlier estimate (₦2,359) was too high; real money in the bank is ₦77,176.25, or **₦76,676.25 from real customers** excluding the ₦500 test.
+- **The 24 October renewal:** Paystack did charge the member on 24 October at 1:15 PM and then the card issuer **reversed** it ("Approved by Financial Institution", status reversed). No money was kept, so nothing was lost and no webhook failed. The earlier "missed renewal" was a reversed charge. The daily subscription check now says so.
+- **Payment method:** card checkouts were 48 attempts and 2 successes (4%); bank and bank-transfer checkouts (OPay, PalmPay, others) were 21 attempts and 12 successes (57%). No card payment has succeeded since 8 October (0 of 25 attempts after 19 October). Most card failures read "The transaction was not completed": the buyer opened the card form and left.
 
 # October by plan (cash received, successful payments only)
 
@@ -22,7 +37,7 @@ Against the fixed running costs in `docs/pricing.md` (about ₦95,000 to ₦108,
 | VIP day pass (founder test, 31 Oct) | 1 | 500 | 500 | 8 |
 | **Total in the payments table** | **14** | | **77,750** | **2,366** |
 
-Net of fees, real customers: about **₦74,891**. Paystack fee used: 1.5% plus ₦100 on amounts of ₦2,500 and above, as in `docs/pricing.md`; the real fee per charge is on the Paystack settlement report and should replace this estimate.
+Net of the fees we paid, real customers: **₦76,676** (Paystack's own settlement figures; the fee column above is the earlier estimate, and the real fee we bore was ₦574 because the customer pays it from 19 October).
 
 Revenue split by type: one-off monthly purchases are **76%** of October cash (₦59,000); recurring subscription charges are 23% (₦18,000); passes are under 1%.
 
@@ -54,12 +69,6 @@ September and August amounts include the old ₦700 Week pass and the first ₦1
 # Limits of this statement
 
 - Cash basis. A ₦5,000 monthly charge is counted in the month it was paid, not spread over the month it covers.
-- Only payments in the database. If a customer paid and the payment was never recorded (the 24 Oct renewal case, checklist 1.5), it is missing here. Compare against the Paystack transaction export for October to close that.
-- The fee is an estimate, not Paystack's settlement figure.
-- Costs are not invoiced yet (checklist 2.2).
-
-# What I need from you
-
-1. The Paystack **transactions export for October** (Dashboard, Transactions, Export, 1 to 31 Oct) so I can reconcile it to this table and use the real fees.
-2. The **October invoices** for Vercel, Supabase, TheSportsDB, Sendbyte and the domain (item 2.2), so the cost line stops being an estimate.
-3. Confirm whether any of the 13 paid orders were friends, staff or tests apart from the ₦500 pass.
+- Checked against the Paystack export: nothing missing (see the reconciliation).
+- Fees are Paystack's actual figures (export of 6 November).
+- Costs are the estimated range in `docs/pricing.md`, accepted as the real figure by the founder.

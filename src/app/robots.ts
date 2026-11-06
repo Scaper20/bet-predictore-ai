@@ -51,6 +51,10 @@ export default function robots(): MetadataRoute.Robots {
           // Player props by market and league: the hub is enough for search,
           // each filter is another per-viewer render.
           "/football/props?",
+          // Head-to-head for any pair of clubs: tens of thousands of combinations,
+          // each a full render. A scraper took up to 1,197 visitors a day from
+          // them in October (CTO checklist 4.6). The hub page stays open.
+          "/football/h2h?",
         ],
       },
     ],
