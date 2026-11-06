@@ -36,6 +36,6 @@ the checklist so it is visible next to the code. Owners: Claude (code, data, rep
 
 ## 5. Partner Agreement V2 (on hold until section 2 closes)
 - [ ] 5.1 Founder's questionnaire answers recovered (Founder)
-- [ ] 5.2 Commission schedule by plan and period from the model; no 35% promise (Claude drafts)
+- [~] 5.2 Commission schedule by plan and period from the model; no 35% promise (Claude drafted 6 Nov: 20% standard, 25% named, 30% ceiling; founder to approve)
 - [ ] 5.3 Legal and tax items (Founder + legal adviser)
-- [ ] 5.4 Referral tracking verified end to end, incl. refund clawback (Claude)
+- [x] 5.4 Referral tracking verified (Claude, 6 Nov): chain checked, Paystack refund now reverses the commission; first real payment still to be seen
