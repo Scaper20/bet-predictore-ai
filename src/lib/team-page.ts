@@ -75,27 +75,33 @@ interface FixtureRow {
   source_ids: Record<string, string> | null;
 }
 
-function teamFixtures(teamId: string): Promise<TeamFixture[]> {
-  return cached(`team:fixtures:${teamId}`, 5 * 60_000, async () => {
+/**
+ * The cache holds the raw rows, the same shape player-page.ts keeps under the
+ * same key. It once held the mapped fixtures here and the raw rows there, so
+ * whichever page filled the entry first broke the other for five minutes.
+ */
+async function teamFixtures(teamId: string): Promise<TeamFixture[]> {
+  const rows = await cached(`team:fixtures:${teamId}`, 5 * 60_000, async () => {
     const c = await client();
     const { data, error } = await c.rpc("team_fixtures", { p_team: teamId, p_past: 20, p_future: 8 });
     if (error) throw error;
-    return ((data ?? []) as FixtureRow[]).map((r) => {
-      const isHome = r.home_team_id === teamId;
-      return {
-        publicId: publicMatchId({ id: r.id, source_ids: r.source_ids }),
-        leagueCode: r.league_code,
-        leagueName: leagueByCode(r.league_code)?.shortName ?? r.league_code,
-        kickoff: r.kickoff,
-        status: r.status,
-        isHome,
-        opponentId: isHome ? r.away_team_id : r.home_team_id,
-        opponentName: isHome ? r.away_name : r.home_name,
-        opponentCrest: isHome ? r.away_crest : r.home_crest,
-        goalsFor: isHome ? r.home_goals : r.away_goals,
-        goalsAgainst: isHome ? r.away_goals : r.home_goals,
-      };
-    });
+    return (data ?? []) as FixtureRow[];
+  });
+  return rows.map((r) => {
+    const isHome = r.home_team_id === teamId;
+    return {
+      publicId: publicMatchId({ id: r.id, source_ids: r.source_ids }),
+      leagueCode: r.league_code,
+      leagueName: leagueByCode(r.league_code)?.shortName ?? r.league_code,
+      kickoff: r.kickoff,
+      status: r.status,
+      isHome,
+      opponentId: isHome ? r.away_team_id : r.home_team_id,
+      opponentName: isHome ? r.away_name : r.home_name,
+      opponentCrest: isHome ? r.away_crest : r.home_crest,
+      goalsFor: isHome ? r.home_goals : r.away_goals,
+      goalsAgainst: isHome ? r.away_goals : r.home_goals,
+    };
   });
 }
 
