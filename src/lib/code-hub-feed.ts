@@ -7,6 +7,7 @@ import { candidatesFor, friendlyLabel, gridFor, halvesFor, type ForgeLeg } from 
 import { bookLeg, keepOnBoard } from "@/lib/board-candidates";
 import { LEG_MARKET_GAP } from "@/lib/market-check";
 import { dispatchHubCodes } from "@/lib/push/events";
+import { recordShadowHub } from "@/lib/code-hub-shadow-store";
 import { priceLeg } from "@/lib/leg-pricing";
 import { applySelectionPolicy } from "@/lib/selection-policy";
 import { extraPicks } from "@/lib/selection-extras";
@@ -96,6 +97,8 @@ async function admin() {
 const LEAD_MS = 30 * 60_000;
 /** How long the hub waits for SportyBet prices before publishing the missing ones at fair odds. */
 const PRICE_BUDGET_MS = 10_000;
+/** How long the hub waits for the shadow run to store its codes. */
+const SHADOW_BUDGET_MS = 8_000;
 
 /** SportyBet's own price on one pick, read off the game's board; undefined when it isn't listed. */
 function boardPrice(market: string, markets: readonly RawMarket[] | undefined): number | undefined {
@@ -191,6 +194,12 @@ async function buildToday(day: string): Promise<HubCodeRow[]> {
   });
 
   const built = buildHub(today, day);
+  // The team-form shadow run, from the same pool (code-hub-shadow.ts). Never
+  // allowed to hold up or break the real hub: capped at a few seconds, errors dropped.
+  await Promise.race([
+    recordShadowHub(today, day).catch(() => {}),
+    new Promise((resolve) => setTimeout(resolve, SHADOW_BUDGET_MS)),
+  ]);
   return Promise.all(
     built.map(async ({ tier, legs }) => {
       const hubLegs = (await priceLegs(legs)).map(toHubLeg);
