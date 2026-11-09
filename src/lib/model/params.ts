@@ -24,12 +24,20 @@
 
 import type { FitOptions } from "./fit";
 import type { ModelOptions } from "./predict";
+import { SWEET_SPOT_BAND_RULES } from "./sweet-spots";
 
 /** 2026-11-05 00:00 in Lagos (UTC+1, no daylight saving). */
 export const NEXT_MODEL_FROM = Date.parse("2026-11-05T00:00:00+01:00");
 
 /** 2026-11-14 00:00 in Lagos: the first games the market-informed fit may apply to. */
 export const MARKET_MODEL_FROM = Date.parse("2026-11-14T00:00:00+01:00");
+
+/**
+ * 2026-11-20 00:00 in Lagos: the first goals-v3 games picked with the graded sweet-spot bands.
+ * Picks are published at most 48 hours before kickoff, so nothing already shown moves as long
+ * as this reaches production by 17 Nov.
+ */
+export const BANDS_FROM = Date.parse("2026-11-20T00:00:00+01:00");
 
 /** Share of a league's last-year training rows that must carry market goals for goals-v3 to apply. */
 export const MARKET_COVERAGE_MIN = 0.4;
@@ -38,7 +46,7 @@ export interface ParamSet {
   /** Stable id, part of the shared-fit cache key. */
   id: "goals-v2" | "goals-v2.1" | "goals-v3";
   fit: FitOptions;
-  options: Pick<ModelOptions, "overTilt" | "neutralTotals" | "headlineFloor" | "headlineHold" | "strengthStretch">;
+  options: Pick<ModelOptions, "overTilt" | "neutralTotals" | "headlineFloor" | "headlineHold" | "strengthStretch" | "sweetSpotRules">;
 }
 
 /** Exactly what ran before the audit: no options, default fit. */
@@ -73,6 +81,17 @@ export const MARKET_PARAMS: ParamSet = {
 };
 
 /**
+ * goals-v3 with the graded sweet-spot bands (model/sweet-spots.ts SWEET_SPOT_BANDS). The fit and
+ * every probability are those of MARKET_PARAMS, hence the same id; only which selection is the
+ * pick changes. Replayed through the predictor with a table fitted before July 2025, the pick
+ * landed 78.8% against 77.9% on 2025-26 and 79.3% against 78.3% on Sep-Oct 2026.
+ */
+export const BANDS_PARAMS: ParamSet = {
+  ...MARKET_PARAMS,
+  options: { ...MARKET_PARAMS.options, sweetSpotRules: SWEET_SPOT_BAND_RULES },
+};
+
+/**
  * Share of the rows in the year before `kickoff` that carry the goals their
  * closing prices implied (ResultRow.homeMkt / awayMkt).
  */
@@ -99,6 +118,6 @@ export function paramsFor(kickoff: string | number, pooled = false, coverage = 0
   const at = typeof kickoff === "number" ? kickoff : Date.parse(kickoff);
   if (!Number.isFinite(at) || at < NEXT_MODEL_FROM) return LEGACY_PARAMS;
   if (pooled) return { ...NEXT_PARAMS, fit: { ...NEXT_PARAMS.fit, newcomerPrior: 0 } };
-  if (at >= MARKET_MODEL_FROM && coverage >= MARKET_COVERAGE_MIN) return MARKET_PARAMS;
+  if (at >= MARKET_MODEL_FROM && coverage >= MARKET_COVERAGE_MIN) return at >= BANDS_FROM ? BANDS_PARAMS : MARKET_PARAMS;
   return NEXT_PARAMS;
 }

@@ -18,6 +18,7 @@ import fs from "node:fs";
 import { buildPrediction, type ModelOptions } from "../src/lib/model/predict";
 import { fitLeague, type FitOptions } from "../src/lib/model/fit";
 import { MARKET_PARAMS, NEXT_PARAMS } from "../src/lib/model/params";
+import { SWEET_SPOTS, SWEET_SPOT_FILLERS, type SweetSpot } from "../src/lib/model/sweet-spots";
 import { evaluatePick } from "../src/lib/settlement";
 import { csv, parse, toMatch, toResultRow, type Row } from "./lib/football-data-uk";
 import { mktRows } from "./lib/mkt-rows";
@@ -65,6 +66,15 @@ export const CONFIGS: Record<string, Config> = {
   next: { ...NEXT_PARAMS.options, fitOpts: NEXT_PARAMS.fit },
   // goals-v3 (model/params.ts): needs --mkt, so the rows carry the goals their closing prices implied.
   v3: { ...MARKET_PARAMS.options, fitOpts: MARKET_PARAMS.fit },
+  // Scoring-level drift on top of v3 (Nov 2026 fresh look): Sep-Oct 2026 ran ~0.15 goals a game above the model.
+  v3_lvl90: { ...MARKET_PARAMS.options, levelAdjust: { halfLifeDays: 90, weight: 0.5 }, fitOpts: MARKET_PARAMS.fit },
+  v3_lvl60: { ...MARKET_PARAMS.options, levelAdjust: { halfLifeDays: 60, weight: 0.5 }, fitOpts: MARKET_PARAMS.fit },
+  v3_lvl45w1: { ...MARKET_PARAMS.options, levelAdjust: { halfLifeDays: 45, weight: 1 }, fitOpts: MARKET_PARAMS.fit },
+  // The same, read from the market's own recent totals instead of the goals scored.
+  v3_ml30: { ...MARKET_PARAMS.options, levelAdjust: { halfLifeDays: 30, weight: 1, market: true }, fitOpts: MARKET_PARAMS.fit },
+  v3_ml45: { ...MARKET_PARAMS.options, levelAdjust: { halfLifeDays: 45, weight: 1, market: true }, fitOpts: MARKET_PARAMS.fit },
+  v3_ml20: { ...MARKET_PARAMS.options, levelAdjust: { halfLifeDays: 20, weight: 1, market: true }, fitOpts: MARKET_PARAMS.fit },
+  v3_ml30w15: { ...MARKET_PARAMS.options, levelAdjust: { halfLifeDays: 30, weight: 1.5, market: true }, fitOpts: MARKET_PARAMS.fit },
   v3_o04: { ...MARKET_PARAMS.options, overTilt: 0.04, fitOpts: MARKET_PARAMS.fit },
   v3_o06: { ...MARKET_PARAMS.options, overTilt: 0.06, fitOpts: MARKET_PARAMS.fit },
   v3_o08: { ...MARKET_PARAMS.options, overTilt: 0.08, fitOpts: MARKET_PARAMS.fit },
@@ -85,6 +95,7 @@ export const CONFIGS: Record<string, Config> = {
   combo_o04: { fitOpts: { regularisation: 0.005 }, strengthStretch: 1.1, overTilt: 0.04 },
   combo_o04_m65: { fitOpts: { regularisation: 0.005 }, strengthStretch: 1.1, overTilt: 0.04, minProbability: { "ou:over:2.5": 0.65 } },
   // Ranker-only picks (sweet spots off) so a pick layer can be refitted offline (scripts/audit-layer.ts).
+  ns_v3: { ...MARKET_PARAMS.options, sweetSpots: false, fitOpts: MARKET_PARAMS.fit },
   ns_legacy: { sweetSpots: false },
   ns_legacy_o02: { sweetSpots: false, overTilt: 0.02 },
   ns_c11: { sweetSpots: false, fitOpts: { regularisation: 0.005 }, strengthStretch: 1.1 },
@@ -147,7 +158,14 @@ async function main() {
   const only = arg("only")?.split(",");
   const out: Rec[] = [];
   const mktSaves: (() => void)[] = [];
+  const lagDays = Number(arg("lag") ?? 0);
   const { fitOpts, useMarketTotal, ...options } = cfg;
+  // --rules=<json from sweet-lab.ts --emit>: goal-market sweet spots replaced by that table; stat and paused rules stay.
+  if (arg("rules")) {
+    const goal = JSON.parse(fs.readFileSync(arg("rules")!, "utf8")) as SweetSpot[];
+    const replaced = new Set(goal.map((r) => r.market));
+    options.sweetSpotRules = { main: [...goal, ...SWEET_SPOTS.filter((r) => !replaced.has(r.market))], fillers: SWEET_SPOT_FILLERS };
+  }
 
   for (const d of DIVS) {
     if (only && !only.includes(d.div)) continue;
@@ -174,7 +192,8 @@ async function main() {
     let i = 0;
     for (const row of target) {
       const day = Math.floor(row.date / DAY) * DAY;
-      while (i < rows.length && rows[i].date < day) i++;
+      // --lag=<days>: train as if the archive ran that many days behind (it lands a median 2.5 days after kickoff).
+      while (i < rows.length && rows[i].date < day - lagDays * DAY) i++;
       const prior = rows.slice(Math.max(0, i - TRAIN_CAP), i).map(rr);
       let fit = fits.get(day);
       if (!fit) {
