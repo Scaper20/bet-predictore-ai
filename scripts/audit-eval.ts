@@ -65,6 +65,15 @@ export const CONFIGS: Record<string, Config> = {
   next: { ...NEXT_PARAMS.options, fitOpts: NEXT_PARAMS.fit },
   // goals-v3 (model/params.ts): needs --mkt, so the rows carry the goals their closing prices implied.
   v3: { ...MARKET_PARAMS.options, fitOpts: MARKET_PARAMS.fit },
+  // Scoring-level drift on top of v3 (Nov 2026 fresh look): Sep-Oct 2026 ran ~0.15 goals a game above the model.
+  v3_lvl90: { ...MARKET_PARAMS.options, levelAdjust: { halfLifeDays: 90, weight: 0.5 }, fitOpts: MARKET_PARAMS.fit },
+  v3_lvl60: { ...MARKET_PARAMS.options, levelAdjust: { halfLifeDays: 60, weight: 0.5 }, fitOpts: MARKET_PARAMS.fit },
+  v3_lvl45w1: { ...MARKET_PARAMS.options, levelAdjust: { halfLifeDays: 45, weight: 1 }, fitOpts: MARKET_PARAMS.fit },
+  // The same, read from the market's own recent totals instead of the goals scored.
+  v3_ml30: { ...MARKET_PARAMS.options, levelAdjust: { halfLifeDays: 30, weight: 1, market: true }, fitOpts: MARKET_PARAMS.fit },
+  v3_ml45: { ...MARKET_PARAMS.options, levelAdjust: { halfLifeDays: 45, weight: 1, market: true }, fitOpts: MARKET_PARAMS.fit },
+  v3_ml20: { ...MARKET_PARAMS.options, levelAdjust: { halfLifeDays: 20, weight: 1, market: true }, fitOpts: MARKET_PARAMS.fit },
+  v3_ml30w15: { ...MARKET_PARAMS.options, levelAdjust: { halfLifeDays: 30, weight: 1.5, market: true }, fitOpts: MARKET_PARAMS.fit },
   v3_o04: { ...MARKET_PARAMS.options, overTilt: 0.04, fitOpts: MARKET_PARAMS.fit },
   v3_o06: { ...MARKET_PARAMS.options, overTilt: 0.06, fitOpts: MARKET_PARAMS.fit },
   v3_o08: { ...MARKET_PARAMS.options, overTilt: 0.08, fitOpts: MARKET_PARAMS.fit },
@@ -147,6 +156,7 @@ async function main() {
   const only = arg("only")?.split(",");
   const out: Rec[] = [];
   const mktSaves: (() => void)[] = [];
+  const lagDays = Number(arg("lag") ?? 0);
   const { fitOpts, useMarketTotal, ...options } = cfg;
 
   for (const d of DIVS) {
@@ -174,7 +184,8 @@ async function main() {
     let i = 0;
     for (const row of target) {
       const day = Math.floor(row.date / DAY) * DAY;
-      while (i < rows.length && rows[i].date < day) i++;
+      // --lag=<days>: train as if the archive ran that many days behind (it lands a median 2.5 days after kickoff).
+      while (i < rows.length && rows[i].date < day - lagDays * DAY) i++;
       const prior = rows.slice(Math.max(0, i - TRAIN_CAP), i).map(rr);
       let fit = fits.get(day);
       if (!fit) {

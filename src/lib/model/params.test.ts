@@ -236,4 +236,18 @@ describe("levelFactor", () => {
     expect(f).toBeLessThanOrEqual(1.1 + 1e-9);
     expect(f).toBeGreaterThan(1);
   });
+
+  it("reads the market's recent totals when asked, and is 1 without enough priced games", () => {
+    const end = Date.parse("2026-11-04T12:00:00Z");
+    const rows = league(end);
+    const fit = fitLeague(rows);
+    const cfg = { halfLifeDays: 30, weight: 1, market: true };
+    expect(levelFactor(rows, fit, cfg)).toBe(1);
+    const flat = rows.map((r) => ({ ...r, homeMkt: 1.5, awayMkt: 1.2 }));
+    expect(levelFactor(flat, fit, cfg)).toBeCloseTo(1, 9);
+    const hot = flat.map((r) => (r.date > end - 40 * 86_400_000 ? { ...r, homeMkt: 1.7, awayMkt: 1.3 } : r));
+    const f = levelFactor(hot, fit, cfg);
+    expect(f).toBeGreaterThan(1.01);
+    expect(f).toBeLessThanOrEqual(1.1 + 1e-9);
+  });
 });
