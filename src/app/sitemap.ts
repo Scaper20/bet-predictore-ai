@@ -9,6 +9,7 @@ import { upcomingFeed } from "@/lib/service";
 import { publicLiveOffers } from "@/lib/offers-server";
 import { offerPath } from "@/lib/offers";
 import { ARTICLES } from "@/lib/guides/articles";
+import { hasTablePage } from "@/lib/stats/leagues";
 
 /**
  * Static routes, a landing page per league, and the next few days of match
@@ -123,7 +124,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const leagues: MetadataRoute.Sitemap = LEAGUES.flatMap((l) => [
     // The permanent hub is listed year-round, fixtures or not (CTO checklist 4.6).
     { url: `${SITE}${competitionPath(l.code, l.sport)}`, changeFrequency: "daily" as const, priority: 0.7 },
-    ...(l.confederation
+    // Only leagues with a table of their own: a cup's /tables URL canonicalises
+    // to another league, and Search Console flags listed URLs that do.
+    ...(!hasTablePage(l.code)
       ? []
       : [{
           url: `${SITE}${sportPath("tables", l.sport)}?league=${l.code}`,
