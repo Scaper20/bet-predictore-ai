@@ -18,6 +18,7 @@ import fs from "node:fs";
 import { buildPrediction, type ModelOptions } from "../src/lib/model/predict";
 import { fitLeague, type FitOptions } from "../src/lib/model/fit";
 import { MARKET_PARAMS, NEXT_PARAMS } from "../src/lib/model/params";
+import { SWEET_SPOTS, SWEET_SPOT_FILLERS, type SweetSpot } from "../src/lib/model/sweet-spots";
 import { evaluatePick } from "../src/lib/settlement";
 import { csv, parse, toMatch, toResultRow, type Row } from "./lib/football-data-uk";
 import { mktRows } from "./lib/mkt-rows";
@@ -94,6 +95,7 @@ export const CONFIGS: Record<string, Config> = {
   combo_o04: { fitOpts: { regularisation: 0.005 }, strengthStretch: 1.1, overTilt: 0.04 },
   combo_o04_m65: { fitOpts: { regularisation: 0.005 }, strengthStretch: 1.1, overTilt: 0.04, minProbability: { "ou:over:2.5": 0.65 } },
   // Ranker-only picks (sweet spots off) so a pick layer can be refitted offline (scripts/audit-layer.ts).
+  ns_v3: { ...MARKET_PARAMS.options, sweetSpots: false, fitOpts: MARKET_PARAMS.fit },
   ns_legacy: { sweetSpots: false },
   ns_legacy_o02: { sweetSpots: false, overTilt: 0.02 },
   ns_c11: { sweetSpots: false, fitOpts: { regularisation: 0.005 }, strengthStretch: 1.1 },
@@ -158,6 +160,12 @@ async function main() {
   const mktSaves: (() => void)[] = [];
   const lagDays = Number(arg("lag") ?? 0);
   const { fitOpts, useMarketTotal, ...options } = cfg;
+  // --rules=<json from sweet-lab.ts --emit>: goal-market sweet spots replaced by that table; stat and paused rules stay.
+  if (arg("rules")) {
+    const goal = JSON.parse(fs.readFileSync(arg("rules")!, "utf8")) as SweetSpot[];
+    const replaced = new Set(goal.map((r) => r.market));
+    options.sweetSpotRules = { main: [...goal, ...SWEET_SPOTS.filter((r) => !replaced.has(r.market))], fillers: SWEET_SPOT_FILLERS };
+  }
 
   for (const d of DIVS) {
     if (only && !only.includes(d.div)) continue;

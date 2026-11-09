@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Match, ResultRow } from "@/lib/types";
 import { buildPrediction, guardHeadline, heldBack, levelFactor, type Pick } from "./predict";
 import { fitLeague } from "./fit";
-import { LEGACY_PARAMS, MARKET_COVERAGE_MIN, MARKET_MODEL_FROM, MARKET_PARAMS, NEXT_MODEL_FROM, NEXT_PARAMS, marketCoverage, paramsFor } from "./params";
+import { BANDS_FROM, BANDS_PARAMS, LEGACY_PARAMS, MARKET_COVERAGE_MIN, MARKET_MODEL_FROM, MARKET_PARAMS, NEXT_MODEL_FROM, NEXT_PARAMS, marketCoverage, paramsFor } from "./params";
 
 function rng(seed: number) {
   return () => {
@@ -89,6 +89,24 @@ describe("parameter gate (today's picks do not move)", () => {
   });
 });
 
+describe("graded sweet-spot bands", () => {
+  it("start at Lagos midnight on 20 Nov 2026, for goals-v3 games only", () => {
+    expect(BANDS_FROM).toBe(Date.parse("2026-11-19T23:00:00Z"));
+    expect(paramsFor(BANDS_FROM - 1, false, 1)).toBe(MARKET_PARAMS);
+    expect(paramsFor(BANDS_FROM, false, 1)).toBe(BANDS_PARAMS);
+    expect(paramsFor(BANDS_FROM, false, 0)).toBe(NEXT_PARAMS);
+    expect(paramsFor(BANDS_FROM, true, 1).options.sweetSpotRules).toBeUndefined();
+  });
+
+  it("change the pick table and nothing else", () => {
+    const { sweetSpotRules, ...rest } = BANDS_PARAMS.options;
+    expect(rest).toEqual(MARKET_PARAMS.options);
+    expect(BANDS_PARAMS.fit).toEqual(MARKET_PARAMS.fit);
+    expect(BANDS_PARAMS.id).toBe(MARKET_PARAMS.id);
+    expect(sweetSpotRules?.main.length).toBeGreaterThan(20);
+  });
+});
+
 describe("market-informed set (goals-v3)", () => {
   const after = MARKET_MODEL_FROM + 3_600_000;
   const priced = (n: number, share: number, end: number) =>
@@ -110,7 +128,7 @@ describe("market-informed set (goals-v3)", () => {
 
   it("applies from the cutover on where the league's training rows carry market goals", () => {
     expect(paramsFor(MARKET_MODEL_FROM, false, MARKET_COVERAGE_MIN)).toBe(MARKET_PARAMS);
-    expect(paramsFor("2026-11-20T15:00:00Z", false, 0.9)).toBe(MARKET_PARAMS);
+    expect(paramsFor("2026-11-19T15:00:00Z", false, 0.9)).toBe(MARKET_PARAMS);
   });
 
   it("holds back where the prices are missing, so an unfinished backfill changes nothing", () => {

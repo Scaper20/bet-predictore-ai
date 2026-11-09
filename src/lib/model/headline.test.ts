@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildPrediction, headlineEligible, HEADLINE_MAX_PROBABILITY, TOTALS_SHRINK } from "./predict";
-import { isStatMarket, pausedHandicapCandidates, SWEET_SPOT_FILLERS, SWEET_SPOT_MAX, SWEET_SPOTS, sweetSpotLabel, sweetSpotPick } from "./sweet-spots";
+import { isStatMarket, pausedHandicapCandidates, SWEET_SPOT_BAND_RULES, SWEET_SPOT_BANDS, SWEET_SPOT_FILLERS, SWEET_SPOT_MAX, SWEET_SPOTS, sweetSpotLabel, sweetSpotPick } from "./sweet-spots";
 import { isPausedHandicap } from "./paused";
 import { STAT_LINES, statGrid, statMarkets, statSelections, type StatKind } from "./match-stats";
 import { statKindOf } from "../settlement";
@@ -170,5 +170,42 @@ describe("headline floors", () => {
     expect(headlineEligible(pick("ou:over:2.5", 0.68))).toBe(false);
     expect(headlineEligible(pick("ou:over:2.5", 0.72))).toBe(true);
     expect(headlineEligible(pick("1x2:home", 0.6))).toBe(true);
+  });
+});
+
+describe("graded sweet-spot bands", () => {
+  const pick = (market: string, probability: number) => ({ market, label: market, group: "result", probability, fairOdds: 1 / probability, confidence: "medium" }) as never;
+  const choose = (picks: never[], stats?: Record<string, number>) => sweetSpotPick(picks, "serie-a", [], [], stats, SWEET_SPOT_BAND_RULES);
+
+  it("rise with the chance within every selection", () => {
+    for (const market of new Set(SWEET_SPOT_BANDS.map((r) => r.market))) {
+      const rows = SWEET_SPOT_BANDS.filter((r) => r.market === market);
+      for (let i = 1; i < rows.length; i++) {
+        expect(rows[i].min).toBeGreaterThan(rows[i - 1].min);
+        expect(rows[i].record).toBeGreaterThan(rows[i - 1].record);
+      }
+      expect(rows[0].record).toBeGreaterThanOrEqual(0.76);
+      expect(rows[rows.length - 1].min).toBeLessThan(SWEET_SPOT_MAX);
+    }
+  });
+
+  it("let a selection deep in its range beat one that has only just qualified", () => {
+    // Single thresholds: home or draw (0.828) always beat over 1.5 (0.82). Banded, over 1.5 at 84% outranks home or draw at 77%.
+    const picks = [pick("dc:home-draw", 0.77), pick("ou:over:1.5", 0.84)];
+    expect(sweetSpotPick(picks, "serie-a")!.market).toBe("dc:home-draw");
+    expect(choose(picks)!.market).toBe("ou:over:1.5");
+    expect(choose([pick("dc:home-draw", 0.845), pick("ou:over:1.5", 0.8)])!.market).toBe("dc:home-draw");
+  });
+
+  it("keep the corners rule, the paused handicaps and the fillers", () => {
+    expect(SWEET_SPOT_BAND_RULES.fillers).toBe(SWEET_SPOT_FILLERS);
+    const kept = SWEET_SPOTS.filter((r) => !SWEET_SPOT_BANDS.some((b) => b.market === r.market)).map((r) => r.market);
+    expect(kept).toEqual(["corners:under:12.5", "ah:away:2", "ah:away:1.5", "ah:home:1.5", "ah:away:1", "ah:home:1", "ah:home:2"]);
+    expect(SWEET_SPOT_BAND_RULES.main).toEqual(expect.arrayContaining(SWEET_SPOTS.filter((r) => kept.includes(r.market))));
+    expect(choose([pick("dc:home-draw", 0.77)], { "corners:under:12.5": 0.83 })!.market).toBe("corners:under:12.5");
+  });
+
+  it("still publish nothing shorter than the cap", () => {
+    expect(choose([pick("dc:home-away", 0.9)])).toBeNull();
   });
 });
