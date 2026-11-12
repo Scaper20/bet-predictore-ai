@@ -27,7 +27,7 @@ const DATA = {
       ["Celta Vigo", "0-0", "Levante", "Celta to score", 81, false],
       ["Inter Milan", "2-0", "Como", "Como under 5.5 corners", 81, true],
     ],
-    allWon: "1,241", allTotal: "1,702", allPct: 73, since: "22 Aug" },
+    allWon: "703", allTotal: "999", allPct: "70.4" },
   slate: { count: 23, rows: [
       ["THU 18:00", "Turkey", "Belgium", "Belgium or draw", 75],
       ["THU 20:45", "England", "Croatia", "England to win", 75],
@@ -123,7 +123,7 @@ const p2 = `<style>${base}
 <div class="h">${r.total} picks.<br><span class="w">${r.won} landed.</span> <span class="l">${r.lost} didn't.</span></div>
 <div class="sub">Eight of the ${r.total}, exactly as published. We don't delete the red ones.</div>
 <div class="list">${r.rows.map(([h, s, a, pk, c, w]) => `<div class="r"><div class="g">${h}<i>${s}</i>${a}</div><div class="pk">${pk}</div><div class="c">${c}%</div><div class="b ${w ? "w" : "l"}">${w ? "LANDED" : "MISSED"}</div></div>`).join("")}</div>
-<div class="all">Since ${r.since}: <b>${r.allWon} of ${r.allTotal}</b> settled picks landed (${r.allPct}%). All on the Track page.</div>
+<div class="all">All time: <b>${r.allWon} of ${r.allTotal}</b> graded headline picks landed (${r.allPct}%). All on the Track page.</div>
 <div class="foot"><div>Past results don't promise future ones.<br>18+ · Play responsibly</div><div class="url">kiqstat.app/football/track-record</div></div>
 </div>`;
 
