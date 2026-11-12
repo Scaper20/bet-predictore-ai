@@ -36,6 +36,20 @@ const DATA = {
       ["FRI 20:45", "Serbia", "Germany", "Serbia under 1.5 goals", 73],
       ["SAT 01:00", "Colombia", "Chile", "Over 1.5 goals", 73],
     ] },
+  code: { code: "RHGYU3", odds: "3.01", chance: 26, games: [
+      ["Uzbekistan or Russia", "Uzbekistan v Russia · Thu 16:00", 75, "Strong"],
+      ["Madagascar or Guinea-Bissau", "Madagascar v Guinea-Bissau · Thu 17:00", 74, "Strong"],
+      ["Armenia or Cyprus", "Armenia v Cyprus · Thu 18:00", 72, "Strong"],
+      ["France or draw", "Italy v France · Thu 20:45", 64, "Fair"],
+    ] },
+  free: { rows: [
+      ["Every pick", "in 27 competitions, with the model's chance"],
+      ["Live scores", "and fixtures 14 days ahead"],
+      ["Check any booking code", "game by game, and make it safer"],
+      ["Ask KiqStat", "3 questions a day about any match"],
+      ["Forge", "5 combos a day, built to the odds you want"],
+      ["The daily 2-odds combo", "with its booking code"],
+    ], pro: "5,000" },
 };
 
 const base = `
@@ -138,9 +152,69 @@ const p3 = `<style>${base}
 <div class="foot"><div>A model's chance, not a certainty.<br>18+ · Play responsibly</div><div class="url">kiqstat.app</div></div>
 </div>`;
 
+
+/* 4. Chalk: the code checker, rebuilt from the Code editor card with today's real 3-odds combo. */
+const c = DATA.code;
+const p4 = `<style>${base}
+.p{background:#F4F5EF;color:#07090B}
+.tag{font-size:22px;color:#4C5650;text-transform:uppercase}
+.h{font-size:66px;margin-top:48px}.h em{font-style:normal;color:#D6274B}
+.sub{margin-top:16px;font-size:27px;color:#4C5650;line-height:1.3}
+.in{margin-top:30px;display:flex;gap:14px}
+.box{flex:1;border:2px solid #07090B;border-radius:16px;padding:16px 22px;font-family:Plex;font-size:28px;letter-spacing:.12em;background:#fff}
+.btn{background:#07090B;color:#D4FF3A;border-radius:16px;padding:16px 30px;font-size:26px;font-weight:700;display:flex;align-items:center}
+.card{margin-top:18px;background:#fff;border:2px solid #E1E4DA;border-radius:24px;padding:22px 30px}
+.tot{display:flex;gap:44px;padding-bottom:16px;border-bottom:2px solid #E1E4DA}
+.tot div{font-size:19px;text-transform:uppercase;letter-spacing:.08em;color:#78827C}
+.tot b{display:block;font-family:Plex;font-weight:500;font-size:40px;color:#07090B;letter-spacing:0;text-transform:none}
+.g{display:grid;grid-template-columns:1fr 70px 120px;gap:16px;align-items:center;padding:12px 0;border-bottom:2px solid #F0F1EA}
+.g:last-child{border:0;padding-bottom:0}
+.g b{font-size:25px}.g small{display:block;font-size:20px;color:#78827C;font-weight:500}
+.g .c{font-family:Plex;font-size:22px;color:#4C5650;text-align:right}
+.bd{font-size:20px;font-weight:700;text-align:center;border-radius:999px;padding:6px 0;border:2px solid}
+.q{margin-top:26px;font-size:34px;font-weight:700}
+.bd.Strong{background:#07090B;color:#D4FF3A;border-color:#07090B}.bd.Fair{color:#4C5650;border-color:#B9BEB2}
+.foot{color:#78827C}.url{color:#07090B}
+</style><div class="p">
+<div class="top">${lockup("lockup-ink.svg")}<div class="tag mono">Code check · free</div></div>
+<div class="h">Four "safe" games.<br>One <em>${c.chance}%</em> slip.</div>
+<div class="sub">Paste any booking code. KiqStat reads every game, rates it, and shows what the whole slip is really worth.</div>
+<div class="in"><div class="box">${c.code}</div><div class="btn">Make it safer</div></div>
+<div class="card">
+ <div class="tot"><div>Chance all ${c.games.length} land<b>${c.chance}%</b></div><div>Odds<b>${c.odds}</b></div><div>Games read<b>${c.games.length} of ${c.games.length}</b></div></div>
+ ${c.games.map(([l, m2, pc, v]) => `<div class="g"><div><b>${l}</b><small>${m2}</small></div><div class="c">${pc}%</div><div class="bd ${v}">${v}</div></div>`).join("")}
+</div>
+<div class="q">What does your slip really add up to?</div>
+<div class="foot"><div>A real Code Hub combo, 12 Nov. Times in WAT.<br>A model's chance, not a certainty. 18+</div><div class="url">kiqstat.app</div></div>
+</div>`;
+
+/* 5. Ink: what the free plan includes. */
+const f = DATA.free;
+const p5 = `<style>${base}
+.p{background:#07090B;color:#F2F4EC}
+.tag{font-size:22px;color:#97A39C;text-transform:uppercase}
+.hero{display:flex;align-items:flex-end;gap:36px;margin-top:44px}
+.zero{font-family:Unbounded;font-weight:800;font-size:250px;line-height:.82;letter-spacing:-.04em;color:#D4FF3A}
+.zero span{font-family:Grotesk;font-weight:700;font-size:150px;letter-spacing:0;margin-right:6px}
+.h{font-size:50px;padding-bottom:10px}
+.list{margin-top:44px;border-top:2px solid #2E3A34}
+.r{display:grid;grid-template-columns:44px 1fr;gap:20px;align-items:center;padding:17px 0;border-bottom:2px solid #1E2723;font-size:28px;color:#97A39C}
+.r b{color:#F2F4EC;font-weight:700}
+.n{font-family:Plex;font-size:20px;color:#6B7670}
+.cta{margin-top:34px;display:flex;align-items:center;gap:26px;font-size:24px;color:#97A39C}
+.pill{background:#D4FF3A;color:#07090B;border-radius:999px;white-space:nowrap;flex-shrink:0;padding:16px 38px;font-size:28px;font-weight:700}
+.foot{color:#6B7670}.url{color:#F2F4EC}
+</style><div class="p">
+<div class="top">${lockup("lockup.svg")}<div class="tag mono">Free plan · no card</div></div>
+<div class="hero"><div class="zero"><span>₦</span>0</div><div class="h">Not a trial.<br>Not a teaser.</div></div>
+<div class="list">${f.rows.map(([b, t], i) => `<div class="r"><div class="n">0${i + 1}</div><div><b>${b}</b> ${t}</div></div>`).join("")}</div>
+<div class="cta"><div class="pill">Start free</div><div>Pro is ₦${f.pro} a month, when you want picks before kick-off in the 15 Pro leagues.</div></div>
+<div class="foot"><div>Football predictions with a public record.<br>18+ · Play responsibly</div><div class="url">kiqstat.app</div></div>
+</div>`;
+
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1200, height: 1200 }, deviceScaleFactor: 2 });
-for (const [name, html] of [["01-price-vs-model", p1], ["02-sunday-receipt", p2], ["03-break-slate", p3]]) {
+for (const [name, html] of [["01-price-vs-model", p1], ["02-sunday-receipt", p2], ["03-break-slate", p3], ["04-code-check", p4], ["05-free-plan", p5]]) {
   await page.setContent(html);
   await page.evaluate(() => document.fonts.ready);
   const over = await page.evaluate(() => { const p = document.querySelector(".p"); return p.scrollHeight - p.clientHeight; });
