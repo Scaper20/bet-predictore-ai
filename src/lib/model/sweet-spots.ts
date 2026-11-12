@@ -77,6 +77,74 @@ export const SWEET_SPOT_FILLERS: readonly SweetSpot[] = [
   { market: "sot:home:under:5.5", min: 0.78, record: 0.837 },
 ];
 
+/**
+ * Graded bands (Nov 2026, docs/sweet-spot-bands-2026-11.md): the goal-market
+ * rules above give a selection one threshold and one record, so a double
+ * chance at 80% and one at 84% rank the same. Here each selection has several
+ * rows, one per step of its record as its chance rises (a monotone fit on
+ * 28,187 replayed games to 31 Oct 2026 with the goals-v3 probabilities, steps
+ * of 100+ picks, from the first step that landed 76%). The strongest record
+ * that applies still takes the game. Used for goals-v3 games from
+ * BANDS_FROM (model/params.ts); made by scripts/sweet-lab.ts --emit.
+ *
+ * Against the single thresholds, through the real predictor with a table
+ * fitted before July 2025: 78.8% against 77.9% landed on 2025-26 and 79.3%
+ * against 78.3% on Sep-Oct 2026, with fewer refunds (away draw no bet gives
+ * way to away or draw) and about 8 points more overs.
+ */
+export const SWEET_SPOT_BANDS: readonly SweetSpot[] = [
+  { market: "dc:home-away", min: 0.77, record: 0.764 },
+  { market: "dc:home-away", min: 0.78, record: 0.785 },
+  { market: "dc:home-away", min: 0.79, record: 0.798 },
+  { market: "dc:home-away", min: 0.8, record: 0.818 },
+  { market: "dc:home-away", min: 0.81, record: 0.844 },
+  { market: "dc:home-away", min: 0.83, record: 0.849 },
+  { market: "dc:home-away", min: 0.84, record: 0.863 },
+  { market: "1x2:home", min: 0.71, record: 0.772 },
+  { market: "1x2:home", min: 0.72, record: 0.785 },
+  { market: "1x2:home", min: 0.76, record: 0.81 },
+  { market: "1x2:home", min: 0.79, record: 0.813 },
+  { market: "1x2:home", min: 0.81, record: 0.87 },
+  { market: "dc:home-draw", min: 0.76, record: 0.783 },
+  { market: "dc:home-draw", min: 0.77, record: 0.806 },
+  { market: "dc:home-draw", min: 0.81, record: 0.843 },
+  { market: "dc:home-draw", min: 0.84, record: 0.874 },
+  { market: "ah:home:0", min: 0.74, record: 0.769 },
+  { market: "ah:home:0", min: 0.75, record: 0.791 },
+  { market: "ah:home:0", min: 0.77, record: 0.811 },
+  { market: "ah:home:0", min: 0.8, record: 0.841 },
+  { market: "ah:home:0", min: 0.81, record: 0.847 },
+  { market: "ah:home:0", min: 0.82, record: 0.851 },
+  { market: "ah:away:0", min: 0.71, record: 0.778 },
+  { market: "ah:away:0", min: 0.74, record: 0.789 },
+  { market: "ah:away:0", min: 0.76, record: 0.819 },
+  { market: "ah:away:0", min: 0.81, record: 0.856 },
+  { market: "dc:away-draw", min: 0.73, record: 0.768 },
+  { market: "dc:away-draw", min: 0.74, record: 0.781 },
+  { market: "dc:away-draw", min: 0.77, record: 0.793 },
+  { market: "dc:away-draw", min: 0.78, record: 0.818 },
+  { market: "dc:away-draw", min: 0.79, record: 0.824 },
+  { market: "dc:away-draw", min: 0.8, record: 0.848 },
+  { market: "dc:away-draw", min: 0.81, record: 0.857 },
+  { market: "dc:away-draw", min: 0.84, record: 0.862 },
+  { market: "ou:over:1.5", min: 0.74, record: 0.76 },
+  { market: "ou:over:1.5", min: 0.75, record: 0.764 },
+  { market: "ou:over:1.5", min: 0.76, record: 0.771 },
+  { market: "ou:over:1.5", min: 0.77, record: 0.779 },
+  { market: "ou:over:1.5", min: 0.78, record: 0.793 },
+  { market: "ou:over:1.5", min: 0.79, record: 0.812 },
+  { market: "ou:over:1.5", min: 0.81, record: 0.813 },
+  { market: "ou:over:1.5", min: 0.83, record: 0.844 },
+];
+
+const BANDED: ReadonlySet<string> = new Set(SWEET_SPOT_BANDS.map((r) => r.market));
+
+/** The banded table as buildPrediction takes it: corners and the paused handicap rows stay as they are. */
+export const SWEET_SPOT_BAND_RULES: { main: readonly SweetSpot[]; fillers: readonly SweetSpot[] } = {
+  main: [...SWEET_SPOT_BANDS, ...SWEET_SPOTS.filter((r) => !BANDED.has(r.market))],
+  fillers: SWEET_SPOT_FILLERS,
+};
+
 /** Shorter than fair odds of 1.18 a pick is near-certain and not worth publishing. */
 export const SWEET_SPOT_MAX = 0.85;
 

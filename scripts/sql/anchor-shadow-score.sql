@@ -20,5 +20,5 @@ select count(*) games,
   round(avg(-ln(case when over then (plain ->> 'o25')::float else 1 - (plain ->> 'o25')::float end))::numeric, 4)    plain_o25,
   round(avg(-ln(case when over then (anchored ->> 'o25')::float else 1 - (anchored ->> 'o25')::float end))::numeric, 4) anchored_o25,
   round(avg(-ln(case when over then (market ->> 'o25')::float else 1 - (market ->> 'o25')::float end))::numeric, 4)   price_o25,
-  round(stddev_samp(ln((anchored ->> res)::float) - ln((plain ->> res)::float))::numeric / sqrt(count(*)), 4) se_1x2_diff
+  round((stddev_samp(ln((anchored ->> res)::float) - ln((plain ->> res)::float)) / sqrt(count(*)))::numeric, 4) se_1x2_diff
 from l;

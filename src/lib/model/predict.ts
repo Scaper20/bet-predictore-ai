@@ -259,7 +259,7 @@ export interface ModelOptions {
    * whose scoring level is moving (audit, Nov 2026: the model sat 0.1-0.2
    * goals a game low through Aug-Oct 2026). Off when absent.
    */
-  levelAdjust?: { halfLifeDays: number; weight: number; clamp?: number };
+  levelAdjust?: { halfLifeDays: number; weight: number; clamp?: number; market?: boolean; baseHalfLifeDays?: number; minGames?: number };
   /** Added to the headline ranking score of every over selection (0 = off). */
   overTilt?: number;
   /** Replaces HEADLINE_MIN_PROBABILITY entries for these markets (e.g. "ou:over:2.5"). */
@@ -462,12 +462,29 @@ function calibrateTotals(lambda: number, mu: number, fit: LeagueFit, shrink: num
 export function levelFactor(
   results: ResultRow[],
   fit: LeagueFit,
-  cfg: { halfLifeDays: number; weight: number; clamp?: number },
+  cfg: { halfLifeDays: number; weight: number; clamp?: number; market?: boolean; baseHalfLifeDays?: number; minGames?: number },
 ): number {
   if (results.length === 0 || !(fit.observedGoalRate > 0)) return 1;
   let newest = 0;
   for (const r of results) if (r.date > newest) newest = r.date;
   const decay = Math.log(2) / (cfg.halfLifeDays * 86_400_000);
+  if (cfg.market) {
+    // Recent market-implied totals against the same totals at the fit's own pace.
+    // Lab only: it closed the Sep-Oct 2026 shortfall in goals but did not lift the
+    // picks (docs/fresh-look-2026-11.md), so no parameter set turns it on.
+    const slow = Math.log(2) / ((cfg.baseHalfLifeDays ?? 120) * 86_400_000);
+    let wf = 0, gf = 0, ws = 0, gs = 0;
+    for (const r of results) {
+      if (r.homeMkt === undefined || r.awayMkt === undefined) continue;
+      const t = r.homeMkt + r.awayMkt;
+      const a = Math.exp(-decay * (newest - r.date));
+      const b = Math.exp(-slow * (newest - r.date));
+      wf += a; gf += a * t; ws += b; gs += b * t;
+    }
+    if (!(wf >= (cfg.minGames ?? 15)) || !(gs > 0)) return 1;
+    const c = cfg.clamp ?? 0.1;
+    return Math.min(1 + c, Math.max(1 - c, 1 + cfg.weight * (gf / wf / (gs / ws) - 1)));
+  }
   let w = 0;
   let g = 0;
   for (const r of results) {

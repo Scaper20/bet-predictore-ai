@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Match, ResultRow } from "@/lib/types";
 import { buildPrediction, guardHeadline, heldBack, levelFactor, type Pick } from "./predict";
 import { fitLeague } from "./fit";
-import { LEGACY_PARAMS, MARKET_COVERAGE_MIN, MARKET_MODEL_FROM, MARKET_PARAMS, NEXT_MODEL_FROM, NEXT_PARAMS, marketCoverage, paramsFor } from "./params";
+import { BANDS_FROM, BANDS_PARAMS, LEGACY_PARAMS, MARKET_COVERAGE_MIN, MARKET_MODEL_FROM, MARKET_PARAMS, NEXT_MODEL_FROM, NEXT_PARAMS, marketCoverage, paramsFor } from "./params";
 
 function rng(seed: number) {
   return () => {
@@ -89,6 +89,24 @@ describe("parameter gate (today's picks do not move)", () => {
   });
 });
 
+describe("graded sweet-spot bands", () => {
+  it("start at Lagos midnight on 20 Nov 2026, for goals-v3 games only", () => {
+    expect(BANDS_FROM).toBe(Date.parse("2026-11-19T23:00:00Z"));
+    expect(paramsFor(BANDS_FROM - 1, false, 1)).toBe(MARKET_PARAMS);
+    expect(paramsFor(BANDS_FROM, false, 1)).toBe(BANDS_PARAMS);
+    expect(paramsFor(BANDS_FROM, false, 0)).toBe(NEXT_PARAMS);
+    expect(paramsFor(BANDS_FROM, true, 1).options.sweetSpotRules).toBeUndefined();
+  });
+
+  it("change the pick table and nothing else", () => {
+    const { sweetSpotRules, ...rest } = BANDS_PARAMS.options;
+    expect(rest).toEqual(MARKET_PARAMS.options);
+    expect(BANDS_PARAMS.fit).toEqual(MARKET_PARAMS.fit);
+    expect(BANDS_PARAMS.id).toBe(MARKET_PARAMS.id);
+    expect(sweetSpotRules?.main.length).toBeGreaterThan(20);
+  });
+});
+
 describe("market-informed set (goals-v3)", () => {
   const after = MARKET_MODEL_FROM + 3_600_000;
   const priced = (n: number, share: number, end: number) =>
@@ -110,7 +128,7 @@ describe("market-informed set (goals-v3)", () => {
 
   it("applies from the cutover on where the league's training rows carry market goals", () => {
     expect(paramsFor(MARKET_MODEL_FROM, false, MARKET_COVERAGE_MIN)).toBe(MARKET_PARAMS);
-    expect(paramsFor("2026-11-20T15:00:00Z", false, 0.9)).toBe(MARKET_PARAMS);
+    expect(paramsFor("2026-11-19T15:00:00Z", false, 0.9)).toBe(MARKET_PARAMS);
   });
 
   it("holds back where the prices are missing, so an unfinished backfill changes nothing", () => {
@@ -235,5 +253,19 @@ describe("levelFactor", () => {
     const f = levelFactor(hot, fitLeague(hot), { halfLifeDays: 30, weight: 1, clamp: 0.1 });
     expect(f).toBeLessThanOrEqual(1.1 + 1e-9);
     expect(f).toBeGreaterThan(1);
+  });
+
+  it("reads the market's recent totals when asked, and is 1 without enough priced games", () => {
+    const end = Date.parse("2026-11-04T12:00:00Z");
+    const rows = league(end);
+    const fit = fitLeague(rows);
+    const cfg = { halfLifeDays: 30, weight: 1, market: true };
+    expect(levelFactor(rows, fit, cfg)).toBe(1);
+    const flat = rows.map((r) => ({ ...r, homeMkt: 1.5, awayMkt: 1.2 }));
+    expect(levelFactor(flat, fit, cfg)).toBeCloseTo(1, 9);
+    const hot = flat.map((r) => (r.date > end - 40 * 86_400_000 ? { ...r, homeMkt: 1.7, awayMkt: 1.3 } : r));
+    const f = levelFactor(hot, fit, cfg);
+    expect(f).toBeGreaterThan(1.01);
+    expect(f).toBeLessThanOrEqual(1.1 + 1e-9);
   });
 });

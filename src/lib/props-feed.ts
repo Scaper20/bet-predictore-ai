@@ -264,11 +264,17 @@ async function runMatch(admin: Admin, match: MatchRow, lineup: LineupRow[], conf
   if (projections.length) {
     // A lineup change can drop a starter: start each game's projections afresh.
     await admin.from("player_prop_projections").delete().eq("match_id", match.id);
-    for (let i = 0; i < projections.length; i += 500) {
-      const { error } = await admin.from("player_prop_projections").insert(projections.slice(i, i + 500));
+    // One row per player and market, written as an upsert: a lineup that lists
+    // a player twice, or two runs overlapping on the same game, used to fail
+    // the whole batch on the primary key and leave the game with no projections.
+    const rows = uniqueProjections(projections);
+    for (let i = 0; i < rows.length; i += 500) {
+      const { error } = await admin
+        .from("player_prop_projections")
+        .upsert(rows.slice(i, i + 500), { onConflict: "match_id,player_id,market" });
       if (error) report.errors.push(`projections: ${error.message}`);
     }
-    report.projections += projections.length;
+    report.projections += rows.length;
   }
   if (logPicks) {
     // Before kickoff the set is replaced as lines move; after kickoff it is frozen.
@@ -415,4 +421,11 @@ export async function runPlayerProps(admin: Admin, opts: { matchIds?: string[] }
     ran++;
   }
   return report;
+}
+
+/** The last row for each (match, player, market): the table's primary key. */
+export function uniqueProjections<T extends Record<string, unknown>>(rows: readonly T[]): T[] {
+  const byKey = new Map<string, T>();
+  for (const r of rows) byKey.set(`${r.match_id}|${r.player_id}|${r.market}`, r);
+  return [...byKey.values()];
 }

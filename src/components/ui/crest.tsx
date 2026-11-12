@@ -15,13 +15,15 @@ import { flagUrl } from "@/lib/flags";
  */
 export function Crest({
   src,
-  name,
+  name: given,
   size = 28,
 }: {
   src?: string;
   name: string;
   size?: number;
 }) {
+  // A badge is decoration: a missing name must never take the page down.
+  const name = given ?? "";
   const [failed, setFailed] = useState(false);
   const [flagFailed, setFlagFailed] = useState(false);
   const flag = !src || failed ? flagUrl(name, size > 36 ? 160 : 80) : null;
