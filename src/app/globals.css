@@ -630,3 +630,32 @@ body {
   .pr-wide { display: inline-flex; }
   .pr-narrow { display: none; }
 }
+
+/* Outcome CTAs (redesign pass 3). On hover or keyboard focus the primary
+   button's label crosses from the action ("Go Pro") to what it gets you
+   ("15 leagues before kick-off"), and its icon moves. Both labels share one
+   grid cell, so the button is sized to the longer one and never jumps.
+   The outcome text is aria-hidden: screen readers hear the action. */
+.cta-swap { display: inline-grid; }
+/* A trailing arrow: both labels hug it instead of centring in the wider cell. */
+.cta-swap-end { justify-items: end; }
+.cta-swap > * {
+  grid-area: 1 / 1;
+  transition: opacity 180ms var(--ease-out-expo), transform 240ms var(--ease-overshoot), filter 180ms ease-out;
+}
+.cta-swap > .cta-to { opacity: 0; transform: translateY(60%); filter: blur(3px); }
+.cta-icon { transition: transform 250ms var(--ease-overshoot); }
+@media (hover: hover) {
+  .cta:hover .cta-swap > .cta-from { opacity: 0; transform: translateY(-60%); filter: blur(3px); }
+  .cta:hover .cta-swap > .cta-to { opacity: 1; transform: none; filter: none; }
+  .cta:hover .cta-icon { transform: translate(3px, -2px) rotate(-8deg); }
+  .cta:hover .cta-icon-x { transform: translateX(4px); }
+}
+.cta:focus-visible .cta-swap > .cta-from { opacity: 0; }
+.cta:focus-visible .cta-swap > .cta-to { opacity: 1; transform: none; filter: none; }
+.cta-icon-x { transition: transform 250ms var(--ease-overshoot); }
+@media (prefers-reduced-motion: reduce) {
+  .cta-swap > *, .cta-icon, .cta-icon-x { transition-duration: 1ms; }
+  .cta:hover .cta-swap > .cta-from, .cta:hover .cta-swap > .cta-to { transform: none; filter: none; }
+  .cta:hover .cta-icon, .cta:hover .cta-icon-x { transform: none; }
+}

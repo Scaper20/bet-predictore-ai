@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Tier } from "@/lib/entitlements";
 import { PLANS, type BillingCycle, type PlanDefinition } from "@/lib/pricing";
-import { Badge } from "@/components/ui/primitives";
+import { Badge, OutcomeLabel } from "@/components/ui/primitives";
 import { PlanPrice } from "@/components/pricing/plan-price";
 
 /**
@@ -111,13 +111,14 @@ export function PricingTable({
               ) : (
                 <Link
                   href={hrefFor?.(plan) ?? `/account/billing?plan=${plan.id}`}
-                  className={`inline-flex w-full items-center justify-center gap-2 rounded-lg px-5 py-3 text-sm transition-colors ${
+                  className={`cta press inline-flex w-full items-center justify-center gap-2 rounded-lg px-5 py-3 text-sm transition-colors ${
                     plan.badge
                       ? "bg-brand text-brand-ink hover:bg-brand-strong font-semibold"
                       : "bg-surface-2 text-ink border border-line hover:border-line-strong hover:bg-surface-3"
                   }`}
                 >
-                  {plan.ctaLabel}
+                  {plan.ctaOutcome ? <OutcomeLabel outcome={plan.ctaOutcome} end>{plan.ctaLabel}</OutcomeLabel> : plan.ctaLabel}
+                  <span aria-hidden className="cta-icon-x">→</span>
                 </Link>
               )}
             </div>

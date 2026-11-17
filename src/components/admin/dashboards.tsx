@@ -602,7 +602,7 @@ const ACTIONS: Record<DashboardView, QuickAction[]> = {
   ],
 };
 
-export function DashboardActions({ view, ctx }: { view: DashboardView; ctx: DashContext }) {
+export function DashboardActions({ view, ctx, outcome }: { view: DashboardView; ctx: DashContext; outcome?: string }) {
   const actions = ACTIONS[view].filter((a) => ctx.canOpen(a.href));
   if (actions.length === 0) return null;
   const [primary, ...rest] = actions;
@@ -613,7 +613,7 @@ export function DashboardActions({ view, ctx }: { view: DashboardView; ctx: Dash
           {a.label}
         </ActionLink>
       ))}
-      <ActionLink href={primary.href} icon={primary.icon} primary>
+      <ActionLink href={primary.href} icon={primary.icon} primary outcome={outcome}>
         {primary.label}
       </ActionLink>
     </>

@@ -42,11 +42,29 @@ export default async function AdminDashboardPage({ searchParams }: PageProps<"/a
 
   // Data first, so the header can carry the role's main action. Only the
   // loader of the dashboard on show runs.
-  const body =
-    view === "owner" ? <OwnerView d={await ownerDashboard()} ctx={ctx} />
-    : view === "product" ? <ProductView d={await productDashboard()} ctx={ctx} />
-    : view === "marketing" ? <MarketingView d={await marketingDashboard()} ctx={ctx} />
-    : <SupportView d={await supportDashboard()} ctx={ctx} />;
+  // `outcome` is what the primary action is worth right now; the button
+  // shows it on hover (pass 3 of the redesign). None when there is nothing
+  // at stake, and the label just stays.
+  let body: React.ReactNode;
+  let outcome: string | undefined;
+  const plural = (n: number, one: string, many = `${one}s`) => `${n.toLocaleString()} ${n === 1 ? one : many}`;
+  if (view === "owner") {
+    const d = await ownerDashboard();
+    body = <OwnerView d={d} ctx={ctx} />;
+    if (d.renewals.attention) outcome = `Save ${plural(d.renewals.attention, "renewal")}`;
+  } else if (view === "product") {
+    const d = await productDashboard();
+    body = <ProductView d={d} ctx={ctx} />;
+    if (d.ingest.failed24h) outcome = `Fix ${plural(d.ingest.failed24h, "failed run")}`;
+  } else if (view === "marketing") {
+    const d = await marketingDashboard();
+    body = <MarketingView d={d} ctx={ctx} />;
+    if (d.audience.reachable) outcome = `Reach ${plural(d.audience.reachable, "person", "people")}`;
+  } else {
+    const d = await supportDashboard();
+    body = <SupportView d={d} ctx={ctx} />;
+    if (d.tickets.open) outcome = `Clear ${d.tickets.open.toLocaleString()} open`;
+  }
 
   return (
     <div>
@@ -61,7 +79,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps<"/a
         }
         title={DASHBOARD_LABEL[view]}
         description={SUMMARY[view]}
-        actions={<DashboardActions view={view} ctx={ctx} />}
+        actions={<DashboardActions view={view} ctx={ctx} outcome={outcome} />}
       >
         {views.length > 1 && (
           <nav className="inline-flex flex-wrap gap-1 rounded-lg border border-line bg-shell p-1" aria-label="Dashboards">

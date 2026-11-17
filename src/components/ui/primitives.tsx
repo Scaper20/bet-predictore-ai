@@ -43,6 +43,21 @@ export function LiveDot() {
 
 /* ----------------------------------------------------------------- Buttons */
 
+/**
+ * A button label that turns from the action into its outcome on hover
+ * (globals.css .cta-swap). Put `cta` on the button itself.
+ */
+export function OutcomeLabel({ children, outcome, end = false }: { children: ReactNode; outcome: ReactNode; end?: boolean }) {
+  return (
+    <span className={`cta-swap ${end ? "cta-swap-end" : ""}`}>
+      <span className="cta-from">{children}</span>
+      <span className="cta-to" aria-hidden>
+        {outcome}
+      </span>
+    </span>
+  );
+}
+
 type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 
 const BUTTONS: Record<ButtonVariant, string> = {
@@ -73,6 +88,7 @@ export function ButtonLink({
   variant = "primary",
   className = "",
   onClick,
+  outcome,
   children,
 }: {
   href: string;
@@ -85,15 +101,17 @@ export function ButtonLink({
    * panel would otherwise still be open on the next page.
    */
   onClick?: () => void;
+  /** What the click gets you; shown in place of the label on hover. */
+  outcome?: ReactNode;
   children: ReactNode;
 }) {
   return (
     <Link
       href={href}
       onClick={onClick}
-      className={`press inline-flex items-center justify-center gap-2 rounded-lg px-5 py-3 text-sm transition-colors ${BUTTONS[variant]} ${className}`}
+      className={`press inline-flex items-center justify-center gap-2 rounded-lg px-5 py-3 text-sm transition-colors ${outcome ? "cta" : ""} ${BUTTONS[variant]} ${className}`}
     >
-      {children}
+      {outcome ? <OutcomeLabel outcome={outcome}>{children}</OutcomeLabel> : children}
     </Link>
   );
 }

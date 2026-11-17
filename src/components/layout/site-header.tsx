@@ -114,7 +114,7 @@ export function SiteHeader() {
               >
                 Sign in
               </Link>
-              <ButtonLink href="/account/sign-up" variant="primary" className="px-4 py-2">
+              <ButtonLink href="/account/sign-up" variant="primary" className="px-4 py-2" outcome="27 competitions, free">
                 Create free account
               </ButtonLink>
             </>

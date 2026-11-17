@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { AdminIcon, type AdminIconName } from "@/components/admin/admin-icons";
+import { OutcomeLabel } from "@/components/ui/primitives";
 
 /*
  * The admin's building blocks. One look across every page: mono uppercase
@@ -124,25 +125,28 @@ export function ActionLink({
   href,
   icon,
   primary = false,
+  outcome,
   children,
 }: {
   href: string;
   icon?: AdminIconName;
   primary?: boolean;
+  /** What the click is worth right now, shown in place of the label on hover. */
+  outcome?: ReactNode;
   children: ReactNode;
 }) {
   return (
     <Link
       href={href}
-      className={`press h-9 items-center gap-2 rounded-lg px-3.5 text-xs font-semibold transition-colors ${
+      className={`press ${outcome ? "cta" : ""} h-9 items-center gap-2 rounded-lg px-3.5 text-xs font-semibold transition-colors ${
         primary
           ? "inline-flex bg-brand text-brand-ink hover:bg-brand-strong"
           : // Phones get the one primary only; the rest are a tap away in the menu and ⌘K.
             "hidden border border-line bg-surface text-ink-muted hover:border-line-strong hover:text-ink sm:inline-flex"
       }`}
     >
-      {icon && <AdminIcon name={icon} className={`size-3.5 shrink-0 ${primary ? "" : "text-ink-dim"}`} />}
-      {children}
+      {icon && <AdminIcon name={icon} className={`cta-icon size-3.5 shrink-0 ${primary ? "" : "text-ink-dim"}`} />}
+      {outcome ? <OutcomeLabel outcome={outcome}>{children}</OutcomeLabel> : children}
     </Link>
   );
 }
