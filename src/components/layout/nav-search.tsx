@@ -10,9 +10,9 @@ import { CLUB_LEAGUES, INTERNATIONAL_LEAGUES } from "@/lib/leagues";
 import { matchPath, playerPath, sportPath, teamPath } from "@/lib/routes";
 import { kickoffDay, kickoffTime } from "@/lib/format";
 import { useTimeZone } from "@/lib/use-visitor";
-import { runNavAction } from "@/components/layout/nav-actions";
+import { openCommandPalette, runNavAction } from "@/components/layout/nav-actions";
 
-interface Result {
+export interface Result {
   key: string;
   group: "Teams" | "Players" | "Pages" | "Leagues" | "Matches";
   label: string;
@@ -82,7 +82,7 @@ function useTeamSearch(query: string, active: boolean): { teams: TeamHit[]; play
   return active && q.length >= 2 && found.q === q ? { teams: found.hits, players: found.players } : { teams: [], players: [] };
 }
 
-function useSearch(sport: SportId, query: string, active: boolean) {
+export function useSearch(sport: SportId, query: string, active: boolean) {
   const [matches, setMatches] = useState<Match[]>([]);
   const { teams: teamHits, players: playerHits } = useTeamSearch(query, active);
   const tz = useTimeZone();
@@ -281,7 +281,18 @@ export function NavSearch({
           className="min-w-0 flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-ink-dim [&::-webkit-search-cancel-button]:hidden"
         />
         {variant === "inline" && (
-          <kbd className="hidden shrink-0 rounded-md border border-line-strong px-1.5 font-mono text-2xs text-ink-dim xl:block">/</kbd>
+          // "/" still focuses this box; the hint advertises the fuller ⌘K menu.
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              openCommandPalette();
+            }}
+            title="Open the command menu"
+            className="hidden shrink-0 rounded-md border border-line-strong px-1.5 font-mono text-2xs text-ink-dim transition-colors hover:border-brand/50 hover:text-ink xl:block"
+          >
+            ⌘K
+          </button>
         )}
       </label>
       {list}

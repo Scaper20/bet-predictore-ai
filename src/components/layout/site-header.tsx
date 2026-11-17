@@ -10,6 +10,7 @@ import { SlipButton, TrackedSlipsWatcher } from "@/components/layout/slip-button
 import { AskButton } from "@/components/ask/ask-button";
 import { SportSwitch } from "@/components/layout/sport-switch";
 import { NavSearch } from "@/components/layout/nav-search";
+import { CommandPalette } from "@/components/layout/command-palette";
 import { MegaNav } from "@/components/layout/mega-nav";
 import { openNotifications } from "@/components/layout/nav-actions";
 import { useEntitlement } from "@/components/entitlements/entitlement-provider";
@@ -79,6 +80,7 @@ export function SiteHeader() {
         <div className="hidden min-w-0 flex-1 lg:block">
           <NavSearch sport={sport} />
         </div>
+        <CommandPalette sport={sport} />
 
         <TrackedSlipsWatcher />
 
