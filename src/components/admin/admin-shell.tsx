@@ -159,6 +159,13 @@ function Sidebar({
   onClose?: () => void;
 }) {
   const initials = (identity.email.split("@")[0] ?? "?").slice(0, 2).toUpperCase();
+  // Hick's law: the everyday pages stay in their groups; the rare ones
+  // (governance, switches, labs) sit under one collapsed "More".
+  const main = nav
+    .filter((s) => s.id !== "governance")
+    .map((s) => ({ ...s, items: s.items.filter((i) => !RARE.has(i.href)) }))
+    .filter((s) => s.items.length > 0);
+  const more = nav.flatMap((s) => (s.id === "governance" ? s.items : s.items.filter((i) => RARE.has(i.href))));
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between gap-2 px-5 pb-4 pt-5">
@@ -175,37 +182,27 @@ function Sidebar({
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 pb-4" aria-label="Admin">
-        {nav.map((section) => (
+        {main.map((section) => (
           <div key={section.id} className="mt-4 first:mt-1">
             {section.id !== "overview" && (
               <p className="px-2.5 pb-1.5 font-mono text-2xs uppercase tracking-[0.16em] text-ink-dim">{section.label}</p>
             )}
-            <ul className="space-y-0.5">
-              {section.items.map((item) => {
-                const active = item.href === "/admin" ? pathname === "/admin" : pathname === item.href || pathname.startsWith(`${item.href}/`);
-                const count = counts[item.href];
-                return (
-                  <li key={item.href}>
-                    <Link
-                      href={item.href}
-                      aria-current={active ? "page" : undefined}
-                      className={`group relative flex items-center gap-2.5 rounded-md px-2.5 py-[7px] text-sm font-medium transition-colors ${
-                        active ? "bg-surface-2 text-ink" : "text-ink-muted hover:bg-surface-2/60 hover:text-ink"
-                      }`}
-                    >
-                      {active && <span className="absolute inset-y-1.5 -left-3 w-[3px] rounded-r bg-brand" aria-hidden />}
-                      <AdminIcon name={item.icon} className={`size-4 shrink-0 ${active ? "text-brand" : "text-ink-dim group-hover:text-ink-muted"}`} />
-                      <span className="truncate">{item.label}</span>
-                      {count ? (
-                        <span className="tnum ml-auto rounded bg-amber/15 px-1.5 font-mono text-2xs font-medium text-amber">{count}</span>
-                      ) : null}
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
+            <NavList items={section.items} pathname={pathname} counts={counts} />
           </div>
         ))}
+        {more.length > 0 && (
+          <details className="group mt-4" open={more.some((i) => isActive(i.href, pathname)) || undefined}>
+            <summary className="flex cursor-pointer list-none items-center gap-2 rounded-md px-2.5 py-1.5 font-mono text-2xs uppercase tracking-[0.16em] text-ink-dim hover:text-ink [&::-webkit-details-marker]:hidden">
+              More
+              <svg viewBox="0 0 20 20" className="ml-auto size-3.5 transition-transform duration-200 group-open:rotate-180" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                <path d="m5 8 5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </summary>
+            <div className="pt-1">
+              <NavList items={more} pathname={pathname} counts={counts} />
+            </div>
+          </details>
+        )}
       </nav>
 
       <div className="border-t border-line p-3">
@@ -245,6 +242,41 @@ function Sidebar({
         </p>
       </div>
     </div>
+  );
+}
+
+/** Pages most staff open rarely; listed under "More" in the sidebar (⌘K still reaches them). */
+const RARE = new Set(["/admin/maintenance", "/admin/ask-lab", "/admin/sportybet", "/admin/whatsapp-digest"]);
+
+const isActive = (href: string, pathname: string) =>
+  href === "/admin" ? pathname === "/admin" : pathname === href || pathname.startsWith(`${href}/`);
+
+function NavList({ items, pathname, counts }: { items: NavSection["items"]; pathname: string; counts: Record<string, number> }) {
+  return (
+    <ul className="space-y-0.5">
+      {items.map((item) => {
+        const active = isActive(item.href, pathname);
+        const count = counts[item.href];
+        return (
+          <li key={item.href}>
+            <Link
+              href={item.href}
+              aria-current={active ? "page" : undefined}
+              className={`group relative flex items-center gap-2.5 rounded-md px-2.5 py-[7px] text-sm font-medium transition-colors ${
+                active ? "bg-surface-2 text-ink" : "text-ink-muted hover:bg-surface-2/60 hover:text-ink"
+              }`}
+            >
+              {active && <span className="absolute inset-y-1.5 -left-3 w-[3px] rounded-r bg-brand" aria-hidden />}
+              <AdminIcon name={item.icon} className={`size-4 shrink-0 ${active ? "text-brand" : "text-ink-dim group-hover:text-ink-muted"}`} />
+              <span className="truncate">{item.label}</span>
+              {count ? (
+                <span className="tnum ml-auto rounded bg-amber/15 px-1.5 font-mono text-2xs font-medium text-amber">{count}</span>
+              ) : null}
+            </Link>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 

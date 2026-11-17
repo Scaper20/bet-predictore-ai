@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ProductIcon } from "@/components/icons/product-icon";
 import { redirect } from "next/navigation";
 import { supabaseServer, supabaseConfigured } from "@/lib/supabase/server";
 import { getEntitlement } from "@/lib/entitlements";
@@ -40,11 +41,11 @@ const SECTIONS = [
 ];
 
 const QUICK_LINKS = [
-  { href: sportPath("predictions"), label: "Today's picks", icon: "◎" },
-  { href: sportPath("trackedSlips"), label: "My combos", icon: "≡" },
-  { href: sportPath("codeHub"), label: "Code Hub", icon: "#" },
-  { href: "/help", label: "Help", icon: "?" },
-];
+  { href: sportPath("predictions"), label: "Today's picks", icon: "target" },
+  { href: sportPath("trackedSlips"), label: "My combos", icon: "ticket" },
+  { href: sportPath("codeHub"), label: "Code Hub", icon: "bolt" },
+  { href: "/help", label: "Help", icon: "search" },
+] as const;
 
 /**
  * The account dashboard.
@@ -98,66 +99,64 @@ export default async function AccountPage() {
 
   return (
     <Container width="shell" className="py-4 sm:py-10">
-      {/* Who and what: the person, their plan, and the four places they go most. */}
-      <div className="grid gap-4 lg:grid-cols-[1fr_1.15fr]">
-        <div className="card flex items-center gap-4 p-5 sm:p-6">
-          <span
-            aria-hidden
-            className="grid size-14 shrink-0 place-items-center rounded-2xl bg-brand/15 font-display text-2xl font-bold text-brand"
-          >
-            {(displayName || user.email || "?").trim().charAt(0).toUpperCase()}
-          </span>
-          <div className="min-w-0">
-            <h1 className="truncate font-display text-2xl font-bold tracking-tight sm:text-3xl">
-              {displayName ? `Hi, ${displayName}` : "Your account"}
-            </h1>
-            <p className="truncate text-sm text-ink-muted">{user.email}</p>
+      {/*
+        Who, then what to do. A compact identity row (no greeting banner),
+        the four places people go most as quiet shortcuts, and the plan.
+      */}
+      <header className="flex flex-wrap items-center gap-x-4 gap-y-3">
+        <span
+          aria-hidden
+          className="grid size-11 shrink-0 place-items-center rounded-xl bg-surface-2 font-display text-lg font-semibold text-ink"
+        >
+          {(displayName || user.email || "?").trim().charAt(0).toUpperCase()}
+        </span>
+        <div className="min-w-0 flex-1">
+          <h1 className="truncate font-display text-xl font-semibold tracking-tight sm:text-2xl">{displayName || "Your account"}</h1>
+          <p className="truncate text-xs text-ink-dim">
+            {user.email}
             {createdAt && (
-              <p className="mt-0.5 text-xs text-ink-dim">
-                Member since {new Date(createdAt).toLocaleDateString("en-NG", { month: "long", year: "numeric" })}
-              </p>
+              <> · member since {new Date(createdAt).toLocaleDateString("en-NG", { month: "long", year: "numeric" })}</>
             )}
-          </div>
+          </p>
         </div>
+        <nav aria-label="Shortcuts" className="grid w-full grid-cols-4 gap-2 sm:flex sm:w-auto">
+          {QUICK_LINKS.map((q) => (
+            <Link
+              key={q.href}
+              href={q.href}
+              className="press flex min-h-11 flex-col items-center justify-center gap-1 rounded-lg border border-line bg-surface px-2 py-2 text-center text-2xs font-semibold text-ink-muted transition-colors hover:border-line-strong hover:text-ink sm:flex-row sm:gap-2 sm:px-3.5 sm:text-xs"
+            >
+              <ProductIcon name={q.icon} className="size-4 shrink-0 text-ink-dim" />
+              {q.label}
+            </Link>
+          ))}
+        </nav>
+      </header>
 
+      <div className="mt-5 grid gap-4 lg:grid-cols-[1.15fr_1fr]">
         <PlanCard tier={entitlement.tier} offer={offerState} passOnly={Boolean(entitlement.passOnly)} />
+        {/* The one place anything that wants doing shows up. */}
+        <div className="card p-5 sm:p-6">
+          <p className="text-2xs font-semibold uppercase tracking-[0.14em] text-ink-dim">To do</p>
+          {!hasOnboarded(preferences) ? (
+            <div className="mt-3 flex flex-wrap items-center gap-4">
+              <div className="min-w-[12rem] flex-1">
+                <p className="text-sm font-semibold">Make the feed yours</p>
+                <p className="mt-1 text-xs text-ink-muted">Three taps: your leagues lead everything you see.</p>
+              </div>
+              <ButtonLink href="/onboarding?next=/account" variant="secondary" className="px-4 py-2">
+                Set it up
+              </ButtonLink>
+            </div>
+          ) : (
+            <p className="mt-3 text-sm text-ink-muted">Nothing waiting. Your feed is set up{followed.length ? ` around ${followed.length} league${followed.length === 1 ? "" : "s"}` : ""}.</p>
+          )}
+        </div>
       </div>
-
-      <nav aria-label="Shortcuts" className="mt-4 grid grid-cols-4 gap-2 sm:gap-3">
-        {QUICK_LINKS.map((q) => (
-          <Link
-            key={q.href}
-            href={q.href}
-            className="card card-hover flex flex-col items-center justify-center gap-1.5 px-2 py-3.5 text-center sm:flex-row sm:gap-2.5 sm:py-4"
-          >
-            <span aria-hidden className="grid size-8 place-items-center rounded-lg bg-surface-2 font-mono text-sm font-bold text-ink">
-              {q.icon}
-            </span>
-            <span className="text-xs font-semibold leading-tight text-ink sm:text-sm">{q.label}</span>
-          </Link>
-        ))}
-      </nav>
 
       <div className="mt-6">
         <AccountSectionNav sections={SECTIONS} />
       </div>
-
-      {/*
-        Someone who skipped the questionnaire (or went straight to a checkout)
-        gets one unobtrusive offer to finish it, rather than being redirected
-        into it on every visit.
-      */}
-      {!hasOnboarded(preferences) && (
-        <div className="card mt-6 flex flex-wrap items-center gap-4 border-brand/25 p-5">
-          <div className="min-w-[14rem] flex-1">
-            <p className="text-sm font-semibold">Make the feed yours</p>
-            <p className="mt-1 text-xs text-ink-muted">Three taps: your leagues lead everything you see.</p>
-          </div>
-          <ButtonLink href="/onboarding?next=/account" variant="secondary" className="px-4 py-2">
-            Set it up
-          </ButtonLink>
-        </div>
-      )}
 
       <section id="overview" className="scroll-mt-[calc(var(--header-h)+4rem)] pt-8">
         <div className="grid gap-3 sm:grid-cols-3">

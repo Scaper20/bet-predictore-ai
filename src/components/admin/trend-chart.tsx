@@ -45,7 +45,9 @@ function niceMax(max: number, f: TrendFormat): number {
  *
  * Marks: columns at most 24px wide with a 2px gap, rounded at the data end
  * and square at the baseline; hairline solid gridlines a step off the
- * surface.
+ * surface. Quiet by default: every column is a neutral step off the card and
+ * only today (and the column under the pointer) takes the accent, so the
+ * eye lands on the latest number first.
  */
 export function TrendChart({
   points,
@@ -109,9 +111,9 @@ export function TrendChart({
                   aria-describedby={active === i ? `${id}-tip` : undefined}
                 >
                   <span
-                    className={`relative w-full max-w-6 rounded-t-[4px] transition-opacity ${color} ${
-                      active === null || active === i ? "opacity-100" : "opacity-35"
-                    } ${p.value === 0 ? "opacity-0" : ""}`}
+                    className={`relative w-full max-w-6 rounded-t-[4px] transition-[opacity,background-color] duration-150 ${
+                      i === last || active === i ? color : "bg-surface-3"
+                    } ${active === null || active === i ? "opacity-100" : "opacity-50"} ${p.value === 0 ? "opacity-0" : ""}`}
                     style={{ height: `${Math.max(p.value > 0 ? 1.5 : 0, h)}%` }}
                   >
                     {labelled && active === null && (

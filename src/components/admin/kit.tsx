@@ -47,7 +47,7 @@ export function PageHeader({
   actions,
   children,
 }: {
-  eyebrow?: string;
+  eyebrow?: ReactNode;
   title: ReactNode;
   description?: ReactNode;
   actions?: ReactNode;
@@ -76,6 +76,74 @@ export function SectionLabel({ children, aside }: { children: ReactNode; aside?:
       <span className="h-px flex-1 bg-line" aria-hidden />
       {aside}
     </div>
+  );
+}
+
+/**
+ * Secondary content below the main grid, collapsed to one labelled row so the
+ * first screen is the numbers and what needs doing. Native <details>, so it
+ * works without JS and keeps its content searchable with find-in-page.
+ */
+export function Collapsible({
+  title,
+  meta,
+  defaultOpen = false,
+  children,
+}: {
+  title: ReactNode;
+  meta?: ReactNode;
+  defaultOpen?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <details className="group" open={defaultOpen}>
+      <summary className="flex min-h-11 cursor-pointer list-none items-center gap-3 rounded-lg [&::-webkit-details-marker]:hidden">
+        <h2 className="font-mono text-2xs uppercase tracking-[0.16em] text-ink-muted transition-colors group-hover:text-ink">{title}</h2>
+        {meta && <span className="font-mono text-2xs text-ink-dim">{meta}</span>}
+        <span className="h-px flex-1 bg-line" aria-hidden />
+        <span className="flex items-center gap-1 text-2xs font-medium text-ink-dim transition-colors group-hover:text-ink">
+          <span className="group-open:hidden">Show</span>
+          <span className="hidden group-open:inline">Hide</span>
+          <svg viewBox="0 0 20 20" className="size-3.5 transition-transform duration-200 group-open:rotate-180" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+            <path d="m5 8 5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </span>
+      </summary>
+      <div className="pt-3">{children}</div>
+    </details>
+  );
+}
+
+/* ------------------------------------------------------------------ actions */
+
+/**
+ * Header actions. A screen has exactly one `primary`; everything else is the
+ * quiet outline style so the one filled button is where the eye goes.
+ */
+export function ActionLink({
+  href,
+  icon,
+  primary = false,
+  children,
+}: {
+  href: string;
+  icon?: AdminIconName;
+  primary?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      className={`press h-9 items-center gap-2 rounded-lg px-3.5 text-xs font-semibold transition-colors ${
+        primary
+          ? "inline-flex bg-brand text-brand-ink hover:bg-brand-strong"
+          : // Phones get the one primary only; the rest are a tap away in the menu and ⌘K.
+            "hidden border border-line bg-surface text-ink-muted hover:border-line-strong hover:text-ink sm:inline-flex"
+      }`}
+    >
+      {icon && <AdminIcon name={icon} className={`size-3.5 shrink-0 ${primary ? "" : "text-ink-dim"}`} />}
+      {children}
+    </Link>
   );
 }
 
@@ -187,7 +255,7 @@ export function KpiTile({
           icon && <AdminIcon name={icon} className={`size-3.5 shrink-0 ${TONE_TEXT[tone]}`} />
         )}
       </div>
-      <p className="mt-3 truncate font-mono text-3xl font-medium leading-none tracking-tight text-ink">
+      <p className="mt-3 truncate font-mono text-xl font-medium leading-none tracking-tight text-ink sm:text-2xl xl:text-xl 2xl:text-2xl" title={value}>
         {value}
         {unit && <span className="ml-1 text-sm text-ink-dim">{unit}</span>}
       </p>

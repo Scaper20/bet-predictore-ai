@@ -58,7 +58,7 @@ Branch: `ui-ux` (from `Main/Production`). Sources: the `screen-redesign-playbook
 | Pass | Status | Notes |
 | --- | --- | --- |
 | 1 Foundation | done | `text-2xs` token + 475 arbitrary sizes mapped to the scale; one flat `.card` (no gradient), `.card-inner` nested radius; alpha `line` tokens in both themes; `glow-brand`/`glow-soft` removed (12 uses); repeated brand washes on match/team/player headers removed; dark hover = lighter surface, not shadow; OKLCH ratings gradient; faded scroller edges; `dvh` for full-height. |
-| 2 Hierarchy | | |
+| 2 Hierarchy | done | Admin: greeting removed; header carries the role's actions with one filled primary (Chase renewals / Check data health / New campaign / Answer tickets), secondaries quiet and hidden on phones; secondary sections (Operations, Voice of the user, Owned channels, Feedback and gifts) collapse below; revenue/signup/hit-rate charts quiet (neutral columns, accent on today only); sidebar puts Governance and rare pages under one "More" that opens when you're inside it; KPI numbers no longer truncate. Public: account page's "Hi, name" banner replaced by a compact identity row, shortcut glyphs replaced by icons, one "To do" card. Public nav left as is (deliberately placed and tour-anchored). |
 | 3 CTAs | | |
 | 4 Depth | | |
 | 5 ⌘K | | |

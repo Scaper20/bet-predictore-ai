@@ -8,9 +8,11 @@ import type {
 } from "@/lib/admin-dashboards";
 import { HUB_MIN_TARGET_SHARE } from "@/lib/admin-dashboards";
 import {
-  AlertList, BarList, EmptyRow, FeedRow, KeyValues, KpiTile, Meter, Panel, PanelLink, SectionLabel, SegmentBar, StatusPill,
+  ActionLink, AlertList, BarList, Collapsible, EmptyRow, FeedRow, KeyValues, KpiTile, Meter, Panel, PanelLink, SegmentBar, StatusPill,
   timeAgo, type KitTone,
 } from "@/components/admin/kit";
+import type { AdminIconName } from "@/components/admin/admin-icons";
+import type { DashboardView } from "@/lib/admin-access";
 import { TrendChart } from "@/components/admin/trend-chart";
 
 /**
@@ -241,8 +243,7 @@ export function OwnerView({ d, ctx }: { d: OwnerDashboard; ctx: DashContext }) {
         </Panel>
       </Grid>
 
-      <div>
-        <SectionLabel>Operations</SectionLabel>
+      <Collapsible title="Operations" meta="code hub · pipeline · payments · team">
         <Grid cols="lg:grid-cols-2 xl:grid-cols-4">
           <HubPanel hub={d.hub} ctx={ctx} />
           <PipelinePanel ingest={d.ingest} ctx={ctx} />
@@ -275,7 +276,7 @@ export function OwnerView({ d, ctx }: { d: OwnerDashboard; ctx: DashContext }) {
             )}
           </Panel>
         </Grid>
-      </div>
+      </Collapsible>
     </div>
   );
 }
@@ -358,13 +359,12 @@ export function ProductView({ d, ctx }: { d: ProductDashboard; ctx: DashContext 
         </Panel>
       </Grid>
 
-      <div>
-        <SectionLabel>Voice of the user</SectionLabel>
+      <Collapsible title="Voice of the user" meta="feedback · tickets">
         <Grid cols="lg:grid-cols-2">
           <FeedbackPanel f={d.feedback} ctx={ctx} />
           <TicketsPanel t={d.tickets} ctx={ctx} title="Support tickets" />
         </Grid>
-      </div>
+      </Collapsible>
     </div>
   );
 }
@@ -437,8 +437,7 @@ export function MarketingView({ d, ctx }: { d: MarketingDashboard; ctx: DashCont
         </Panel>
       </Grid>
 
-      <div>
-        <SectionLabel>Owned channels</SectionLabel>
+      <Collapsible title="Owned channels" meta="email · audience">
         <Grid cols="lg:grid-cols-3">
           <Panel title="Email campaigns" meta="all time" action={<Link_ ctx={ctx} href="/admin/outreach" />} className="lg:col-span-2" flush>
             {d.emails.length === 0 ? (
@@ -485,7 +484,7 @@ export function MarketingView({ d, ctx }: { d: MarketingDashboard; ctx: DashCont
             />
           </Panel>
         </Grid>
-      </div>
+      </Collapsible>
     </div>
   );
 }
@@ -533,6 +532,7 @@ export function SupportView({ d, ctx }: { d: SupportDashboard; ctx: DashContext 
         </Panel>
       </Grid>
 
+      <Collapsible title="Feedback and gifts" meta={`${d.feedback.count30d} notes · ${d.gifts.length} gifts`}>
       <Grid cols="lg:grid-cols-2">
         <FeedbackPanel f={d.feedback} ctx={ctx} />
         <Panel title="Active gifts" meta="expiring soonest" action={<Link_ ctx={ctx} href="/admin/users" />} flush>
@@ -557,6 +557,65 @@ export function SupportView({ d, ctx }: { d: SupportDashboard; ctx: DashContext 
           )}
         </Panel>
       </Grid>
+      </Collapsible>
     </div>
+  );
+}
+
+/* ------------------------------------------------------------ header actions */
+
+interface QuickAction {
+  href: string;
+  label: string;
+  icon: AdminIconName;
+}
+
+/**
+ * Each role's jobs, as header buttons. The first is the role's one primary
+ * action (filled); the rest are quiet. Links the viewer can't open are
+ * dropped, and if the primary is one of them the next openable action is
+ * promoted.
+ */
+const ACTIONS: Record<DashboardView, QuickAction[]> = {
+  owner: [
+    { href: "/admin/renewals", label: "Chase renewals", icon: "pulse" },
+    { href: "/admin/payments", label: "Payments", icon: "card" },
+    { href: "/admin/offers", label: "Offers", icon: "star" },
+    { href: "/admin/traffic", label: "Traffic", icon: "chart" },
+  ],
+  product: [
+    { href: "/admin/data-health", label: "Check data health", icon: "pulse" },
+    { href: "/admin/model-performance", label: "Model", icon: "target" },
+    { href: "/admin/publishing", label: "Publishing", icon: "power" },
+    { href: "/admin/parsebot", label: "Code Hub", icon: "code" },
+  ],
+  marketing: [
+    { href: "/admin/outreach", label: "New campaign", icon: "send" },
+    { href: "/admin/traffic", label: "Traffic", icon: "chart" },
+    { href: "/admin/offers", label: "Offers", icon: "star" },
+    { href: "/admin/partners", label: "Partners", icon: "handshake" },
+  ],
+  support: [
+    { href: "/admin/tickets", label: "Answer tickets", icon: "inbox" },
+    { href: "/admin/users", label: "Find a user", icon: "users" },
+    { href: "/admin/feedback", label: "Feedback", icon: "star" },
+  ],
+};
+
+export function DashboardActions({ view, ctx }: { view: DashboardView; ctx: DashContext }) {
+  const actions = ACTIONS[view].filter((a) => ctx.canOpen(a.href));
+  if (actions.length === 0) return null;
+  const [primary, ...rest] = actions;
+  return (
+    <>
+      {rest.map((a) => (
+        <ActionLink key={a.href} href={a.href} icon={a.icon}>
+          {a.label}
+        </ActionLink>
+      ))}
+      <ActionLink href={primary.href} icon={primary.icon} primary>
+        {primary.label}
+      </ActionLink>
+    </>
   );
 }
