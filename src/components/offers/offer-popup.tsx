@@ -228,7 +228,7 @@ function Sheet({ offer, signedIn, left, onClose }: { offer: PublicOffer; signedI
   const cta = `${offer.cta} · ${naira(offer.priceNaira)}`;
   const eyebrow = offer.audience === "new_visitors" ? "New here" : "Members' offer";
   return (
-    <div className="fixed inset-0 z-[65] flex items-end justify-center bg-black/60 backdrop-blur-sm animate-overlay-in sm:items-center sm:p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-[65] flex items-end justify-center glass-scrim animate-overlay-in sm:items-center sm:p-4" onClick={onClose}>
       <div
         ref={containerRef}
         role="dialog"

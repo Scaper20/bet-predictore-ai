@@ -45,8 +45,8 @@ export function CommandPalette({ nav, onClose }: { nav: NavSection[]; onClose: (
 
   return (
     <div className="fixed inset-0 z-[60] flex items-start justify-center px-4 pt-[12vh]" role="dialog" aria-modal="true" aria-label="Jump to a page">
-      <button type="button" aria-label="Close" className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <div className="relative w-full max-w-lg overflow-hidden rounded-xl border border-line-strong bg-shell shadow-2xl" onKeyDown={onKeyDown}>
+      <button type="button" aria-label="Close" className="animate-overlay-in absolute inset-0 glass-scrim" onClick={onClose} />
+      <div className="animate-dialog-in relative w-full max-w-lg overflow-hidden rounded-xl border border-line-strong glass-panel" onKeyDown={onKeyDown}>
         <div className="flex items-center gap-3 border-b border-line px-4">
           <AdminIcon name="search" className="size-4 text-ink-dim" />
           <input

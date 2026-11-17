@@ -55,7 +55,7 @@ export function SiteHeader() {
 
   return (
     <header data-site-header
-      className="sticky top-0 z-50 border-b border-line bg-canvas/90 backdrop-blur-xl"
+      className="sticky top-0 z-50 border-b border-line glass-bar"
       // Installed on iOS the status bar is translucent and the page runs up
       // under it (layout.tsx); this keeps the header clear of the notch. Zero
       // everywhere else.

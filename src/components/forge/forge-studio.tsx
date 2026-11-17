@@ -975,7 +975,7 @@ function ResultPanel({
 
       {/* mobile action bar */}
       <div
-        className="fixed inset-x-0 z-30 border-t border-line bg-shell/95 px-4 pb-3 pt-3 backdrop-blur lg:hidden"
+        className="fixed inset-x-0 z-30 border-t border-line glass-bar px-4 pb-3 pt-3 lg:hidden"
         style={{ bottom: "calc(var(--bottom-nav-h) + env(safe-area-inset-bottom))" }}
       >
         <div className="grid grid-cols-[auto_1fr_1fr] gap-2.5">
@@ -1108,7 +1108,7 @@ function EmptyResult() {
 
 function GuestGate({ onClose }: { onClose: () => void }) {
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-canvas/60 p-5 backdrop-blur-md">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center glass-scrim p-5">
       <div className="w-full max-w-sm rounded-2xl border border-line bg-shell p-6 text-center shadow-2xl">
         <p className="font-mono text-2xs font-semibold uppercase tracking-[0.18em] text-brand">KiqStat Forge</p>
         <p className="mt-3 font-display text-2xl font-bold">Keep forging combos</p>

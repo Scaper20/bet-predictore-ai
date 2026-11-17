@@ -62,7 +62,7 @@ export function GiftPopup() {
   const until = new Date(gift.expiresAt).toLocaleDateString("en-NG", { day: "numeric", month: "long", year: "numeric" });
 
   return (
-    <div className="fixed inset-0 z-[60] grid place-items-center bg-canvas/70 p-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[60] grid place-items-center glass-scrim p-4">
       <Confetti />
       <div
         ref={containerRef}

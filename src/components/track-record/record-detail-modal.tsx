@@ -61,7 +61,7 @@ export function RecordDetailModal({
 
   return (
     <div
-      className="animate-overlay-in fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+      className="animate-overlay-in fixed inset-0 z-50 flex items-center justify-center glass-scrim p-4"
       onClick={onClose}
     >
       <div

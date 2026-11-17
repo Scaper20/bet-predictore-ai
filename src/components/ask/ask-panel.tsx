@@ -523,7 +523,7 @@ function EmptyIntro({ context }: { context: boolean }) {
 function GuestGate({ pathname }: { pathname: string }) {
   const next = encodeURIComponent(pathname);
   return (
-    <div className="absolute inset-0 z-10 flex items-center justify-center bg-canvas/55 p-5 backdrop-blur-md">
+    <div className="absolute inset-0 z-10 flex items-center justify-center glass-scrim p-5">
       <div className="w-full max-w-sm rounded-2xl border border-line bg-shell/95 p-6 text-center shadow-2xl">
         <div className="mx-auto w-fit">
           <AskAvatar size="lg" />

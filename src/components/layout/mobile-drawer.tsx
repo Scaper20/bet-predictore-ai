@@ -130,7 +130,7 @@ export function MobileDrawer({
         </div>
 
         {/* One section at a time. Sticks to the top while its list scrolls. */}
-        <div ref={tabsRef} className="sticky top-0 z-10 mt-7 bg-canvas/95 px-5 py-3 backdrop-blur">
+        <div ref={tabsRef} className="sticky top-0 z-10 mt-7 glass-bar px-5 py-3">
           <SectionTabs menus={menus} active={current.id} onChoose={choose} />
         </div>
 

@@ -67,7 +67,7 @@ export function MegaNav({ tabs }: { tabs: NavTab[] }) {
       }}
       onMouseEnter={() => window.clearTimeout(leaveTimer.current)}
     >
-      <nav aria-label="Main" className="border-t border-line/70 bg-shell/60">
+      <nav aria-label="Main" className="border-t border-line/70">
         <Container className="flex h-12 items-stretch gap-0.5">
           {tabs.map((tab) => {
             if (tab.kind === "link") {

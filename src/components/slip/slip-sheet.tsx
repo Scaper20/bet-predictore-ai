@@ -60,7 +60,7 @@ export function SlipSheet() {
 
       {open && (
         <div className="fixed inset-0 z-[60]" role="presentation">
-          <button type="button" aria-label="Close combo" tabIndex={-1} onClick={close} className="slip-fade absolute inset-0 bg-black/55" />
+          <button type="button" aria-label="Close combo" tabIndex={-1} onClick={close} className="slip-fade absolute inset-0 glass-scrim" />
           <div
             ref={containerRef}
             role="dialog"

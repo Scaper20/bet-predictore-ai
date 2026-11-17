@@ -74,8 +74,8 @@ export function AdminShell({
 
         {drawer && (
           <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="Admin menu">
-            <button type="button" aria-label="Close menu" className="absolute inset-0 bg-black/60" onClick={() => setDrawer(false)} />
-            <aside className="absolute inset-y-0 left-0 w-72 max-w-[85vw] border-r border-line bg-shell">
+            <button type="button" aria-label="Close menu" className="absolute inset-0 glass-scrim" onClick={() => setDrawer(false)} />
+            <aside className="absolute inset-y-0 left-0 w-72 max-w-[85vw] border-r border-line glass-panel">
               <Sidebar nav={nav} pathname={pathname} identity={identity} counts={counts} env={env} onClose={() => setDrawer(false)} />
             </aside>
           </div>
@@ -83,7 +83,7 @@ export function AdminShell({
 
         <div className="min-w-0 flex-1">
           <header
-            className="sticky top-0 z-30 border-b border-line bg-shell"
+            className="sticky top-0 z-30 border-b border-line glass-bar"
             style={{ paddingTop: "env(safe-area-inset-top)" }}
           >
             <div className="flex h-12 items-center gap-3 px-4 sm:px-6">

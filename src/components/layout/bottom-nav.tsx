@@ -67,7 +67,7 @@ export function BottomNav({ onOpenMenu, menuOpen }: { onOpenMenu: () => void; me
   return (
     <nav data-bottom-nav
       aria-label="Primary"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-shell/92 backdrop-blur-xl lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-line glass-bar lg:hidden"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       <ul className={`grid grid-cols-5 ${HEIGHT_CLASS}`}>
