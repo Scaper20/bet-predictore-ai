@@ -19,10 +19,10 @@ export function LeagueGroupCard({ group, aside, children }: { group: LiveGroup; 
         )}
         <span className="min-w-0 flex-1">
           <span className="block truncate text-sm font-semibold text-ink">{group.name}</span>
-          {group.country && <span className="block truncate text-[11px] text-ink-dim">{group.country}</span>}
+          {group.country && <span className="block truncate text-2xs text-ink-dim">{group.country}</span>}
         </span>
         {aside}
-        <span className="tnum shrink-0 rounded-full bg-surface-2 px-2 py-0.5 text-[11px] font-semibold text-ink-muted">
+        <span className="tnum shrink-0 rounded-full bg-surface-2 px-2 py-0.5 text-2xs font-semibold text-ink-muted">
           {group.matches.length}
         </span>
       </div>

@@ -25,7 +25,7 @@ export function money(v: number | null): string | null {
 export function NextMatchCard({ next, teamName }: { next: PlayerFixture; teamName: string | null }) {
   return (
     <Link href={matchPath(next.publicId)} className="card group block p-5 transition-colors hover:border-brand/40">
-      <p className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-ink-dim">Next match · {next.leagueName}</p>
+      <p className="text-2xs font-semibold uppercase tracking-[0.12em] text-ink-dim">Next match · {next.leagueName}</p>
       <div className="mt-3 flex items-center justify-between gap-3">
         <span className="min-w-0">
           <span className="block truncate font-display text-base font-bold sm:text-lg">
@@ -70,7 +70,7 @@ export function SeasonTiles({ line, keeper }: { line: SeasonLine | undefined; ke
       <div className="stagger grid grid-cols-2 gap-2.5 sm:grid-cols-4">
         {tiles.map(([label, value], i) => (
           <div key={label} className="rounded-xl border border-line bg-surface-2 px-3 py-2.5" style={{ ["--i" as string]: i }}>
-            <p className="text-[10.5px] uppercase tracking-wider text-ink-dim">{label}</p>
+            <p className="text-2xs uppercase tracking-wider text-ink-dim">{label}</p>
             <p className="tnum mt-1 font-mono text-lg font-semibold">{value}</p>
           </div>
         ))}
@@ -103,7 +103,7 @@ export function RatingStrip({ games }: { games: Game[] }) {
               title={`${r.toFixed(1)} v ${g.opponentName}`}
               className="group flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-1"
             >
-              <span className="tnum font-mono text-[10.5px] text-ink-muted group-hover:text-ink">{r.toFixed(1)}</span>
+              <span className="tnum font-mono text-2xs text-ink-muted group-hover:text-ink">{r.toFixed(1)}</span>
               <span className={`seg-grow block w-full max-w-10 rounded-t-md ${tone(r)}`} style={{ height: `${h}%`, transformOrigin: "bottom", animationDelay: `${i * 50}ms` }} />
               <Crest src={g.opponentCrest ?? undefined} name={g.opponentName} size={16} />
             </Link>
@@ -136,7 +136,7 @@ export function HitRatesPanel({ rates, compact = false }: { rates: HitRate[]; co
     <section className="card overflow-hidden">
       <div className="flex items-baseline justify-between gap-3 border-b border-line px-4 py-3 sm:px-5">
         <h2 className={H2}>Lines cleared</h2>
-        <span className="text-[11px] text-ink-dim">Last {shown[0]?.games ?? 0} starts</span>
+        <span className="text-2xs text-ink-dim">Last {shown[0]?.games ?? 0} starts</span>
       </div>
       <ul className="stagger divide-y divide-line">
         {shown.map((r, i) => {
@@ -160,7 +160,7 @@ export function HitRatesPanel({ rates, compact = false }: { rates: HitRate[]; co
           );
         })}
       </ul>
-      <p className="border-t border-line px-4 py-2.5 text-[11px] text-ink-dim sm:px-5">Counts from FotMob. A bookmaker&apos;s own count can differ slightly.</p>
+      <p className="border-t border-line px-4 py-2.5 text-2xs text-ink-dim sm:px-5">Counts from FotMob. A bookmaker&apos;s own count can differ slightly.</p>
     </section>
   );
 }
@@ -181,7 +181,7 @@ export function GameLog({ games, keeper }: { games: Game[]; keeper: boolean }) {
       <div className="overflow-x-auto">
         <table className="w-full min-w-[40rem] text-sm">
           <thead>
-            <tr className="border-b border-line text-left text-[10.5px] uppercase tracking-wider text-ink-dim">
+            <tr className="border-b border-line text-left text-2xs uppercase tracking-wider text-ink-dim">
               <th className="sticky left-0 z-10 bg-surface py-2.5 pl-4 pr-2 font-medium sm:pl-5">Match</th>
               <th className="px-2 py-2.5 text-right font-medium">Min</th>
               <th className="px-2 py-2.5 text-right font-medium">Rtg</th>
@@ -198,7 +198,7 @@ export function GameLog({ games, keeper }: { games: Game[]; keeper: boolean }) {
                 <tr key={g.matchId} className="group/row transition-colors hover:bg-surface-2">
                   <td className="sticky left-0 z-10 max-w-[13rem] bg-surface py-2 pl-4 pr-2 transition-colors group-hover/row:bg-surface-2 sm:max-w-none sm:pl-5">
                     <Link href={matchPath(g.publicId)} className="flex min-w-0 items-center gap-2.5 hover:text-brand">
-                      <span className="w-11 shrink-0 text-[11px] leading-tight text-ink-dim">
+                      <span className="w-11 shrink-0 text-2xs leading-tight text-ink-dim">
                         <LocalTime iso={g.kickoff} kind="day" />
                       </span>
                       <Crest src={g.opponentCrest ?? undefined} name={g.opponentName} size={18} />
@@ -206,10 +206,10 @@ export function GameLog({ games, keeper }: { games: Game[]; keeper: boolean }) {
                         <span className="block truncate font-medium">
                           {g.isHome ? "v" : "@"} {g.opponentName}
                         </span>
-                        <span className="block truncate text-[11px] text-ink-dim">{g.leagueName}</span>
+                        <span className="block truncate text-2xs text-ink-dim">{g.leagueName}</span>
                       </span>
                       {res && (
-                        <span className={`tnum ml-auto shrink-0 rounded px-1.5 py-0.5 font-mono text-[11px] font-bold ${res === "W" ? "bg-brand text-brand-ink" : res === "L" ? "bg-rose text-white" : "bg-surface-3"}`}>
+                        <span className={`tnum ml-auto shrink-0 rounded px-1.5 py-0.5 font-mono text-2xs font-bold ${res === "W" ? "bg-brand text-brand-ink" : res === "L" ? "bg-rose text-white" : "bg-surface-3"}`}>
                           {g.goalsFor}-{g.goalsAgainst}
                         </span>
                       )}
@@ -267,7 +267,7 @@ export function StatsPanel({ page }: { page: PlayerPage }) {
           <div className="stagger grid grid-cols-2 gap-2.5 sm:grid-cols-5">
             {perGame.map(([label, v], i) => (
               <div key={label} className="rounded-xl border border-line bg-surface-2 px-3 py-2.5" style={{ ["--i" as string]: i }}>
-                <p className="text-[10.5px] uppercase tracking-wider text-ink-dim">{label}</p>
+                <p className="text-2xs uppercase tracking-wider text-ink-dim">{label}</p>
                 <p className="tnum mt-1 font-mono text-lg font-semibold">{v === null ? "–" : v.toFixed(2)}</p>
               </div>
             ))}
@@ -278,7 +278,7 @@ export function StatsPanel({ page }: { page: PlayerPage }) {
         <section className="card p-5">
           <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
             <h2 className={H2}>Compared with players in the same position</h2>
-            <span className="text-[11px] text-ink-dim">{page.peersLabel}</span>
+            <span className="text-2xs text-ink-dim">{page.peersLabel}</span>
           </div>
           <ul className="space-y-2.5">
             {page.percentiles.map((p, i) => (
@@ -296,7 +296,7 @@ export function StatsPanel({ page }: { page: PlayerPage }) {
               </li>
             ))}
           </ul>
-          <p className="mt-3 text-[11px] text-ink-dim">Percentile per 90 minutes: 90 means better than 90% of them.</p>
+          <p className="mt-3 text-2xs text-ink-dim">Percentile per 90 minutes: 90 means better than 90% of them.</p>
         </section>
       )}
       {page.season.length > 1 && <SeasonTable lines={page.season} keeper={keeper} />}
@@ -311,7 +311,7 @@ function SeasonTable({ lines, keeper }: { lines: SeasonLine[]; keeper: boolean }
       <div className="overflow-x-auto">
         <table className="w-full min-w-[34rem] text-sm">
           <thead>
-            <tr className="text-left text-[10.5px] uppercase tracking-wider text-ink-dim">
+            <tr className="text-left text-2xs uppercase tracking-wider text-ink-dim">
               <th className="py-2 pl-4 pr-2 font-medium sm:pl-5">Competition</th>
               <th className="px-2 py-2 text-right font-medium">Apps</th>
               <th className="px-2 py-2 text-right font-medium">Min</th>
@@ -419,7 +419,7 @@ export function ProfilePanel({ player }: { player: PlayerHeader }) {
         <section className="card stagger grid grid-cols-2 gap-2.5 p-5 sm:grid-cols-4">
           {shown.map(([label, value], i) => (
             <div key={label} className="rounded-xl border border-line bg-surface-2 px-3 py-2.5" style={{ ["--i" as string]: i }}>
-              <p className="text-[10.5px] uppercase tracking-wider text-ink-dim">{label}</p>
+              <p className="text-2xs uppercase tracking-wider text-ink-dim">{label}</p>
               <p className="mt-1 truncate text-sm font-semibold">{value}</p>
             </div>
           ))}
@@ -435,7 +435,7 @@ export function ProfilePanel({ player }: { player: PlayerHeader }) {
               <li key={`${t.name}-${t.team}`} className="flex items-center justify-between gap-3 rounded-xl border border-line bg-surface-2 px-3.5 py-2.5">
                 <span className="min-w-0">
                   <span className="block truncate text-sm font-medium">{t.name}</span>
-                  <span className="block truncate text-[11px] text-ink-dim">{[t.team, t.latest && `last ${t.latest}`].filter(Boolean).join(" · ")}</span>
+                  <span className="block truncate text-2xs text-ink-dim">{[t.team, t.latest && `last ${t.latest}`].filter(Boolean).join(" · ")}</span>
                 </span>
                 <span className="tnum shrink-0 font-display text-xl font-bold text-gold">{t.won}×</span>
               </li>
@@ -458,9 +458,9 @@ function CareerList({ title, spells }: { title: string; spells: PlayerHeader["ca
             <span className="min-w-0">
               <span className="flex items-center gap-2 truncate text-sm font-medium">
                 {s.team}
-                {s.active && <span className="rounded bg-brand/15 px-1 text-[10px] font-bold text-brand">Now</span>}
+                {s.active && <span className="rounded bg-brand/15 px-1 text-2xs font-bold text-brand">Now</span>}
               </span>
-              <span className="block text-[11px] text-ink-dim">
+              <span className="block text-2xs text-ink-dim">
                 {s.start?.slice(0, 4) ?? "?"} – {s.active ? "now" : (s.end?.slice(0, 4) ?? "?")}
               </span>
             </span>

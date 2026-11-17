@@ -122,7 +122,7 @@ function WhatsAppCommunitySection() {
     <div className="border-t border-line pt-8">
       <div className="mb-1 flex items-center gap-2">
         <span className="text-sm font-semibold text-ink">WhatsApp picks</span>
-        <span className="rounded-full bg-brand px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-brand-ink">
+        <span className="rounded-full bg-brand px-2 py-0.5 text-2xs font-bold uppercase tracking-wide text-brand-ink">
           New
         </span>
       </div>

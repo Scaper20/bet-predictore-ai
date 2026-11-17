@@ -25,7 +25,7 @@ function PlayerBadge({ name, position }: { name: string; position: number | null
     <span className="relative grid size-10 shrink-0 place-items-center rounded-xl border border-line-strong bg-surface-2 font-display text-sm font-bold">
       {initials(name)}
       {position !== null && (
-        <span className="absolute -bottom-1.5 -right-1.5 rounded bg-surface-3 px-1 text-[9px] font-bold text-ink-muted">{POS[position]}</span>
+        <span className="absolute -bottom-1.5 -right-1.5 rounded bg-surface-3 px-1 text-2xs font-bold text-ink-muted">{POS[position]}</span>
       )}
     </span>
   );
@@ -41,7 +41,7 @@ export function RecentPips({ recent, line }: { recent: number[]; line: number })
         <span
           key={i}
           title={String(v)}
-          className={`grid h-5 min-w-5 place-items-center rounded px-0.5 font-mono text-[10px] font-bold tnum ${v > line ? "bg-brand/20 text-brand" : "bg-surface-3 text-ink-dim"}`}
+          className={`grid h-5 min-w-5 place-items-center rounded px-0.5 font-mono text-2xs font-bold tnum ${v > line ? "bg-brand/20 text-brand" : "bg-surface-3 text-ink-dim"}`}
         >
           {v}
         </span>
@@ -78,12 +78,12 @@ export function Ladder({ row }: { row: PropRow }) {
             key={r.line}
             className={`min-w-[4.25rem] shrink-0 rounded-lg border px-2 py-1.5 text-center ${picked ? "border-brand/50 bg-brand/10" : "border-line bg-surface-2"}`}
           >
-            <p className="font-mono text-[11px] text-ink-dim tnum">{r.line}+</p>
+            <p className="font-mono text-2xs text-ink-dim tnum">{r.line}+</p>
             <p className="font-mono text-sm font-bold tnum">{pct(r.over)}</p>
             <div className="mx-auto mt-1 h-1 w-full overflow-hidden rounded-full bg-surface-3">
               <span className="seg-grow block h-full rounded-full bg-brand/70" style={{ width: pct(r.over) }} />
             </div>
-            <p className={`mt-1 text-[10px] font-semibold ${listed ? "text-cyan" : "text-ink-dim"}`}>
+            <p className={`mt-1 text-2xs font-semibold ${listed ? "text-cyan" : "text-ink-dim"}`}>
               {r.overPrice ? `@${r.overPrice.toFixed(2)}` : listed ? "listed" : "model"}
             </p>
           </div>
@@ -129,7 +129,7 @@ export function PropCard({ row, showMatch = true, index = 0 }: { row: PropRow; s
           <Link href={playerPath(row.playerId, row.playerName)} prefetch={false} className="block truncate font-semibold hover:text-brand">
             {row.playerName}
           </Link>
-          <p className="flex items-center gap-1.5 truncate text-[11px] text-ink-dim">
+          <p className="flex items-center gap-1.5 truncate text-2xs text-ink-dim">
             <Crest src={row.teamCrest ?? undefined} name={row.teamName} size={14} />
             <span className="truncate">{row.teamName}</span>
             {showMatch && (
@@ -143,8 +143,8 @@ export function PropCard({ row, showMatch = true, index = 0 }: { row: PropRow; s
           </p>
         </div>
         <div className="shrink-0 text-right">
-          <p className="text-[10.5px] font-semibold uppercase tracking-wider text-ink-muted">{spec.label}</p>
-          <p className={`mt-0.5 text-[10.5px] font-semibold ${row.lineup === "confirmed" ? "text-brand" : "text-amber"}`}>
+          <p className="text-2xs font-semibold uppercase tracking-wider text-ink-muted">{spec.label}</p>
+          <p className={`mt-0.5 text-2xs font-semibold ${row.lineup === "confirmed" ? "text-brand" : "text-amber"}`}>
             {row.lineup === "confirmed" ? "Confirmed XI" : "Likely starter"}
           </p>
         </div>
@@ -153,7 +153,7 @@ export function PropCard({ row, showMatch = true, index = 0 }: { row: PropRow; s
       {row.locked ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-violet/25 bg-violet/8 px-3.5 py-3">
           <p className="text-sm">
-            <span className="mr-1.5 rounded-full bg-violet/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em] text-violet">Pro</span>
+            <span className="mr-1.5 rounded-full bg-violet/15 px-2 py-0.5 text-2xs font-bold uppercase tracking-[0.14em] text-violet">Pro</span>
             {row.hasPick ? "Our pick and its line" : "Projection and line-by-line chances"}
           </p>
           <Link href={UPGRADE_HREF} className="text-xs font-bold text-brand hover:underline">
@@ -169,7 +169,7 @@ export function PropCard({ row, showMatch = true, index = 0 }: { row: PropRow; s
                 <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-ink-muted">
                   <span className="font-mono font-semibold text-ink tnum">{pct(row.pick.probability)}</span>
                   {row.pick.price && <span className="font-mono tnum">@{row.pick.price.toFixed(2)} SportyBet</span>}
-                  <span className={`inline-flex h-5 items-center gap-1.5 rounded-full border px-2 text-[10px] font-semibold ${RISK_TONE[row.pick.risk]}`}>
+                  <span className={`inline-flex h-5 items-center gap-1.5 rounded-full border px-2 text-2xs font-semibold ${RISK_TONE[row.pick.risk]}`}>
                     {RISK_LABEL[row.pick.risk]}
                   </span>
                 </p>
@@ -193,14 +193,14 @@ export function PropsUpsell() {
   return (
     <section className="card relative overflow-hidden p-5 sm:p-6">
       <div aria-hidden className="pointer-events-none absolute -right-16 -top-16 size-48 rounded-full bg-violet/15 blur-3xl" />
-      <span className="rounded-full bg-violet/15 px-2.5 py-0.5 text-[10.5px] font-bold uppercase tracking-[0.14em] text-violet">Pro</span>
+      <span className="rounded-full bg-violet/15 px-2.5 py-0.5 text-2xs font-bold uppercase tracking-[0.14em] text-violet">Pro</span>
       <p className="mt-2 max-w-xl font-display text-lg font-bold leading-snug">
         Every starter&apos;s projection, the chance at each line, and a pick you can load on SportyBet
       </p>
       <p className="mt-1 max-w-xl text-sm text-ink-muted">Recent hit rates stay free for everyone.</p>
       <Link
         href={UPGRADE_HREF}
-        className="glow-brand mt-4 inline-flex items-center gap-1.5 rounded-lg bg-brand px-5 py-2.5 text-sm font-bold text-brand-ink transition-colors hover:bg-brand-strong"
+        className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-brand px-5 py-2.5 text-sm font-bold text-brand-ink transition-colors hover:bg-brand-strong"
       >
         Unlock with Pro <span aria-hidden>→</span>
       </Link>

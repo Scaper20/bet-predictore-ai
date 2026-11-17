@@ -43,7 +43,7 @@ function FixtureRow({ f, result }: { f: TeamFixture; result?: boolean }) {
   const tone = o === "W" ? "bg-brand text-brand-ink" : o === "L" ? "bg-rose text-white" : o === "D" ? "bg-surface-3 text-ink" : "";
   return (
     <Link href={matchPath(f.publicId)} className="group flex min-h-14 items-center gap-3 px-4 py-2.5 transition-colors hover:bg-surface-2 sm:px-5">
-      <span className="w-14 shrink-0 text-[11px] leading-tight text-ink-dim">
+      <span className="w-14 shrink-0 text-2xs leading-tight text-ink-dim">
         <LocalTime iso={f.kickoff} kind="day" />
         {!result && (
           <span className="block tnum font-mono text-ink-muted">
@@ -51,12 +51,12 @@ function FixtureRow({ f, result }: { f: TeamFixture; result?: boolean }) {
           </span>
         )}
       </span>
-      <span className="w-7 shrink-0 text-center text-[10px] font-semibold uppercase text-ink-dim">{f.isHome ? "H" : "A"}</span>
+      <span className="w-7 shrink-0 text-center text-2xs font-semibold uppercase text-ink-dim">{f.isHome ? "H" : "A"}</span>
       <span className="flex min-w-0 flex-1 items-center gap-2.5">
         <Crest src={f.opponentCrest ?? undefined} name={f.opponentName} size={22} />
         <span className="min-w-0">
           <span className="block truncate text-sm font-medium group-hover:text-brand">{f.opponentName}</span>
-          <span className="block truncate text-[11px] text-ink-dim">{f.leagueName}</span>
+          <span className="block truncate text-2xs text-ink-dim">{f.leagueName}</span>
         </span>
       </span>
       {result && o ? (
@@ -75,7 +75,7 @@ function FixtureRow({ f, result }: { f: TeamFixture; result?: boolean }) {
 export function NextMatchCard({ next, teamName }: { next: TeamFixture; teamName: string }) {
   return (
     <Link href={matchPath(next.publicId)} className="card group block overflow-hidden p-5 transition-colors hover:border-brand/40">
-      <p className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-ink-dim">Next match · {next.leagueName}</p>
+      <p className="text-2xs font-semibold uppercase tracking-[0.12em] text-ink-dim">Next match · {next.leagueName}</p>
       <div className="mt-3 flex items-center justify-between gap-3">
         <span className="min-w-0">
           <span className="block truncate font-display text-base font-bold sm:text-lg">
@@ -118,7 +118,7 @@ export function FormCard({ form, goals }: { form: FormSummary; goals: GoalProfil
       <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
         {tiles.map(([label, value]) => (
           <div key={label} className="rounded-xl border border-line bg-surface-2 px-3 py-2.5">
-            <p className="text-[10.5px] uppercase tracking-wider text-ink-dim">{label}</p>
+            <p className="text-2xs uppercase tracking-wider text-ink-dim">{label}</p>
             <p className="tnum mt-1 font-mono text-lg font-semibold">{value}</p>
           </div>
         ))}
@@ -158,11 +158,11 @@ export function InjuriesCard({ injured }: { injured: SquadMember[] }) {
           {injured.map((m) => (
             <li key={m.id} className="flex min-h-11 items-center justify-between gap-3 py-1.5">
               <span className="flex min-w-0 items-center gap-2">
-                <span className="grid size-5 shrink-0 place-items-center rounded-full bg-rose/15 text-[10px] font-bold text-rose" aria-hidden>+</span>
+                <span className="grid size-5 shrink-0 place-items-center rounded-full bg-rose/15 text-2xs font-bold text-rose" aria-hidden>+</span>
                 <span className="min-w-0 truncate text-sm">{m.name}</span>
-                {m.position && <span className="shrink-0 text-[11px] text-ink-dim">{m.position}</span>}
+                {m.position && <span className="shrink-0 text-2xs text-ink-dim">{m.position}</span>}
               </span>
-              {m.injury && <span className="shrink-0 text-right text-[11px] text-ink-muted">{m.injury}</span>}
+              {m.injury && <span className="shrink-0 text-right text-2xs text-ink-muted">{m.injury}</span>}
             </li>
           ))}
         </ul>
@@ -184,7 +184,7 @@ export function SquadPanel({ profile, links = {} }: { profile: TeamProfile; link
         <section key={g} className="card overflow-hidden">
           <div className="flex items-baseline justify-between border-b border-line px-4 py-3 sm:px-5">
             <h2 className={H2}>{GROUP_LABEL[g]}</h2>
-            <span className="hidden text-[10.5px] uppercase tracking-wider text-ink-dim sm:block">Age · G · A · Rating</span>
+            <span className="hidden text-2xs uppercase tracking-wider text-ink-dim sm:block">Age · G · A · Rating</span>
           </div>
           <ul className="stagger divide-y divide-line">
             {profile.squad[g].map((m, i) => (
@@ -199,9 +199,9 @@ export function SquadPanel({ profile, links = {} }: { profile: TeamProfile; link
                     ) : (
                       m.name
                     )}
-                    {m.injured && <span className="rounded bg-rose/15 px-1 text-[10px] font-bold text-rose" title={m.injury ?? "Injured"}>Inj</span>}
+                    {m.injured && <span className="rounded bg-rose/15 px-1 text-2xs font-bold text-rose" title={m.injury ?? "Injured"}>Inj</span>}
                   </span>
-                  <span className="block truncate text-[11px] text-ink-dim">{[m.position?.replace(/,\s*/g, ", "), m.country].filter(Boolean).join(" · ")}</span>
+                  <span className="block truncate text-2xs text-ink-dim">{[m.position?.replace(/,\s*/g, ", "), m.country].filter(Boolean).join(" · ")}</span>
                 </span>
                 <span className="tnum hidden w-8 shrink-0 text-right font-mono text-xs text-ink-muted sm:block">{m.age ?? ""}</span>
                 <span className="tnum w-6 shrink-0 text-right font-mono text-xs">{m.goals || ""}</span>
@@ -290,7 +290,7 @@ export function ClubPanel({ profile }: { profile: TeamProfile }) {
 function Fact({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-xl border border-line bg-surface-2 px-3.5 py-3">
-      <p className="text-[10.5px] uppercase tracking-wider text-ink-dim">{label}</p>
+      <p className="text-2xs uppercase tracking-wider text-ink-dim">{label}</p>
       <p className="mt-1 truncate text-sm font-semibold">{value}</p>
     </div>
   );
@@ -308,7 +308,7 @@ function TransferList({ title, list }: { title: string; list: Transfer[] }) {
             <li key={`${t.name}-${i}`} className="flex min-h-12 items-center justify-between gap-3 px-4 py-2 sm:px-5">
               <span className="min-w-0">
                 <span className="block truncate text-sm font-medium">{t.name}</span>
-                <span className="block truncate text-[11px] text-ink-dim">
+                <span className="block truncate text-2xs text-ink-dim">
                   {t.direction === "in" ? "from" : "to"} {t.club ?? "unknown"}
                   {t.date ? ` · ${t.date.slice(0, 10)}` : ""}
                 </span>
@@ -331,7 +331,7 @@ function Honours({ honours }: { honours: Honour[] }) {
           <li key={h.name} className="flex items-center justify-between gap-3 rounded-xl border border-line bg-surface-2 px-3.5 py-2.5">
             <span className="min-w-0">
               <span className="block truncate text-sm font-medium">{h.name}</span>
-              {h.latest && <span className="block text-[11px] text-ink-dim">Last: {h.latest}</span>}
+              {h.latest && <span className="block text-2xs text-ink-dim">Last: {h.latest}</span>}
             </span>
             <span className="tnum shrink-0 font-display text-xl font-bold text-gold">{h.won}×</span>
           </li>

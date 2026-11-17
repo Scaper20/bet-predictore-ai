@@ -67,7 +67,7 @@ export function MegaNav({ tabs }: { tabs: NavTab[] }) {
       }}
       onMouseEnter={() => window.clearTimeout(leaveTimer.current)}
     >
-      <nav aria-label="Main" className="border-t border-line/70 bg-shell/60">
+      <nav aria-label="Main" className="border-t border-line/70">
         <Container className="flex h-12 items-stretch gap-0.5">
           {tabs.map((tab) => {
             if (tab.kind === "link") {
@@ -87,12 +87,12 @@ export function MegaNav({ tabs }: { tabs: NavTab[] }) {
                   {tab.live && <span className="live-dot size-2 rounded-full bg-signal" aria-hidden />}
                   {tab.label}
                   {tab.badge && (
-                    <span className="rounded-full bg-brand/14 px-1.5 text-[10px] font-semibold uppercase tracking-wide text-brand">
+                    <span className="rounded-full bg-brand/14 px-1.5 text-2xs font-semibold uppercase tracking-wide text-brand">
                       {tab.badge.text}
                     </span>
                   )}
                   {tab.live && live !== null && live > 0 && (
-                    <span className="tnum rounded-full bg-signal/14 px-1.5 font-mono text-[11px] text-signal">{live}</span>
+                    <span className="tnum rounded-full bg-signal/14 px-1.5 font-mono text-2xs text-signal">{live}</span>
                   )}
                 </Link>
               );
@@ -136,7 +136,7 @@ export function MegaNav({ tabs }: { tabs: NavTab[] }) {
             href="/responsible-use"
             className="flex items-center gap-2 self-center text-xs text-ink-dim transition-colors hover:text-ink-muted"
           >
-            <span className="rounded-md border border-line-strong px-1.5 py-px font-mono text-[10.5px]">18+</span>
+            <span className="rounded-md border border-line-strong px-1.5 py-px font-mono text-2xs">18+</span>
             Use responsibly
           </Link>
         </Container>
@@ -188,12 +188,12 @@ function MenuPanel({ menu, onChoose }: { menu: NavMenu; onChoose: () => void }) 
       >
         {menu.columns.map((col) => (
           <div key={col.title} className="flex flex-col gap-0.5">
-            <p className="px-2.5 pb-2 text-[11px] font-bold uppercase tracking-[0.12em] text-ink-dim">{col.title}</p>
+            <p className="px-2.5 pb-2 text-2xs font-bold uppercase tracking-[0.12em] text-ink-dim">{col.title}</p>
             {col.links.map((l) => (
               <MenuLink key={`${l.label}${l.href}`} link={l} onChoose={onChoose} />
             ))}
             {col.all && (
-              <Link href={col.all.href} onClick={onChoose} className="px-2.5 py-2 text-[13px] font-bold text-brand hover:underline">
+              <Link href={col.all.href} onClick={onChoose} className="px-2.5 py-2 text-sm font-bold text-brand hover:underline">
                 {col.all.label} →
               </Link>
             )}
@@ -215,7 +215,7 @@ const BADGE: Record<Badge["tone"], string> = {
 
 export function NavBadge({ badge }: { badge: Badge }) {
   return (
-    <span className={`rounded px-1.5 py-px text-[9.5px] font-bold uppercase tracking-wider ${BADGE[badge.tone]}`}>
+    <span className={`rounded px-1.5 py-px text-2xs font-bold uppercase tracking-wider ${BADGE[badge.tone]}`}>
       {badge.text}
     </span>
   );
@@ -265,9 +265,9 @@ function FeatureCard({ feature, onChoose }: { feature: NavFeature; onChoose: () 
   const ctaCls = `mt-1 inline-flex min-h-10 items-center self-start rounded-xl px-4 text-sm font-extrabold transition-colors ${t.cta}`;
   return (
     <aside className={`flex flex-col gap-3 self-start rounded-2xl border p-5 ${t.card}`}>
-      <p className={`text-[11px] font-bold uppercase tracking-[0.12em] ${t.kicker}`}>{feature.kicker}</p>
-      <p className="font-display text-[28px] font-bold leading-[1.05] text-ink">{feature.title}</p>
-      <p className="text-[13px] leading-relaxed text-ink-muted">{feature.body}</p>
+      <p className={`text-2xs font-bold uppercase tracking-[0.12em] ${t.kicker}`}>{feature.kicker}</p>
+      <p className="font-display text-3xl font-bold leading-[1.05] text-ink">{feature.title}</p>
+      <p className="text-sm leading-relaxed text-ink-muted">{feature.body}</p>
       {feature.cta.action ? (
         <button
           type="button"

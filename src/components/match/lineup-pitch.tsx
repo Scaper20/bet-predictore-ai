@@ -72,7 +72,7 @@ export function LineupsPanel({ match, details }: { match: Match; details: MatchD
         <section className="card overflow-hidden">
           <div className="flex items-baseline justify-between gap-3 border-b border-line px-4 py-3 sm:px-5">
             <h2 className="font-sans text-sm font-semibold uppercase tracking-wider text-ink-muted">Out of this game</h2>
-            <span className="text-[11px] text-ink-dim">Injured or suspended</span>
+            <span className="text-2xs text-ink-dim">Injured or suspended</span>
           </div>
           <div className="grid divide-y divide-line sm:grid-cols-2 sm:divide-x sm:divide-y-0">
             <AbsenceList team={match.home} players={home?.unavailable ?? []} />
@@ -94,7 +94,7 @@ function StatusChip({ status }: { status: LineupStatus }) {
   };
   const [label, tone] = map[status];
   if (!label) return null;
-  return <span className={`rounded-full border px-2.5 py-1 text-[10.5px] font-semibold ${tone}`}>{label}</span>;
+  return <span className={`rounded-full border px-2.5 py-1 text-2xs font-semibold ${tone}`}>{label}</span>;
 }
 
 function SideHeader({ team, side, bottom, flat, right }: { team: Match["home"]; side: LineupSide; bottom?: boolean; flat?: boolean; right?: boolean }) {
@@ -222,7 +222,7 @@ function PitchPlayer({ player: p, style }: { player: DetailPlayer; style: React.
       <Link href={playerPath(p.id, p.name)} prefetch={false} aria-label={summary} title={summary} className="group flex flex-col items-center rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-brand">
       <div className="relative transition-transform duration-200 group-hover:scale-110">
         <span
-          className={`grid size-8 place-items-center rounded-full border text-xs font-bold tnum shadow-[0_2px_10px_rgb(0_0_0/0.35)] sm:size-9 sm:text-[13px] ${
+          className={`grid size-8 place-items-center rounded-full border text-xs font-bold tnum shadow-[0_2px_10px_rgb(0_0_0/0.35)] sm:size-9 sm:text-sm ${
             band === "elite" ? "border-brand bg-brand text-brand-ink" : "border-line-strong bg-shell text-ink"
           }`}
         >
@@ -240,12 +240,12 @@ function PitchPlayer({ player: p, style }: { player: DetailPlayer; style: React.
           {p.red ? <CardIcon red /> : p.yellow ? <CardIcon /> : null}
         </span>
         {p.subOut !== null && (
-          <span className="absolute -bottom-1 -right-2.5 grid size-4 place-items-center rounded-full bg-rose text-[9px] font-bold text-white" aria-hidden>
+          <span className="absolute -bottom-1 -right-2.5 grid size-4 place-items-center rounded-full bg-rose text-2xs font-bold text-white" aria-hidden>
             ↓
           </span>
         )}
       </div>
-      <span className="mt-1.5 max-w-full truncate rounded px-1 text-center text-[10.5px] font-medium leading-tight text-ink group-hover:text-brand sm:text-[11.5px]">
+      <span className="mt-1.5 max-w-full truncate rounded px-1 text-center text-2xs font-medium leading-tight text-ink group-hover:text-brand sm:text-2xs">
         {p.captain && <span className="mr-0.5 text-brand">©</span>}
         {p.short}
       </span>
@@ -262,7 +262,7 @@ export function RatingChip({ rating, small }: { rating: number; small?: boolean 
     band === "ok" ? "bg-amber text-canvas" :
     "bg-rose text-white";
   return (
-    <span className={`tnum inline-block rounded-md font-mono font-semibold leading-none ${small ? "px-1 py-[3px] text-[9.5px]" : "px-1.5 py-1 text-[11px]"} ${tone}`}>
+    <span className={`tnum inline-block rounded-md font-mono font-semibold leading-none ${small ? "px-1 py-[3px] text-2xs" : "px-1.5 py-1 text-2xs"} ${tone}`}>
       {rating.toFixed(1)}
     </span>
   );
@@ -286,7 +286,7 @@ function PlayerList({ team, players, finished }: { team: Match["home"]; players:
             {p.subIn !== null ? (
               <span className="tnum shrink-0 font-mono text-xs text-brand">↑ {p.subIn}&apos;</span>
             ) : finished ? (
-              <span className="shrink-0 text-[11px] text-ink-dim">Unused</span>
+              <span className="shrink-0 text-2xs text-ink-dim">Unused</span>
             ) : null}
             {p.rating !== null && <RatingChip rating={p.rating} />}
           </li>
@@ -310,14 +310,14 @@ function AbsenceList({ team, players }: { team: Match["home"]; players: DetailPl
             <li key={p.id} className="flex min-h-11 items-center justify-between gap-3 py-1.5">
               <span className="flex min-w-0 items-center gap-2">
                 <span
-                  className={`grid size-5 shrink-0 place-items-center rounded-full text-[10px] font-bold ${p.absence === "suspension" ? "bg-amber/20 text-amber" : "bg-rose/15 text-rose"}`}
+                  className={`grid size-5 shrink-0 place-items-center rounded-full text-2xs font-bold ${p.absence === "suspension" ? "bg-amber/20 text-amber" : "bg-rose/15 text-rose"}`}
                   aria-hidden
                 >
                   {p.absence === "suspension" ? "S" : "+"}
                 </span>
                 <Link href={playerPath(p.id, p.name)} prefetch={false} className="min-w-0 truncate text-sm hover:text-brand">{p.name}</Link>
               </span>
-              <span className="shrink-0 text-right text-[11px] text-ink-dim">
+              <span className="shrink-0 text-right text-2xs text-ink-dim">
                 {p.absence === "suspension" ? "Suspended" : "Injured"}
                 {p.expectedReturn && <span className="block text-ink-muted">{p.expectedReturn}</span>}
               </span>

@@ -202,7 +202,7 @@ function GeneratorPanel({ paid }: { paid: boolean }) {
   return (
     <article className="card flex flex-col justify-between p-5">
       <div>
-        <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-violet">Pro and VIP</p>
+        <p className="font-mono text-2xs font-semibold uppercase tracking-[0.18em] text-violet">Pro and VIP</p>
         <h3 className="mt-2 font-display text-lg font-bold text-ink">Your own combo as a code</h3>
         <p className="mt-1.5 text-sm leading-relaxed text-ink-muted">
           Build a combo in{" "}

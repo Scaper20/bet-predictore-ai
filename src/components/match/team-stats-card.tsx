@@ -21,7 +21,7 @@ export function TeamStatsCard({ match, rows, live }: { match: Match; rows: TeamS
           <Crest src={match.home.crest} name={match.home.name} size={20} />
           <span className="truncate text-xs font-semibold">{match.home.name}</span>
         </span>
-        <span className="shrink-0 text-[10.5px] font-semibold uppercase tracking-wider text-ink-dim">{live ? "This match, live" : "This match"}</span>
+        <span className="shrink-0 text-2xs font-semibold uppercase tracking-wider text-ink-dim">{live ? "This match, live" : "This match"}</span>
         <span className="flex min-w-0 items-center justify-end gap-2">
           <span className="truncate text-xs font-semibold">{match.away.name}</span>
           <Crest src={match.away.crest} name={match.away.name} size={20} />

@@ -32,7 +32,7 @@ export default async function SoonPage({ params }: { params: Promise<{ slug: str
 
   return (
     <div className={`${containerClass("narrow")} py-12 sm:py-20`}>
-      <span className="inline-flex items-center gap-2 rounded-full border border-amber/35 bg-amber/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-amber">
+      <span className="inline-flex items-center gap-2 rounded-full border border-amber/35 bg-amber/10 px-3 py-1 text-2xs font-bold uppercase tracking-[0.14em] text-amber">
         <span className="size-1.5 rounded-full bg-amber" aria-hidden />
         Coming soon
       </span>
@@ -41,7 +41,7 @@ export default async function SoonPage({ params }: { params: Promise<{ slug: str
 
       <ul className="mt-8 space-y-3">
         {f.points.map((point) => (
-          <li key={point} className="flex gap-3 text-[15px] leading-relaxed text-ink">
+          <li key={point} className="flex gap-3 text-base leading-relaxed text-ink">
             <span className="mt-1 grid size-5 shrink-0 place-items-center rounded-full bg-brand/12 text-brand" aria-hidden>
               <svg viewBox="0 0 16 16" className="size-3" fill="none" stroke="currentColor" strokeWidth="2.4">
                 <path d="m3.5 8.5 3 3 6-7" strokeLinecap="round" strokeLinejoin="round" />
@@ -52,14 +52,14 @@ export default async function SoonPage({ params }: { params: Promise<{ slug: str
         ))}
       </ul>
 
-      <div className="mt-10 rounded-2xl border border-line bg-surface p-5 sm:p-6">
+      <div className="card mt-10 p-5 sm:p-6">
         <p className="text-sm font-semibold text-ink">Be first to know</p>
         <p className="mt-1 text-sm text-ink-muted">We&apos;ll send a notification the day it goes live.</p>
         <NotifyButton className="mt-4 rounded-xl bg-brand px-5 py-3 text-sm font-bold text-brand-ink transition-colors hover:bg-brand-strong" />
       </div>
 
       <div className="mt-8">
-        <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-ink-dim">Meanwhile</p>
+        <p className="text-2xs font-bold uppercase tracking-[0.12em] text-ink-dim">Meanwhile</p>
         <div className="mt-3 flex flex-wrap gap-2.5">
           {f.meanwhile.map((m) => (
             <Link

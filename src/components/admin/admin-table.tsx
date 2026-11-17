@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 export function AdminTable({ children }: { children: ReactNode }) {
   return (
     <div className="card overflow-x-auto">
-      <table className="w-full text-[13px]">{children}</table>
+      <table className="w-full text-sm">{children}</table>
     </div>
   );
 }
@@ -14,7 +14,7 @@ export function AdminTableHead({ columns }: { columns: string[] }) {
     <thead>
       <tr className="border-b border-line bg-surface-2/40 text-left">
         {columns.map((c, i) => (
-          <th key={`${c}-${i}`} className="whitespace-nowrap px-4 py-2.5 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-ink-dim">
+          <th key={`${c}-${i}`} className="whitespace-nowrap px-4 py-2.5 font-mono text-2xs font-medium uppercase tracking-[0.14em] text-ink-dim">
             {c}
           </th>
         ))}

@@ -37,7 +37,7 @@ export function SplitBar({
         ))}
       </div>
       {labels && (
-        <div className="mt-1.5 grid grid-cols-3 text-[11px]">
+        <div className="mt-1.5 grid grid-cols-3 text-2xs">
           {parts.map((p, i) => (
             <span
               key={p.key}

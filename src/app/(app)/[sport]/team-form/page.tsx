@@ -108,7 +108,7 @@ export default async function TeamFormPage({ searchParams }: { searchParams: Pro
                     </span>
                     <span className="text-right">
                       <span className="tnum block font-mono text-lg font-medium leading-none">{r.form.points}</span>
-                      <span className="text-[10px] text-ink-dim">pts</span>
+                      <span className="text-2xs text-ink-dim">pts</span>
                     </span>
                   </li>
                 ))}
@@ -129,7 +129,7 @@ function Trend({ value }: { value: number }) {
   if (Math.abs(value) < 0.5) return null;
   const up = value > 0;
   return (
-    <span className={`shrink-0 text-[11px] font-bold ${up ? "text-brand" : "text-rose"}`} title={up ? "Better lately" : "Worse lately"}>
+    <span className={`shrink-0 text-2xs font-bold ${up ? "text-brand" : "text-rose"}`} title={up ? "Better lately" : "Worse lately"}>
       {up ? "↗" : "↘"}
     </span>
   );
@@ -153,7 +153,7 @@ function Spot({
   const last = row.games[0];
   return (
     <div style={{ ["--i" as string]: i }} className={`card border p-4 ${ring}`}>
-      <p className={`text-[10.5px] font-semibold uppercase tracking-[0.14em] ${text}`}>{title}</p>
+      <p className={`text-2xs font-semibold uppercase tracking-[0.14em] ${text}`}>{title}</p>
       <div className="mt-2 flex items-center gap-2.5">
         <Crest src={row.team.crest} name={row.team.name} size={28} />
         <Link href={teamPath(row.team.id, row.team.name)} prefetch={false} className="min-w-0 truncate font-display text-lg font-bold hover:text-brand">
@@ -163,7 +163,7 @@ function Spot({
       <div className="mt-3"><FormPips letters={row.form.letters.slice(0, 5)} size="sm" index={i} /></div>
       <p className="mt-2 text-xs text-ink-muted">{note}</p>
       {last && (
-        <Link href={matchPath(last.publicId)} prefetch={false} className="mt-1 block truncate text-[11px] text-ink-dim hover:text-ink">
+        <Link href={matchPath(last.publicId)} prefetch={false} className="mt-1 block truncate text-2xs text-ink-dim hover:text-ink">
           Last: {last.goalsFor}-{last.goalsAgainst} {last.isHome ? "v" : "at"} {last.opponentName}
         </Link>
       )}

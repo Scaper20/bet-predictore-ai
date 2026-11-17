@@ -39,13 +39,13 @@ export function FeedbackForm({ onDone }: { onDone?: () => void }) {
           {Array.from({ length: 11 }, (_, i) => i).map((n) => (
             <label key={n} className="cursor-pointer">
               <input type="radio" name="score" value={n} className="peer sr-only" />
-              <span className="grid h-7 place-items-center rounded text-[10px] font-medium text-ink-muted peer-checked:bg-brand peer-checked:text-brand-ink peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-brand hover:bg-surface-2">
+              <span className="grid h-7 place-items-center rounded text-2xs font-medium text-ink-muted peer-checked:bg-brand peer-checked:text-brand-ink peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-brand hover:bg-surface-2">
                 {n}
               </span>
             </label>
           ))}
         </div>
-        <div className="mt-1 flex justify-between text-[10px] text-ink-dim">
+        <div className="mt-1 flex justify-between text-2xs text-ink-dim">
           <span>Not likely</span>
           <span>Very likely</span>
         </div>

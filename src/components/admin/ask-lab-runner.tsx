@@ -66,7 +66,7 @@ export function AskLabRunner({ presets, ready }: { presets: PresetOption[]; read
     <div className="space-y-3">
       <div className="flex flex-wrap items-end gap-3">
         <label className="block min-w-[16rem] flex-1">
-          <span className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-dim">Settings to test</span>
+          <span className="mb-1 block text-2xs font-semibold uppercase tracking-[0.08em] text-ink-dim">Settings to test</span>
           <select
             value={preset}
             onChange={(e) => setPreset(e.target.value)}
@@ -123,7 +123,7 @@ export function RateAnswer({ questionId, rating }: { questionId: string; rating:
           type="button"
           aria-pressed={value === v}
           onClick={() => set(v)}
-          className={`rounded border px-1.5 py-0.5 font-mono text-[10px] uppercase ${value === v ? tone[v] : "border-line text-ink-dim hover:text-ink"}`}
+          className={`rounded border px-1.5 py-0.5 font-mono text-2xs uppercase ${value === v ? tone[v] : "border-line text-ink-dim hover:text-ink"}`}
         >
           {v}
         </button>

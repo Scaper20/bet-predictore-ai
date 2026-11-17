@@ -66,16 +66,16 @@ export function AdminShell({
   }, []);
 
   return (
-    <div className="min-h-screen bg-canvas text-ink">
+    <div className="min-h-dvh bg-canvas text-ink">
       <div className="flex">
-        <aside className="sticky top-0 hidden h-screen w-60 shrink-0 border-r border-line bg-shell lg:block">
+        <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 border-r border-line bg-shell lg:block">
           <Sidebar nav={nav} pathname={pathname} identity={identity} counts={counts} env={env} />
         </aside>
 
         {drawer && (
           <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="Admin menu">
-            <button type="button" aria-label="Close menu" className="absolute inset-0 bg-black/60" onClick={() => setDrawer(false)} />
-            <aside className="absolute inset-y-0 left-0 w-72 max-w-[85vw] border-r border-line bg-shell">
+            <button type="button" aria-label="Close menu" className="absolute inset-0 glass-scrim" onClick={() => setDrawer(false)} />
+            <aside className="absolute inset-y-0 left-0 w-72 max-w-[85vw] border-r border-line glass-panel">
               <Sidebar nav={nav} pathname={pathname} identity={identity} counts={counts} env={env} onClose={() => setDrawer(false)} />
             </aside>
           </div>
@@ -83,7 +83,7 @@ export function AdminShell({
 
         <div className="min-w-0 flex-1">
           <header
-            className="sticky top-0 z-30 border-b border-line bg-shell"
+            className="sticky top-0 z-30 border-b border-line glass-bar"
             style={{ paddingTop: "env(safe-area-inset-top)" }}
           >
             <div className="flex h-12 items-center gap-3 px-4 sm:px-6">
@@ -95,7 +95,7 @@ export function AdminShell({
               >
                 <AdminIcon name="menu" className="size-5" />
               </button>
-              <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-2 font-mono text-[11px] uppercase tracking-[0.12em]">
+              <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-2 font-mono text-2xs uppercase tracking-[0.12em]">
                 <span className="hidden text-ink-dim sm:inline">Admin</span>
                 {here && here.section.id !== "overview" && (
                   <>
@@ -114,10 +114,10 @@ export function AdminShell({
                 >
                   <AdminIcon name="search" className="size-3.5" />
                   <span className="hidden sm:inline">Jump to</span>
-                  <kbd className="hidden rounded border border-line px-1 font-mono text-[10px] sm:inline">⌘K</kbd>
+                  <kbd className="hidden rounded border border-line px-1 font-mono text-2xs sm:inline">⌘K</kbd>
                 </button>
                 <LagosClock />
-                <span className={`rounded border px-1.5 py-0.5 font-mono text-[10px] tracking-[0.12em] ${ENV_STYLE[env].className}`}>
+                <span className={`rounded border px-1.5 py-0.5 font-mono text-2xs tracking-[0.12em] ${ENV_STYLE[env].className}`}>
                   {ENV_STYLE[env].label}
                 </span>
               </div>
@@ -159,13 +159,20 @@ function Sidebar({
   onClose?: () => void;
 }) {
   const initials = (identity.email.split("@")[0] ?? "?").slice(0, 2).toUpperCase();
+  // Hick's law: the everyday pages stay in their groups; the rare ones
+  // (governance, switches, labs) sit under one collapsed "More".
+  const main = nav
+    .filter((s) => s.id !== "governance")
+    .map((s) => ({ ...s, items: s.items.filter((i) => !RARE.has(i.href)) }))
+    .filter((s) => s.items.length > 0);
+  const more = nav.flatMap((s) => (s.id === "governance" ? s.items : s.items.filter((i) => RARE.has(i.href))));
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between gap-2 px-5 pb-4 pt-5">
         <Link href="/admin" className="flex items-center gap-2.5">
           <LogoLockup className="h-[22px] w-auto text-ink" />
           <span className="sr-only">KiqStat</span>
-          <span className="rounded border border-line px-1.5 py-0.5 font-mono text-[10px] tracking-[0.14em] text-ink-muted">ADMIN</span>
+          <span className="rounded border border-line px-1.5 py-0.5 font-mono text-2xs tracking-[0.14em] text-ink-muted">ADMIN</span>
         </Link>
         {onClose && (
           <button type="button" onClick={onClose} className="rounded-md p-1 text-ink-muted hover:text-ink" aria-label="Close menu">
@@ -175,49 +182,39 @@ function Sidebar({
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 pb-4" aria-label="Admin">
-        {nav.map((section) => (
+        {main.map((section) => (
           <div key={section.id} className="mt-4 first:mt-1">
             {section.id !== "overview" && (
-              <p className="px-2.5 pb-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-dim">{section.label}</p>
+              <p className="px-2.5 pb-1.5 font-mono text-2xs uppercase tracking-[0.16em] text-ink-dim">{section.label}</p>
             )}
-            <ul className="space-y-0.5">
-              {section.items.map((item) => {
-                const active = item.href === "/admin" ? pathname === "/admin" : pathname === item.href || pathname.startsWith(`${item.href}/`);
-                const count = counts[item.href];
-                return (
-                  <li key={item.href}>
-                    <Link
-                      href={item.href}
-                      aria-current={active ? "page" : undefined}
-                      className={`group relative flex items-center gap-2.5 rounded-md px-2.5 py-[7px] text-[13px] font-medium transition-colors ${
-                        active ? "bg-surface-2 text-ink" : "text-ink-muted hover:bg-surface-2/60 hover:text-ink"
-                      }`}
-                    >
-                      {active && <span className="absolute inset-y-1.5 -left-3 w-[3px] rounded-r bg-brand" aria-hidden />}
-                      <AdminIcon name={item.icon} className={`size-4 shrink-0 ${active ? "text-brand" : "text-ink-dim group-hover:text-ink-muted"}`} />
-                      <span className="truncate">{item.label}</span>
-                      {count ? (
-                        <span className="tnum ml-auto rounded bg-amber/15 px-1.5 font-mono text-[10px] font-medium text-amber">{count}</span>
-                      ) : null}
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
+            <NavList items={section.items} pathname={pathname} counts={counts} />
           </div>
         ))}
+        {more.length > 0 && (
+          <details className="group mt-4" open={more.some((i) => isActive(i.href, pathname)) || undefined}>
+            <summary className="flex cursor-pointer list-none items-center gap-2 rounded-md px-2.5 py-1.5 font-mono text-2xs uppercase tracking-[0.16em] text-ink-dim hover:text-ink [&::-webkit-details-marker]:hidden">
+              More
+              <svg viewBox="0 0 20 20" className="ml-auto size-3.5 transition-transform duration-200 group-open:rotate-180" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                <path d="m5 8 5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </summary>
+            <div className="pt-1">
+              <NavList items={more} pathname={pathname} counts={counts} />
+            </div>
+          </details>
+        )}
       </nav>
 
       <div className="border-t border-line p-3">
         <div className="flex items-center gap-2.5 rounded-md px-2 py-1.5">
-          <span className="grid size-8 shrink-0 place-items-center rounded-md bg-surface-3 font-mono text-[11px] font-medium text-ink">
+          <span className="grid size-8 shrink-0 place-items-center rounded-md bg-surface-3 font-mono text-2xs font-medium text-ink">
             {initials}
           </span>
           <div className="min-w-0">
             <p className="truncate text-xs text-ink">{identity.email}</p>
             <p className="mt-0.5 flex flex-wrap gap-1">
               {identity.roles.map((r) => (
-                <span key={r} className="rounded bg-surface-2 px-1 font-mono text-[9.5px] tracking-[0.1em] text-ink-muted" title={ROLES[r].label}>
+                <span key={r} className="rounded bg-surface-2 px-1 font-mono text-2xs tracking-[0.1em] text-ink-muted" title={ROLES[r].label}>
                   {ROLES[r].short}
                 </span>
               ))}
@@ -227,24 +224,59 @@ function Sidebar({
         <div className="mt-2 flex items-center gap-1 px-1">
           <Link
             href="/"
-            className="flex items-center gap-1.5 rounded-md px-2 py-1 text-[11px] text-ink-dim hover:bg-surface-2 hover:text-ink"
+            className="flex items-center gap-1.5 rounded-md px-2 py-1 text-2xs text-ink-dim hover:bg-surface-2 hover:text-ink"
           >
             <AdminIcon name="external" className="size-3.5" /> Live site
           </Link>
           <form action={signOut} className="ml-auto">
             <button
               type="submit"
-              className="flex items-center gap-1.5 rounded-md px-2 py-1 text-[11px] text-ink-dim hover:bg-surface-2 hover:text-ink"
+              className="flex items-center gap-1.5 rounded-md px-2 py-1 text-2xs text-ink-dim hover:bg-surface-2 hover:text-ink"
             >
               <AdminIcon name="logout" className="size-3.5" /> Sign out
             </button>
           </form>
         </div>
-        <p className="mt-2 px-3 font-mono text-[9.5px] uppercase tracking-[0.14em] text-ink-dim">
+        <p className="mt-2 px-3 font-mono text-2xs uppercase tracking-[0.14em] text-ink-dim">
           {env === "production" ? "www.kiqstat.app" : env}
         </p>
       </div>
     </div>
+  );
+}
+
+/** Pages most staff open rarely; listed under "More" in the sidebar (⌘K still reaches them). */
+const RARE = new Set(["/admin/maintenance", "/admin/ask-lab", "/admin/sportybet", "/admin/whatsapp-digest"]);
+
+const isActive = (href: string, pathname: string) =>
+  href === "/admin" ? pathname === "/admin" : pathname === href || pathname.startsWith(`${href}/`);
+
+function NavList({ items, pathname, counts }: { items: NavSection["items"]; pathname: string; counts: Record<string, number> }) {
+  return (
+    <ul className="space-y-0.5">
+      {items.map((item) => {
+        const active = isActive(item.href, pathname);
+        const count = counts[item.href];
+        return (
+          <li key={item.href}>
+            <Link
+              href={item.href}
+              aria-current={active ? "page" : undefined}
+              className={`group relative flex items-center gap-2.5 rounded-md px-2.5 py-[7px] text-sm font-medium transition-colors ${
+                active ? "bg-surface-2 text-ink" : "text-ink-muted hover:bg-surface-2/60 hover:text-ink"
+              }`}
+            >
+              {active && <span className="absolute inset-y-1.5 -left-3 w-[3px] rounded-r bg-brand" aria-hidden />}
+              <AdminIcon name={item.icon} className={`size-4 shrink-0 ${active ? "text-brand" : "text-ink-dim group-hover:text-ink-muted"}`} />
+              <span className="truncate">{item.label}</span>
+              {count ? (
+                <span className="tnum ml-auto rounded bg-amber/15 px-1.5 font-mono text-2xs font-medium text-amber">{count}</span>
+              ) : null}
+            </Link>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 
@@ -259,7 +291,7 @@ function LagosClock() {
     return () => clearInterval(t);
   }, []);
   return (
-    <span className="tnum hidden items-center gap-1.5 font-mono text-[11px] text-ink-dim md:flex" title="Lagos time (WAT)">
+    <span className="tnum hidden items-center gap-1.5 font-mono text-2xs text-ink-dim md:flex" title="Lagos time (WAT)">
       <AdminIcon name="clock" className="size-3.5" />
       {now ?? "--:--"} <span className="text-ink-dim/70">WAT</span>
     </span>

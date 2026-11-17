@@ -58,8 +58,8 @@ export default async function PublishingPage() {
   return (
     <div className="space-y-6">
       <div>
-        <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-brand">Product</p>
-        <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight sm:text-[28px]">Publishing</h1>
+        <p className="font-mono text-2xs uppercase tracking-[0.16em] text-brand">Product</p>
+        <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight sm:text-3xl">Publishing</h1>
         <p className="mt-1 max-w-3xl text-sm text-ink-muted">
           Which selections may be published, as the headline pick or in the Code Hub&rsquo;s codes. Each starts on the
           rules in code; a switch with an amber ring is your call, and <span className="text-ink">Default</span> hands it
@@ -72,7 +72,7 @@ export default async function PublishingPage() {
 
       {groups.map((g) => (
         <section key={g} className="card overflow-hidden">
-          <h2 className="border-b border-line px-4 py-2.5 font-mono text-[10.5px] uppercase tracking-[0.16em] text-ink-dim">{g}</h2>
+          <h2 className="border-b border-line px-4 py-2.5 font-mono text-2xs uppercase tracking-[0.16em] text-ink-dim">{g}</h2>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[46rem] text-left text-xs">
               <thead className="text-ink-dim">

@@ -23,8 +23,8 @@ export default async function AdminPaymentsPage({
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-brand">Business</p>
-          <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight sm:text-[28px]">Payments</h1>
+          <p className="font-mono text-2xs uppercase tracking-[0.16em] text-brand">Business</p>
+          <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight sm:text-3xl">Payments</h1>
           <p className="mt-1 text-sm text-ink-muted">
             A checkout that never got a Paystack webhook automatically flips from pending to failed after 24h.
           </p>

@@ -34,6 +34,8 @@ export interface PlanDefinition {
   badge?: string;
   /** CTA copy. Previously a loose map in sections.tsx that had to be kept in step. */
   ctaLabel: string;
+  /** What the CTA gets you, shown in place of ctaLabel on hover (pass 3 of the redesign). */
+  ctaOutcome?: string;
   order: number;
 }
 
@@ -68,6 +70,7 @@ export const PLANS: PlanDefinition[] = [
     price: {},
     cadence: "forever",
     ctaLabel: "Start free",
+    ctaOutcome: "27 competitions, free",
     order: 1,
   },
   {
@@ -93,6 +96,7 @@ export const PLANS: PlanDefinition[] = [
     cadence: "per month",
     badge: "Most popular",
     ctaLabel: "Go Pro",
+    ctaOutcome: "Picks before kick-off",
     order: 2,
   },
   {
@@ -110,6 +114,7 @@ export const PLANS: PlanDefinition[] = [
     price: { monthly: 12000, quarterly: 32400, yearly: 115200 },
     cadence: "per month",
     ctaLabel: "Go VIP",
+    ctaOutcome: "Live win probability",
     order: 3,
   },
 ];

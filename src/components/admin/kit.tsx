@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { AdminIcon, type AdminIconName } from "@/components/admin/admin-icons";
+import { OutcomeLabel } from "@/components/ui/primitives";
 
 /*
  * The admin's building blocks. One look across every page: mono uppercase
@@ -47,7 +48,7 @@ export function PageHeader({
   actions,
   children,
 }: {
-  eyebrow?: string;
+  eyebrow?: ReactNode;
   title: ReactNode;
   description?: ReactNode;
   actions?: ReactNode;
@@ -57,8 +58,8 @@ export function PageHeader({
     <header className="mb-6 border-b border-line pb-5 sm:mb-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="min-w-0">
-          {eyebrow && <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-brand">{eyebrow}</p>}
-          <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight sm:text-[28px]">{title}</h1>
+          {eyebrow && <p className="font-mono text-2xs uppercase tracking-[0.16em] text-brand">{eyebrow}</p>}
+          <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight sm:text-3xl">{title}</h1>
           {description && <p className="mt-2 max-w-3xl text-sm leading-relaxed text-ink-muted">{description}</p>}
         </div>
         {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
@@ -72,10 +73,81 @@ export function PageHeader({
 export function SectionLabel({ children, aside }: { children: ReactNode; aside?: ReactNode }) {
   return (
     <div className="mb-3 flex items-center gap-3">
-      <h2 className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-ink-dim">{children}</h2>
+      <h2 className="font-mono text-2xs uppercase tracking-[0.16em] text-ink-dim">{children}</h2>
       <span className="h-px flex-1 bg-line" aria-hidden />
       {aside}
     </div>
+  );
+}
+
+/**
+ * Secondary content below the main grid, collapsed to one labelled row so the
+ * first screen is the numbers and what needs doing. Native <details>, so it
+ * works without JS and keeps its content searchable with find-in-page.
+ */
+export function Collapsible({
+  title,
+  meta,
+  defaultOpen = false,
+  children,
+}: {
+  title: ReactNode;
+  meta?: ReactNode;
+  defaultOpen?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <details className="group" open={defaultOpen}>
+      <summary className="flex min-h-11 cursor-pointer list-none items-center gap-3 rounded-lg [&::-webkit-details-marker]:hidden">
+        <h2 className="font-mono text-2xs uppercase tracking-[0.16em] text-ink-muted transition-colors group-hover:text-ink">{title}</h2>
+        {meta && <span className="font-mono text-2xs text-ink-dim">{meta}</span>}
+        <span className="h-px flex-1 bg-line" aria-hidden />
+        <span className="flex items-center gap-1 text-2xs font-medium text-ink-dim transition-colors group-hover:text-ink">
+          <span className="group-open:hidden">Show</span>
+          <span className="hidden group-open:inline">Hide</span>
+          <svg viewBox="0 0 20 20" className="size-3.5 transition-transform duration-200 group-open:rotate-180" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+            <path d="m5 8 5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </span>
+      </summary>
+      <div className="pt-3">{children}</div>
+    </details>
+  );
+}
+
+/* ------------------------------------------------------------------ actions */
+
+/**
+ * Header actions. A screen has exactly one `primary`; everything else is the
+ * quiet outline style so the one filled button is where the eye goes.
+ */
+export function ActionLink({
+  href,
+  icon,
+  primary = false,
+  outcome,
+  children,
+}: {
+  href: string;
+  icon?: AdminIconName;
+  primary?: boolean;
+  /** What the click is worth right now, shown in place of the label on hover. */
+  outcome?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      className={`press ${outcome ? "cta" : ""} h-9 items-center gap-2 rounded-lg px-3.5 text-xs font-semibold transition-colors ${
+        primary
+          ? "inline-flex bg-brand text-brand-ink hover:bg-brand-strong"
+          : // Phones get the one primary only; the rest are a tap away in the menu and ⌘K.
+            "hidden border border-line bg-surface text-ink-muted hover:border-line-strong hover:text-ink sm:inline-flex"
+      }`}
+    >
+      {icon && <AdminIcon name={icon} className={`cta-icon size-3.5 shrink-0 ${primary ? "" : "text-ink-dim"}`} />}
+      {outcome ? <OutcomeLabel outcome={outcome}>{children}</OutcomeLabel> : children}
+    </Link>
   );
 }
 
@@ -103,8 +175,8 @@ export function Panel({
       {(title || action) && (
         <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3 sm:px-5">
           <div className="flex min-w-0 items-baseline gap-2.5">
-            {title && <h3 className="truncate text-[13px] font-semibold text-ink">{title}</h3>}
-            {meta && <span className="truncate font-mono text-[10.5px] uppercase tracking-[0.12em] text-ink-dim">{meta}</span>}
+            {title && <h3 className="truncate text-sm font-semibold text-ink">{title}</h3>}
+            {meta && <span className="truncate font-mono text-2xs uppercase tracking-[0.12em] text-ink-dim">{meta}</span>}
           </div>
           {action}
         </div>
@@ -116,7 +188,7 @@ export function Panel({
 
 export function PanelLink({ href, children = "Open" }: { href: string; children?: ReactNode }) {
   return (
-    <Link href={href} className="flex shrink-0 items-center gap-1 text-[11px] font-medium text-ink-dim transition-colors hover:text-brand">
+    <Link href={href} className="flex shrink-0 items-center gap-1 text-2xs font-medium text-ink-dim transition-colors hover:text-brand">
       {children} <AdminIcon name="arrow" className="size-3" />
     </Link>
   );
@@ -137,7 +209,7 @@ export interface Delta {
 
 export function DeltaText({ delta }: { delta: Delta }) {
   if (delta.change === null || !Number.isFinite(delta.change)) {
-    return <span className="font-mono text-[10.5px] text-ink-dim">— {delta.against}</span>;
+    return <span className="font-mono text-2xs text-ink-dim">— {delta.against}</span>;
   }
   const up = delta.change > 0;
   const flat = Math.abs(delta.change) < (delta.points ? 0.0005 : 0.005);
@@ -146,7 +218,7 @@ export function DeltaText({ delta }: { delta: Delta }) {
   const size = Math.abs(delta.change);
   const pct = delta.points ? `${(size * 100).toFixed(1)} pts` : size >= 10 ? `${Math.round(size)}×` : `${Math.round(size * 100)}%`;
   return (
-    <span className="font-mono text-[10.5px]">
+    <span className="font-mono text-2xs">
       <span className={tone}>
         {flat ? (delta.points ? "±0 pts" : "±0%") : `${up ? "▲" : "▼"} ${pct}`}
       </span>{" "}
@@ -180,20 +252,20 @@ export function KpiTile({
   const body = (
     <>
       <div className="flex items-center justify-between gap-2">
-        <p className="truncate font-mono text-[10.5px] uppercase tracking-[0.14em] text-ink-dim">{label}</p>
+        <p className="truncate font-mono text-2xs uppercase tracking-[0.14em] text-ink-dim">{label}</p>
         {spark && spark.length > 1 ? (
           <Sparkline values={spark} tone={tone} width={44} height={16} />
         ) : (
           icon && <AdminIcon name={icon} className={`size-3.5 shrink-0 ${TONE_TEXT[tone]}`} />
         )}
       </div>
-      <p className="mt-3 truncate font-mono text-[26px] font-medium leading-none tracking-tight text-ink">
+      <p className="mt-3 truncate font-mono text-xl font-medium leading-none tracking-tight text-ink sm:text-2xl xl:text-xl 2xl:text-2xl" title={value}>
         {value}
         {unit && <span className="ml-1 text-sm text-ink-dim">{unit}</span>}
       </p>
       <div className="mt-3 min-h-4 space-y-1">
         {delta && <DeltaText delta={delta} />}
-        {hint && <p className="text-[11px] leading-snug text-ink-dim">{hint}</p>}
+        {hint && <p className="text-2xs leading-snug text-ink-dim">{hint}</p>}
       </div>
     </>
   );
@@ -233,7 +305,7 @@ export function StatusDot({ tone }: { tone: KitTone }) {
 /** A labelled state: dot plus word, never colour alone. */
 export function StatusPill({ tone, children }: { tone: KitTone; children: ReactNode }) {
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded border border-line px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.1em] ${TONE_TEXT[tone]}`}>
+    <span className={`inline-flex items-center gap-1.5 rounded border border-line px-1.5 py-0.5 font-mono text-2xs uppercase tracking-[0.1em] ${TONE_TEXT[tone]}`}>
       <StatusDot tone={tone} />
       {children}
     </span>
@@ -361,7 +433,7 @@ export function AlertList({ alerts }: { alerts: Alert[] }) {
             <AdminIcon name="alert" className={`mt-0.5 size-3.5 shrink-0 ${TONE_TEXT[a.tone]}`} />
             <span className="min-w-0 flex-1">
               <span className="block text-xs font-medium text-ink">{a.title}</span>
-              {a.detail && <span className="mt-0.5 block text-[11px] leading-snug text-ink-dim">{a.detail}</span>}
+              {a.detail && <span className="mt-0.5 block text-2xs leading-snug text-ink-dim">{a.detail}</span>}
             </span>
             {a.href && <AdminIcon name="arrow" className="mt-0.5 size-3 shrink-0 text-ink-dim" />}
           </>
@@ -399,8 +471,8 @@ export function FeedRow({
   const body = (
     <>
       <div className="min-w-0">
-        <p className="truncate text-[13px] text-ink">{primary}</p>
-        {secondary && <p className="mt-0.5 truncate text-[11px] text-ink-dim">{secondary}</p>}
+        <p className="truncate text-sm text-ink">{primary}</p>
+        {secondary && <p className="mt-0.5 truncate text-2xs text-ink-dim">{secondary}</p>}
       </div>
       {aside && <div className="shrink-0 text-right">{aside}</div>}
     </>

@@ -19,7 +19,7 @@ export function PlanTag({ plan, className = "" }: { plan: PlanClass; className?:
   return (
     <span
       title={plan === "vip" ? "VIP" : "Pro"}
-      className={`inline-flex shrink-0 items-center rounded-full px-1.5 py-0 text-[9px] font-bold uppercase leading-[16px] tracking-[0.12em] ${TONE[plan]} ${className}`}
+      className={`inline-flex shrink-0 items-center rounded-full px-1.5 py-0 text-2xs font-bold uppercase leading-[16px] tracking-[0.12em] ${TONE[plan]} ${className}`}
     >
       {plan}
     </span>

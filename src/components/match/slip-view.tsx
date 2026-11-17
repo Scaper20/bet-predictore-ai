@@ -256,7 +256,7 @@ export function SlipView({ variant = "page" }: { variant?: "page" | "sheet" }) {
           return (
             <div key={l.matchId} className="card flex items-center gap-3 px-4 py-3">
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[11px] text-ink-dim">
+                <p className="truncate text-2xs text-ink-dim">
                   {l.league} · <LocalTime iso={l.kickoff} kind="relative" /> <LocalTime iso={l.kickoff} />
                 </p>
                 <Link href={matchPath(l.matchId)} className="mt-0.5 block truncate text-sm font-semibold hover:text-brand">
@@ -265,7 +265,7 @@ export function SlipView({ variant = "page" }: { variant?: "page" | "sheet" }) {
                 <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
                   <span className="truncate text-sm text-brand">{l.label}</span>
                   {sportyPrice(l) && (
-                    <span className="tnum rounded bg-surface-2 px-1.5 py-0.5 text-[11px] text-ink-muted">
+                    <span className="tnum rounded bg-surface-2 px-1.5 py-0.5 text-2xs text-ink-muted">
                       Market <span className="font-semibold text-ink">{odds(sportyPrice(l)!)}</span>
                     </span>
                   )}
@@ -305,7 +305,7 @@ export function SlipView({ variant = "page" }: { variant?: "page" | "sheet" }) {
 
           <div className={`${sheet ? "" : "mt-5"} space-y-4`}>
             <div>
-              <p className="flex items-center justify-between gap-2 text-[10px] uppercase tracking-wider text-ink-dim">
+              <p className="flex items-center justify-between gap-2 text-2xs uppercase tracking-wider text-ink-dim">
                 Chance all {legs.length} land
                 <RiskBadge pick={{ market: "combo", probability: acc.probability }} />
               </p>
@@ -320,13 +320,13 @@ export function SlipView({ variant = "page" }: { variant?: "page" | "sheet" }) {
             {usingRealOdds && (
             <dl className="grid grid-cols-2 gap-4 border-t border-line pt-4">
               <div>
-                <dt className="text-[10px] uppercase tracking-wider text-ink-dim">
+                <dt className="text-2xs uppercase tracking-wider text-ink-dim">
                   Combined price
                 </dt>
                 <dd className="tnum mt-0.5 text-lg font-bold">{odds(acc.decimalOdds)}</dd>
               </div>
               <div>
-                <dt className="text-[10px] uppercase tracking-wider text-ink-dim">
+                <dt className="text-2xs uppercase tracking-wider text-ink-dim">
                   Value vs fair
                 </dt>
                 <dd
@@ -342,7 +342,7 @@ export function SlipView({ variant = "page" }: { variant?: "page" | "sheet" }) {
             )}
 
             {fetchedAny && (
-              <p className="text-[11px] leading-relaxed text-ink-dim">
+              <p className="text-2xs leading-relaxed text-ink-dim">
                 {pricedAt ? (
                   <>
                     SportyBet prices as of <LocalTime iso={new Date(pricedAt).toISOString()} />.{" "}
@@ -362,7 +362,7 @@ export function SlipView({ variant = "page" }: { variant?: "page" | "sheet" }) {
           {(state === "loading" && !usingRealOdds) || (usingRealOdds && worst?.verdict.rating === "no-bet") || correlated || legs.length >= 5 ? (
           <div className="mt-5 space-y-3 border-t border-line pt-5">
             {state === "loading" && !usingRealOdds ? (
-              <p className="text-[11px] leading-relaxed text-ink-dim">
+              <p className="text-2xs leading-relaxed text-ink-dim">
                 Reading current market prices for these selections…
               </p>
             ) : !usingRealOdds ? null : (
@@ -370,7 +370,7 @@ export function SlipView({ variant = "page" }: { variant?: "page" | "sheet" }) {
               worst.verdict.rating === "no-bet" && (
                 <div className="rounded-lg border border-rose/25 bg-rose/5 p-3">
                   <Badge tone="rose">Weakest pick</Badge>
-                  <p className="mt-2 text-[11px] leading-relaxed text-ink-muted">
+                  <p className="mt-2 text-2xs leading-relaxed text-ink-muted">
                     <strong className="font-semibold text-ink">{worst.leg.label}</strong> on{" "}
                     {worst.leg.fixture} is priced too short.
                   </p>
@@ -381,7 +381,7 @@ export function SlipView({ variant = "page" }: { variant?: "page" | "sheet" }) {
             {correlated && (
               <div className="rounded-lg border border-amber/25 bg-amber/5 p-3">
                 <Badge tone="amber">Linked picks</Badge>
-                <p className="mt-2 text-[11px] leading-relaxed text-ink-muted">
+                <p className="mt-2 text-2xs leading-relaxed text-ink-muted">
                   Two or more of these are in the same competition on the same day. The maths here
                   assumes picks are independent, so the real chance of them all landing differs from
                   the number above.
@@ -392,7 +392,7 @@ export function SlipView({ variant = "page" }: { variant?: "page" | "sheet" }) {
             {legs.length >= 5 && (
               <div className="rounded-lg border border-rose/25 bg-rose/5 p-3">
                 <Badge tone="rose">Long combo</Badge>
-                <p className="mt-2 text-[11px] leading-relaxed text-ink-muted">
+                <p className="mt-2 text-2xs leading-relaxed text-ink-muted">
                   At {legs.length} picks this lands roughly {percent(acc.probability, 2)} of the
                   time. Every pick you add multiplies the chance of the combo going wrong, so a long
                   combo looks exciting because it almost never lands.

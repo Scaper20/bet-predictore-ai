@@ -208,7 +208,6 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
       </h1>
       <LiveMatchProvider matchId={match.id} initial={liveSnapshot(match)}>
       <header className="relative overflow-hidden border-b border-line bg-shell">
-        <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_80%_at_50%_-10%,color-mix(in_oklab,var(--color-brand)_10%,transparent),transparent_70%)]" />
         <div className={`${containerClass()} relative py-5 sm:py-8`}>
           <div className="mx-auto max-w-5xl">
             <div className="flex items-center gap-2.5">
@@ -247,7 +246,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
                 {live ? (
                   <LiveProgress />
                 ) : (
-                  <p className="mt-2 text-[11px] text-ink-dim sm:text-xs">
+                  <p className="mt-2 text-2xs text-ink-dim sm:text-xs">
                     <LocalTime iso={match.kickoff} kind="day" />
                   </p>
                 )}
@@ -256,7 +255,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
             </div>
 
             <div className="mx-auto mt-6 max-w-xl sm:mt-8">
-              <div className="mb-2 flex items-center justify-between text-[10.5px] font-semibold uppercase tracking-[0.12em] text-ink-dim">
+              <div className="mb-2 flex items-center justify-between text-2xs font-semibold uppercase tracking-[0.12em] text-ink-dim">
                 <span>Model&apos;s read</span>
                 {(venue || referee) && (
                   <span className="truncate pl-3 normal-case tracking-normal">
@@ -400,7 +399,7 @@ function Overview({
       <aside className="min-w-0 space-y-5 lg:sticky lg:top-[calc(var(--header-h)+4.5rem)]">
         <AddToSlip prediction={prediction} />
         <AskAboutMatch label={label} />
-        <p className="px-1 text-[11px] leading-relaxed text-ink-dim">
+        <p className="px-1 text-2xs leading-relaxed text-ink-dim">
           Model estimates, not facts. 18+, use responsibly.{" "}
           <Link href={sportPath("trackRecord")} className="text-ink-muted underline-offset-2 hover:underline">See our record</Link>
         </p>
@@ -557,7 +556,7 @@ function PlayerOfMatch({ details }: { details: MatchDetails }) {
   return (
     <section className="card relative overflow-hidden p-5">
       <div aria-hidden className="pointer-events-none absolute -right-10 -top-10 size-40 rounded-full bg-[radial-gradient(closest-side,color-mix(in_oklab,var(--color-brand)_14%,transparent),transparent)]" />
-      <p className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-ink-dim">Player of the match</p>
+      <p className="text-2xs font-semibold uppercase tracking-[0.12em] text-ink-dim">Player of the match</p>
       <div className="mt-2 flex items-center justify-between gap-4">
         <div className="min-w-0">
           <p className="truncate font-display text-lg font-bold sm:text-xl">{p.name}</p>

@@ -70,6 +70,12 @@ export function ScrollRow({
         role={label ? "group" : undefined}
         aria-label={label}
         onScroll={measure}
+        // Fade whichever edge still has content past it, rather than a hard clip.
+        style={{
+          maskImage: `linear-gradient(90deg, ${edges.start ? "transparent, black 2rem" : "black"}, ${
+            edges.end ? "black calc(100% - 2rem), transparent" : "black"
+          })`,
+        }}
         className={`no-scrollbar flex overflow-x-auto ${className}`}
       >
         {children}

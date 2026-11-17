@@ -185,7 +185,7 @@ export function ChatWidget() {
                   Oma
                   {vip && <Badge tone="violet">VIP priority</Badge>}
                 </span>
-                <span className="block text-[11px] text-ink-dim">KiqStat support</span>
+                <span className="block text-2xs text-ink-dim">KiqStat support</span>
               </span>
             </span>
             <span className="flex items-center gap-3">
@@ -288,7 +288,7 @@ export function ChatWidget() {
               </Button>
               </div>
               {thread.guest && (
-                <p className="text-[11px] text-ink-dim">
+                <p className="text-2xs text-ink-dim">
                   Have an account?{" "}
                   <Link href={`/account/login?next=${encodeURIComponent(pathname)}`} className="text-brand hover:underline">
                     Sign in

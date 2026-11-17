@@ -157,7 +157,7 @@ function Chip({ state, left, onOpen, onHide }: { state: OfferState; left: number
       <>
         <Star />
         <span className="text-xs font-semibold text-ink">{tierName(state.tier)} on</span>
-        {left !== null && <span className="tnum font-mono text-[11px] text-gold">{formatLeft(left)} left</span>}
+        {left !== null && <span className="tnum font-mono text-2xs text-gold">{formatLeft(left)} left</span>}
       </>
     ) : state.state === "offer" ? (
       <>
@@ -165,7 +165,7 @@ function Chip({ state, left, onOpen, onHide }: { state: OfferState; left: number
         <span className="text-xs font-semibold text-ink">
           {shortName(state.offer)} · {naira(state.offer.priceNaira)}
         </span>
-        {left !== null && <span className="tnum font-mono text-[11px] text-gold">{formatLeft(left)}</span>}
+        {left !== null && <span className="tnum font-mono text-2xs text-gold">{formatLeft(left)}</span>}
       </>
     ) : null;
   return (
@@ -192,7 +192,7 @@ function Chip({ state, left, onOpen, onHide }: { state: OfferState; left: number
 
 function Star() {
   return (
-    <span className="grid size-6 place-items-center rounded-full bg-gold text-[11px] font-black text-gold-ink" aria-hidden>
+    <span className="grid size-6 place-items-center rounded-full bg-gold text-2xs font-black text-gold-ink" aria-hidden>
       ★
     </span>
   );
@@ -228,7 +228,7 @@ function Sheet({ offer, signedIn, left, onClose }: { offer: PublicOffer; signedI
   const cta = `${offer.cta} · ${naira(offer.priceNaira)}`;
   const eyebrow = offer.audience === "new_visitors" ? "New here" : "Members' offer";
   return (
-    <div className="fixed inset-0 z-[65] flex items-end justify-center bg-black/60 backdrop-blur-sm animate-overlay-in sm:items-center sm:p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-[65] flex items-end justify-center glass-scrim animate-overlay-in sm:items-center sm:p-4" onClick={onClose}>
       <div
         ref={containerRef}
         role="dialog"
@@ -255,7 +255,7 @@ function Sheet({ offer, signedIn, left, onClose }: { offer: PublicOffer; signedI
             </svg>
           </button>
 
-          <p className="inline-flex items-center gap-1.5 rounded-full border border-gold/40 bg-gold/10 px-2.5 py-1 font-mono text-[10.5px] font-semibold uppercase tracking-[0.14em] text-gold">
+          <p className="inline-flex items-center gap-1.5 rounded-full border border-gold/40 bg-gold/10 px-2.5 py-1 font-mono text-2xs font-semibold uppercase tracking-[0.14em] text-gold">
             {eyebrow}
             {left !== null && (
               <>
@@ -311,7 +311,7 @@ function Sheet({ offer, signedIn, left, onClose }: { offer: PublicOffer; signedI
               Not now
             </button>
           </div>
-          <p className="text-center text-[11px] text-ink-dim">
+          <p className="text-center text-2xs text-ink-dim">
             {signedIn ? "Transfer, OPay, PalmPay, USSD or card." : "Takes a free account. 20 seconds."} Once per account.
           </p>
         </div>

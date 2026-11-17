@@ -23,7 +23,7 @@ export function PropsSection({ record, enabled, canSwitch }: { record: PropsReco
             they land about as often as they say, and at least as often as SportyBet&rsquo;s own price says (docs/props-backtest.md).
           </p>
         </div>
-        <span className={`rounded-full px-2.5 py-1 font-mono text-[10.5px] uppercase tracking-[0.14em] ${enabled ? "bg-brand/15 text-brand" : "bg-line text-ink-muted"}`}>
+        <span className={`rounded-full px-2.5 py-1 font-mono text-2xs uppercase tracking-[0.14em] ${enabled ? "bg-brand/15 text-brand" : "bg-line text-ink-muted"}`}>
           {enabled ? "Publishing" : `Shadow · day ${days}`}
         </span>
       </div>
@@ -35,7 +35,7 @@ export function PropsSection({ record, enabled, canSwitch }: { record: PropsReco
           <div className="grid gap-3 sm:grid-cols-3">
             {[["Landed", r.landed], ["We said", r.stated], ["SportyBet said", r.bookStated]].map(([label, v]) => (
               <div key={String(label)} className="rounded-lg border border-line p-4">
-                <p className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-ink-dim">{label}</p>
+                <p className="font-mono text-2xs uppercase tracking-[0.14em] text-ink-dim">{label}</p>
                 <p className="tnum mt-1 font-display text-2xl font-semibold">{pct(v as number | null)}</p>
               </div>
             ))}

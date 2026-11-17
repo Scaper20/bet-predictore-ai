@@ -47,13 +47,13 @@ export function Gate({
 function UpsellTeaser({ requires }: { requires: Tier }) {
   return (
     <LockedPreview>
-      <span className="rounded-full bg-violet/15 px-2.5 py-0.5 text-[10.5px] font-bold uppercase tracking-[0.14em] text-violet">
+      <span className="rounded-full bg-violet/15 px-2.5 py-0.5 text-2xs font-bold uppercase tracking-[0.14em] text-violet">
         {TIER_LABEL[requires]}
       </span>
       <p className="mt-2 font-display text-lg font-bold leading-snug text-ink">Get the full picture</p>
       <Link
         href={`/account/billing?plan=${TIER_PLAN[requires]}`}
-        className="glow-brand mt-4 inline-flex items-center gap-1.5 rounded-lg bg-brand px-5 py-2.5 text-sm font-bold text-brand-ink transition-colors hover:bg-brand-strong"
+        className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-brand px-5 py-2.5 text-sm font-bold text-brand-ink transition-colors hover:bg-brand-strong"
       >
         Unlock {TIER_LABEL[requires]} <span aria-hidden>→</span>
       </Link>

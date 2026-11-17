@@ -27,7 +27,7 @@ export function LockIcon({ className = "size-3.5" }: { className?: string }) {
 
 export function ProTag() {
   return (
-    <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-violet/15 px-2.5 py-1 text-[11px] font-bold tracking-wide text-violet">
+    <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-violet/15 px-2.5 py-1 text-2xs font-bold tracking-wide text-violet">
       <LockIcon className="size-3" /> PRO
     </span>
   );

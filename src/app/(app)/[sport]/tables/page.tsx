@@ -62,7 +62,7 @@ export default async function TablesPage({ searchParams }: { searchParams: Promi
                 {table.liveGames > 0 ? (
                   <Badge tone="live"><LiveDot /> Live · {table.liveGames} in play</Badge>
                 ) : (
-                  <span className="text-[11px] text-ink-dim">
+                  <span className="text-2xs text-ink-dim">
                     {table.updatedAt ? (
                       <>
                         Updated{" "}

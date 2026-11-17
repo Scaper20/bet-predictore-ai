@@ -198,8 +198,8 @@ export default async function AdminSportyBetPage() {
   return (
     <div className="max-w-4xl space-y-8">
       <div>
-        <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-brand">Product</p>
-        <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight sm:text-[28px]">SportyBet matching</h1>
+        <p className="font-mono text-2xs uppercase tracking-[0.16em] text-brand">Product</p>
+        <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight sm:text-3xl">SportyBet matching</h1>
         <p className="mt-1 text-sm text-ink-muted">
           Prices and booking codes come straight from SportyBet. Each of our fixtures is matched to SportyBet&rsquo;s
           event once and remembered. Clubs are learned by their Sportradar id, so a club matched once is never matched
@@ -257,7 +257,7 @@ export default async function AdminSportyBetPage() {
         {p.missing && <p className="text-xs text-amber">Migration 0067 hasn&rsquo;t been applied yet.</p>}
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="text-left text-[11px] uppercase tracking-wider text-ink-dim">
+            <thead className="text-left text-2xs uppercase tracking-wider text-ink-dim">
               <tr>
                 <th className="py-1.5 pr-3 font-medium">Method</th>
                 <th className="py-1.5 pr-3 text-right font-medium">Confirmed</th>
@@ -593,7 +593,7 @@ export default async function AdminSportyBetPage() {
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-xl border border-line bg-surface-2/60 p-3">
-      <p className="text-[11px] font-medium uppercase tracking-wider text-ink-dim">{label}</p>
+      <p className="text-2xs font-medium uppercase tracking-wider text-ink-dim">{label}</p>
       <p className="mt-1 font-mono text-base">{value}</p>
     </div>
   );

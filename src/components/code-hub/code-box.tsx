@@ -17,7 +17,7 @@ export function CodeBox({ code }: { code: string }) {
   return (
     <div className="flex items-center justify-between gap-3 rounded-xl border border-brand/30 bg-brand/8 px-4 py-3">
       <div>
-        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-dim">SportyBet code</p>
+        <p className="text-2xs font-semibold uppercase tracking-[0.16em] text-ink-dim">SportyBet code</p>
         <p className="mt-0.5 font-mono text-xl font-bold tracking-[0.12em] text-ink">{code}</p>
       </div>
       <button

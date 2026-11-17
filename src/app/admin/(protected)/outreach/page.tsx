@@ -59,8 +59,8 @@ export default async function AdminOutreachPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-brand">Growth</p>
-          <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight sm:text-[28px]">Outreach</h1>
+          <p className="font-mono text-2xs uppercase tracking-[0.16em] text-brand">Growth</p>
+          <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight sm:text-3xl">Outreach</h1>
           <p className="mt-1 max-w-2xl text-sm text-ink-muted">
             One-time emails to the whole user base — a personal check-in, plus segmented surveys. Every send is from
             Scaper personally, carries an unsubscribe link, and skips anyone who&rsquo;s opted out. Nothing here sends

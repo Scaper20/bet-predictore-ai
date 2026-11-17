@@ -51,9 +51,9 @@ export function DocPage({
           <div className="min-w-0 max-w-3xl space-y-12">
             {sections.map((s, i) => (
               <section key={s.id} id={s.id} className="scroll-reveal scroll-mt-[calc(var(--header-h)+1.5rem)]">
-                <p className="mb-2 font-mono text-[11px] font-semibold text-ink-dim">{String(i + 1).padStart(2, "0")}</p>
+                <p className="mb-2 font-mono text-2xs font-semibold text-ink-dim">{String(i + 1).padStart(2, "0")}</p>
                 <h2 className="font-display text-2xl font-bold sm:text-3xl">{s.title}</h2>
-                <div className="doc-body mt-4 space-y-4 text-[15px] leading-relaxed text-ink-muted">{s.body}</div>
+                <div className="doc-body mt-4 space-y-4 text-base leading-relaxed text-ink-muted">{s.body}</div>
               </section>
             ))}
             {footer}
@@ -84,7 +84,7 @@ export function DocCard({ title, children, href, cta }: { title: string; childre
 export function Example({ children }: { children: ReactNode }) {
   return (
     <div className="rounded-xl border border-brand/20 bg-brand/[0.05] px-4 py-3.5 text-sm leading-relaxed text-ink">
-      <span className="mr-2 rounded bg-brand/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-brand">Example</span>
+      <span className="mr-2 rounded bg-brand/15 px-1.5 py-0.5 text-2xs font-bold uppercase tracking-wider text-brand">Example</span>
       {children}
     </div>
   );

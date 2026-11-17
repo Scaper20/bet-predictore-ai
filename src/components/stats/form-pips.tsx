@@ -22,7 +22,7 @@ export function FormPips({
   /** Per-pip tooltip, e.g. "2-1 v Arsenal". */
   titles?: string[];
 }) {
-  const box = size === "sm" ? "size-4 text-[9px]" : "size-5 text-[10px]";
+  const box = size === "sm" ? "size-4 text-2xs" : "size-5 text-2xs";
   return (
     <span className="inline-flex items-center gap-1" aria-label={`Form, latest first: ${letters.join(" ")}`}>
       {letters.map((l, p) => (

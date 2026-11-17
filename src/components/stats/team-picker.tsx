@@ -103,7 +103,7 @@ function Search({ label, value, onPick }: { label: string; value?: Team; onPick:
       <div className="flex items-center gap-3 rounded-xl border border-brand/30 bg-brand/[0.06] px-3.5 py-3">
         <Crest src={value.crest} name={value.name} size={32} />
         <span className="min-w-0 flex-1">
-          <span className="block text-[10px] font-semibold uppercase tracking-wider text-ink-dim">{label}</span>
+          <span className="block text-2xs font-semibold uppercase tracking-wider text-ink-dim">{label}</span>
           <span className="block truncate font-semibold">{value.name}</span>
         </span>
         <button type="button" onClick={() => setOpen(true)} className="text-xs font-medium text-brand hover:underline">
@@ -153,7 +153,7 @@ function Search({ label, value, onPick }: { label: string; value?: Team; onPick:
               >
                 <Crest src={t.crest} name={t.name} size={24} />
                 <span className="min-w-0 flex-1 truncate font-medium">{t.name}</span>
-                {t.scope && <span className="shrink-0 text-[11px] capitalize text-ink-dim">{t.scope}</span>}
+                {t.scope && <span className="shrink-0 text-2xs capitalize text-ink-dim">{t.scope}</span>}
               </button>
             </li>
           ))}

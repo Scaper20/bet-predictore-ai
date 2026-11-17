@@ -64,7 +64,7 @@ export default async function OfferPage({ params, searchParams }: PageProps<"/of
         <div className="relative">
           {ent.passOnly && ent.passUntil ? (
             <>
-              <p className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.16em] text-gold">Pass on</p>
+              <p className="font-mono text-2xs font-semibold uppercase tracking-[0.16em] text-gold">Pass on</p>
               <h1 className="mt-2 font-display text-3xl font-bold tracking-tight">You&apos;re {tierName(ent.tier === "vip" ? "vip" : "pro")}</h1>
               <p className="mt-2 text-sm text-ink-muted">
                 Until{" "}
@@ -74,7 +74,7 @@ export default async function OfferPage({ params, searchParams }: PageProps<"/of
             </>
           ) : offer && check.ok ? (
             <>
-              <p className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.16em] text-gold">
+              <p className="font-mono text-2xs font-semibold uppercase tracking-[0.16em] text-gold">
                 {tierName(offer.tier)} · {durationLabel(offer.hours)}
               </p>
               <h1 className="mt-2 font-display text-3xl font-bold tracking-tight">{offer.headline}</h1>
@@ -122,7 +122,7 @@ function SignedOutOffer({ offer }: { offer: Offer }) {
           className="pointer-events-none absolute inset-x-0 top-0 h-48 bg-[radial-gradient(120%_100%_at_50%_0%,color-mix(in_oklab,var(--color-gold)_22%,transparent),transparent_70%)]"
         />
         <div className="relative">
-          <p className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.16em] text-gold">
+          <p className="font-mono text-2xs font-semibold uppercase tracking-[0.16em] text-gold">
             {tierName(offer.tier)} · {durationLabel(offer.hours)}
           </p>
           <h1 className="mt-2 font-display text-3xl font-bold tracking-tight">{offer.headline}</h1>

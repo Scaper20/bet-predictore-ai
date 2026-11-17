@@ -60,7 +60,7 @@ export function ChipTabs({
                 }`}
               >
                 {s.label}
-                {s.pro && <span className="rounded bg-violet/15 px-1 text-[9px] font-bold uppercase tracking-wider text-violet">Pro</span>}
+                {s.pro && <span className="rounded bg-violet/15 px-1 text-2xs font-bold uppercase tracking-wider text-violet">Pro</span>}
               </button>
             );
           })}

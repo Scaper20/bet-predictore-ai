@@ -10,6 +10,7 @@ import { SlipButton, TrackedSlipsWatcher } from "@/components/layout/slip-button
 import { AskButton } from "@/components/ask/ask-button";
 import { SportSwitch } from "@/components/layout/sport-switch";
 import { NavSearch } from "@/components/layout/nav-search";
+import { CommandPalette } from "@/components/layout/command-palette";
 import { MegaNav } from "@/components/layout/mega-nav";
 import { openNotifications } from "@/components/layout/nav-actions";
 import { useEntitlement } from "@/components/entitlements/entitlement-provider";
@@ -55,7 +56,7 @@ export function SiteHeader() {
 
   return (
     <header data-site-header
-      className="sticky top-0 z-50 border-b border-line bg-canvas/90 backdrop-blur-xl"
+      className="sticky top-0 z-50 border-b border-line glass-bar"
       // Installed on iOS the status bar is translucent and the page runs up
       // under it (layout.tsx); this keeps the header clear of the notch. Zero
       // everywhere else.
@@ -79,6 +80,7 @@ export function SiteHeader() {
         <div className="hidden min-w-0 flex-1 lg:block">
           <NavSearch sport={sport} />
         </div>
+        <CommandPalette sport={sport} />
 
         <TrackedSlipsWatcher />
 
@@ -114,7 +116,7 @@ export function SiteHeader() {
               >
                 Sign in
               </Link>
-              <ButtonLink href="/account/sign-up" variant="primary" className="px-4 py-2">
+              <ButtonLink href="/account/sign-up" variant="primary" className="px-4 py-2" outcome="27 competitions, free">
                 Create free account
               </ButtonLink>
             </>

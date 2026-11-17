@@ -8,9 +8,11 @@ import type {
 } from "@/lib/admin-dashboards";
 import { HUB_MIN_TARGET_SHARE } from "@/lib/admin-dashboards";
 import {
-  AlertList, BarList, EmptyRow, FeedRow, KeyValues, KpiTile, Meter, Panel, PanelLink, SectionLabel, SegmentBar, StatusPill,
+  ActionLink, AlertList, BarList, Collapsible, EmptyRow, FeedRow, KeyValues, KpiTile, Meter, Panel, PanelLink, SegmentBar, StatusPill,
   timeAgo, type KitTone,
 } from "@/components/admin/kit";
+import type { AdminIconName } from "@/components/admin/admin-icons";
+import type { DashboardView } from "@/lib/admin-access";
 import { TrendChart } from "@/components/admin/trend-chart";
 
 /**
@@ -59,18 +61,18 @@ function HubPanel({ hub, ctx }: { hub: HubCodeCheck[]; ctx: DashContext }) {
             return (
               <li key={c.tier} className="border-t border-line px-4 py-3 first:border-t-0 sm:px-5">
                 <div className="flex items-baseline justify-between gap-3">
-                  <span className="font-mono text-[10.5px] uppercase tracking-[0.12em] text-ink-muted">{c.name}</span>
+                  <span className="font-mono text-2xs uppercase tracking-[0.12em] text-ink-muted">{c.name}</span>
                   <span className="tnum font-mono text-sm text-ink">
                     {c.odds.toFixed(2)} <span className="text-ink-dim">/ {c.target}</span>
                   </span>
                 </div>
                 <div className="mt-2 flex items-center gap-3">
                   <Meter value={Math.min(1, c.share)} tone={short ? "amber" : "brand"} label={`${c.name}: ${Math.round(c.share * 100)}% of target`} />
-                  <span className={`tnum w-10 shrink-0 text-right font-mono text-[10.5px] ${short ? "text-amber" : "text-ink-dim"}`}>
+                  <span className={`tnum w-10 shrink-0 text-right font-mono text-2xs ${short ? "text-amber" : "text-ink-dim"}`}>
                     {Math.round(c.share * 100)}%
                   </span>
                 </div>
-                <p className="mt-1.5 text-[11px] text-ink-dim">
+                <p className="mt-1.5 text-2xs text-ink-dim">
                   {c.legs} legs · {c.booked ? "booked" : <span className="text-amber">not booked</span>}
                   {short && <span className="text-amber"> · short of its odds</span>}
                 </p>
@@ -123,7 +125,7 @@ function TicketsPanel({ t, ctx, title = "Support queue" }: { t: SupportDashboard
             aside={
               <span className="flex flex-col items-end gap-1">
                 <StatusPill tone={q.status === "open" ? (q.ageH >= 24 ? "rose" : "amber") : "cyan"}>{q.status}</StatusPill>
-                <span className="tnum font-mono text-[10px] text-ink-dim">{ageText(q.ageH)}</span>
+                <span className="tnum font-mono text-2xs text-ink-dim">{ageText(q.ageH)}</span>
               </span>
             }
           />
@@ -235,14 +237,13 @@ export function OwnerView({ d, ctx }: { d: OwnerDashboard; ctx: DashContext }) {
             ]}
           />
           <div className="mt-6">
-            <p className="mb-3 font-mono text-[10.5px] uppercase tracking-[0.14em] text-ink-dim">Revenue by plan · 30d</p>
+            <p className="mb-3 font-mono text-2xs uppercase tracking-[0.14em] text-ink-dim">Revenue by plan · 30d</p>
             <BarList rows={d.revenueByPlan.map((r) => ({ ...r, display: naira(r.value) }))} tone="gold" empty="No revenue in the last 30 days." />
           </div>
         </Panel>
       </Grid>
 
-      <div>
-        <SectionLabel>Operations</SectionLabel>
+      <Collapsible title="Operations" meta="code hub · pipeline · payments · team">
         <Grid cols="lg:grid-cols-2 xl:grid-cols-4">
           <HubPanel hub={d.hub} ctx={ctx} />
           <PipelinePanel ingest={d.ingest} ctx={ctx} />
@@ -275,7 +276,7 @@ export function OwnerView({ d, ctx }: { d: OwnerDashboard; ctx: DashContext }) {
             )}
           </Panel>
         </Grid>
-      </div>
+      </Collapsible>
     </div>
   );
 }
@@ -358,13 +359,12 @@ export function ProductView({ d, ctx }: { d: ProductDashboard; ctx: DashContext 
         </Panel>
       </Grid>
 
-      <div>
-        <SectionLabel>Voice of the user</SectionLabel>
+      <Collapsible title="Voice of the user" meta="feedback · tickets">
         <Grid cols="lg:grid-cols-2">
           <FeedbackPanel f={d.feedback} ctx={ctx} />
           <TicketsPanel t={d.tickets} ctx={ctx} title="Support tickets" />
         </Grid>
-      </div>
+      </Collapsible>
     </div>
   );
 }
@@ -400,7 +400,7 @@ export function MarketingView({ d, ctx }: { d: MarketingDashboard; ctx: DashCont
         </Panel>
         <Panel title="Channels" meta="signups · 30d" action={<Link_ ctx={ctx} href="/admin/traffic" />}>
           <BarList rows={d.channels} tone="cyan" empty="No signups in the last 30 days." />
-          <p className="mt-4 text-[11px] leading-snug text-ink-dim">
+          <p className="mt-4 text-2xs leading-snug text-ink-dim">
             First touch: a tagged link wins, then the referring site. &ldquo;Direct&rdquo; is typed-in, app and untagged traffic.
           </p>
         </Panel>
@@ -437,18 +437,17 @@ export function MarketingView({ d, ctx }: { d: MarketingDashboard; ctx: DashCont
         </Panel>
       </Grid>
 
-      <div>
-        <SectionLabel>Owned channels</SectionLabel>
+      <Collapsible title="Owned channels" meta="email · audience">
         <Grid cols="lg:grid-cols-3">
           <Panel title="Email campaigns" meta="all time" action={<Link_ ctx={ctx} href="/admin/outreach" />} className="lg:col-span-2" flush>
             {d.emails.length === 0 ? (
               <EmptyRow>No campaigns sent yet.</EmptyRow>
             ) : (
-              <table className="w-full text-[13px]">
+              <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-line text-left">
                     {["Campaign", "Sent", "Queued", "Failed", ""].map((h, i) => (
-                      <th key={i} className="px-4 py-2 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-ink-dim sm:px-5">
+                      <th key={i} className="px-4 py-2 font-mono text-2xs font-medium uppercase tracking-[0.14em] text-ink-dim sm:px-5">
                         {h}
                       </th>
                     ))}
@@ -485,7 +484,7 @@ export function MarketingView({ d, ctx }: { d: MarketingDashboard; ctx: DashCont
             />
           </Panel>
         </Grid>
-      </div>
+      </Collapsible>
     </div>
   );
 }
@@ -523,16 +522,17 @@ export function SupportView({ d, ctx }: { d: SupportDashboard; ctx: DashContext 
                 key={i}
                 primary={ctx.showEmail(s.email) ?? "—"}
                 secondary={`${s.plan} · ${timeAgo(s.at)}`}
-                aside={<span className="tnum font-mono text-[10.5px] text-ink-dim">{s.attempts} {s.attempts === 1 ? "try" : "tries"}</span>}
+                aside={<span className="tnum font-mono text-2xs text-ink-dim">{s.attempts} {s.attempts === 1 ? "try" : "tries"}</span>}
               />
             ))
           )}
-          <p className="border-t border-line px-4 py-3 text-[11px] leading-snug text-ink-dim sm:px-5">
+          <p className="border-t border-line px-4 py-3 text-2xs leading-snug text-ink-dim sm:px-5">
             A friendly note often turns these into customers: a card that needed 3-D Secure, a bank that declined, a mobile money prompt that timed out.
           </p>
         </Panel>
       </Grid>
 
+      <Collapsible title="Feedback and gifts" meta={`${d.feedback.count30d} notes · ${d.gifts.length} gifts`}>
       <Grid cols="lg:grid-cols-2">
         <FeedbackPanel f={d.feedback} ctx={ctx} />
         <Panel title="Active gifts" meta="expiring soonest" action={<Link_ ctx={ctx} href="/admin/users" />} flush>
@@ -547,7 +547,7 @@ export function SupportView({ d, ctx }: { d: SupportDashboard; ctx: DashContext 
                 aside={
                   <span className="flex flex-col items-end gap-1">
                     <StatusPill tone={g.tier === "vip" ? "gold" : "brand"}>{g.tier}</StatusPill>
-                    <span className="tnum font-mono text-[10px] text-ink-dim">
+                    <span className="tnum font-mono text-2xs text-ink-dim">
                       to {new Date(g.expires).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
                     </span>
                   </span>
@@ -557,6 +557,65 @@ export function SupportView({ d, ctx }: { d: SupportDashboard; ctx: DashContext 
           )}
         </Panel>
       </Grid>
+      </Collapsible>
     </div>
+  );
+}
+
+/* ------------------------------------------------------------ header actions */
+
+interface QuickAction {
+  href: string;
+  label: string;
+  icon: AdminIconName;
+}
+
+/**
+ * Each role's jobs, as header buttons. The first is the role's one primary
+ * action (filled); the rest are quiet. Links the viewer can't open are
+ * dropped, and if the primary is one of them the next openable action is
+ * promoted.
+ */
+const ACTIONS: Record<DashboardView, QuickAction[]> = {
+  owner: [
+    { href: "/admin/renewals", label: "Chase renewals", icon: "pulse" },
+    { href: "/admin/payments", label: "Payments", icon: "card" },
+    { href: "/admin/offers", label: "Offers", icon: "star" },
+    { href: "/admin/traffic", label: "Traffic", icon: "chart" },
+  ],
+  product: [
+    { href: "/admin/data-health", label: "Check data health", icon: "pulse" },
+    { href: "/admin/model-performance", label: "Model", icon: "target" },
+    { href: "/admin/publishing", label: "Publishing", icon: "power" },
+    { href: "/admin/parsebot", label: "Code Hub", icon: "code" },
+  ],
+  marketing: [
+    { href: "/admin/outreach", label: "New campaign", icon: "send" },
+    { href: "/admin/traffic", label: "Traffic", icon: "chart" },
+    { href: "/admin/offers", label: "Offers", icon: "star" },
+    { href: "/admin/partners", label: "Partners", icon: "handshake" },
+  ],
+  support: [
+    { href: "/admin/tickets", label: "Answer tickets", icon: "inbox" },
+    { href: "/admin/users", label: "Find a user", icon: "users" },
+    { href: "/admin/feedback", label: "Feedback", icon: "star" },
+  ],
+};
+
+export function DashboardActions({ view, ctx, outcome }: { view: DashboardView; ctx: DashContext; outcome?: string }) {
+  const actions = ACTIONS[view].filter((a) => ctx.canOpen(a.href));
+  if (actions.length === 0) return null;
+  const [primary, ...rest] = actions;
+  return (
+    <>
+      {rest.map((a) => (
+        <ActionLink key={a.href} href={a.href} icon={a.icon}>
+          {a.label}
+        </ActionLink>
+      ))}
+      <ActionLink href={primary.href} icon={primary.icon} primary outcome={outcome}>
+        {primary.label}
+      </ActionLink>
+    </>
   );
 }

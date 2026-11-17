@@ -14,7 +14,7 @@ export function MatchTimeline({ match, events }: { match: Match; events: Timelin
     <section className="card overflow-hidden">
       <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3 sm:px-5">
         <h2 className="font-sans text-sm font-semibold uppercase tracking-wider text-ink-muted">Match events</h2>
-        <span className="text-[11px] text-ink-dim">
+        <span className="text-2xs text-ink-dim">
           {match.home.name} · {match.away.name}
         </span>
       </div>
@@ -23,7 +23,7 @@ export function MatchTimeline({ match, events }: { match: Match; events: Timelin
         {shown.map((e, i) =>
           e.type === "half" ? (
             <li key={i} className="relative my-3 flex justify-center" style={{ ["--i" as string]: i }}>
-              <span className="relative z-10 rounded-full border border-line bg-surface px-3 py-1 text-[10.5px] font-semibold uppercase tracking-wider text-ink-muted">
+              <span className="relative z-10 rounded-full border border-line bg-surface px-3 py-1 text-2xs font-semibold uppercase tracking-wider text-ink-muted">
                 {e.detail === "HT" ? "Half-time" : e.detail === "FT" ? "Full-time" : (e.detail ?? "Break")}
               </span>
             </li>
@@ -72,10 +72,10 @@ function EventRow({ e, index }: { e: TimelineEvent; index: number }) {
     <li className="relative grid grid-cols-[minmax(0,1fr)_3.25rem_minmax(0,1fr)] items-center gap-2 py-1.5" style={{ ["--i" as string]: index }}>
       <div className="min-w-0">{home && body}</div>
       <div className="relative z-10 flex flex-col items-center gap-1">
-        <span className="tnum rounded-full bg-surface px-1.5 font-mono text-[11px] text-ink-muted">{minuteLabel(e)}</span>
+        <span className="tnum rounded-full bg-surface px-1.5 font-mono text-2xs text-ink-muted">{minuteLabel(e)}</span>
         <Icon e={e} />
         {e.type === "goal" && e.score && (
-          <span className="tnum rounded-full bg-brand px-1.5 py-px font-mono text-[10.5px] font-bold text-brand-ink">
+          <span className="tnum rounded-full bg-brand px-1.5 py-px font-mono text-2xs font-bold text-brand-ink">
             {e.score[0]}-{e.score[1]}
           </span>
         )}
@@ -89,7 +89,7 @@ function Icon({ e }: { e: TimelineEvent }) {
   if (e.type === "goal") return <BallIcon />;
   if (e.type === "card") return <CardIcon red={e.card !== "yellow"} />;
   if (e.type === "sub") return <span className="text-xs font-bold text-brand" aria-hidden>⇅</span>;
-  if (e.type === "var") return <span className="rounded bg-violet/20 px-1 text-[9px] font-bold text-violet" aria-hidden>VAR</span>;
+  if (e.type === "var") return <span className="rounded bg-violet/20 px-1 text-2xs font-bold text-violet" aria-hidden>VAR</span>;
   if (e.type === "missed-penalty") return <span className="text-xs font-bold text-rose" aria-hidden>✕</span>;
   return null;
 }

@@ -13,8 +13,8 @@ export default async function AdminMaintenancePage() {
   return (
     <div className="max-w-2xl space-y-8">
       <div>
-        <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-brand">Product</p>
-        <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight sm:text-[28px]">Maintenance mode</h1>
+        <p className="font-mono text-2xs uppercase tracking-[0.16em] text-brand">Product</p>
+        <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight sm:text-3xl">Maintenance mode</h1>
         <p className="mt-1 text-sm text-ink-muted">
           Blocks the public site with a &ldquo;we&rsquo;ll be back soon&rdquo; page while you make major
           changes. Signed-in admins still see the real site, and the admin portal,

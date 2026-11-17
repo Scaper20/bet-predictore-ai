@@ -29,8 +29,8 @@ export default async function ModelPerformancePage() {
     return (
       <div className="space-y-6">
         <div>
-          <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-brand">Product</p>
-          <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight sm:text-[28px]">Model performance</h1>
+          <p className="font-mono text-2xs uppercase tracking-[0.16em] text-brand">Product</p>
+          <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight sm:text-3xl">Model performance</h1>
         </div>
         {engineSection}
         <EmptyState
@@ -45,8 +45,8 @@ export default async function ModelPerformancePage() {
   return (
     <div className="space-y-8">
       <div>
-        <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-brand">Product</p>
-        <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight sm:text-[28px]">Model performance</h1>
+        <p className="font-mono text-2xs uppercase tracking-[0.16em] text-brand">Product</p>
+        <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight sm:text-3xl">Model performance</h1>
       </div>
 
       {engineSection}
@@ -408,8 +408,8 @@ function CalibrationBar({ label, value, tone }: { label: string; value: number; 
   return (
     <div className="min-w-0">
       <div className="mb-1 flex items-baseline justify-between gap-2">
-        <span className="text-[10px] text-ink-dim">{label}</span>
-        <span className="tnum text-[10px] font-semibold">{Math.round(value * 100)}%</span>
+        <span className="text-2xs text-ink-dim">{label}</span>
+        <span className="tnum text-2xs font-semibold">{Math.round(value * 100)}%</span>
       </div>
       <div className="h-1.5 overflow-hidden rounded-full bg-surface-3">
         <div className={`h-full rounded-full ${tone === "cyan" ? "bg-cyan" : "bg-brand"}`} style={{ width: `${value * 100}%` }} />

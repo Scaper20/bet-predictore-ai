@@ -30,7 +30,7 @@ export function GiftSubscriptionButton({ userId, userEmail }: { userId: string; 
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-[60] grid place-items-center bg-canvas/70 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[60] grid place-items-center glass-scrim p-4">
           <div ref={containerRef} role="dialog" aria-modal="true" aria-labelledby={titleId} className="card w-full max-w-sm p-5 sm:p-6">
             <div className="mb-1 flex items-center justify-between gap-3">
               <h2 id={titleId} className="text-sm font-semibold text-ink">

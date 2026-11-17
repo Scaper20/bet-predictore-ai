@@ -50,7 +50,7 @@ export function DocToc({ items }: { items: { id: string; title: string }[] }) {
       </nav>
       <nav aria-label="On this page" className="hidden lg:block">
         <div className="sticky top-[calc(var(--header-h)+1.5rem)]">
-          <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-dim">On this page</p>
+          <p className="mb-3 text-2xs font-semibold uppercase tracking-[0.14em] text-ink-dim">On this page</p>
           <div className="relative border-l border-line">
             <span
               aria-hidden

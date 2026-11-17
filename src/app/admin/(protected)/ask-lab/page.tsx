@@ -138,8 +138,8 @@ export default async function AskLabPage() {
                     const rated = rows.filter((x) => x.runId === r.runId && x.rating);
                     return (
                       <AdminTableRow key={r.runId}>
-                        <AdminTableCell className="font-mono text-[11px]">{r.runId}</AdminTableCell>
-                        <AdminTableCell className="font-mono text-[11px]">{r.label}</AdminTableCell>
+                        <AdminTableCell className="font-mono text-2xs">{r.runId}</AdminTableCell>
+                        <AdminTableCell className="font-mono text-2xs">{r.label}</AdminTableCell>
                         <AdminTableCell className="font-mono">
                           {r.overall.answered}/{r.overall.n}
                         </AdminTableCell>
@@ -169,7 +169,7 @@ export default async function AskLabPage() {
                 <tbody>
                   {runs.map((r) => (
                     <AdminTableRow key={r.runId}>
-                      <AdminTableCell className="font-mono text-[11px]">{r.label}</AdminTableCell>
+                      <AdminTableCell className="font-mono text-2xs">{r.label}</AdminTableCell>
                       <Margin cost={r.overall.avgCost * allowance.pro} price={price.pro} />
                       <Margin cost={r.overall.p95Cost * allowance.pro} price={price.pro} />
                       <Margin cost={r.overall.avgCost * allowance.vip} price={price.vip} />
@@ -223,9 +223,9 @@ export default async function AskLabPage() {
                       {forCase.map((x, i) => (
                         <div key={recentRuns[i].runId} className="min-w-0 rounded-lg border border-line p-3">
                           <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                            <span className="font-mono text-[10.5px] text-ink-dim">{recentRuns[i].label}</span>
+                            <span className="font-mono text-2xs text-ink-dim">{recentRuns[i].label}</span>
                             {x && (
-                              <span className="font-mono text-[10.5px] text-ink-dim">
+                              <span className="font-mono text-2xs text-ink-dim">
                                 {naira(x.costMicros)} · {secs(x.ms)} · {x.calls} calls
                               </span>
                             )}
@@ -236,7 +236,7 @@ export default async function AskLabPage() {
                             <>
                               {x.outcome !== "answered" && <StatusPill tone={x.outcome === "budget_stop" ? "amber" : "rose"}>{x.outcome}</StatusPill>}
                               <p className="mt-1 whitespace-pre-wrap text-xs leading-relaxed text-ink">{x.answer ?? "No answer."}</p>
-                              <p className="mt-2 text-[10.5px] text-ink-dim">
+                              <p className="mt-2 text-2xs text-ink-dim">
                                 {x.tools.length ? x.tools.join(", ") : "no lookups"}
                                 {x.picks ? ` · ${x.picks} cards` : ""}
                               </p>

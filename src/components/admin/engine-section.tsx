@@ -22,7 +22,7 @@ export function EngineSection({ record, enabled, canSwitch }: { record: EngineRe
             Switch after {SHADOW_DAYS} days and {SHADOW_GAMES} settled games if it lands at least as often at the higher price.
           </p>
         </div>
-        <span className={`rounded-full px-2.5 py-1 font-mono text-[10.5px] uppercase tracking-[0.14em] ${enabled ? "bg-brand/15 text-brand" : "bg-line text-ink-muted"}`}>
+        <span className={`rounded-full px-2.5 py-1 font-mono text-2xs uppercase tracking-[0.14em] ${enabled ? "bg-brand/15 text-brand" : "bg-line text-ink-muted"}`}>
           {enabled ? "Publishing" : `Shadow · day ${r.days}`}
         </span>
       </div>
@@ -46,7 +46,7 @@ export function EngineSection({ record, enabled, canSwitch }: { record: EngineRe
       {r.mix.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {r.mix.map((m) => (
-            <span key={m.family} className="rounded-md border border-line px-2 py-1 font-mono text-[11px] text-ink-muted">
+            <span key={m.family} className="rounded-md border border-line px-2 py-1 font-mono text-2xs text-ink-muted">
               {m.family} <span className="text-ink">{m.n}</span> · {pct(m.landed)}
             </span>
           ))}
@@ -102,7 +102,7 @@ export function EngineSection({ record, enabled, canSwitch }: { record: EngineRe
 function Side({ title, s, highlight }: { title: string; s: SideRecord | null; highlight: boolean }) {
   return (
     <div className={`rounded-lg border p-4 ${highlight ? "border-brand/40" : "border-line"}`}>
-      <p className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-ink-dim">{title}</p>
+      <p className="font-mono text-2xs uppercase tracking-[0.14em] text-ink-dim">{title}</p>
       {s ? (
         <>
           <p className="tnum mt-1 font-display text-2xl font-semibold text-ink">{pct(s.landed)}</p>

@@ -61,12 +61,12 @@ export default async function AdminTeamPage() {
               <AdminTableRow key={s.id}>
                 <AdminTableCell>
                   <div className="flex items-center gap-2.5">
-                    <span className="grid size-8 shrink-0 place-items-center rounded-md bg-surface-3 font-mono text-[11px] text-ink">
+                    <span className="grid size-8 shrink-0 place-items-center rounded-md bg-surface-3 font-mono text-2xs text-ink">
                       {(s.email ?? "?").slice(0, 2).toUpperCase()}
                     </span>
                     <div className="min-w-0">
                       <p className="truncate text-ink">{s.email ?? "—"}</p>
-                      {s.id === me.id && <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-brand">You</p>}
+                      {s.id === me.id && <p className="font-mono text-2xs uppercase tracking-[0.12em] text-brand">You</p>}
                     </div>
                   </div>
                 </AdminTableCell>
@@ -75,11 +75,11 @@ export default async function AdminTeamPage() {
                 </AdminTableCell>
                 <AdminTableCell className="whitespace-nowrap text-xs text-ink-muted">
                   {new Date(s.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
-                  <span className="block text-[11px] text-ink-dim">
+                  <span className="block text-2xs text-ink-dim">
                     {s.created_by ? `by ${emailById.get(s.created_by)?.split("@")[0] ?? "a former admin"}` : "by setup script"}
                   </span>
                 </AdminTableCell>
-                <AdminTableCell className="whitespace-nowrap font-mono text-[11px] text-ink-dim">
+                <AdminTableCell className="whitespace-nowrap font-mono text-2xs text-ink-dim">
                   {lastAction.has(s.id) ? timeAgo(lastAction.get(s.id)!) : "never"}
                 </AdminTableCell>
                 <AdminTableCell>
@@ -94,7 +94,7 @@ export default async function AdminTeamPage() {
       <div className="grid gap-4 lg:grid-cols-3">
         <Panel title="Add a teammate" meta="least access first" className="lg:col-span-1">
           <AddMemberForm />
-          <p className="mt-5 border-t border-line pt-4 text-[11px] leading-relaxed text-ink-dim">
+          <p className="mt-5 border-t border-line pt-4 text-2xs leading-relaxed text-ink-dim">
             For a login that is only for admin (not tied to a site account), run{" "}
             <code className="rounded bg-surface-2 px-1 py-0.5 font-mono">scripts/create-admin.ts --role=…</code>.
           </p>
@@ -102,12 +102,12 @@ export default async function AdminTeamPage() {
 
         <Panel title="What each role can do" meta={`${ALL_PERMISSIONS.length} permissions`} className="lg:col-span-2" flush>
           <div className="overflow-x-auto">
-            <table className="w-full text-[13px]">
+            <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-line bg-surface-2/40 text-left">
-                  <th className="px-4 py-2.5 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-ink-dim sm:px-5">Permission</th>
+                  <th className="px-4 py-2.5 font-mono text-2xs font-medium uppercase tracking-[0.14em] text-ink-dim sm:px-5">Permission</th>
                   {ROLE_IDS.map((r) => (
-                    <th key={r} className="px-3 py-2.5 text-center font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-ink-dim" title={ROLES[r].label}>
+                    <th key={r} className="px-3 py-2.5 text-center font-mono text-2xs font-medium uppercase tracking-[0.14em] text-ink-dim" title={ROLES[r].label}>
                       {ROLES[r].short}
                     </th>
                   ))}
@@ -116,7 +116,7 @@ export default async function AdminTeamPage() {
               {groups.map((g) => (
                 <tbody key={g}>
                   <tr>
-                    <td colSpan={ROLE_IDS.length + 1} className="border-t border-line px-4 pb-1 pt-3 font-mono text-[10px] uppercase tracking-[0.16em] text-brand sm:px-5">
+                    <td colSpan={ROLE_IDS.length + 1} className="border-t border-line px-4 pb-1 pt-3 font-mono text-2xs uppercase tracking-[0.16em] text-brand sm:px-5">
                       {g}
                     </td>
                   </tr>
@@ -124,7 +124,7 @@ export default async function AdminTeamPage() {
                     <tr key={p} className="hover:bg-surface-2/40">
                       <td className="px-4 py-1.5 sm:px-5">
                         <span className="text-ink">{PERMISSIONS[p].label}</span>
-                        <span className="ml-2 hidden text-[11px] text-ink-dim md:inline">{PERMISSIONS[p].detail}</span>
+                        <span className="ml-2 hidden text-2xs text-ink-dim md:inline">{PERMISSIONS[p].detail}</span>
                       </td>
                       {ROLE_IDS.map((r) => (
                         <td key={r} className="px-3 py-1.5 text-center">

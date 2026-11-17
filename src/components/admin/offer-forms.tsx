@@ -14,9 +14,9 @@ const input =
 function Field({ label, hint, children, wide = false }: { label: string; hint?: string; children: React.ReactNode; wide?: boolean }) {
   return (
     <label className={`block ${wide ? "sm:col-span-2" : ""}`}>
-      <span className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-dim">{label}</span>
+      <span className="mb-1 block text-2xs font-semibold uppercase tracking-[0.08em] text-ink-dim">{label}</span>
       {children}
-      {hint && <span className="mt-1 block text-[11px] leading-snug text-ink-dim">{hint}</span>}
+      {hint && <span className="mt-1 block text-2xs leading-snug text-ink-dim">{hint}</span>}
     </label>
   );
 }
@@ -140,7 +140,7 @@ export function PriceForm({ tier, cycle, value, placeholder }: { tier: "pro" | "
       <Button type="submit" variant="secondary" disabled={pending} className="h-9 px-3 text-xs">
         {pending ? <Spinner className="size-3.5" /> : "Set"}
       </Button>
-      {(state.error || state.message) && <span className={`text-[11px] ${state.error ? "text-rose" : "text-brand"}`}>{state.error ?? state.message ?? "Saved"}</span>}
+      {(state.error || state.message) && <span className={`text-2xs ${state.error ? "text-rose" : "text-brand"}`}>{state.error ?? state.message ?? "Saved"}</span>}
     </form>
   );
 }
