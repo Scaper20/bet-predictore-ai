@@ -37,7 +37,7 @@ export async function TopPicks({
       <div className="flex items-center justify-between gap-3 px-1">
         <h2 className="flex items-center gap-2 font-sans text-sm font-semibold uppercase tracking-wider text-ink-muted">
           Top picks
-          <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-brand/15 px-1.5 text-[11px] font-bold text-brand">{picks.length}</span>
+          <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-brand/15 px-1.5 text-2xs font-bold text-brand">{picks.length}</span>
           {isProLeague(prediction.match.league.code) && <ViewerPlanTag />}
         </h2>
         <SharePicksButton matchId={prediction.match.id} label={`${prediction.match.home.name} v ${prediction.match.away.name}`} />
@@ -69,15 +69,15 @@ function PickCard({ n, pick, strong, match, children }: { n: number; pick: TopPi
     <article className="card rounded-2xl p-4">
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-start gap-3">
-          <span aria-label={`Pick ${n}`} className="mt-0.5 inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-brand/15 font-mono text-[12px] font-bold text-brand">
+          <span aria-label={`Pick ${n}`} className="mt-0.5 inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-brand/15 font-mono text-xs font-bold text-brand">
             {n}
           </span>
           <div className="min-w-0">
-          <p className="flex flex-wrap items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-ink-dim">
+          <p className="flex flex-wrap items-center gap-1.5 text-2xs font-semibold uppercase tracking-[0.12em] text-ink-dim">
             {pick.group}
             {strong && <StrongBadge />}
             <RiskBadge pick={pick} />
-            {outcome && <span className={`inline-flex h-5 items-center rounded-full px-2 text-[10px] font-semibold normal-case tracking-normal ${outcome.tone}`}>{outcome.text}</span>}
+            {outcome && <span className={`inline-flex h-5 items-center rounded-full px-2 text-2xs font-semibold normal-case tracking-normal ${outcome.tone}`}>{outcome.text}</span>}
           </p>
           <h3 className="mt-1 font-display text-base font-bold leading-snug text-ink sm:text-lg">{pick.label}</h3>
           </div>
@@ -91,7 +91,7 @@ function PickCard({ n, pick, strong, match, children }: { n: number; pick: TopPi
       {pick.reasons.length > 0 && (
         <div className="mt-2.5 flex flex-wrap gap-1.5">
           {pick.reasons.map((r) => (
-            <span key={r} className="inline-flex min-h-5 items-center rounded-full bg-surface-2 px-2.5 py-0.5 text-[11px] text-ink-muted">
+            <span key={r} className="inline-flex min-h-5 items-center rounded-full bg-surface-2 px-2.5 py-0.5 text-2xs text-ink-muted">
               {r}
             </span>
           ))}
@@ -109,7 +109,7 @@ function PickCard({ n, pick, strong, match, children }: { n: number; pick: TopPi
         {pick.variations.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1.5" aria-label="Same idea, other lines">
             {pick.variations.map((v) => (
-              <span key={v.label} className="inline-flex items-center gap-1.5 rounded-full border border-line px-2.5 py-1 text-[11px] text-ink-muted">
+              <span key={v.label} className="inline-flex items-center gap-1.5 rounded-full border border-line px-2.5 py-1 text-2xs text-ink-muted">
                 {v.label}
                 <span className="tnum font-semibold text-ink">{percent(v.probability)}</span>
               </span>

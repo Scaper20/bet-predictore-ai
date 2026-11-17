@@ -43,7 +43,7 @@ export function MatchStats({
     <section className="card overflow-hidden">
       <div className="flex items-center justify-between gap-3 border-b border-line px-5 py-3.5">
         <TeamTag team={match.home} />
-        <span className="text-[10.5px] font-semibold uppercase tracking-wider text-ink-dim">{live ? "This match, live" : "This match"}</span>
+        <span className="text-2xs font-semibold uppercase tracking-wider text-ink-dim">{live ? "This match, live" : "This match"}</span>
         <TeamTag team={match.away} right />
       </div>
       <div className="space-y-4 px-5 py-5">
@@ -77,7 +77,7 @@ export function MatchStats({
     <section className="card overflow-hidden">
       <div className="flex items-center justify-between gap-3 border-b border-line px-5 py-3.5">
         <TeamTag team={match.home} />
-        <span className="text-center text-[10.5px] font-semibold uppercase tracking-wider text-ink-dim">
+        <span className="text-center text-2xs font-semibold uppercase tracking-wider text-ink-dim">
           Corners &amp; shots · last {Math.max(ah!.games, aa!.games)} league games
         </span>
         <TeamTag team={match.away} right />
@@ -139,7 +139,7 @@ export function MatchStats({
       <section className="card overflow-hidden">
         <div className="flex items-center justify-between gap-3 border-b border-line px-5 py-3.5">
           <TeamTag team={match.home} />
-          <span className="text-[10.5px] font-semibold uppercase tracking-wider text-ink-dim">Last {Math.max(h.form.played, a.form.played)} games</span>
+          <span className="text-2xs font-semibold uppercase tracking-wider text-ink-dim">Last {Math.max(h.form.played, a.form.played)} games</span>
           <TeamTag team={match.away} right />
         </div>
         <div className="space-y-4 px-5 py-5">

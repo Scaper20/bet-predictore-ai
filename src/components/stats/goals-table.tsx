@@ -60,15 +60,15 @@ export function GoalsTable({ rows }: { rows: GoalsRow[] }) {
       <table className="w-full min-w-[40rem] border-collapse text-sm">
         <thead>
           <tr className="border-b border-line">
-            <th className="sticky left-0 z-10 bg-surface py-3 pl-4 text-left text-[10.5px] font-semibold uppercase tracking-wider text-ink-dim sm:pl-5">Team</th>
-            <th className="w-10 py-3 text-center text-[10.5px] font-semibold uppercase tracking-wider text-ink-dim">GP</th>
+            <th className="sticky left-0 z-10 bg-surface py-3 pl-4 text-left text-2xs font-semibold uppercase tracking-wider text-ink-dim sm:pl-5">Team</th>
+            <th className="w-10 py-3 text-center text-2xs font-semibold uppercase tracking-wider text-ink-dim">GP</th>
             {COLS.map((c) => (
               <th key={c.key} className="w-16 py-2 text-center">
                 <button
                   type="button"
                   onClick={() => choose(c.key)}
                   title={c.hint}
-                  className={`inline-flex items-center gap-0.5 rounded-md px-1.5 py-1 text-[10.5px] font-semibold uppercase tracking-wider transition-colors ${
+                  className={`inline-flex items-center gap-0.5 rounded-md px-1.5 py-1 text-2xs font-semibold uppercase tracking-wider transition-colors ${
                     sort === c.key ? "bg-brand/12 text-brand" : "text-ink-dim hover:text-ink"
                   }`}
                 >

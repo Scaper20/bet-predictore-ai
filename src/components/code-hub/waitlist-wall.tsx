@@ -7,7 +7,7 @@ export function WaitlistWall({ email, joined }: { email: string | null; joined: 
   return (
     <div className="mx-auto grid max-w-5xl gap-8 lg:grid-cols-[1.1fr_1fr] lg:items-center">
       <div>
-        <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-brand">Coming soon</p>
+        <p className="font-mono text-2xs font-semibold uppercase tracking-[0.18em] text-brand">Coming soon</p>
         <h2 className="mt-3 font-display text-3xl font-bold leading-tight sm:text-4xl">
           Ready-made combos, with the code to load them
         </h2>
@@ -40,7 +40,7 @@ export function WaitlistWall({ email, joined }: { email: string | null; joined: 
               style={{ opacity: 1 - i * 0.1, transform: `translateX(${i * 4}px)` }}
             >
               <div>
-                <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-brand">{t.name}</p>
+                <p className="font-mono text-2xs font-semibold uppercase tracking-[0.18em] text-brand">{t.name}</p>
                 <p className="mt-1 text-xs text-ink-dim">
                   {hubGameRange(t).join("–")} games · <span className="tracking-[0.2em]">••••••</span>
                 </p>

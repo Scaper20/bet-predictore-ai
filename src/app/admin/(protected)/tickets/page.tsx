@@ -56,8 +56,8 @@ export default async function AdminTicketsPage({
   return (
     <div className="space-y-6">
       <div>
-        <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-brand">Customers</p>
-        <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight sm:text-[28px]">Tickets</h1>
+        <p className="font-mono text-2xs uppercase tracking-[0.16em] text-brand">Customers</p>
+        <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight sm:text-3xl">Tickets</h1>
       </div>
 
       <div className="flex flex-wrap gap-2">

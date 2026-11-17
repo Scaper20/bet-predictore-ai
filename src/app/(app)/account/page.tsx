@@ -108,7 +108,7 @@ export default async function AccountPage() {
             {(displayName || user.email || "?").trim().charAt(0).toUpperCase()}
           </span>
           <div className="min-w-0">
-            <h1 className="truncate font-display text-2xl font-bold tracking-tight sm:text-[28px]">
+            <h1 className="truncate font-display text-2xl font-bold tracking-tight sm:text-3xl">
               {displayName ? `Hi, ${displayName}` : "Your account"}
             </h1>
             <p className="truncate text-sm text-ink-muted">{user.email}</p>
@@ -133,7 +133,7 @@ export default async function AccountPage() {
             <span aria-hidden className="grid size-8 place-items-center rounded-lg bg-surface-2 font-mono text-sm font-bold text-ink">
               {q.icon}
             </span>
-            <span className="text-[12px] font-semibold leading-tight text-ink sm:text-sm">{q.label}</span>
+            <span className="text-xs font-semibold leading-tight text-ink sm:text-sm">{q.label}</span>
           </Link>
         ))}
       </nav>

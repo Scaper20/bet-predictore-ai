@@ -4,7 +4,7 @@ import { sportPath } from "@/lib/routes";
 
 export default function NotFound() {
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex min-h-dvh flex-col">
       <div className="mx-auto flex max-w-xl flex-1 flex-col items-center justify-center px-4 py-24 text-center">
         <p className="font-display text-6xl font-extrabold text-brand/25">404</p>
         <h1 className="mt-4 font-display text-2xl font-bold">This page does not exist</h1>

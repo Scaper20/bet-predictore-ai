@@ -87,7 +87,7 @@ function Clock({ match, since }: { match: Match; since?: number }) {
   const minute = useTickingMinute(match.minute, match.status, since ?? Number.NaN);
   if (match.status === "halftime") {
     return (
-      <span className="w-fit rounded-md border border-amber/30 bg-amber/10 px-1.5 py-0.5 font-mono text-[11px] font-bold text-amber">HT</span>
+      <span className="w-fit rounded-md border border-amber/30 bg-amber/10 px-1.5 py-0.5 font-mono text-2xs font-bold text-amber">HT</span>
     );
   }
   if (match.status === "live") {
@@ -98,10 +98,10 @@ function Clock({ match, since }: { match: Match; since?: number }) {
       </span>
     );
   }
-  if (match.status === "finished") return <span className="font-mono text-[11px] font-bold text-ink-dim">FT</span>;
-  if (match.status === "postponed") return <span className="font-mono text-[11px] font-bold text-amber">PST</span>;
-  if (match.status === "cancelled") return <span className="font-mono text-[11px] font-bold text-rose">CAN</span>;
-  return <span className="tnum font-mono text-[13px] font-semibold text-ink"><LocalTime iso={match.kickoff} /></span>;
+  if (match.status === "finished") return <span className="font-mono text-2xs font-bold text-ink-dim">FT</span>;
+  if (match.status === "postponed") return <span className="font-mono text-2xs font-bold text-amber">PST</span>;
+  if (match.status === "cancelled") return <span className="font-mono text-2xs font-bold text-rose">CAN</span>;
+  return <span className="tnum font-mono text-sm font-semibold text-ink"><LocalTime iso={match.kickoff} /></span>;
 }
 
 function TeamLine({

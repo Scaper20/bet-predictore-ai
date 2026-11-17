@@ -257,7 +257,7 @@ function SlipFab({ count, onOpen }: { count: number; onOpen: () => void }) {
       }}
       aria-label={count > 0 ? `Open combo, ${count} ${count === 1 ? "selection" : "selections"}` : "Open combo"}
       style={{ left: pos.x, top: pos.y, touchAction: "none" }}
-      className={`fixed z-50 grid size-14 place-items-center rounded-full bg-brand text-brand-ink shadow-lg glow-brand select-none ${
+      className={`fixed z-50 grid size-14 place-items-center rounded-full bg-brand text-brand-ink shadow-lg select-none ${
         dragging ? "scale-110 cursor-grabbing" : "transition-[left,top,transform] duration-200 ease-out hover:scale-105"
       }`}
     >
@@ -268,7 +268,7 @@ function SlipFab({ count, onOpen }: { count: number; onOpen: () => void }) {
       {count > 0 && (
         <span
           key={count}
-          className="tnum slip-pop absolute -right-1 -top-1 grid min-w-6 place-items-center rounded-full border-2 border-shell bg-ink px-1.5 text-[11px] font-bold leading-5 text-shell"
+          className="tnum slip-pop absolute -right-1 -top-1 grid min-w-6 place-items-center rounded-full border-2 border-shell bg-ink px-1.5 text-2xs font-bold leading-5 text-shell"
         >
           {count}
         </span>

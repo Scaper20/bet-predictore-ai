@@ -140,7 +140,7 @@ function SideTotal({ name, shots, goals, xg, tone, right }: { name: string; shot
 
 function Legend() {
   return (
-    <span className="hidden items-center gap-3 text-[10.5px] text-ink-dim sm:flex" aria-hidden>
+    <span className="hidden items-center gap-3 text-2xs text-ink-dim sm:flex" aria-hidden>
       <span className="flex items-center gap-1"><span className="size-2.5 rounded-full bg-ink-muted" /> Goal</span>
       <span className="flex items-center gap-1"><span className="size-2.5 rounded-full border border-ink-muted bg-ink-muted/30" /> On target</span>
       <span className="flex items-center gap-1"><span className="size-2.5 rounded-full border border-ink-muted/60" /> Off</span>

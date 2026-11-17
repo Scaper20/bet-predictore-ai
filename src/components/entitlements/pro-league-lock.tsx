@@ -21,7 +21,7 @@ export function ProLeaguePickLock({
 }) {
   return (
     <section className="card rounded-2xl border-violet/30 p-5 sm:p-6">
-      <p className="flex items-center gap-2 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-ink-dim">
+      <p className="flex items-center gap-2 text-2xs font-semibold uppercase tracking-[0.14em] text-ink-dim">
         Pro pick{group ? ` · ${group}` : ""} <ProTag />
       </p>
       <div className="mt-2">
@@ -32,7 +32,7 @@ export function ProLeaguePickLock({
         <p className="text-xs text-ink-dim">Opens for everyone at kick-off. Every result stays on the track record.</p>
         <Link
           href={UPGRADE_HREF}
-          className="glow-brand inline-flex items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-sm font-bold text-brand-ink hover:bg-brand-strong"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-4 py-2 text-sm font-bold text-brand-ink hover:bg-brand-strong"
         >
           Go Pro <span aria-hidden>→</span>
         </Link>
@@ -111,7 +111,7 @@ export function ProLeaguesBanner({
   return (
     <section className="card flex items-center justify-between gap-3 border-violet/30 bg-violet/5 p-3.5 sm:gap-4 sm:p-6">
       <div className="min-w-0">
-        <p className="flex items-center gap-2 text-[13px] font-semibold text-ink sm:text-sm">
+        <p className="flex items-center gap-2 text-sm font-semibold text-ink sm:text-sm">
           <ProTag /> {league ? `${league.name} is a Pro league` : `${held} ${held === 1 ? "game" : "games"} here ${held === 1 ? "is" : "are"} in Pro leagues`}
         </p>
         {/* On a phone the line and button say enough; the why shows from sm up. */}
@@ -123,7 +123,7 @@ export function ProLeaguesBanner({
       </div>
       <Link
         href={UPGRADE_HREF}
-        className="glow-brand inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-xs font-bold text-brand-ink hover:bg-brand-strong sm:px-5 sm:py-2.5 sm:text-sm"
+        className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-xs font-bold text-brand-ink hover:bg-brand-strong sm:px-5 sm:py-2.5 sm:text-sm"
       >
         Unlock<span className="hidden sm:inline"> every league</span> <span aria-hidden>→</span>
       </Link>

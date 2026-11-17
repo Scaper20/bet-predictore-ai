@@ -23,8 +23,8 @@ export default async function AdminMailPage({ searchParams }: PageProps<"/admin/
     return (
       <div className="space-y-8">
         <div>
-          <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-brand">Customers</p>
-          <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight sm:text-[28px]">Mail</h1>
+          <p className="font-mono text-2xs uppercase tracking-[0.16em] text-brand">Customers</p>
+          <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight sm:text-3xl">Mail</h1>
         </div>
         <p className="max-w-2xl text-sm text-ink-muted">
           Not set up yet. This needs a Google OAuth client (
@@ -41,8 +41,8 @@ export default async function AdminMailPage({ searchParams }: PageProps<"/admin/
     return (
       <div className="space-y-8">
         <div>
-          <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-brand">Customers</p>
-          <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight sm:text-[28px]">Mail</h1>
+          <p className="font-mono text-2xs uppercase tracking-[0.16em] text-brand">Customers</p>
+          <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight sm:text-3xl">Mail</h1>
         </div>
         <p className="max-w-2xl text-sm text-ink-muted">This feature isn&apos;t available on your account.</p>
       </div>
@@ -54,8 +54,8 @@ export default async function AdminMailPage({ searchParams }: PageProps<"/admin/
   return (
     <div className="space-y-8">
       <div>
-        <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-brand">Customers</p>
-        <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight sm:text-[28px]">Mail</h1>
+        <p className="font-mono text-2xs uppercase tracking-[0.16em] text-brand">Customers</p>
+        <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight sm:text-3xl">Mail</h1>
       </div>
 
       {justConnected && (

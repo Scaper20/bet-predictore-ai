@@ -251,13 +251,13 @@ function ScorelineGrid() {
       <div className="grid grid-cols-[1.5rem_repeat(5,minmax(0,1fr))] gap-1 text-center">
         <span />
         {Array.from({ length: n }, (_, a) => (
-          <span key={a} className="text-[10px] font-semibold text-ink-dim">{a}</span>
+          <span key={a} className="text-2xs font-semibold text-ink-dim">{a}</span>
         ))}
         {Array.from({ length: n }, (_, h) => (
           <Row key={h} h={h} n={n} grid={grid} max={max} />
         ))}
       </div>
-      <p className="mt-2 text-[10px] text-ink-dim">Rows: home goals. Columns: away goals. Greener is likelier.</p>
+      <p className="mt-2 text-2xs text-ink-dim">Rows: home goals. Columns: away goals. Greener is likelier.</p>
     </figure>
   );
 }
@@ -265,14 +265,14 @@ function ScorelineGrid() {
 function Row({ h, n, grid, max }: { h: number; n: number; grid: number[][]; max: number }) {
   return (
     <>
-      <span className="grid place-items-center text-[10px] font-semibold text-ink-dim">{h}</span>
+      <span className="grid place-items-center text-2xs font-semibold text-ink-dim">{h}</span>
       {Array.from({ length: n }, (_, a) => {
         const p = grid[h][a];
         const t = p / max;
         return (
           <span
             key={a}
-            className="pip tnum grid aspect-[1.6] place-items-center rounded-md text-[11px] font-semibold"
+            className="pip tnum grid aspect-[1.6] place-items-center rounded-md text-2xs font-semibold"
             style={{
               background: `color-mix(in oklab, var(--color-brand) ${Math.round(t * 70)}%, var(--color-surface-2))`,
               color: t > 0.55 ? "var(--color-brand-ink)" : "var(--color-ink-muted)",

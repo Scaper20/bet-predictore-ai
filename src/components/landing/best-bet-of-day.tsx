@@ -28,7 +28,7 @@ export function BestBetOfDay({ prediction }: { prediction: Prediction | ViewedPr
     <article className="orbit-border card card-hover group grid gap-5 overflow-hidden rounded-2xl p-5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-8 sm:p-7">
       <Link href={matchPath(match.id)} prefetch={false} className="block min-w-0">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-brand px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-[0.14em] text-brand-ink">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-brand px-2.5 py-1 text-2xs font-bold uppercase tracking-[0.14em] text-brand-ink">
             <svg viewBox="0 0 16 16" className="size-3" fill="currentColor" aria-hidden>
               <path d="M8 1.5 9.9 5.6l4.4.5-3.3 3 1 4.4L8 11.3 4 13.5l1-4.4-3.3-3 4.4-.5Z" />
             </svg>
@@ -54,7 +54,7 @@ export function BestBetOfDay({ prediction }: { prediction: Prediction | ViewedPr
 
       <div className="flex items-end justify-between gap-6 rounded-xl border border-brand/20 bg-brand/[0.06] px-5 py-4 sm:block sm:min-w-52 sm:text-right">
         <Link href={matchPath(match.id)} prefetch={false} className="block">
-          <p className="text-[10.5px] font-semibold uppercase tracking-[0.12em] text-ink-dim">Our pick</p>
+          <p className="text-2xs font-semibold uppercase tracking-[0.12em] text-ink-dim">Our pick</p>
           {locked ? (
             <LockedSelection group={topPick.group} className="mt-1 text-base font-bold text-ink sm:text-lg" />
           ) : (

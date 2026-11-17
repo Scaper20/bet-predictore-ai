@@ -209,7 +209,7 @@ export function NavSearch({
           if (!rows.length) return null;
           return (
             <div key={group} className="py-1">
-              <p className="px-3 pb-1 pt-1.5 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-ink-dim">{group}</p>
+              <p className="px-3 pb-1 pt-1.5 text-2xs font-semibold uppercase tracking-[0.14em] text-ink-dim">{group}</p>
               {rows.map((r) => {
                 const i = results.indexOf(r);
                 return (
@@ -281,7 +281,7 @@ export function NavSearch({
           className="min-w-0 flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-ink-dim [&::-webkit-search-cancel-button]:hidden"
         />
         {variant === "inline" && (
-          <kbd className="hidden shrink-0 rounded-md border border-line-strong px-1.5 font-mono text-[11px] text-ink-dim xl:block">/</kbd>
+          <kbd className="hidden shrink-0 rounded-md border border-line-strong px-1.5 font-mono text-2xs text-ink-dim xl:block">/</kbd>
         )}
       </label>
       {list}
@@ -291,7 +291,7 @@ export function NavSearch({
 
 export function SoonTag() {
   return (
-    <span className="shrink-0 rounded bg-surface-3 px-1.5 py-0.5 text-[9.5px] font-bold uppercase tracking-wider text-ink-dim">
+    <span className="shrink-0 rounded bg-surface-3 px-1.5 py-0.5 text-2xs font-bold uppercase tracking-wider text-ink-dim">
       Soon
     </span>
   );

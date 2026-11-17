@@ -74,7 +74,7 @@ export function AddToSlip({ prediction: shared }: { prediction: Prediction }) {
       </div>
 
       <label className="block">
-        <span className="mb-1.5 block text-[11px] font-medium text-ink-muted">Selection</span>
+        <span className="mb-1.5 block text-2xs font-medium text-ink-muted">Selection</span>
         <select
           value={selected}
           onChange={(e) => setSelected(e.target.value)}

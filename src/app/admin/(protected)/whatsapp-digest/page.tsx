@@ -19,8 +19,8 @@ export default async function AdminWhatsappDigestPage() {
     <div className="space-y-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-brand">Growth</p>
-          <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight sm:text-[28px]">WhatsApp digest</h1>
+          <p className="font-mono text-2xs uppercase tracking-[0.16em] text-brand">Growth</p>
+          <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight sm:text-3xl">WhatsApp digest</h1>
           <p className="mt-1 max-w-2xl text-sm text-ink-muted">
             Computed once a day, early morning. Copy each message below and paste it into the
             KiqStat Picks community — nothing here posts to WhatsApp automatically.

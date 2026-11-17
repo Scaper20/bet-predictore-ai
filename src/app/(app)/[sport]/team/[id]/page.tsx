@@ -126,7 +126,6 @@ export default async function TeamPage({ params }: { params: Params }) {
     <>
       <JsonLd data={teamJsonLd(team, { league: league?.name, coach: profile?.coach, venue: profile?.venue, city: profile?.city }, SITE)} />
       <header className="relative overflow-hidden border-b border-line bg-shell">
-        <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_80%_at_50%_-10%,color-mix(in_oklab,var(--color-brand)_10%,transparent),transparent_70%)]" />
         <div className={`${containerClass()} relative py-6 sm:py-9`}>
           <div className="stagger mx-auto flex max-w-5xl flex-col gap-5 sm:flex-row sm:items-center sm:gap-7">
             <div className="flex items-center gap-4 sm:gap-6">
@@ -189,7 +188,7 @@ export default async function TeamPage({ params }: { params: Params }) {
 function HeroStat({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex min-h-14 flex-col justify-center gap-1 rounded-xl border border-line bg-surface/70 px-3.5 py-2 backdrop-blur">
-      <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-ink-dim">{label}</span>
+      <span className="text-2xs font-semibold uppercase tracking-[0.12em] text-ink-dim">{label}</span>
       {children}
     </div>
   );

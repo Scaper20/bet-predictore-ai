@@ -118,8 +118,8 @@ export function FixturesBoard({ matches, league, windowDays }: { matches: Match[
               key: d.key,
               label: (
                 <span className="flex flex-col items-center leading-tight">
-                  <span className="text-[13px] font-semibold">{dayLabel(d.iso, tz)}</span>
-                  <span className="text-[10px] font-normal text-ink-dim">{shortDate(d.iso, tz)}</span>
+                  <span className="text-sm font-semibold">{dayLabel(d.iso, tz)}</span>
+                  <span className="text-2xs font-normal text-ink-dim">{shortDate(d.iso, tz)}</span>
                 </span>
               ),
               meta: d.live > 0 ? <span className="text-signal">●</span> : d.count,
@@ -283,14 +283,14 @@ function LeagueCard({ group, open, onToggle }: { group: LiveGroup; open: boolean
           <span className="flex items-center gap-2">
             <span className="truncate text-sm font-semibold text-ink">{group.name}</span>
             {group.tracked && (
-              <span className="shrink-0 rounded border border-brand/25 bg-brand/10 px-1.5 py-px text-[9.5px] font-semibold uppercase tracking-wider text-brand" title="KiqStat models this competition">
+              <span className="shrink-0 rounded border border-brand/25 bg-brand/10 px-1.5 py-px text-2xs font-semibold uppercase tracking-wider text-brand" title="KiqStat models this competition">
                 Model
               </span>
             )}
           </span>
-          {group.country && <span className="block truncate text-[11px] text-ink-dim">{group.country}</span>}
+          {group.country && <span className="block truncate text-2xs text-ink-dim">{group.country}</span>}
         </span>
-        <span className="tnum shrink-0 rounded-full bg-surface-2 px-2 py-0.5 text-[11px] font-semibold text-ink-muted">{group.matches.length}</span>
+        <span className="tnum shrink-0 rounded-full bg-surface-2 px-2 py-0.5 text-2xs font-semibold text-ink-muted">{group.matches.length}</span>
         <svg viewBox="0 0 20 20" className={`size-4 shrink-0 text-ink-dim transition-transform duration-300 ${open ? "" : "-rotate-90"}`} fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
           <path d="m5 7.5 5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>

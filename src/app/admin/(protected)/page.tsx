@@ -58,7 +58,7 @@ export default async function AdminDashboardPage({ searchParams }: PageProps<"/a
         }
         description={SUMMARY[view]}
         actions={
-          <span className="font-mono text-[10.5px] uppercase tracking-[0.12em] text-ink-dim">
+          <span className="font-mono text-2xs uppercase tracking-[0.12em] text-ink-dim">
             Updated {updated} WAT ·{" "}
             <Link href={`/admin?view=${view}`} className="text-ink-muted underline underline-offset-2 hover:text-ink">
               refresh

@@ -116,7 +116,7 @@ export function LeagueTable({
     <div className="overflow-x-auto">
       <table className="w-full min-w-[20rem] border-collapse text-sm">
         <thead>
-          <tr className="border-b border-line text-[10.5px] font-semibold uppercase tracking-wider text-ink-dim">
+          <tr className="border-b border-line text-2xs font-semibold uppercase tracking-wider text-ink-dim">
             <th className="w-10 py-2.5 pl-4 text-left font-semibold sm:pl-5">#</th>
             <th className="py-2.5 text-left font-semibold">Team</th>
             <th className="w-8 py-2.5 text-center font-semibold">P</th>
@@ -150,7 +150,7 @@ export function LeagueTable({
         </tbody>
       </table>
       {zones && (
-        <div className="flex flex-wrap gap-x-4 gap-y-1 border-t border-line px-4 py-2.5 text-[11px] text-ink-dim sm:px-5">
+        <div className="flex flex-wrap gap-x-4 gap-y-1 border-t border-line px-4 py-2.5 text-2xs text-ink-dim sm:px-5">
           <span className="flex items-center gap-1.5"><span className="h-2.5 w-1 rounded-full bg-brand" /> Top four</span>
           <span className="flex items-center gap-1.5"><span className="h-2.5 w-1 rounded-full bg-rose" /> Bottom three</span>
           {table.liveGames > 0 && (
@@ -201,7 +201,7 @@ function Row({
         <span className="flex items-center gap-1">
           <span className={`tnum text-xs font-semibold ${highlighted ? "text-brand" : "text-ink-muted"}`}>{r.position}</span>
           {r.movement !== 0 && (
-            <span className={`text-[9px] ${r.movement > 0 ? "text-brand" : "text-rose"}`} aria-label={r.movement > 0 ? `up ${r.movement}` : `down ${-r.movement}`}>
+            <span className={`text-2xs ${r.movement > 0 ? "text-brand" : "text-rose"}`} aria-label={r.movement > 0 ? `up ${r.movement}` : `down ${-r.movement}`}>
               {r.movement > 0 ? "▲" : "▼"}
             </span>
           )}
@@ -226,7 +226,7 @@ function Row({
           {live && (
             <Link
               href={matchPath(live.matchId)} prefetch={false}
-              className="flex shrink-0 items-center gap-1 rounded-md bg-rose/12 px-1.5 py-0.5 font-mono text-[10px] font-bold text-rose hover:bg-rose/20"
+              className="flex shrink-0 items-center gap-1 rounded-md bg-rose/12 px-1.5 py-0.5 font-mono text-2xs font-bold text-rose hover:bg-rose/20"
               title="In play — tap for the match"
             >
               <LiveDot />

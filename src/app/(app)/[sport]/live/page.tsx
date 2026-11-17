@@ -78,7 +78,7 @@ export default async function ScoresPage({ searchParams }: { searchParams: Promi
         <span className="flex items-center gap-1.5">
           Live
           {liveCount > 0 && (
-            <span className="tnum rounded-full bg-signal px-1.5 font-mono text-[10px] font-bold leading-4 text-canvas">
+            <span className="tnum rounded-full bg-signal px-1.5 font-mono text-2xs font-bold leading-4 text-canvas">
               {liveCount}
             </span>
           )}

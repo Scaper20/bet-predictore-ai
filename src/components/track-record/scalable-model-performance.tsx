@@ -78,16 +78,16 @@ function LiveModelCard({ row }: { row: ModelPerformanceRow }) {
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="text-base font-bold text-ink">{model.brandName}</h3>
             {model.status === "live" ? (
-              <Badge tone="brand" className="text-[10px] uppercase">
+              <Badge tone="brand" className="text-2xs uppercase">
                 Live
               </Badge>
             ) : (
-              <Badge className="text-[10px] uppercase">Retired</Badge>
+              <Badge className="text-2xs uppercase">Retired</Badge>
             )}
           </div>
           <p className="mt-1 text-xs leading-relaxed text-ink-muted">{model.blurb}</p>
           {model.servedFrom && (
-            <p className="mt-1.5 text-[11px] text-ink-dim">
+            <p className="mt-1.5 text-2xs text-ink-dim">
               {model.status === "live" ? "Live since" : "Retired"} {model.servedFrom}
             </p>
           )}
@@ -122,7 +122,7 @@ function LiveModelCard({ row }: { row: ModelPerformanceRow }) {
 
           {markets.length > 0 && (
             <div className="space-y-1.5">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
+              <p className="text-2xs font-semibold uppercase tracking-wider text-ink-muted">
                 By market
               </p>
               {markets.map(({ family, record: mr }) => (

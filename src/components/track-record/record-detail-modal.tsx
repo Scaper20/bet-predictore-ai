@@ -142,7 +142,7 @@ export function RecordDetailModal({
           </div>
         </div>
 
-        <p className="mt-6 border-t border-line pt-3 text-[11px] leading-relaxed text-ink-muted">
+        <p className="mt-6 border-t border-line pt-3 text-2xs leading-relaxed text-ink-muted">
           <span className="font-semibold text-ink">Logged before kickoff</span> and graded
           automatically against the final score from the match feeds
           {match.settled_at

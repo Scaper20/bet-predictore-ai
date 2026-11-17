@@ -31,14 +31,14 @@ export function SelectionToggle({
   label: string;
 }) {
   const [state, action, pending] = useActionState(setSelection, initial);
-  if (disabled) return <span className="text-[11px] text-ink-dim" title={disabledNote}>n/a</span>;
+  if (disabled) return <span className="text-2xs text-ink-dim" title={disabledNote}>n/a</span>;
   return (
     <form action={action} className="inline-flex flex-col items-end gap-1">
       <input type="hidden" name="market" value={market} />
       <input type="hidden" name="surface" value={surface} />
       <span className="inline-flex items-center gap-2">
         {manual && (
-          <button type="submit" name="value" value="default" disabled={pending} className="text-[10.5px] text-ink-dim underline-offset-2 hover:text-ink hover:underline">
+          <button type="submit" name="value" value="default" disabled={pending} className="text-2xs text-ink-dim underline-offset-2 hover:text-ink hover:underline">
             Default
           </button>
         )}
@@ -58,8 +58,8 @@ export function SelectionToggle({
           <span className={`absolute top-0.5 size-4 rounded-full bg-canvas transition-all ${on ? "left-[18px]" : "left-0.5"}`} />
         </button>
       </span>
-      {state.error && <span className="max-w-[14rem] text-right text-[10.5px] text-rose">{state.error}</span>}
-      {state.message && <span className="max-w-[14rem] text-right text-[10.5px] text-brand">{state.message}</span>}
+      {state.error && <span className="max-w-[14rem] text-right text-2xs text-rose">{state.error}</span>}
+      {state.message && <span className="max-w-[14rem] text-right text-2xs text-brand">{state.message}</span>}
     </form>
   );
 }

@@ -38,7 +38,7 @@ export function inTen(p: number): string {
 
 export function Chip({ p }: { p: number }) {
   const l = likelihood(p);
-  return <span className={`inline-flex w-[5.5rem] shrink-0 justify-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${l.tone}`}>{l.word}</span>;
+  return <span className={`inline-flex w-[5.5rem] shrink-0 justify-center rounded-full px-2 py-0.5 text-2xs font-semibold ${l.tone}`}>{l.word}</span>;
 }
 
 /**
@@ -50,7 +50,7 @@ export function Ask({ q, sub, p }: { q: string; sub?: string; p: number }) {
     <div className="flex items-center justify-between gap-3 py-2">
       <p className="min-w-0 text-sm leading-snug text-ink">
         {q}
-        {sub && <span className="block text-[10.5px] leading-tight text-ink-dim">{sub}</span>}
+        {sub && <span className="block text-2xs leading-tight text-ink-dim">{sub}</span>}
       </p>
       <div className="flex shrink-0 items-center gap-2">
         <span className="tnum w-10 text-right font-mono text-sm font-semibold text-ink" title={inTen(p)}>
@@ -78,7 +78,7 @@ export function Pick3({ items }: { items: { label: string; p: number }[] }) {
         return (
           <div key={i.label} className={`min-w-0 rounded-lg px-2 py-2.5 text-center ${top ? "bg-brand/10 ring-1 ring-brand/40" : "bg-surface-2"}`}>
             <p className={`tnum text-base font-bold ${top ? "text-brand" : ""}`}>{inTen(i.p)}</p>
-            <p className="mt-0.5 truncate text-[11px] text-ink-dim" title={`${i.label}: ${percent(i.p)}`}>
+            <p className="mt-0.5 truncate text-2xs text-ink-dim" title={`${i.label}: ${percent(i.p)}`}>
               {i.label}
             </p>
           </div>
@@ -103,7 +103,7 @@ export function CountChart({ bars, noun }: { bars: { label: string; p: number }[
       </div>
       <div className="mt-1.5 flex gap-1.5">
         {bars.map((b) => (
-          <span key={b.label} className={`tnum min-w-0 flex-1 text-center text-[11px] ${b.p === top ? "font-semibold text-brand" : "text-ink-dim"}`}>
+          <span key={b.label} className={`tnum min-w-0 flex-1 text-center text-2xs ${b.p === top ? "font-semibold text-brand" : "text-ink-dim"}`}>
             {b.label}
           </span>
         ))}

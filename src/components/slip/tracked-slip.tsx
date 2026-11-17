@@ -137,7 +137,7 @@ function Pill({
   return (
     <span
       className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border font-mono font-semibold uppercase tracking-wider ${
-        size === "sm" ? "px-2 py-0.5 text-[10px]" : "px-3 py-1 text-[11px]"
+        size === "sm" ? "px-2 py-0.5 text-2xs" : "px-3 py-1 text-2xs"
       } ${PILL_TONES[tone]}`}
     >
       {children}
@@ -255,7 +255,7 @@ function LegCard({ leg, state }: { leg: TrackedLeg; state: LegState }) {
   return (
     <div className={`rounded-xl border bg-surface/60 p-4 sm:p-5 ${LEG_BORDER[tone]}`}>
       <div className="flex items-start justify-between gap-3">
-        <p className="flex min-w-0 gap-1.5 pt-0.5 font-mono text-[10.5px] uppercase tracking-wider text-ink-muted">
+        <p className="flex min-w-0 gap-1.5 pt-0.5 font-mono text-2xs uppercase tracking-wider text-ink-muted">
           <span className="min-w-0 truncate">{leg.league}</span>
           <span className="shrink-0">· <LegClock leg={leg} state={state} /></span>
         </p>
@@ -335,7 +335,7 @@ function Headline({ view }: { view: SlipView }) {
 function Stat({ label, value, accent = false }: { label: ReactNode; value: string; accent?: boolean }) {
   return (
     <div className="min-w-0 rounded-xl border border-line bg-surface/60 px-3 py-3 sm:px-4">
-      <p className="truncate font-mono text-[10px] uppercase tracking-wider text-ink-dim">{label}</p>
+      <p className="truncate font-mono text-2xs uppercase tracking-wider text-ink-dim">{label}</p>
       <p className={`tnum mt-1 font-mono tracking-tight text-xl font-medium sm:text-2xl ${accent ? "text-brand" : "text-ink"}`}>
         {value}
       </p>
@@ -359,7 +359,7 @@ export function TrackedSlipCard({ view }: { view: SlipView }) {
         <SlipStatusPill status={view.status} />
       </header>
 
-      <p className="mt-6 font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-brand">
+      <p className="mt-6 font-mono text-2xs font-semibold uppercase tracking-[0.18em] text-brand">
         Combo · {n} {n === 1 ? "pick" : "picks"}
       </p>
       <Headline view={view} />
@@ -433,7 +433,7 @@ export function TrackedSlipRow({ view, onOpen, onShare }: { view: SlipView; onOp
       aria-label={`Open combo with ${n} ${n === 1 ? "selection" : "selections"}`}
     >
       <div className="flex items-center justify-between gap-3">
-        <p className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.16em] text-brand">
+        <p className="font-mono text-2xs font-semibold uppercase tracking-[0.16em] text-brand">
           {n} {n === 1 ? "pick" : "picks"} · {pct(view.combined)}
         </p>
         <SlipStatusPill status={view.status} size="sm" />

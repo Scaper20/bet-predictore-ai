@@ -59,18 +59,18 @@ function HubPanel({ hub, ctx }: { hub: HubCodeCheck[]; ctx: DashContext }) {
             return (
               <li key={c.tier} className="border-t border-line px-4 py-3 first:border-t-0 sm:px-5">
                 <div className="flex items-baseline justify-between gap-3">
-                  <span className="font-mono text-[10.5px] uppercase tracking-[0.12em] text-ink-muted">{c.name}</span>
+                  <span className="font-mono text-2xs uppercase tracking-[0.12em] text-ink-muted">{c.name}</span>
                   <span className="tnum font-mono text-sm text-ink">
                     {c.odds.toFixed(2)} <span className="text-ink-dim">/ {c.target}</span>
                   </span>
                 </div>
                 <div className="mt-2 flex items-center gap-3">
                   <Meter value={Math.min(1, c.share)} tone={short ? "amber" : "brand"} label={`${c.name}: ${Math.round(c.share * 100)}% of target`} />
-                  <span className={`tnum w-10 shrink-0 text-right font-mono text-[10.5px] ${short ? "text-amber" : "text-ink-dim"}`}>
+                  <span className={`tnum w-10 shrink-0 text-right font-mono text-2xs ${short ? "text-amber" : "text-ink-dim"}`}>
                     {Math.round(c.share * 100)}%
                   </span>
                 </div>
-                <p className="mt-1.5 text-[11px] text-ink-dim">
+                <p className="mt-1.5 text-2xs text-ink-dim">
                   {c.legs} legs · {c.booked ? "booked" : <span className="text-amber">not booked</span>}
                   {short && <span className="text-amber"> · short of its odds</span>}
                 </p>
@@ -123,7 +123,7 @@ function TicketsPanel({ t, ctx, title = "Support queue" }: { t: SupportDashboard
             aside={
               <span className="flex flex-col items-end gap-1">
                 <StatusPill tone={q.status === "open" ? (q.ageH >= 24 ? "rose" : "amber") : "cyan"}>{q.status}</StatusPill>
-                <span className="tnum font-mono text-[10px] text-ink-dim">{ageText(q.ageH)}</span>
+                <span className="tnum font-mono text-2xs text-ink-dim">{ageText(q.ageH)}</span>
               </span>
             }
           />
@@ -235,7 +235,7 @@ export function OwnerView({ d, ctx }: { d: OwnerDashboard; ctx: DashContext }) {
             ]}
           />
           <div className="mt-6">
-            <p className="mb-3 font-mono text-[10.5px] uppercase tracking-[0.14em] text-ink-dim">Revenue by plan · 30d</p>
+            <p className="mb-3 font-mono text-2xs uppercase tracking-[0.14em] text-ink-dim">Revenue by plan · 30d</p>
             <BarList rows={d.revenueByPlan.map((r) => ({ ...r, display: naira(r.value) }))} tone="gold" empty="No revenue in the last 30 days." />
           </div>
         </Panel>
@@ -400,7 +400,7 @@ export function MarketingView({ d, ctx }: { d: MarketingDashboard; ctx: DashCont
         </Panel>
         <Panel title="Channels" meta="signups · 30d" action={<Link_ ctx={ctx} href="/admin/traffic" />}>
           <BarList rows={d.channels} tone="cyan" empty="No signups in the last 30 days." />
-          <p className="mt-4 text-[11px] leading-snug text-ink-dim">
+          <p className="mt-4 text-2xs leading-snug text-ink-dim">
             First touch: a tagged link wins, then the referring site. &ldquo;Direct&rdquo; is typed-in, app and untagged traffic.
           </p>
         </Panel>
@@ -444,11 +444,11 @@ export function MarketingView({ d, ctx }: { d: MarketingDashboard; ctx: DashCont
             {d.emails.length === 0 ? (
               <EmptyRow>No campaigns sent yet.</EmptyRow>
             ) : (
-              <table className="w-full text-[13px]">
+              <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-line text-left">
                     {["Campaign", "Sent", "Queued", "Failed", ""].map((h, i) => (
-                      <th key={i} className="px-4 py-2 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-ink-dim sm:px-5">
+                      <th key={i} className="px-4 py-2 font-mono text-2xs font-medium uppercase tracking-[0.14em] text-ink-dim sm:px-5">
                         {h}
                       </th>
                     ))}
@@ -523,11 +523,11 @@ export function SupportView({ d, ctx }: { d: SupportDashboard; ctx: DashContext 
                 key={i}
                 primary={ctx.showEmail(s.email) ?? "—"}
                 secondary={`${s.plan} · ${timeAgo(s.at)}`}
-                aside={<span className="tnum font-mono text-[10.5px] text-ink-dim">{s.attempts} {s.attempts === 1 ? "try" : "tries"}</span>}
+                aside={<span className="tnum font-mono text-2xs text-ink-dim">{s.attempts} {s.attempts === 1 ? "try" : "tries"}</span>}
               />
             ))
           )}
-          <p className="border-t border-line px-4 py-3 text-[11px] leading-snug text-ink-dim sm:px-5">
+          <p className="border-t border-line px-4 py-3 text-2xs leading-snug text-ink-dim sm:px-5">
             A friendly note often turns these into customers: a card that needed 3-D Secure, a bank that declined, a mobile money prompt that timed out.
           </p>
         </Panel>
@@ -547,7 +547,7 @@ export function SupportView({ d, ctx }: { d: SupportDashboard; ctx: DashContext 
                 aside={
                   <span className="flex flex-col items-end gap-1">
                     <StatusPill tone={g.tier === "vip" ? "gold" : "brand"}>{g.tier}</StatusPill>
-                    <span className="tnum font-mono text-[10px] text-ink-dim">
+                    <span className="tnum font-mono text-2xs text-ink-dim">
                       to {new Date(g.expires).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
                     </span>
                   </span>

@@ -62,14 +62,14 @@ export function PlanMatrixMobile() {
               <th
                 scope="colgroup"
                 colSpan={3}
-                className="pb-1 pt-5 text-left text-[11px] font-semibold uppercase tracking-[0.16em] text-brand"
+                className="pb-1 pt-5 text-left text-2xs font-semibold uppercase tracking-[0.16em] text-brand"
               >
                 {group.group}
               </th>
             </tr>
             {group.rows.map((row) => (
               <tr key={row.label} className="border-t border-line">
-                <th scope="row" className="py-2.5 pr-3 text-left text-[13px] font-normal text-ink-muted">
+                <th scope="row" className="py-2.5 pr-3 text-left text-sm font-normal text-ink-muted">
                   {row.label}
                 </th>
                 <Cell value={row.values[left]} />
@@ -114,7 +114,7 @@ function PlanPicker({
 
 function Cell({ value }: { value: boolean | string }) {
   if (typeof value === "string") {
-    return <td className="tnum py-2.5 text-center text-[13px] text-ink">{value}</td>;
+    return <td className="tnum py-2.5 text-center text-sm text-ink">{value}</td>;
   }
   // The glyph is decorative; the word beside it is what gets announced, so a
   // row never reads as an unlabelled tick.

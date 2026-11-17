@@ -26,7 +26,7 @@ export function Badge({
 }) {
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold tracking-wide ${TONES[tone]} ${className}`}
+      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-2xs font-semibold tracking-wide ${TONES[tone]} ${className}`}
     >
       {children}
     </span>
@@ -47,7 +47,7 @@ type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 
 const BUTTONS: Record<ButtonVariant, string> = {
   primary:
-    "bg-brand text-brand-ink hover:bg-brand-strong glow-brand font-semibold",
+    "bg-brand text-brand-ink hover:bg-brand-strong font-semibold",
   secondary:
     "bg-surface-2 text-ink border border-line hover:border-line-strong hover:bg-surface-3",
   ghost: "text-ink-muted hover:text-ink hover:bg-surface-2",

@@ -41,9 +41,9 @@ export default async function AdminPartnerPage({ params }: { params: Promise<{ i
         <Link href="/admin/partners" className="text-xs text-ink-muted underline underline-offset-2 hover:text-ink">
           ← All partners
         </Link>
-        <p className="mt-3 font-mono text-[10.5px] uppercase tracking-[0.16em] text-brand">Business · Partner</p>
+        <p className="mt-3 font-mono text-2xs uppercase tracking-[0.16em] text-brand">Business · Partner</p>
         <div className="mt-1.5 flex flex-wrap items-center gap-3">
-          <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-[28px]">{partner.name}</h1>
+          <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">{partner.name}</h1>
           <Badge tone={shownStatus === "active" ? "brand" : "rose"}>{shownStatus}</Badge>
           <Badge tone="neutral">{pctText(partner.rateBps)}</Badge>
         </div>
@@ -124,7 +124,7 @@ export default async function AdminPartnerPage({ params }: { params: Promise<{ i
                     <AdminTableCell className="tnum font-medium">{moneyText(c.amountMinor, c.currency)}</AdminTableCell>
                     <AdminTableCell>
                       <Badge tone={STANDING_TONE[s]}>{s === "held" ? `held to ${date(c.payableAt)}` : s}</Badge>
-                      {c.reversalReason && <p className="mt-1 text-[11px] text-ink-dim">{c.reversalReason}</p>}
+                      {c.reversalReason && <p className="mt-1 text-2xs text-ink-dim">{c.reversalReason}</p>}
                     </AdminTableCell>
                     <AdminTableCell>
                       {canPay && c.kind === "commission" && c.status !== "reversed" && <ReverseForm id={c.id} partnerId={partner.id} />}
@@ -195,7 +195,7 @@ export default async function AdminPartnerPage({ params }: { params: Promise<{ i
                   <AdminTableCell className="whitespace-nowrap text-ink-muted">{date(c.notifiedAt)}</AdminTableCell>
                   <AdminTableCell className="tnum">
                     {pctText(c.fromBps)} to {pctText(c.toBps)}
-                    {c.agreedInWriting && <span className="ml-2 text-[11px] text-ink-dim">agreed in writing</span>}
+                    {c.agreedInWriting && <span className="ml-2 text-2xs text-ink-dim">agreed in writing</span>}
                   </AdminTableCell>
                   <AdminTableCell className="whitespace-nowrap text-ink-muted">{date(c.effectiveAt)}</AdminTableCell>
                   <AdminTableCell>

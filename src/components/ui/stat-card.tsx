@@ -19,7 +19,7 @@ export function StatCard({
     <div className="card p-5">
       <p className="text-xs font-medium uppercase tracking-wider text-ink-dim">{label}</p>
       <p className="tnum mt-2 font-mono tracking-tight text-2xl font-medium">{value}</p>
-      {sublabel && <p className="mt-3 text-[11px] leading-relaxed text-ink-dim">{sublabel}</p>}
+      {sublabel && <p className="mt-3 text-2xs leading-relaxed text-ink-dim">{sublabel}</p>}
     </div>
   );
 }

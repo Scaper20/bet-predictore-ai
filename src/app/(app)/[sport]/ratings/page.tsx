@@ -162,10 +162,10 @@ function toRated(p: RatingPoint): Rated {
 }
 
 function Change({ value }: { value: number | null }) {
-  if (value === null || Math.abs(value) < 0.1) return <span className="block text-[11px] text-ink-dim">steady</span>;
+  if (value === null || Math.abs(value) < 0.1) return <span className="block text-2xs text-ink-dim">steady</span>;
   const up = value > 0;
   return (
-    <span className={`tnum block text-[11px] font-semibold ${up ? "text-brand" : "text-rose"}`}>
+    <span className={`tnum block text-2xs font-semibold ${up ? "text-brand" : "text-rose"}`}>
       {up ? "▲" : "▼"} {Math.abs(value).toFixed(1)} this month
     </span>
   );
@@ -176,7 +176,7 @@ function Mover({ label, r }: { label: string; r: Rated }) {
     <div className="card flex items-center gap-3 p-4">
       <Crest src={r.crest} name={r.name} size={30} />
       <div className="min-w-0 flex-1">
-        <p className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-ink-dim">{label}</p>
+        <p className="text-2xs font-semibold uppercase tracking-[0.14em] text-ink-dim">{label}</p>
         <p className="truncate font-semibold">{r.name}</p>
       </div>
       <Change value={r.change} />
@@ -189,8 +189,8 @@ function Scale() {
   const stops = Array.from({ length: 10 }, (_, i) => ratingColor(i + 1)).join(", ");
   return (
     <div className="card p-4 sm:p-5">
-      <div className="h-2.5 w-full rounded-full" style={{ background: `linear-gradient(90deg, ${stops})` }} />
-      <div className="mt-2 grid grid-cols-5 text-[11px] text-ink-dim">
+      <div className="h-2.5 w-full rounded-full" style={{ background: `linear-gradient(90deg in oklch, ${stops})` }} />
+      <div className="mt-2 grid grid-cols-5 text-2xs text-ink-dim">
         {/* The end labels shrink to the numbers on the narrowest phones. */}
         <span>1<span className="hidden min-[360px]:inline"> · Struggling</span></span>
         <span className="text-center">Weak</span>

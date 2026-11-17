@@ -103,17 +103,17 @@ export default async function PropsPage({ searchParams }: { searchParams: Promis
       <Container className="space-y-5 py-5 sm:py-8">
         <div className="grid gap-3 sm:grid-cols-3">
           <div className="card p-4">
-            <p className="text-[10.5px] font-semibold uppercase tracking-wider text-ink-muted">Starters projected</p>
+            <p className="text-2xs font-semibold uppercase tracking-wider text-ink-muted">Starters projected</p>
             <p className="mt-1 font-mono text-2xl font-bold tnum">{new Set(upcoming.map((r) => r.playerId)).size}</p>
             <p className="text-xs text-ink-dim">next 36 hours, {new Set(upcoming.map((r) => r.matchId)).size} games</p>
           </div>
           <div className="card p-4">
-            <p className="text-[10.5px] font-semibold uppercase tracking-wider text-ink-muted">Picks</p>
+            <p className="text-2xs font-semibold uppercase tracking-wider text-ink-muted">Picks</p>
             <p className="mt-1 font-mono text-2xl font-bold tnum">{live ? picks.length : "Trial run"}</p>
             <p className="text-xs text-ink-dim">{live ? "logged once lineups are confirmed" : "graded privately until the record proves out"}</p>
           </div>
           <div className="card p-4">
-            <p className="text-[10.5px] font-semibold uppercase tracking-wider text-ink-muted">Record</p>
+            <p className="text-2xs font-semibold uppercase tracking-wider text-ink-muted">Record</p>
             <p className="mt-1 font-mono text-2xl font-bold tnum">{graded >= 30 ? `${Math.round((won / graded) * 100)}%` : "–"}</p>
             <p className="text-xs text-ink-dim">{graded >= 30 ? `${won} of ${graded} published picks landed` : "shows once 30 picks are graded"}</p>
           </div>
@@ -170,7 +170,7 @@ export default async function PropsPage({ searchParams }: { searchParams: Promis
             );
           })
         )}
-        <p className="text-[11px] text-ink-dim">
+        <p className="text-2xs text-ink-dim">
           {PROPS_NOTE} Projections are KiqStat&apos;s, from FotMob counts; how they were tested is in{" "}
           <Link href="/how-it-works" className="underline">how our picks work</Link>.
         </p>

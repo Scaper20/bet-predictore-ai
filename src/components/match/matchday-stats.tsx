@@ -8,7 +8,7 @@ import { sportPath } from "@/lib/routes";
 function Stat({ eyebrow, value, detail, href }: { eyebrow: string; value: string; detail: string; href?: string }) {
   const body = (
     <>
-      <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-ink-dim">{eyebrow}</p>
+      <p className="font-mono text-2xs uppercase tracking-[0.14em] text-ink-dim">{eyebrow}</p>
       <p className="mt-0.5 flex items-baseline gap-2">
         <span className="tnum font-mono text-lg font-semibold tracking-tight text-brand">{value}</span>
         <span className="tnum text-xs text-ink-muted">{detail}</span>

@@ -426,7 +426,7 @@ function SettingsPanel({
                   }`}
                 >
                   <span className={`tnum block font-mono text-base font-bold ${on ? "text-brand" : "text-ink"}`}>{n.toFixed(n < 10 ? 1 : 0)}</span>
-                  <span className="mt-0.5 block text-[10.5px] text-ink-dim">{oneIn(1 / n)}</span>
+                  <span className="mt-0.5 block text-2xs text-ink-dim">{oneIn(1 / n)}</span>
                 </button>
               );
             })}
@@ -465,11 +465,11 @@ function SettingsPanel({
                 <Link
                   key={m.id}
                   href="/pricing"
-                  className="flex min-w-0 items-center justify-between gap-1.5 rounded-xl border border-line px-3 py-2.5 text-[13px] text-ink-dim hover:text-ink-muted"
+                  className="flex min-w-0 items-center justify-between gap-1.5 rounded-xl border border-line px-3 py-2.5 text-sm text-ink-dim hover:text-ink-muted"
                   title={`${m.label} is part of Pro`}
                 >
                   <span className="truncate">{m.label}</span>
-                  <span className="shrink-0 rounded bg-violet/15 px-1.5 py-px text-[10px] font-semibold text-violet">Pro</span>
+                  <span className="shrink-0 rounded bg-violet/15 px-1.5 py-px text-2xs font-semibold text-violet">Pro</span>
                 </Link>
               ) : (
                 <button
@@ -477,7 +477,7 @@ function SettingsPanel({
                   type="button"
                   aria-pressed={on}
                   onClick={() => toggleMarket(m.id)}
-                  className={`flex min-w-0 items-center justify-between gap-2 rounded-xl border px-3 py-2.5 text-left text-[13px] font-medium transition-colors ${
+                  className={`flex min-w-0 items-center justify-between gap-2 rounded-xl border px-3 py-2.5 text-left text-sm font-medium transition-colors ${
                     on ? "border-brand/40 bg-brand/12 text-brand" : "border-line text-ink-muted hover:border-line-strong hover:text-ink"
                   }`}
                 >
@@ -485,7 +485,7 @@ function SettingsPanel({
                     <span className="truncate">{m.label}</span>
                     {m.paid && <ViewerPlanTag />}
                   </span>
-                  <span aria-hidden className={`grid size-4 shrink-0 place-items-center rounded-full border text-[9px] ${on ? "border-brand bg-brand text-brand-ink" : "border-line-strong"}`}>
+                  <span aria-hidden className={`grid size-4 shrink-0 place-items-center rounded-full border text-2xs ${on ? "border-brand bg-brand text-brand-ink" : "border-line-strong"}`}>
                     {on ? "✓" : ""}
                   </span>
                 </button>
@@ -588,7 +588,7 @@ function SettingsPanel({
 function AllowanceLine({ allowance, remaining }: { allowance: Allowance | null; remaining: number | null }) {
   if (!allowance) return null;
   return (
-    <p className="mt-2.5 text-center text-[11px] text-ink-dim">
+    <p className="mt-2.5 text-center text-2xs text-ink-dim">
       {allowance.paid
         ? `Up to ${FORGE_PAID_DAILY} combos a day with your plan`
         : !allowance.signedIn
@@ -673,9 +673,9 @@ function DayRangePicker({
                       : "border-line text-ink-muted hover:border-line-strong hover:text-ink"
               }`}
             >
-              <span className={`text-[10px] font-semibold uppercase tracking-wide ${edge ? "" : "text-ink-dim"}`}>{parts.top}</span>
+              <span className={`text-2xs font-semibold uppercase tracking-wide ${edge ? "" : "text-ink-dim"}`}>{parts.top}</span>
               <span className="tnum mt-0.5 font-mono text-base font-bold leading-none">{parts.day}</span>
-              <span className={`tnum mt-1 text-[10px] ${edge ? "font-semibold" : "text-ink-dim"}`}>{n === undefined ? parts.month : n}</span>
+              <span className={`tnum mt-1 text-2xs ${edge ? "font-semibold" : "text-ink-dim"}`}>{n === undefined ? parts.month : n}</span>
             </button>
           );
         })}
@@ -728,7 +728,7 @@ function LeaguePicker({
 
   const toggle = (code: string) => onChange(chosen.includes(code) ? chosen.filter((c) => c !== code) : [...chosen.filter((c) => c !== "mine"), code]);
   const chip = (on: boolean) =>
-    `inline-flex max-w-full items-center gap-1.5 rounded-full border py-1 pl-1 pr-2.5 text-[12.5px] font-medium transition-colors ${
+    `inline-flex max-w-full items-center gap-1.5 rounded-full border py-1 pl-1 pr-2.5 text-xs font-medium transition-colors ${
       on ? "border-brand/50 bg-brand/12 text-ink" : "border-line text-ink-muted hover:border-line-strong hover:text-ink"
     }`;
 
@@ -751,9 +751,9 @@ function LeaguePicker({
             <button key={l.code} type="button" aria-pressed={on} onClick={() => toggle(l.code)} className={chip(on)} title={l.name}>
               <LeagueLogo code={l.code} size={18} fallback={l.flag} />
               <span className="truncate">{l.shortName}</span>
-              {n !== undefined && <span className={`tnum text-[10.5px] ${on ? "text-brand" : "text-ink-dim"}`}>{n}</span>}
-              {pro && <span className="rounded bg-violet/15 px-1 text-[9.5px] font-semibold text-violet">Pro</span>}
-              {on && <span aria-hidden className="text-[10px] text-brand">✓</span>}
+              {n !== undefined && <span className={`tnum text-2xs ${on ? "text-brand" : "text-ink-dim"}`}>{n}</span>}
+              {pro && <span className="rounded bg-violet/15 px-1 text-2xs font-semibold text-violet">Pro</span>}
+              {on && <span aria-hidden className="text-2xs text-brand">✓</span>}
             </button>
           );
         })}
@@ -902,7 +902,7 @@ function ResultPanel({
       </div>
 
       <div className="hidden flex-wrap items-center justify-between gap-3 lg:flex">
-        <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-ink-muted">
+        <p className="font-mono text-2xs font-semibold uppercase tracking-[0.18em] text-ink-muted">
           Your combo · {style} · {slip.legs.length} {slip.legs.length === 1 ? "game" : "games"}
         </p>
         <div className="flex flex-wrap gap-2">
@@ -990,7 +990,7 @@ function ResultPanel({
           </ActionButton>
         </div>
         {allowance && !allowance.paid && remaining !== null && (
-          <p className="mt-1.5 text-center text-[10.5px] text-ink-dim">
+          <p className="mt-1.5 text-center text-2xs text-ink-dim">
             {remaining} {allowance.signedIn ? "left today" : "free combos left"}
           </p>
         )}
@@ -1023,7 +1023,7 @@ function LegCard({
         <p className="flex min-w-0 items-center gap-2 text-xs text-ink-dim">
           <span
             title={rank === 1 ? "The strongest pick on this combo" : `Pick ${rank} by strength`}
-            className={`grid size-6 shrink-0 place-items-center rounded-full font-mono text-[11px] font-bold ${rank === 1 ? "bg-brand text-brand-ink" : "bg-surface-3 text-ink-muted"}`}
+            className={`grid size-6 shrink-0 place-items-center rounded-full font-mono text-2xs font-bold ${rank === 1 ? "bg-brand text-brand-ink" : "bg-surface-3 text-ink-muted"}`}
           >
             {rank}
           </span>
@@ -1032,7 +1032,7 @@ function LegCard({
           </span>
         </p>
         {combo && (
-          <span className="shrink-0 rounded-md bg-violet/15 px-2 py-0.5 text-[11px] font-semibold text-violet">
+          <span className="shrink-0 rounded-md bg-violet/15 px-2 py-0.5 text-2xs font-semibold text-violet">
             {leg.picks.length} picks · 1 game
           </span>
         )}
@@ -1085,7 +1085,7 @@ function EmptyResult() {
   ];
   return (
     <div className="card flex min-h-[28rem] flex-col justify-center p-8">
-      <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-brand">Your combo appears here</p>
+      <p className="font-mono text-2xs font-semibold uppercase tracking-[0.18em] text-brand">Your combo appears here</p>
       <ol className="mt-6 space-y-5">
         {steps.map(([title, text], i) => (
           <li key={title} className="flex gap-4">
@@ -1110,7 +1110,7 @@ function GuestGate({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-canvas/60 p-5 backdrop-blur-md">
       <div className="w-full max-w-sm rounded-2xl border border-line bg-shell p-6 text-center shadow-2xl">
-        <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-brand">KiqStat Forge</p>
+        <p className="font-mono text-2xs font-semibold uppercase tracking-[0.18em] text-brand">KiqStat Forge</p>
         <p className="mt-3 font-display text-2xl font-bold">Keep forging combos</p>
         <p className="mt-2 text-sm leading-relaxed text-ink-muted">
           You&apos;ve used your {FORGE_GUEST_TOTAL} free combos. Create a free account for {FORGE_FREE_DAILY} a day. Your
@@ -1167,7 +1167,7 @@ function Total({ label, value, hint, accent = false }: { label: string; value: s
     <div className="min-w-0">
       <p className="truncate text-xs text-ink-muted">{label}</p>
       <p className={`tnum mt-1 truncate font-mono text-2xl font-bold sm:text-3xl ${accent ? "text-brand" : "text-ink"}`}>{value}</p>
-      {hint && <p className="mt-0.5 truncate text-[11px] text-ink-dim">{hint}</p>}
+      {hint && <p className="mt-0.5 truncate text-2xs text-ink-dim">{hint}</p>}
     </div>
   );
 }

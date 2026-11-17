@@ -39,7 +39,7 @@ export function DataLayerForm({ mode }: { mode: string }) {
           >
             <span className="flex items-center gap-2 text-sm font-semibold text-ink">
               {o.label}
-              {o.value === mode && <span className="text-[10px] font-bold uppercase tracking-wider text-brand">Current</span>}
+              {o.value === mode && <span className="text-2xs font-bold uppercase tracking-wider text-brand">Current</span>}
             </span>
             <span className="mt-1 block text-xs leading-snug text-ink-dim">{o.hint}</span>
           </button>

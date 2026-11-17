@@ -460,7 +460,7 @@ function AskPanelInner({ page }: { page: { matchId: string; label: string } | nu
                 </button>
               )}
             </form>
-            <p className="mt-2 text-center text-[11px] text-ink-dim">
+            <p className="mt-2 text-center text-2xs text-ink-dim">
               {allowance?.paid ? (
                 remaining !== null && allowance.limit !== null ? (
                   `${remaining} of ${allowance.limit} questions left today · Never invents injuries or news`
@@ -512,7 +512,7 @@ function EmptyIntro({ context }: { context: boolean }) {
         Picks, prices, form, combos. Every answer comes from the KiqStat model and live market prices, and you can add
         what it suggests straight to your combo.
       </p>
-      <p className="mx-auto mt-3 max-w-xs text-[11px] text-ink-dim">
+      <p className="mx-auto mt-3 max-w-xs text-2xs text-ink-dim">
         It never invents injuries, line-ups or news. Probabilities, not promises. 18+.
       </p>
     </div>
@@ -549,7 +549,7 @@ function GuestGate({ pathname }: { pathname: string }) {
             I already have an account
           </Link>
         </div>
-        <p className="mt-4 text-[11px] text-ink-dim">Takes a minute. Pro: {ASK_PAID_DAILY} questions a day.</p>
+        <p className="mt-4 text-2xs text-ink-dim">Takes a minute. Pro: {ASK_PAID_DAILY} questions a day.</p>
       </div>
     </div>
   );
@@ -675,13 +675,13 @@ function PickCards({ picks }: { picks: AskPickCard[] }) {
               <p className="truncate text-xs text-ink-muted">
                 {c.label} · {pct(c.probability)}
               </p>
-              <p className="truncate text-[10.5px] text-ink-dim">
+              <p className="truncate text-2xs text-ink-dim">
                 {c.league} · <LocalTime iso={c.kickoff} kind="day" />, <LocalTime iso={c.kickoff} />
               </p>
             </div>
             <div className="shrink-0 text-right">
               <p className="tnum font-mono text-sm font-bold text-ink">{(c.price ?? c.fairOdds).toFixed(2)}</p>
-              <p className="text-[9.5px] uppercase tracking-wider text-ink-dim">{c.price ? "Market" : "Fair"}</p>
+              <p className="text-2xs uppercase tracking-wider text-ink-dim">{c.price ? "Market" : "Fair"}</p>
             </div>
             <button
               type="button"

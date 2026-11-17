@@ -338,7 +338,7 @@ function SectionTitle({ title, count, live = false, extra }: { title: string; co
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dt className="text-[10px] uppercase tracking-wider text-ink-dim">{label}</dt>
+      <dt className="text-2xs uppercase tracking-wider text-ink-dim">{label}</dt>
       <dd className="tnum mt-0.5 font-bold">{value}</dd>
     </div>
   );

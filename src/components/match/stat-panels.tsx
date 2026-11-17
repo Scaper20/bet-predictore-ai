@@ -28,11 +28,11 @@ function Section({ title, hint, children }: { title: string; hint?: string; chil
 }
 
 function Label({ children }: { children: React.ReactNode }) {
-  return <p className="mb-2 mt-4 text-[11px] font-semibold uppercase tracking-wider text-ink-dim first:mt-0">{children}</p>;
+  return <p className="mb-2 mt-4 text-2xs font-semibold uppercase tracking-wider text-ink-dim first:mt-0">{children}</p>;
 }
 
 function Note({ children }: { children: React.ReactNode }) {
-  return <p className="mt-3 text-[11px] leading-relaxed text-ink-dim">{children}</p>;
+  return <p className="mt-3 text-2xs leading-relaxed text-ink-dim">{children}</p>;
 }
 
 const STAT_COPY: Record<StatKind, { title: string; noun: string; weakTotals: boolean; teamLine: string; hcp: string[] }> = {

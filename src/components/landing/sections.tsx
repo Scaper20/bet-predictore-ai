@@ -241,7 +241,7 @@ export function Leagues() {
                   <LeagueLogo code={l.code} size={28} />
                   <span className="min-w-0">
                     <span className="block truncate text-sm font-medium">{l.shortName}</span>
-                    <span className="block truncate text-[11px] text-ink-dim">{l.country}</span>
+                    <span className="block truncate text-2xs text-ink-dim">{l.country}</span>
                   </span>
                 </Link>
               ))}

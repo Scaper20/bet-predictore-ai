@@ -67,7 +67,7 @@ export function PricingTable({
              * reading order everywhere else) is untouched.
              */
             className={`card relative flex flex-col p-5 sm:p-7 ${
-              plan.badge ? "order-first border-brand/40 glow-brand md:order-0" : ""
+              plan.badge ? "order-first border-brand/40 md:order-0" : ""
             } ${current ? "border-brand/40" : ""}`}
           >
             {(plan.badge || current) && (
@@ -113,7 +113,7 @@ export function PricingTable({
                   href={hrefFor?.(plan) ?? `/account/billing?plan=${plan.id}`}
                   className={`inline-flex w-full items-center justify-center gap-2 rounded-lg px-5 py-3 text-sm transition-colors ${
                     plan.badge
-                      ? "bg-brand text-brand-ink hover:bg-brand-strong glow-brand font-semibold"
+                      ? "bg-brand text-brand-ink hover:bg-brand-strong font-semibold"
                       : "bg-surface-2 text-ink border border-line hover:border-line-strong hover:bg-surface-3"
                   }`}
                 >

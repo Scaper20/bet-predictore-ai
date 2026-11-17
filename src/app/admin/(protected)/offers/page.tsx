@@ -178,7 +178,7 @@ function OfferRow({ offer: o, stat }: { offer: Offer; stat?: OfferStat }) {
             {tierName(o.tier)} for {durationLabel(o.hours)} · <span className="font-mono text-ink">{naira(o.priceNaira)}</span>
             {o.windowHours ? ` · open ${durationLabel(o.windowHours)}` : ""} · {o.maxPerAccount === 1 ? "once per account" : `${o.maxPerAccount}× per account`}
           </p>
-          <p className="mt-0.5 text-[11px] text-ink-dim">
+          <p className="mt-0.5 text-2xs text-ink-dim">
             {stat ? `${stat.passes} sold · ${kobo(stat.revenueKobo)} · ${stat.converted}/${stat.buyers} went on to a plan` : "None sold yet"}
           </p>
         </div>
