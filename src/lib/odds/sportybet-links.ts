@@ -3,6 +3,8 @@ import "server-only";
 import { leagueByCode } from "@/lib/leagues";
 import { normaliseKey } from "@/lib/model/fit";
 import { cached } from "@/lib/providers/cache";
+import { allPages } from "@/lib/supabase/pages";
+import { boardPrices, type BoardPrices } from "./anchor-shadow";
 import type { LearnedLink, MatchInput, MatchMethod, UnresolvedFixture } from "./sportybet-match";
 import type { SportyBetEvent } from "./sportybet-api";
 import type { Discovery } from "./sportybet-discover";
@@ -447,19 +449,54 @@ export async function priceSnapshots(matchIds: readonly string[]): Promise<Map<s
   const out = new Map<string, Snapshot[]>();
   if (matchIds.length === 0) return out;
   try {
-    const { data } = await (await admin())
-      .from("sportybet_price_history")
-      .select("match_id, captured_at, prices")
-      .in("match_id", [...new Set(matchIds)])
-      .order("captured_at", { ascending: true })
-      .limit(5000);
-    for (const r of (data ?? []) as { match_id: string; captured_at: string; prices: CompactPrices }[]) {
+    const db = await admin();
+    const ids = [...new Set(matchIds)];
+    // Paged, in slices of ids: the Data API stops at 1,000 rows a request
+    // without saying so, and a day's slate carries several snapshots a game.
+    const data: { match_id: string; captured_at: string; prices: CompactPrices }[] = [];
+    for (let i = 0; i < ids.length; i += 150) {
+      const slice = ids.slice(i, i + 150);
+      data.push(
+        ...(await allPages<{ match_id: string; captured_at: string; prices: CompactPrices }>((from, to) =>
+          db
+            .from("sportybet_price_history")
+            .select("match_id, captured_at, prices")
+            .in("match_id", slice)
+            .order("captured_at", { ascending: true })
+            .order("match_id", { ascending: true })
+            .range(from, to),
+        )),
+      );
+    }
+    data.sort((a, b) => Date.parse(a.captured_at) - Date.parse(b.captured_at));
+    for (const r of data) {
       const list = out.get(r.match_id) ?? [];
       list.push({ capturedAt: Date.parse(r.captured_at), prices: r.prices });
       out.set(r.match_id, list);
     }
   } catch {
     // No history: picks are logged without prices, as before.
+  }
+  return out;
+}
+
+/**
+ * The first usable 1X2 and over/under 2.5 prices SportyBet's board showed for
+ * each game: what the model is anchored to (model/params.ts ANCHOR_FROM). The
+ * first read, not the latest, so the anchor holds still once a game is priced,
+ * and it is the price the anchoring shadow was scored on. Games without one
+ * are absent and keep the plain model.
+ */
+export async function firstBoardPrices(matchIds: readonly string[]): Promise<Map<string, BoardPrices>> {
+  const out = new Map<string, BoardPrices>();
+  for (const [id, list] of await priceSnapshots(matchIds)) {
+    for (const snap of list) {
+      const prices = boardPrices(snap.prices);
+      if (prices) {
+        out.set(id, prices);
+        break;
+      }
+    }
   }
   return out;
 }

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Match, ResultRow } from "@/lib/types";
 import { buildPrediction, guardHeadline, heldBack, levelFactor, type Pick } from "./predict";
 import { fitLeague } from "./fit";
-import { BANDS_FROM, BANDS_PARAMS, LEGACY_PARAMS, MARKET_COVERAGE_MIN, MARKET_MODEL_FROM, MARKET_PARAMS, NEXT_MODEL_FROM, NEXT_PARAMS, marketCoverage, paramsFor } from "./params";
+import { ANCHOR_FROM, ANCHOR_WEIGHT, anchorWeight, BANDS_FROM, BANDS_PARAMS, LEGACY_PARAMS, MARKET_COVERAGE_MIN, MARKET_MODEL_FROM, MARKET_PARAMS, NEXT_MODEL_FROM, NEXT_PARAMS, marketCoverage, paramsFor } from "./params";
 
 function rng(seed: number) {
   return () => {
@@ -86,6 +86,25 @@ describe("parameter gate (today's picks do not move)", () => {
     expect(gated.picks).toEqual(before.picks);
     expect(gated.topPick).toEqual(before.topPick);
     expect(gated.markets.home).toBe(before.markets.home);
+  });
+});
+
+describe("anchoring to SportyBet's price", () => {
+  it("starts at Lagos midnight on 28 Nov 2026, beyond the 48-hour publish horizon", () => {
+    expect(ANCHOR_FROM).toBe(Date.parse("2026-11-27T23:00:00Z"));
+    expect(ANCHOR_FROM).toBeGreaterThan(BANDS_FROM);
+  });
+
+  it("never reaches a game before the cutover", () => {
+    expect(anchorWeight(ANCHOR_FROM - 1)).toBe(0);
+    expect(anchorWeight("2026-11-24T20:00:00Z")).toBe(0);
+    expect(anchorWeight("not a date")).toBe(0);
+  });
+
+  it("moves the model halfway toward the price from the cutover on", () => {
+    expect(ANCHOR_WEIGHT).toBe(0.5);
+    expect(anchorWeight(ANCHOR_FROM)).toBe(0.5);
+    expect(anchorWeight("2026-12-05T15:00:00Z")).toBe(0.5);
   });
 });
 

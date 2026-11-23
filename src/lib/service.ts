@@ -21,7 +21,9 @@ import { switchOn } from "@/lib/switches";
 import { listingsFor, type SportyBetEvent } from "@/lib/odds/sportybet";
 import { trainingAsOf } from "@/lib/model/as-of";
 import { marketGoals } from "@/lib/model/market-goals";
-import { marketCoverage, paramsFor, type ParamSet } from "@/lib/model/params";
+import { anchorWeight, marketCoverage, paramsFor, type ParamSet } from "@/lib/model/params";
+import { firstBoardPrices } from "@/lib/odds/sportybet-links";
+import type { BoardPrices } from "@/lib/odds/anchor-shadow";
 import { buildPrediction, guardHeadline, HEADLINE_EXCLUDED, HEADLINE_MAX_PROBABILITY, type ModelOptions, type Prediction } from "@/lib/model/predict";
 import { applySelectionPolicy } from "@/lib/selection-policy";
 import { extraPicks } from "@/lib/selection-extras";
@@ -195,10 +197,22 @@ async function sweetSpotStats(match: Match): Promise<Record<string, number> | un
   return sweetSpotLeague(match.league.code) ? statChances(match) : undefined;
 }
 
+/**
+ * SportyBet's first board prices for the games that are anchored to them
+ * (model/params.ts ANCHOR_FROM). Games before the cutover are never looked
+ * up, so nothing changes for them, not even a read.
+ */
+async function anchorBoards(matches: readonly Match[]): Promise<Map<string, BoardPrices>> {
+  const ids = matches.filter((m) => anchorWeight(m.kickoff) > 0).map((m) => m.id);
+  if (ids.length === 0) return new Map();
+  return cached(`anchor-board:${ids.join(",")}`, 5 * 60_000, () => firstBoardPrices(ids)).catch(() => new Map<string, BoardPrices>());
+}
+
 function modelOptions(
   match: Match,
   training: { rows: ResultRow[]; book?: NameBook; topFive?: ReadonlySet<string> },
   stats?: Record<string, number>,
+  board?: BoardPrices,
 ): ModelOptions {
   // Games before the cutover keep the parameters they were published under (model/params.ts).
   const def = match.league.code ? leagueByCode(match.league.code) : undefined;
@@ -215,9 +229,13 @@ function modelOptions(
     [match.away.name, ratingNames?.away ?? match.away.name],
     training.topFive,
   );
+  // Anchored to SportyBet's price from ANCHOR_FROM on, where its board has one.
+  const weight = board ? anchorWeight(match.kickoff) : 0;
+  const anchor = weight > 0 && board ? marketGoals(board.oneXTwo, board.overUnder) : null;
   return {
     prefit,
     ...params.options,
+    ...(anchor ? { marketRates: anchor, marketRatesWeight: weight } : {}),
     ...(ratingNames ? { ratingNames } : {}),
     ...(barred.length ? { excludeHeadline: [...HEADLINE_EXCLUDED, ...barred] } : {}),
     ...(stats ? { statChances: stats } : {}),
@@ -309,9 +327,9 @@ export async function matchDetail(id: string): Promise<MatchDetail | null> {
     const match = await getMatch(id);
     if (!match) return null;
 
-    const [full, h2h, stats] = await Promise.all([trainingRows(match), getH2H(match), sweetSpotStats(match)]);
+    const [full, h2h, stats, boards] = await Promise.all([trainingRows(match), getH2H(match), sweetSpotStats(match), anchorBoards([match])]);
     const training = asOf(match, full);
-    const options = modelOptions(match, training, stats);
+    const options = modelOptions(match, training, stats, boards.get(match.id));
     // The same check the predictions list runs, so the page and the list agree.
     const [prediction] = await marketChecked([{ prediction: buildPrediction(match, training.rows, h2h, options), options }]);
 
@@ -339,9 +357,9 @@ export async function matchPrediction(id: string): Promise<Prediction | null> {
   return cached(`prediction:${id}`, 10 * 60_000, async () => {
     const match = await getMatch(id);
     if (!match) return null;
-    const [full, h2h, stats] = await Promise.all([trainingRows(match), getH2H(match), sweetSpotStats(match)]);
+    const [full, h2h, stats, boards] = await Promise.all([trainingRows(match), getH2H(match), sweetSpotStats(match), anchorBoards([match])]);
     const training = asOf(match, full);
-    const options = modelOptions(match, training, stats);
+    const options = modelOptions(match, training, stats, boards.get(match.id));
     const [checked] = await marketChecked([{ prediction: buildPrediction(match, training.rows, h2h, options), options }]);
     return checked;
   });
@@ -356,7 +374,7 @@ export async function anchorShadow(
   matchId: string,
   prices: { oneXTwo: { home: number; draw: number; away: number }; overUnder: { over: number; under: number } },
   weight = 0.5,
-): Promise<{ league: string | null; kickoff: string; plain: Record<string, number>; anchored: Record<string, number> } | null> {
+): Promise<{ league: string | null; kickoff: string; plain: Record<string, number>; anchored: Record<string, number | Record<string, number>> } | null> {
   const match = await getMatch(matchId);
   if (!match) return null;
   const [full, h2h] = await Promise.all([trainingRows(match), getH2H(match)]);
@@ -372,7 +390,12 @@ export async function anchorShadow(
     league: match.league.code ?? null,
     kickoff: match.kickoff,
     plain: read(options),
-    anchored: read({ ...options, marketRates: goals, marketRatesWeight: weight }),
+    anchored: {
+      ...read({ ...options, marketRates: goals, marketRatesWeight: weight }),
+      // A heavier anchor beside it, for the national-team and cup games where the
+      // model sits furthest from the price (docs/live-audit-2026-11-23.md).
+      w75: read({ ...options, marketRates: goals, marketRatesWeight: 0.75 }),
+    },
   };
 }
 
@@ -435,10 +458,15 @@ async function publishedPicks(ids: string[]): Promise<Map<string, LoggedPick>> {
     for (let i = 0; i < ids.length; i += 100) {
       const { data, error } = await c
         .from("predictions_log")
-        .select("match_id, market, label, probability, fair_odds, confidence, top_picks")
+        .select("match_id, market, label, probability, fair_odds, confidence, top_picks, result, actual_home_goals")
         .in("match_id", ids.slice(i, i + 100));
       if (error) throw error;
-      for (const r of data ?? []) out.set(r.match_id as string, r as LoggedPick);
+      for (const r of data ?? []) {
+        // A pick voided because its game was not played on its day (settlement-timing.ts
+        // voidReason) does not hold the rearranged game: that one shows the live read.
+        if (r.result === "push" && r.actual_home_goals === null) continue;
+        out.set(r.match_id as string, r as LoggedPick);
+      }
     }
     return out;
   }).catch(() => new Map<string, LoggedPick>());
@@ -509,8 +537,9 @@ export async function liveWinProbability(matchId: string): Promise<LiveProbabili
   const match = await getMatch(matchId);
   if (!match || !isLive(match)) return null;
 
-  const training = asOf(match, await trainingRows(match));
-  const prediction = buildPrediction(match, training.rows, [], modelOptions(match, training));
+  const [full, boards] = await Promise.all([trainingRows(match), anchorBoards([match])]);
+  const training = asOf(match, full);
+  const prediction = buildPrediction(match, training.rows, [], modelOptions(match, training, undefined, boards.get(match.id)));
   const { home: lambda, away: mu } = prediction.markets.expectedGoals;
 
   const elapsedMinutes = elapsedMinutesFor(match);
@@ -554,13 +583,14 @@ async function predictSlice(slice: Match[]): Promise<Prediction[]> {
   }
 
   const built: { prediction: Prediction; options: ModelOptions }[] = [];
+  const boards = await anchorBoards(slice);
   await Promise.all(
     [...byLeague.values()].map(async (group) => {
       // One training fetch and one fit per competition, reused across its fixtures.
       const [training, stats] = await Promise.all([trainingRows(group[0]), Promise.all(group.map(sweetSpotStats))]);
       group.forEach((m, i) => {
         const trained = asOf(m, training);
-        const options = modelOptions(m, trained, stats[i]);
+        const options = modelOptions(m, trained, stats[i], boards.get(m.id));
         built.push({ prediction: buildPrediction(m, trained.rows, [], options), options });
       });
     }),

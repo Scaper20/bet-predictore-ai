@@ -11,7 +11,7 @@ import { priceInSnapshot } from "@/lib/odds/market-prob";
 import { lastSnapshotBefore } from "@/lib/odds/sportybet-links";
 import { looseKey, nameBook, nameScope } from "@/lib/teams/canonical";
 import type { Match } from "@/lib/types";
-import { settleStep, type SettleOpts } from "@/lib/settlement-timing";
+import { settleStep, voidReason, type SettleOpts } from "@/lib/settlement-timing";
 import { gradePick, halftimeOf } from "@/lib/pick-grade";
 
 /**
@@ -124,7 +124,7 @@ export async function runSettlementPass(
   // The scores already stored, in one read.
   const { data: stored } = await admin
     .from("match_results")
-    .select("match_id, status, home_goals, away_goals, ht_home, ht_away")
+    .select("match_id, status, home_goals, away_goals, ht_home, ht_away, kickoff")
     .in("match_id", [...new Set(pending.map((r) => r.match_id as string))]);
   const results = new Map((stored ?? []).map((r) => [r.match_id as string, r]));
   const archive = new Map<string, ArchiveHalf[]>();
@@ -148,6 +148,7 @@ export async function runSettlementPass(
     let status = cached?.status;
     let homeGoals = cached?.home_goals ?? null;
     let awayGoals = cached?.away_goals ?? null;
+    let storedKickoff: string | null = (cached?.kickoff as string | null | undefined) ?? null;
 
     // No stored score yet: look the game up, and store what comes back so a
     // retry (this row or another) doesn't ask the provider again.
@@ -158,10 +159,22 @@ export async function runSettlementPass(
       status = match.status;
       homeGoals = match.score.home;
       awayGoals = match.score.away;
+      storedKickoff = match.kickoff;
       await captureMatchResults(admin, [match]);
     }
 
-    if (status !== "finished" || homeGoals === null || awayGoals === null) continue;
+    if (status !== "finished" || homeGoals === null || awayGoals === null) {
+      // Not played on its day: voided, as a bookmaker voids the bet (settlement-timing.ts).
+      if (voidReason(row.kickoff as string, { status, kickoff: storedKickoff })) {
+        const { error: voidError } = await admin
+          .from("predictions_log")
+          .update({ result: "push", actual_home_goals: null, actual_away_goals: null, settled_at: new Date().toISOString() })
+          .eq("id", row.id as string)
+          .is("settled_at", null);
+        if (!voidError) settledCount++;
+      }
+      continue;
+    }
 
     const market = row.market as string;
     const result = statKindOf(market)

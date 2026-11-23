@@ -85,11 +85,33 @@ so engine against sweet spots cannot be measured live.
   interval ±26 per 100 days). Real hub: 7 of 36 codes landed against 8.2
   expected, return -44%.
 
-## Recommended next steps, in order
+## What was done (23 Nov)
 
-1. Anchor the model halfway to SportyBet's price outside the lab divisions (and
-   for national-team games), gated on kickoff. The shadow already measures it.
-2. Decide engine against sweet spots on evidence: log the model's own top pick
-   beside the engine's (as `engine_picks` did before the switch) for a few
-   weeks, then compare.
-3. Void picks whose game is postponed, and re-log a rescheduled game.
+1. **Anchoring, live for games from 28 Nov** (`model/params.ts` ANCHOR_FROM,
+   ANCHOR_WEIGHT 0.5). Every game with a SportyBet board read is moved halfway,
+   in logs, toward the goals its first 1X2 and over/under 2.5 prices imply
+   (`odds/sportybet-links.ts` firstBoardPrices, `service.ts` modelOptions).
+   All competitions, not only those outside the lab divisions: the shadow gained
+   in every group (lab 0.961 to 0.950, 3 standard errors; other club leagues
+   1.071 to 1.053; national-team and cup games 0.919 to 0.853) and over/under
+   2.5 improved in each. Games without a board read keep the plain model. The
+   shadow keeps running on the plain model and from 24 Nov also logs a 0.75
+   anchor (`anchored.w75`), scored by `scripts/sql/anchor-shadow-score.sql`;
+   the heavier weight looked better for national-team and cup games (the
+   price alone scored 0.827) but was not measured directly.
+2. **The model's own pick beside the engine's.** The settle cron logs it as
+   `engine_picks` slot `model` (0106), frozen at the first run like the
+   published pick, and grades it. Compare with
+   `scripts/sql/engine-vs-model-score.sql` after about 300 paired games.
+3. **Postponed games are voided** (`settlement-timing.ts` voidReason): three
+   days after the logged kickoff a pick whose game was postponed, cancelled or
+   moved by more than a day settles as a push, with no score; one with no sign
+   of play after 14 days too. A game seen live or at half time is never voided.
+   A voided pick no longer holds the rearranged game (`service.ts`
+   publishedPicks), which shows the live read; that read is not logged, because
+   `predictions_log` keeps one row per game.
+4. `priceSnapshots` had the same 1,000-row cap as the track record (fewer
+   publish-time prices on busy days); it now pages.
+
+Still open: the engine's price floor leaves the Strong tier with few picks, and
+the training archive lags the weekend's results.
