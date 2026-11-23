@@ -26,8 +26,8 @@ export default async function AdminPartnersPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-brand">Business</p>
-          <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight sm:text-[28px]">Partners</h1>
+          <p className="font-mono text-2xs uppercase tracking-[0.16em] text-brand">Business</p>
+          <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight sm:text-3xl">Partners</h1>
           <p className="mt-1 max-w-2xl text-sm text-ink-muted">
             Each partner has a link. Users who sign up through it and pay earn the partner a share of the net payment for their first 12 months.
             A commission is held 14 days (the refund window), then becomes payable.

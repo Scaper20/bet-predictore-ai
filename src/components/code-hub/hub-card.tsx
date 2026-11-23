@@ -71,7 +71,7 @@ export function HubCard(props: HubCardProps) {
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-brand">{tier.name}</p>
+                <p className="font-mono text-2xs font-semibold uppercase tracking-[0.18em] text-brand">{tier.name}</p>
                 {status && <Badge tone={status.tone}>{status.text}</Badge>}
                 {props.plan && <PlanTag plan={props.plan} />}
               </div>
@@ -87,7 +87,7 @@ export function HubCard(props: HubCardProps) {
             <div className="flex shrink-0 items-start gap-2">
               <div className="text-right">
                 <p className="font-display text-2xl font-bold leading-none text-ink sm:text-3xl">{odds(props.odds)}</p>
-                <p className="mt-1 text-[10px] font-medium uppercase tracking-wide text-ink-dim">odds</p>
+                <p className="mt-1 text-2xs font-medium uppercase tracking-wide text-ink-dim">odds</p>
               </div>
               <span aria-hidden className="mt-1 text-ink-dim transition-transform group-open:rotate-180">
                 ▾
@@ -133,7 +133,7 @@ export function HubCard(props: HubCardProps) {
             </div>
           )}
           {!locked && !settled && (
-            <p className="pt-2 text-[11px] text-ink-dim">
+            <p className="pt-2 text-2xs text-ink-dim">
               First kick-off <LocalTime iso={new Date(props.firstKickoff).toISOString()} kind="time" />. Prices are
               SportyBet&apos;s where listed, otherwise the model&apos;s fair odds.
             </p>
@@ -160,7 +160,7 @@ export function HubCard(props: HubCardProps) {
           ) : (
             <div className="flex items-center justify-between gap-3 rounded-xl border border-dashed border-line-strong px-4 py-3">
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-dim">SportyBet code</p>
+                <p className="text-2xs font-semibold uppercase tracking-[0.16em] text-ink-dim">SportyBet code</p>
                 <p className="mt-0.5 font-mono text-xl font-bold tracking-[0.12em] text-ink-dim">••••••</p>
               </div>
               <p className="max-w-[10rem] text-right text-xs text-ink-muted">

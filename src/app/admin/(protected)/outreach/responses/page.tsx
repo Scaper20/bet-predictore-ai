@@ -46,8 +46,8 @@ export default async function SurveyResponsesPage({
         <Link href="/admin/outreach" className="text-sm text-ink-muted underline underline-offset-2 hover:text-ink">
           ← Back to outreach
         </Link>
-        <p className="mt-3 font-mono text-[10.5px] uppercase tracking-[0.16em] text-brand">Growth · Outreach</p>
-        <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight sm:text-[28px]">Survey responses</h1>
+        <p className="mt-3 font-mono text-2xs uppercase tracking-[0.16em] text-brand">Growth · Outreach</p>
+        <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight sm:text-3xl">Survey responses</h1>
         <p className="mt-1 max-w-2xl text-sm text-ink-muted">Only submitted answers.</p>
       </div>
 

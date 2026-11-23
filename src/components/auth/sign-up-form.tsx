@@ -47,7 +47,7 @@ export function SignUpForm({
             required
             placeholder="you@example.com"
             autoComplete="email"
-            className="h-12 w-full rounded-xl border border-line bg-surface-2 px-4 text-[15px] text-ink outline-none transition-colors placeholder:text-ink-dim focus:border-brand focus:ring-2 focus:ring-brand/30"
+            className="h-12 w-full rounded-xl border border-line bg-surface-2 px-4 text-base text-ink outline-none transition-colors placeholder:text-ink-dim focus:border-brand focus:ring-2 focus:ring-brand/30"
           />
         </label>
 
@@ -63,7 +63,7 @@ export function SignUpForm({
               minLength={8}
               placeholder="8+ characters"
               autoComplete="new-password"
-              className="h-12 w-full rounded-xl border border-line bg-surface-2 pl-4 pr-12 text-[15px] text-ink outline-none transition-colors placeholder:text-ink-dim focus:border-brand focus:ring-2 focus:ring-brand/30"
+              className="h-12 w-full rounded-xl border border-line bg-surface-2 pl-4 pr-12 text-base text-ink outline-none transition-colors placeholder:text-ink-dim focus:border-brand focus:ring-2 focus:ring-brand/30"
             />
             <button
               type="button"
@@ -86,7 +86,7 @@ export function SignUpForm({
 
           {/* Password Validation Indicators */}
           {password.length > 0 && (
-            <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px]">
+            <div className="mt-2 flex flex-wrap items-center gap-3 text-2xs">
               <span className={`inline-flex items-center gap-1 font-medium ${isMinLength ? "text-brand" : "text-ink-dim"}`}>
                 {isMinLength ? "✓" : "○"} At least 8 characters
               </span>
@@ -97,7 +97,7 @@ export function SignUpForm({
           )}
         </label>
 
-        <Button type="submit" disabled={pending} className="mt-2 h-12 w-full rounded-xl text-[15px] font-semibold">
+        <Button type="submit" disabled={pending} className="mt-2 h-12 w-full rounded-xl text-base font-semibold">
           {pending ? (
             <>
               <Spinner className="size-4 text-brand-ink" />

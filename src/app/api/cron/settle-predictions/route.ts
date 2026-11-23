@@ -243,5 +243,40 @@ async function logUpcomingPicks(admin: ReturnType<typeof supabaseAdmin>): Promis
       () => undefined,
     );
   }
+  // The model's own pick (sweet spots and ranking) beside the engine's, slot
+  // "model" (0106): what would have been published with the engine off. Kept
+  // from the first run that logs the game, like the published pick, so the
+  // two are compared on what each would have put on the record
+  // (scripts/sql/engine-vs-model-score.sql).
+  const model = predictions
+    .filter((p) => p.sufficiency.publishable && p.topPick && p.engine)
+    .map((p) => {
+      const pick = p.modelTopPick ?? p.topPick!;
+      const price = priced(p.match.id, pick.market);
+      return {
+        match_id: p.match.id,
+        slot: "model",
+        market: pick.market,
+        label: pick.label,
+        family: pick.market.split(":")[0],
+        probability: Math.round(pick.probability * 10_000) / 10_000,
+        calibrated: Math.round(pick.probability * 10_000) / 10_000,
+        market_prob: price.market_prob_at_publish,
+        price: price.price_at_publish,
+        load_price: price.price_at_publish ?? Math.round(pick.fairOdds * 100) / 100,
+        published_market: p.topPick!.market,
+        league_code: p.match.league.code ?? null,
+        home_name: p.match.home.name,
+        away_name: p.match.away.name,
+        kickoff: p.match.kickoff,
+        logged_at: new Date().toISOString(),
+      };
+    });
+  if (model.length > 0) {
+    await admin.from("engine_picks").upsert(model, { onConflict: "match_id,slot", ignoreDuplicates: true }).then(
+      () => undefined,
+      () => undefined,
+    );
+  }
   return rows.length;
 }

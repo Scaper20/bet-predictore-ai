@@ -130,7 +130,7 @@ export function MobileDrawer({
         </div>
 
         {/* One section at a time. Sticks to the top while its list scrolls. */}
-        <div ref={tabsRef} className="sticky top-0 z-10 mt-7 bg-canvas/95 px-5 py-3 backdrop-blur">
+        <div ref={tabsRef} className="sticky top-0 z-10 mt-7 glass-bar px-5 py-3">
           <SectionTabs menus={menus} active={current.id} onChoose={choose} />
         </div>
 
@@ -172,7 +172,7 @@ export function MobileDrawer({
             </ButtonLink>
           </div>
         )}
-        <p className="text-center text-[11px] text-ink-dim">18+ only. Use responsibly.</p>
+        <p className="text-center text-2xs text-ink-dim">18+ only. Use responsibly.</p>
       </div>
     </div>
   );
@@ -242,7 +242,7 @@ function SectionBody({ menu, pathname, onClose }: { menu: NavMenu; pathname: str
       ))}
       {chips && (
         <section>
-          <h3 className="pb-3 font-sans text-[13px] font-semibold text-ink-dim">{chips.title}</h3>
+          <h3 className="pb-3 font-sans text-sm font-semibold text-ink-dim">{chips.title}</h3>
           <div className="no-scrollbar -mx-5 flex snap-x scroll-px-5 gap-2 overflow-x-auto px-5 pb-1">
             {chips.links.map((l) => (
               <Link
@@ -270,13 +270,13 @@ function SectionBody({ menu, pathname, onClose }: { menu: NavMenu; pathname: str
   );
 }
 
-const ROW = "flex min-h-14 w-full items-center px-4 text-left text-[15px] font-medium text-ink";
+const ROW = "flex min-h-14 w-full items-center px-4 text-left text-base font-medium text-ink";
 
 /** A titled panel of rows, separated by inset rules. */
 function Group({ title, className = "", children }: { title?: string; className?: string; children: ReactNode }) {
   return (
     <section className={className}>
-      {title && <h3 className="pb-3 font-sans text-[13px] font-semibold text-ink-dim">{title}</h3>}
+      {title && <h3 className="pb-3 font-sans text-sm font-semibold text-ink-dim">{title}</h3>}
       <div className="overflow-hidden rounded-2xl bg-surface [&>*+*]:border-t [&>*+*]:border-line">{children}</div>
     </section>
   );
@@ -290,8 +290,8 @@ function Row({ link, current, onClose }: { link: NavLink; current: boolean; onCl
     <>
       {current && <span aria-hidden className="absolute inset-y-3 left-0 w-[3px] rounded-r bg-brand" />}
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className={`text-[15px] font-semibold ${current ? "text-brand" : link.soon ? "text-ink-muted" : "text-ink"}`}>{link.label}</span>
-        {link.desc && <span className="text-[13px] leading-snug text-ink-dim">{link.desc}</span>}
+        <span className={`text-base font-semibold ${current ? "text-brand" : link.soon ? "text-ink-muted" : "text-ink"}`}>{link.label}</span>
+        {link.desc && <span className="text-sm leading-snug text-ink-dim">{link.desc}</span>}
       </span>
       {link.badge ? <NavBadge badge={link.badge} /> : <Chevron />}
     </>
@@ -355,7 +355,7 @@ function Shortcut({
       </span>
       <span className="flex flex-col gap-0.5">
         <span className="text-base font-bold text-ink">{label}</span>
-        {desc && <span className="text-[13px] leading-snug text-ink-muted">{desc}</span>}
+        {desc && <span className="text-sm leading-snug text-ink-muted">{desc}</span>}
       </span>
     </>
   );

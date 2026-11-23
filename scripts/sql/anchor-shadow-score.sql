@@ -3,6 +3,9 @@
 -- that have finished. Lower is better. Enable anchoring only if "anchored" beats
 -- "plain" by clearly more than its interval over a few hundred games (L1 in the audit:
 -- about 0.005 on 1X2 on football-data prices).
+-- Anchoring at 0.5 went live for games from 28 Nov 2026 (model/params.ts ANCHOR_FROM);
+-- "plain" stays the unanchored model, so this keeps measuring it. Rows from 24 Nov on
+-- also carry anchored.w75, a 0.75 anchor, scored in the last columns (null before).
 with g as (
   select s.*, r.home_goals hg, r.away_goals ag
   from public.anchor_shadow s join public.match_results r on r.match_id = s.match_id
@@ -20,5 +23,8 @@ select count(*) games,
   round(avg(-ln(case when over then (plain ->> 'o25')::float else 1 - (plain ->> 'o25')::float end))::numeric, 4)    plain_o25,
   round(avg(-ln(case when over then (anchored ->> 'o25')::float else 1 - (anchored ->> 'o25')::float end))::numeric, 4) anchored_o25,
   round(avg(-ln(case when over then (market ->> 'o25')::float else 1 - (market ->> 'o25')::float end))::numeric, 4)   price_o25,
-  round((stddev_samp(ln((anchored ->> res)::float) - ln((plain ->> res)::float)) / sqrt(count(*)))::numeric, 4) se_1x2_diff
+  round((stddev_samp(ln((anchored ->> res)::float) - ln((plain ->> res)::float)) / sqrt(count(*)))::numeric, 4) se_1x2_diff,
+  count(anchored -> 'w75') w75_games,
+  round(avg(-ln((anchored ->> res)::float)) filter (where anchored ? 'w75')::numeric, 4) anchored_1x2_w75_games,
+  round(avg(-ln((anchored -> 'w75' ->> res)::float))::numeric, 4) w75_1x2
 from l;

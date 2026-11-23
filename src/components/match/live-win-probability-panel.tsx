@@ -95,7 +95,7 @@ export function LiveWinProbabilityPanel({ matchId }: { matchId: string }) {
   if (!data) {
     return (
       <div className="card px-4 py-3">
-        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
+        <p className="mb-2 text-2xs font-semibold uppercase tracking-wider text-ink-muted">
           Loading live win probability…
         </p>
         <div className="animate-pulse space-y-2">
@@ -117,7 +117,7 @@ export function LiveWinProbabilityPanel({ matchId }: { matchId: string }) {
   return (
     <div className="card px-4 py-3">
       <div className="flex items-center justify-between gap-3">
-        <span className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-ink-muted">Live win probability <PlanTag plan="vip" /></span>
+        <span className="flex items-center gap-2 text-2xs font-semibold uppercase tracking-wider text-ink-muted">Live win probability <PlanTag plan="vip" /></span>
         <span className="flex items-center gap-2.5">
           <span className="tnum text-sm font-bold">
             {data.currentScore.home}–{data.currentScore.away}
@@ -144,12 +144,12 @@ export function LiveWinProbabilityPanel({ matchId }: { matchId: string }) {
       </div>
 
       {!data.publishable && (
-        <p className="mt-2 text-[11px] leading-relaxed text-amber">
+        <p className="mt-2 text-2xs leading-relaxed text-amber">
           Thin sample for this competition — treat as indicative.
         </p>
       )}
       {failing && (
-        <p className="mt-2 text-[11px] leading-relaxed text-ink-dim">
+        <p className="mt-2 text-2xs leading-relaxed text-ink-dim">
           Reconnecting to the feed — showing the last good read.
         </p>
       )}

@@ -18,7 +18,7 @@ function RolePicker({ value, onChange, name = "roles", compact = false }: { valu
             key={r}
             title={ROLES[r].description}
             className={`cursor-pointer select-none rounded-md border font-medium transition-colors ${
-              compact ? "px-2 py-1 text-[11px]" : "px-3 py-1.5 text-xs"
+              compact ? "px-2 py-1 text-2xs" : "px-3 py-1.5 text-xs"
             } ${on ? (r === "owner" ? "border-gold/40 bg-gold/10 text-gold" : "border-brand/40 bg-brand/10 text-brand") : "border-line text-ink-muted hover:border-line-strong hover:text-ink"}`}
           >
             <input
@@ -86,11 +86,11 @@ export function RoleEditor({ targetId, targetEmail, roles: initial }: { targetId
           <button
             type="submit"
             disabled={pending || roles.length === 0}
-            className="inline-flex items-center gap-1.5 rounded-md bg-brand px-2.5 py-1 text-[11px] font-semibold text-brand-ink hover:bg-brand-strong disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-md bg-brand px-2.5 py-1 text-2xs font-semibold text-brand-ink hover:bg-brand-strong disabled:opacity-50"
           >
             {pending && <Spinner className="size-3" />} Save
           </button>
-          <button type="button" onClick={() => setRoles(initial)} className="text-[11px] text-ink-dim hover:text-ink">
+          <button type="button" onClick={() => setRoles(initial)} className="text-2xs text-ink-dim hover:text-ink">
             Cancel
           </button>
         </>

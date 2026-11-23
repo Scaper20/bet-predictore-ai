@@ -87,7 +87,7 @@ export function BuildProgress({ pct, className = "" }: { pct: number | null; cla
   const shown = Math.round(pct);
   return (
     <div className={className} role="progressbar" aria-label="Building your combo" aria-valuemin={0} aria-valuemax={100} aria-valuenow={shown}>
-      <div className="flex items-baseline justify-between gap-3 text-[11px]">
+      <div className="flex items-baseline justify-between gap-3 text-2xs">
         <span className="font-medium text-ink-muted">{stageFor(pct)}</span>
         <span className="tnum font-bold text-brand">{shown}%</span>
       </div>

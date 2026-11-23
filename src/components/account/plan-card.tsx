@@ -117,8 +117,8 @@ function Shell({
       )}
       <div className="relative flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
         <div className="min-w-0">
-          <p className={`font-mono text-[10.5px] font-semibold uppercase tracking-[0.16em] ${tone === "gold" ? "text-gold" : "text-brand"}`}>{label}</p>
-          <p className="mt-1.5 font-display text-2xl font-bold tracking-tight text-ink sm:text-[28px]">
+          <p className={`font-mono text-2xs font-semibold uppercase tracking-[0.16em] ${tone === "gold" ? "text-gold" : "text-brand"}`}>{label}</p>
+          <p className="mt-1.5 font-display text-2xl font-bold tracking-tight text-ink sm:text-3xl">
             {value}
             {unit && <span className="ml-1.5 text-sm font-medium text-ink-dim">{unit}</span>}
           </p>

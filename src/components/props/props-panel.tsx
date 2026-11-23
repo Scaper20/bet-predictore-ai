@@ -84,7 +84,7 @@ export function PropsPanel({ matchId, playerId, emptyText }: { matchId?: string;
           </div>
         ))}
       </div>
-      <p className="text-[11px] text-ink-dim">{PROPS_NOTE}</p>
+      <p className="text-2xs text-ink-dim">{PROPS_NOTE}</p>
     </div>
   );
 }

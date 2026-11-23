@@ -23,7 +23,7 @@ export default async function DeniedPage({ searchParams }: PageProps<"/admin/den
         <span className="grid size-10 place-items-center rounded-lg border border-line bg-surface-2 text-amber">
           <AdminIcon name="lock" className="size-5" />
         </span>
-        <p className="mt-5 font-mono text-[10.5px] uppercase tracking-[0.16em] text-amber">403 · Not in your role</p>
+        <p className="mt-5 font-mono text-2xs uppercase tracking-[0.16em] text-amber">403 · Not in your role</p>
         <h1 className="mt-2 font-display text-xl font-semibold">You don&apos;t have access to this page</h1>
         <p className="mt-2 text-sm leading-relaxed text-ink-muted">
           You&apos;re signed in as <span className="text-ink">{me.email}</span> ({rolesLabel(me.roles)}).

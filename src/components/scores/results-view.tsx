@@ -58,8 +58,8 @@ export async function ResultsView({ def, day }: { def?: LeagueDef; day?: string 
                 href: qs(o),
                 label: (
                   <span className="flex flex-col items-center leading-tight">
-                    <span className="text-[13px] font-semibold">{o === 0 ? "Today" : o === 1 ? "Yesterday" : d.toLocaleDateString("en-NG", { weekday: "short", timeZone: APP_TIMEZONE })}</span>
-                    <span className="text-[10px] font-normal text-ink-dim">{d.toLocaleDateString("en-NG", { day: "numeric", month: "short", timeZone: APP_TIMEZONE })}</span>
+                    <span className="text-sm font-semibold">{o === 0 ? "Today" : o === 1 ? "Yesterday" : d.toLocaleDateString("en-NG", { weekday: "short", timeZone: APP_TIMEZONE })}</span>
+                    <span className="text-2xs font-normal text-ink-dim">{d.toLocaleDateString("en-NG", { day: "numeric", month: "short", timeZone: APP_TIMEZONE })}</span>
                   </span>
                 ),
               };
@@ -126,7 +126,7 @@ function OtherPicks({ picks }: { picks: DayPick[] }) {
                 </span>
               )}
             </div>
-            <p className="mt-0.5 truncate text-[11px] text-ink-dim">{p.league}</p>
+            <p className="mt-0.5 truncate text-2xs text-ink-dim">{p.league}</p>
             <PickLine pick={{ matchId: p.matchId, label: p.label, result: p.result }} />
           </li>
         ))}
@@ -143,12 +143,12 @@ function clampOffset(day: string | undefined): number {
 function Tile({ label, value, suffix = "", hint }: { label: string; value: number; suffix?: string; hint?: string }) {
   return (
     <div className="rounded-xl border border-line bg-surface-2/60 px-3 py-3 text-center">
-      <p className="text-[10px] font-medium uppercase tracking-wider text-ink-dim">{label}</p>
+      <p className="text-2xs font-medium uppercase tracking-wider text-ink-dim">{label}</p>
       <p className="mt-1 font-mono tracking-tight text-xl font-medium">
         <AnimatedNumber value={value} />
         <span className="text-base text-ink-dim">{suffix}</span>
       </p>
-      {hint && <p className="text-[10px] text-ink-dim">{hint}</p>}
+      {hint && <p className="text-2xs text-ink-dim">{hint}</p>}
     </div>
   );
 }
@@ -158,7 +158,7 @@ function PickLine({ pick }: { pick: LoggedPick }) {
     pick.result === "win" ? "text-brand" : pick.result === "lose" ? "text-rose" : "text-ink-dim";
   const mark = pick.result === "win" ? "✓" : pick.result === "lose" ? "✗" : pick.result === "push" ? "void" : "…";
   return (
-    <p className={`flex items-center gap-1.5 pt-0.5 text-[11px] ${tone}`}>
+    <p className={`flex items-center gap-1.5 pt-0.5 text-2xs ${tone}`}>
       <span className="font-bold">{mark}</span>
       <span className="truncate">Our pick: {pick.label}</span>
     </p>

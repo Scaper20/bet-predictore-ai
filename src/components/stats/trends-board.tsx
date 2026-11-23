@@ -114,11 +114,11 @@ function TrendCard({ t, index }: { t: StreakTrend; index: number }) {
           <div className="flex items-center gap-2">
             <Crest src={t.team.crest} name={t.team.name} size={20} />
             <span className="min-w-0 truncate text-xs font-semibold text-ink-muted">{t.team.name}</span>
-            <span className={`ml-auto shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${tone.bg} ${tone.text}`}>
+            <span className={`ml-auto shrink-0 rounded-md px-1.5 py-0.5 text-2xs font-bold uppercase tracking-wider ${tone.bg} ${tone.text}`}>
               {meta.market}
             </span>
           </div>
-          <p className="mt-1.5 text-[15px] font-semibold leading-snug text-ink">{sentence(t)}</p>
+          <p className="mt-1.5 text-base font-semibold leading-snug text-ink">{sentence(t)}</p>
         </div>
       </div>
 
@@ -131,7 +131,7 @@ function TrendCard({ t, index }: { t: StreakTrend; index: number }) {
           />
         ))}
       </div>
-      <p className="mt-1 flex justify-between text-[10px] text-ink-dim">
+      <p className="mt-1 flex justify-between text-2xs text-ink-dim">
         <span>latest</span>
         <span>earlier</span>
       </p>

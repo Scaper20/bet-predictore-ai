@@ -2,6 +2,7 @@ import "server-only";
 
 import { supabasePublic } from "@/lib/supabase/public";
 import { cached } from "@/lib/providers/cache";
+import { allPages } from "@/lib/supabase/pages";
 import { leagueByProviderName } from "@/lib/leagues";
 import { DEFAULT_SPORT, type SportId } from "@/lib/sports";
 import { summarise, tally, type SettledBreakdown, type SettledRecord, type SettledRow } from "@/lib/performance";
@@ -74,20 +75,27 @@ export async function settledRecords(
         ? undefined
         : new Date(Date.now() - sinceDays * 86_400_000).toISOString();
 
-    const run = async (columns: string) => {
-      let query = supabase
-        .from("predictions_log")
-        .select(columns)
-        .eq("sport", sport)
-        .not("settled_at", "is", null)
-        .not("result", "is", null)
-        // Defensive cap, matching admin-analytics. Not expected to bind at
-        // this app's volume, but an unbounded select on a public page should
-        // not be one busy season away from a problem.
-        .limit(5000);
-
-      if (cutoff) query = query.gte("kickoff", cutoff);
-      return query;
+    // Page by page: the Data API stops at 1,000 rows a request without
+    // saying so. A single read capped this record at 999 picks from
+    // mid-November 2026 (the oldest, unordered), so the track record showed
+    // 70.4% while the full log stood at 73.1% over 2,024. The id tie-break
+    // keeps pages from repeating or skipping rows.
+    const run = async (columns: string): Promise<{ data: unknown[] | null; error: { message: string } | null }> => {
+      try {
+        const data = await allPages<unknown>((from, to) => {
+          let query = supabase
+            .from("predictions_log")
+            .select(columns)
+            .eq("sport", sport)
+            .not("settled_at", "is", null)
+            .not("result", "is", null);
+          if (cutoff) query = query.gte("kickoff", cutoff);
+          return query.order("kickoff", { ascending: true }).order("id", { ascending: true }).range(from, to);
+        });
+        return { data, error: null };
+      } catch (e) {
+        return { data: null, error: { message: e instanceof Error ? e.message : String(e) } };
+      }
     };
 
     // pick_tier arrives in 0040; until it is applied, read without it and
@@ -135,16 +143,25 @@ export async function groupRecords(): Promise<Map<EngineGroup, SettledRecord>> {
     const out = new Map<EngineGroup, SettledRecord>();
     const supabase = supabasePublic();
     if (!supabase) return out;
-    const { data, error } = await supabase
-      .from("engine_picks")
-      .select("slot, result")
-      .neq("slot", "headline")
-      .not("result", "is", null)
-      .order("kickoff", { ascending: false })
-      .limit(20000);
-    if (error || !data) return out;
+    // Paged for the same reason as settledRecords: one read stops at 1,000 rows.
+    let data: { slot: string; result: "win" | "lose" | "push" }[];
+    try {
+      data = await allPages<{ slot: string; result: "win" | "lose" | "push" }>((from, to) =>
+        supabase
+          .from("engine_picks")
+          .select("slot, result")
+          .neq("slot", "headline")
+          .not("result", "is", null)
+          .order("kickoff", { ascending: false })
+          .order("match_id", { ascending: true })
+          .order("slot", { ascending: true })
+          .range(from, to),
+      );
+    } catch {
+      return out;
+    }
     const by = new Map<EngineGroup, { result: "win" | "lose" | "push" }[]>();
-    for (const r of data as { slot: string; result: "win" | "lose" | "push" }[]) {
+    for (const r of data) {
       if (!isEngineGroup(r.slot)) continue;
       by.set(r.slot, [...(by.get(r.slot) ?? []), { result: r.result }]);
     }

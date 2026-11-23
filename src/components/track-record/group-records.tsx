@@ -19,16 +19,16 @@ export function GroupRecords({ records }: { records: Map<EngineGroup, SettledRec
           const show = isPublishable(r);
           return (
             <li key={g.id} className="rounded-lg border border-line p-3">
-              <p className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-ink-dim">{g.label}</p>
+              <p className="font-mono text-2xs uppercase tracking-[0.14em] text-ink-dim">{g.label}</p>
               {show && r ? (
                 <>
                   <p className="tnum mt-1 font-mono text-xl font-medium tracking-tighter text-brand">{percent(r.winRate ?? 0, 1)}</p>
-                  <p className="tnum text-[11px] text-ink-muted">
+                  <p className="tnum text-2xs text-ink-muted">
                     {r.wins}W – {r.losses}L{r.pushes > 0 && ` – ${r.pushes}P`}
                   </p>
                 </>
               ) : (
-                <p className="mt-1 text-[11px] text-ink-muted">
+                <p className="mt-1 text-2xs text-ink-muted">
                   {r?.sample ?? 0} graded. Shows from {MIN_PUBLISHABLE_SAMPLE}.
                 </p>
               )}

@@ -45,14 +45,14 @@ export function SignUpWall({ reason }: { reason: string }) {
 
   return (
     <LockedPreview>
-      <span className="rounded-full bg-brand/15 px-2.5 py-0.5 text-[10.5px] font-bold uppercase tracking-[0.14em] text-brand">
+      <span className="rounded-full bg-brand/15 px-2.5 py-0.5 text-2xs font-bold uppercase tracking-[0.14em] text-brand">
         Free to unlock
       </span>
       <p className="mt-2 font-display text-lg font-bold leading-snug text-ink">{reason}</p>
       <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
         <Link
           href={`/account/sign-up?next=${next}`}
-          className="glow-brand inline-flex items-center gap-1.5 rounded-lg bg-brand px-5 py-2.5 text-sm font-bold text-brand-ink transition-colors hover:bg-brand-strong"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-5 py-2.5 text-sm font-bold text-brand-ink transition-colors hover:bg-brand-strong"
         >
           Unlock free <span aria-hidden>→</span>
         </Link>

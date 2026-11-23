@@ -58,7 +58,7 @@ export function TicketThread({ ticketId, initialMessages }: { ticketId: string; 
           }`}
         >
           <p className="whitespace-pre-wrap leading-relaxed">{m.body}</p>
-          <p className="mt-1 text-[10px] text-ink-dim">
+          <p className="mt-1 text-2xs text-ink-dim">
             {new Date(m.created_at).toLocaleString("en-NG", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
           </p>
         </div>

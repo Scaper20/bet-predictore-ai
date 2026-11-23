@@ -90,5 +90,5 @@ export function withEngineHeadline(p: Prediction): Prediction {
   const e = p.engine?.headline;
   if (!e || !p.topPick) return p;
   const pick = engineAsPick(p, e);
-  return { ...p, topPick: pick, picks: [pick, ...p.picks.filter((x) => x.market !== pick.market)], sweetSpot: false, marketCheck: undefined };
+  return { ...p, topPick: pick, picks: [pick, ...p.picks.filter((x) => x.market !== pick.market)], sweetSpot: false, marketCheck: undefined, modelTopPick: p.topPick };
 }

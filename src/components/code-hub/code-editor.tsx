@@ -320,7 +320,7 @@ function EditedCard({ result: full, before, mode }: { result: EditResult; before
 
       {changedGames.length > 0 && (
         <div className="border-t border-brand/20 px-4 py-3">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-ink-dim">What changed</p>
+          <p className="text-2xs font-semibold uppercase tracking-wider text-ink-dim">What changed</p>
           <ul className="mt-1 divide-y divide-line/60">
             {changedGames.map((g) => (
               <li key={g.matchId} className="flex items-start justify-between gap-3 py-2 text-sm">
@@ -406,7 +406,7 @@ function BeforeAfter({
     <dl className="grid grid-cols-2 gap-2">
       {items.map((it) => (
         <div key={it.label} className="rounded-lg bg-surface/70 px-3 py-2">
-          <dt className="text-[10px] uppercase tracking-wider text-ink-dim">
+          <dt className="text-2xs uppercase tracking-wider text-ink-dim">
             {it.label}
             {it.note && <span className="normal-case tracking-normal"> ({it.note})</span>}
           </dt>
@@ -424,11 +424,11 @@ function Totals({ chance, oddsValue, label, fair = false }: { chance: number | n
   return (
     <dl className="mt-3 grid grid-cols-2 gap-3">
       <div>
-        <dt className="text-[10px] uppercase tracking-wider text-ink-dim">{label}: chance</dt>
+        <dt className="text-2xs uppercase tracking-wider text-ink-dim">{label}: chance</dt>
         <dd className="tnum mt-0.5 text-lg font-bold">{chance === null ? "–" : chanceText(chance)}</dd>
       </div>
       <div>
-        <dt className="text-[10px] uppercase tracking-wider text-ink-dim">{fair ? "Fair odds" : "SportyBet odds"}</dt>
+        <dt className="text-2xs uppercase tracking-wider text-ink-dim">{fair ? "Fair odds" : "SportyBet odds"}</dt>
         <dd className="tnum mt-0.5 text-lg font-bold">{oddsValue === null ? "–" : odds(oddsValue)}</dd>
       </div>
     </dl>

@@ -80,7 +80,8 @@ export function summariseEngine(engineRows: readonly EngineLogRow[], published: 
 
   const groups = new Map<string, { graded: number; w: number; sum: number; pending: number }>();
   for (const r of engineRows) {
-    if (r.slot === "headline") continue;
+    // "model" is the model's own pick logged beside the engine's (0106), not a group.
+    if (r.slot === "headline" || r.slot === "model") continue;
     const g = groups.get(r.slot) ?? { graded: 0, w: 0, sum: 0, pending: 0 };
     if (r.result === null) g.pending++;
     else if (decided(r)) {

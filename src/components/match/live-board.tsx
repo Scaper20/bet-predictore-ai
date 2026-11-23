@@ -334,16 +334,16 @@ function LeagueGroup({
             <span className="truncate text-sm font-semibold text-ink">{group.name}</span>
             {group.tracked && (
               <span
-                className="shrink-0 rounded border border-brand/25 bg-brand/10 px-1.5 py-px text-[9.5px] font-semibold uppercase tracking-wider text-brand"
+                className="shrink-0 rounded border border-brand/25 bg-brand/10 px-1.5 py-px text-2xs font-semibold uppercase tracking-wider text-brand"
                 title="KiqStat models this competition — open a match for live win probability"
               >
                 Model
               </span>
             )}
           </span>
-          {group.country && <span className="block truncate text-[11px] text-ink-dim">{group.country}</span>}
+          {group.country && <span className="block truncate text-2xs text-ink-dim">{group.country}</span>}
         </span>
-        <span className="tnum shrink-0 rounded-full bg-signal/10 px-2 py-0.5 text-[11px] font-semibold text-signal">
+        <span className="tnum shrink-0 rounded-full bg-signal/10 px-2 py-0.5 text-2xs font-semibold text-signal">
           {group.matches.length}
         </span>
         <svg
@@ -419,7 +419,7 @@ function Clock({ match }: { match: Match }) {
   return (
     <div className="flex flex-col items-start gap-1.5">
       {halftime ? (
-        <span className="rounded-md border border-amber/30 bg-amber/10 px-1.5 py-0.5 font-mono text-[11px] font-bold text-amber">
+        <span className="rounded-md border border-amber/30 bg-amber/10 px-1.5 py-0.5 font-mono text-2xs font-bold text-amber">
           HT
         </span>
       ) : (
@@ -446,7 +446,7 @@ function Team({ team, leading, scored }: { team: Match["home"]; leading: boolean
         {team.name}
       </span>
       {scored && (
-        <span className="shrink-0 rounded bg-brand px-1.5 py-px text-[9.5px] font-bold uppercase tracking-wider text-brand-ink">
+        <span className="shrink-0 rounded bg-brand px-1.5 py-px text-2xs font-bold uppercase tracking-wider text-brand-ink">
           Goal
         </span>
       )}

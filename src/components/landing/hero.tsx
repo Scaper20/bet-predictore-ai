@@ -45,7 +45,9 @@ export function Hero({ liveCount, board }: { liveCount: number; board: ReactNode
           </p>
 
           <div className="mt-8 flex flex-wrap gap-3">
-            <ButtonLink href={sportPath("predictions")}>See today&apos;s predictions →</ButtonLink>
+            <ButtonLink href={sportPath("predictions")} className="cta">
+              See today&apos;s predictions <span aria-hidden className="cta-icon-x">→</span>
+            </ButtonLink>
             <ButtonLink href={sportPath("live")} variant="secondary">
               {liveCount > 0 ? (
                 <>

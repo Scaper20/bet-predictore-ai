@@ -135,16 +135,16 @@ export function BookCodeButton({
           </p>
         )}
         {current.swapped.map((s) => (
-          <p key={s.matchId} className="text-[11px] leading-relaxed text-ink-muted">
+          <p key={s.matchId} className="text-2xs leading-relaxed text-ink-muted">
             <span className="font-semibold text-ink">{legs.find((l) => l.matchId === s.matchId)?.fixture ?? "One pick"}</span>{" "}
             went on as {s.label}, SportyBet&rsquo;s name for the same bet on this game (same chance).
           </p>
         ))}
-        <p className="text-[11px] leading-relaxed text-ink-dim">
+        <p className="text-2xs leading-relaxed text-ink-dim">
           The code carries your picks, not prices: SportyBet shows its own odds at the moment you load it, and they move
           until kick-off.
         </p>
-        <div className="flex items-center justify-between gap-3 text-[11px] text-ink-dim">
+        <div className="flex items-center justify-between gap-3 text-2xs text-ink-dim">
           <span>
             Loads until <LocalTime iso={new Date(current.deadline).toISOString()} kind="dayTime" />
           </span>
@@ -153,7 +153,7 @@ export function BookCodeButton({
           </a>
         </div>
         {current.remaining !== null && (
-          <p className="text-[11px] text-ink-dim">
+          <p className="text-2xs text-ink-dim">
             {current.remaining === 0
               ? "That was your last code for this week."
               : `${current.remaining} ${current.remaining === 1 ? "code" : "codes"} left this week.`}
@@ -171,7 +171,7 @@ export function BookCodeButton({
       </Button>
 
       {current?.kind === "error" && (
-        <div className="space-y-1 text-[11px]">
+        <div className="space-y-1 text-2xs">
           <p className={current.upgrade || current.nextFreeAt ? "text-ink-muted" : "text-rose"}>{current.message}</p>
           {current.nextFreeAt && (
             <p className="text-ink-dim">
@@ -188,14 +188,14 @@ export function BookCodeButton({
 
       {current?.kind === "problems" && (
         <div className="space-y-2 rounded-lg border border-amber/25 bg-amber/5 p-3">
-          <p className="text-[11px] font-semibold text-ink">
+          <p className="text-2xs font-semibold text-ink">
             {current.problems.length === 1 ? "One pick" : `${current.problems.length} picks`} can&rsquo;t go on a code:
           </p>
           <ul className="space-y-1.5">
             {current.problems.map(({ matchId, problem }) => {
               const leg = legs.find((l) => l.matchId === matchId);
               return (
-                <li key={matchId} className="flex items-start justify-between gap-2 text-[11px] text-ink-muted">
+                <li key={matchId} className="flex items-start justify-between gap-2 text-2xs text-ink-muted">
                   <span className="min-w-0">
                     <span className="block truncate font-semibold text-ink">{leg?.fixture ?? matchId}</span>
                     {WHY[problem] ?? WHY["not-listed"]}
@@ -213,7 +213,7 @@ export function BookCodeButton({
               );
             })}
           </ul>
-          {remove && <p className="text-[11px] text-ink-dim">Remove them and tap the button again.</p>}
+          {remove && <p className="text-2xs text-ink-dim">Remove them and tap the button again.</p>}
         </div>
       )}
     </div>

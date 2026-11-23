@@ -112,6 +112,12 @@ export interface Prediction {
    * SportyBet's board (service.ts marketChecked).
    */
   engine?: EngineRead;
+  /**
+   * The model's own top pick (sweet spots and ranking) where the engine's
+   * headline replaced it (engine-feed.ts withEngineHeadline). Logged beside the
+   * engine's as engine_picks slot "model", so the two can be compared live.
+   */
+  modelTopPick?: Pick;
   /** What in the data the model is reacting to; see insights.ts. */
   insights: Insight[];
   /** Whether there is enough real history to stand behind this prediction. */

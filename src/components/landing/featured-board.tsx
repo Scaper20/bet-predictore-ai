@@ -139,11 +139,11 @@ export function FeaturedBoard({ rows, renderedAt }: { rows: FeaturedRow[]; rende
   const anyLive = board.some((r) => r.status === "live" || r.status === "halftime");
 
   return (
-    <div className="card glow-soft overflow-hidden">
+    <div className="card overflow-hidden">
       <div className="flex items-center gap-2 border-b border-line px-5 py-3.5">
         {anyLive ? <LiveDot /> : <span className="size-2 rounded-full bg-ink-dim" />}
         <span className="text-sm font-semibold">Featured matches</span>
-        <span className="ml-auto font-mono text-[11px] text-ink-dim">
+        <span className="ml-auto font-mono text-2xs text-ink-dim">
           {stale ? "reconnecting" : anyLive ? "live" : "next up"}
         </span>
       </div>
@@ -175,10 +175,10 @@ export function FeaturedBoard({ rows, renderedAt }: { rows: FeaturedRow[]; rende
                     {(row.status === "live" || row.status === "halftime") && <LiveDot />}
                     {REASON_LABEL[row.reason]}
                   </Badge>
-                  <span className="min-w-0 truncate text-[11px] font-medium text-ink-dim">
+                  <span className="min-w-0 truncate text-2xs font-medium text-ink-dim">
                     {row.leagueName}
                   </span>
-                  <span className="tnum ml-auto shrink-0 text-[11px] font-semibold text-ink-muted">
+                  <span className="tnum ml-auto shrink-0 text-2xs font-semibold text-ink-muted">
                     {row.status === "live" || row.status === "halftime" ? (
                       <LiveClock status={row.status} minute={row.minute} at={row.at} />
                     ) : (
@@ -205,7 +205,7 @@ export function FeaturedBoard({ rows, renderedAt }: { rows: FeaturedRow[]; rende
                           style={{ width: `${Math.round(row.probabilities[k] * 100)}%` }}
                         />
                       </div>
-                      <p className="tnum mt-1 text-center text-[10px] text-ink-dim">
+                      <p className="tnum mt-1 text-center text-2xs text-ink-dim">
                         {percent(row.probabilities[k])}
                       </p>
                     </div>
@@ -218,7 +218,7 @@ export function FeaturedBoard({ rows, renderedAt }: { rows: FeaturedRow[]; rende
                 </p>
 
                 {row.pick && (
-                  <p className="mt-2 flex min-w-0 items-center gap-1.5 text-[11px] leading-none">
+                  <p className="mt-2 flex min-w-0 items-center gap-1.5 text-2xs leading-none">
                     <span className="shrink-0 text-ink-dim">Model pick</span>
                     {row.pick.locked ? (
                       <span className="inline-flex items-center gap-1 font-semibold text-violet">

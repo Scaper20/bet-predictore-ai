@@ -95,7 +95,7 @@ async function Comparison({ a, b }: { a: TeamRef; b: TeamRef }) {
         <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 px-4 py-6 sm:px-8">
           <Side team={a} />
           <div className="text-center">
-            <p className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-ink-dim">{n} meetings</p>
+            <p className="text-2xs font-semibold uppercase tracking-[0.14em] text-ink-dim">{n} meetings</p>
             <p className="mt-1 font-mono tracking-tighter text-3xl font-medium sm:text-4xl">
               <AnimatedNumber value={winsA} className="text-brand" />
               <span className="mx-2 text-ink-dim">–</span>
@@ -111,7 +111,7 @@ async function Comparison({ a, b }: { a: TeamRef; b: TeamRef }) {
             <span className="seg-grow block bg-ink-dim/35" style={{ width: `${(draws / n) * 100}%`, animationDelay: "120ms" }} />
             <span className="seg-grow block rounded-r-full bg-cyan" style={{ width: `${(winsB / n) * 100}%`, animationDelay: "240ms" }} />
           </div>
-          <div className="mt-2 flex justify-between text-[11px] text-ink-muted">
+          <div className="mt-2 flex justify-between text-2xs text-ink-muted">
             <span className="tnum">{percent(winsA / n)} {a.name}</span>
             <span className="tnum">{percent(winsB / n)} {b.name}</span>
           </div>
@@ -167,7 +167,7 @@ function Stat({ label, value, suffix = "", i }: { label: string; value: number; 
   return (
     <div style={{ ["--i" as string]: i }} className="border-line px-4 py-4 text-center odd:border-r sm:border-r sm:last:border-r-0">
       <p className="font-mono tracking-tight text-xl font-medium"><AnimatedNumber value={value} suffix={suffix} /></p>
-      <p className="mt-0.5 truncate text-[11px] text-ink-dim">{label}</p>
+      <p className="mt-0.5 truncate text-2xs text-ink-dim">{label}</p>
     </div>
   );
 }

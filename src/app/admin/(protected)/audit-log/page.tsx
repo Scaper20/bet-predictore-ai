@@ -19,8 +19,8 @@ export default async function AdminAuditLogPage({
   return (
     <div className="space-y-6">
       <div>
-        <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-brand">Governance</p>
-        <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight sm:text-[28px]">Audit log</h1>
+        <p className="font-mono text-2xs uppercase tracking-[0.16em] text-brand">Governance</p>
+        <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight sm:text-3xl">Audit log</h1>
         <p className="mt-1 text-sm text-ink-muted">Every admin grant, revoke, and ticket action — who did what, when.</p>
       </div>
 

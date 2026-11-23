@@ -34,14 +34,14 @@ export function AbsenceImpact({ match, availability }: { match: Match; availabil
     <section className="card overflow-hidden">
       <div className="flex items-baseline justify-between gap-3 border-b border-line px-4 py-3 sm:px-5">
         <h2 className="font-sans text-sm font-semibold uppercase tracking-wider text-ink-muted">What the absences cost</h2>
-        <span className="rounded-full border border-gold/40 bg-gold/[0.08] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-gold">Pro</span>
+        <span className="rounded-full border border-gold/40 bg-gold/[0.08] px-2 py-0.5 text-2xs font-bold uppercase tracking-wider text-gold">Pro</span>
       </div>
       <div className="grid divide-y divide-line sm:grid-cols-2 sm:divide-x sm:divide-y-0">
         {sides.map(({ team, a }) => (
           <SideImpact key={team.name} team={team} a={a} />
         ))}
       </div>
-      <p className="border-t border-line px-4 py-3 text-[11px] leading-relaxed text-ink-dim sm:px-5">
+      <p className="border-t border-line px-4 py-3 text-2xs leading-relaxed text-ink-dim sm:px-5">
         Regulars started at least half of each side&apos;s last {Math.max(availability.home?.gamesLookedAt ?? 0, availability.away?.gamesLookedAt ?? 0)} games.
         Share of attack is each player&apos;s part of the side&apos;s expected goals and assists in those games.
         {basis === "xi" ? " Judged against the named eleven." : " Judged against the injury and suspension list until the lineups are confirmed."}
@@ -74,10 +74,10 @@ function SideImpact({ team, a }: { team: Match["home"]; a: SideAvailability | nu
             <li key={m.playerId}>
               <div className="mb-1 flex items-baseline justify-between gap-3 text-sm">
                 <span className="flex min-w-0 items-baseline gap-2">
-                  {ROLE[m.role] && <span className="w-8 shrink-0 text-[10px] font-bold text-ink-dim">{ROLE[m.role]}</span>}
+                  {ROLE[m.role] && <span className="w-8 shrink-0 text-2xs font-bold text-ink-dim">{ROLE[m.role]}</span>}
                   <span className="truncate">{m.name}</span>
                 </span>
-                <span className="shrink-0 text-[11px] text-ink-muted">
+                <span className="shrink-0 text-2xs text-ink-muted">
                   {REASON[m.reason]} · <span className="tnum font-mono text-ink">{Math.round(m.attackShare * 100)}%</span>
                 </span>
               </div>

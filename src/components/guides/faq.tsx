@@ -65,7 +65,7 @@ export function Faq({ groups }: { groups: FaqGroup[] }) {
                     onClick={() => setOpen(isOpen ? null : key)}
                     className="flex w-full items-center gap-4 px-5 py-4 text-left transition-colors hover:bg-surface-2/50"
                   >
-                    <span className="flex-1 text-[15px] font-semibold text-ink">{item.q}</span>
+                    <span className="flex-1 text-base font-semibold text-ink">{item.q}</span>
                     <span className={`grid size-7 shrink-0 place-items-center rounded-full border border-line transition-all duration-300 ${isOpen ? "rotate-45 border-brand/40 bg-brand/10 text-brand" : "text-ink-dim"}`} aria-hidden>
                       <svg viewBox="0 0 16 16" className="size-3.5" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M8 3v10M3 8h10" strokeLinecap="round" />

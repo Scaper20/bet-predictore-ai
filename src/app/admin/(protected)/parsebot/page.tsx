@@ -56,8 +56,8 @@ export default async function AdminParsebotPage() {
   return (
     <div className="max-w-3xl space-y-8">
       <div>
-        <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-brand">Product</p>
-        <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight sm:text-[28px]">parse.bot and Code Hub</h1>
+        <p className="font-mono text-2xs uppercase tracking-[0.16em] text-brand">Product</p>
+        <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight sm:text-3xl">parse.bot and Code Hub</h1>
         <p className="mt-1 text-sm text-ink-muted">
           SportyBet prices and booking codes come straight from SportyBet (see{" "}
           <Link href="/admin/sportybet" className="text-brand hover:underline">SportyBet matching</Link>). parse.bot, paid per
@@ -169,7 +169,7 @@ function Meter({ label, used, cap }: { label: string; used: number; cap: number 
   const pct = cap > 0 ? Math.min(100, Math.round((used / cap) * 100)) : 0;
   return (
     <div className="rounded-xl border border-line bg-surface-2/60 p-3">
-      <p className="text-[11px] font-medium uppercase tracking-wider text-ink-dim">{label}</p>
+      <p className="text-2xs font-medium uppercase tracking-wider text-ink-dim">{label}</p>
       <p className="mt-1 font-mono text-lg">
         {used} <span className="text-sm text-ink-dim">/ {cap} credits</span>
       </p>
@@ -183,7 +183,7 @@ function Meter({ label, used, cap }: { label: string; used: number; cap: number 
 function Stat({ label, value }: { label: string; value: number }) {
   return (
     <div className="rounded-xl border border-line bg-surface-2/60 p-3 text-center">
-      <p className="text-[11px] font-medium uppercase tracking-wider text-ink-dim">{label}</p>
+      <p className="text-2xs font-medium uppercase tracking-wider text-ink-dim">{label}</p>
       <p className="mt-1 font-mono text-lg">{value}</p>
     </div>
   );

@@ -16,8 +16,8 @@ export function DataHealthView({ h, fotmobUi = true }: { h: DataHealth; fotmobUi
   if (!h.available) {
     return (
       <div className="max-w-2xl space-y-3">
-        <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-brand">Product</p>
-        <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-[28px]">Data health</h1>
+        <p className="font-mono text-2xs uppercase tracking-[0.16em] text-brand">Product</p>
+        <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">Data health</h1>
         <p className="text-sm text-ink-muted">
           Run migrations 0029 and 0030 first. This page reads the scheduled data layer they create.
         </p>
@@ -30,8 +30,8 @@ export function DataHealthView({ h, fotmobUi = true }: { h: DataHealth; fotmobUi
   return (
     <div className="min-w-0 max-w-full space-y-8">
       <div>
-        <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-brand">Product</p>
-        <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight sm:text-[28px]">Data health</h1>
+        <p className="font-mono text-2xs uppercase tracking-[0.16em] text-brand">Product</p>
+        <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight sm:text-3xl">Data health</h1>
         <p className="mt-1 max-w-3xl text-sm text-ink-muted">
           Scheduled jobs (GitHub Actions and a Supabase cron) bring every competition&rsquo;s fixtures, results,
           tables and prices into the database. This page shows how fresh each one is, what failed, and which club
@@ -50,7 +50,7 @@ export function DataHealthView({ h, fotmobUi = true }: { h: DataHealth; fotmobUi
 
       <section className="card max-w-full overflow-x-auto p-0">
         <table className="w-full min-w-[860px] text-sm">
-          <thead className="border-b border-line text-left text-[11px] uppercase tracking-wider text-ink-dim">
+          <thead className="border-b border-line text-left text-2xs uppercase tracking-wider text-ink-dim">
             <tr>
               <th className="px-4 py-3">Competition</th>
               <th className="px-3 py-3 text-right">Matches</th>
@@ -102,7 +102,7 @@ export function DataHealthView({ h, fotmobUi = true }: { h: DataHealth; fotmobUi
               ] as const
             ).map(([label, n]) => (
               <div key={label} className="rounded-xl border border-line bg-surface-2 px-3 py-2.5">
-                <p className="text-[10.5px] uppercase tracking-wider text-ink-dim">{label}</p>
+                <p className="text-2xs uppercase tracking-wider text-ink-dim">{label}</p>
                 <p className="tnum mt-1 font-mono text-lg font-semibold">{n.toLocaleString("en-GB")}</p>
               </div>
             ))}
@@ -129,7 +129,7 @@ export function DataHealthView({ h, fotmobUi = true }: { h: DataHealth; fotmobUi
             <div className="max-w-full overflow-x-auto">
               <table className="w-full min-w-[36rem] text-sm">
                 <thead>
-                  <tr className="text-left text-[10.5px] uppercase tracking-wider text-ink-dim">
+                  <tr className="text-left text-2xs uppercase tracking-wider text-ink-dim">
                     <th className="py-2 pr-3 font-medium">Competition</th>
                     <th className="py-2 pr-3 font-medium">Last run</th>
                     <th className="py-2 pr-3 text-right font-medium">Linked</th>

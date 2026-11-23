@@ -103,7 +103,7 @@ export function LeagueFilter({
         {/* "More" alone on the narrowest phones, where the full label pushed the row off screen. */}
         <span className="min-[480px]:hidden">More</span>
         <span className="hidden min-[480px]:inline">More leagues</span>
-        {counts && moreCount > 0 && <span className="tnum hidden rounded-full bg-surface-3 px-1.5 text-[11px] text-ink-muted min-[480px]:inline">{moreCount}</span>}
+        {counts && moreCount > 0 && <span className="tnum hidden rounded-full bg-surface-3 px-1.5 text-2xs text-ink-muted min-[480px]:inline">{moreCount}</span>}
         <svg viewBox="0 0 20 20" className={`size-4 transition-transform ${open ? "rotate-180" : ""}`} fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
           <path d="m5 7.5 5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
@@ -144,7 +144,7 @@ function Group({
   const sorted = counts ? [...leagues].sort((a, b) => Number((counts[b.code] ?? 0) > 0) - Number((counts[a.code] ?? 0) > 0)) : leagues;
   return (
     <section className="mb-4 last:mb-0">
-      <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-ink-dim">{title}</h3>
+      <h3 className="mb-2 text-2xs font-semibold uppercase tracking-wider text-ink-dim">{title}</h3>
       <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 lg:grid-cols-4">
         {sorted.map((l) => {
           const n = counts?.[l.code] ?? 0;
@@ -161,8 +161,8 @@ function Group({
             >
               <LeagueLogo code={l.code} size={22} />
               <span className="min-w-0 flex-1 truncate">{l.shortName}</span>
-              {proTags && isProLeague(l.code) && <span className="rounded-full bg-violet/15 px-1.5 py-0.5 text-[9px] font-bold text-violet">PRO</span>}
-              {counts && <span className="tnum text-[11px] text-ink-dim">{n || "–"}</span>}
+              {proTags && isProLeague(l.code) && <span className="rounded-full bg-violet/15 px-1.5 py-0.5 text-2xs font-bold text-violet">PRO</span>}
+              {counts && <span className="tnum text-2xs text-ink-dim">{n || "–"}</span>}
             </Link>
           );
         })}
@@ -204,7 +204,7 @@ function Chip({
       {/* A long name ("Conference League") gives way with an ellipsis rather than pushing the page wider than the phone. */}
       <span className="min-w-0 truncate">{label}</span>
       {pro && (
-        <span title="Pro league" className="shrink-0 rounded-full bg-violet/15 px-1.5 py-0.5 text-[9.5px] font-bold tracking-wide text-violet">
+        <span title="Pro league" className="shrink-0 rounded-full bg-violet/15 px-1.5 py-0.5 text-2xs font-bold tracking-wide text-violet">
           PRO
         </span>
       )}

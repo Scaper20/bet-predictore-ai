@@ -79,7 +79,7 @@ export default async function GoalsStatsPage({ searchParams }: { searchParams: P
 function Avg({ label, value, suffix = "", decimals = 0, i }: { label: string; value: number; suffix?: string; decimals?: number; i: number }) {
   return (
     <div style={{ ["--i" as string]: i }} className="card p-4">
-      <p className="text-[10.5px] font-semibold uppercase tracking-wider text-ink-dim">{label}</p>
+      <p className="text-2xs font-semibold uppercase tracking-wider text-ink-dim">{label}</p>
       <p className="mt-1.5 font-mono tracking-tight text-2xl font-medium text-ink">
         <AnimatedNumber value={value} decimals={decimals} suffix={suffix} />
       </p>

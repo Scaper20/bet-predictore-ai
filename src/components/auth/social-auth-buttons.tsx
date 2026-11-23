@@ -62,7 +62,7 @@ export function SocialAuthButtons({ next }: { next: string }) {
         <div className="absolute inset-0 flex items-center">
           <div className="w-full border-t border-line" />
         </div>
-        <span className="relative bg-shell px-3 text-[11px] font-medium text-ink-dim">or with email</span>
+        <span className="relative bg-shell px-3 text-2xs font-medium text-ink-dim">or with email</span>
       </div>
     </div>
   );

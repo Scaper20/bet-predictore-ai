@@ -57,7 +57,7 @@ export function MatchTabs({ tabs }: { tabs: MatchTab[] }) {
 
   return (
     <div>
-      <div ref={bar} className="sticky top-[var(--header-h)] z-20 -mx-4 border-b border-line bg-canvas/90 px-4 backdrop-blur-md sm:mx-0 sm:px-0">
+      <div ref={bar} className="sticky top-[var(--header-h)] z-20 -mx-4 border-b border-line glass-bar px-4 sm:mx-0 sm:px-0">
         <SlidingTabs
           ariaLabel="Match sections"
           variant="underline"

@@ -26,7 +26,7 @@ export function OutcomePanel({ prediction, facts = true }: { prediction: Predict
           return (
             <div key={r.key} className={`min-w-0 rounded-xl px-2 py-2.5 text-center ${top ? "bg-brand/10 ring-1 ring-brand/40" : "bg-surface-2"}`}>
               <p className={`tnum font-mono text-lg font-semibold tracking-tight sm:text-xl ${top ? "text-brand" : "text-ink"}`}>{percent(r.value)}</p>
-              <p className="mt-0.5 truncate text-[11px] text-ink-dim" title={r.label}>{r.label}</p>
+              <p className="mt-0.5 truncate text-2xs text-ink-dim" title={r.label}>{r.label}</p>
             </div>
           );
         })}
@@ -45,7 +45,7 @@ export function OutcomePanel({ prediction, facts = true }: { prediction: Predict
 function Fact({ label, value, hot = false }: { label: string; value: string; hot?: boolean }) {
   return (
     <div className="min-w-0 px-1 py-2">
-      <dt className="truncate text-[10px] font-medium uppercase tracking-wider text-ink-dim">{label}</dt>
+      <dt className="truncate text-2xs font-medium uppercase tracking-wider text-ink-dim">{label}</dt>
       <dd className={`tnum mt-0.5 font-mono text-sm font-semibold ${hot ? "text-brand" : "text-ink"}`}>{value}</dd>
     </div>
   );
@@ -87,7 +87,7 @@ export function GoalsPanel({ prediction }: { prediction: Prediction }) {
       <p className="mb-3 text-xs leading-relaxed text-ink-muted">{expectSentence(prediction)}</p>
       <table className="w-full text-sm">
         <thead>
-          <tr className="text-[10.5px] uppercase tracking-wider text-ink-dim">
+          <tr className="text-2xs uppercase tracking-wider text-ink-dim">
             <th className="pb-1.5 text-left font-medium">Line</th>
             <th className="pb-1.5 text-right font-medium">Over</th>
             <th className="pb-1.5 text-right font-medium">Under</th>
@@ -154,7 +154,7 @@ export function CorrectScorePanel({ prediction }: { prediction: Prediction }) {
             <p className="tnum font-mono text-base font-semibold">
               {s.home}-{s.away}
             </p>
-            <p className="tnum text-[11px] text-ink-dim" title={oneIn(s.probability)}>{percent(s.probability, 1)}</p>
+            <p className="tnum text-2xs text-ink-dim" title={oneIn(s.probability)}>{percent(s.probability, 1)}</p>
           </li>
         ))}
       </ol>
@@ -196,7 +196,7 @@ function BarCell({ label, value }: { label: string; value: number }) {
   return (
     <div className="min-w-0">
       <div className="mb-1 flex items-baseline justify-between gap-2">
-        <span className="min-w-0 truncate text-[11px] text-ink-dim">{label}</span>
+        <span className="min-w-0 truncate text-2xs text-ink-dim">{label}</span>
         <span className="tnum text-xs font-semibold">{percent(value)}</span>
       </div>
       <ProbabilityBar value={value} tone={value > 0.5 ? "brand" : "neutral"} />
@@ -269,13 +269,13 @@ function BigStat({ label, value, highlight }: { label: string; value: string; hi
       className={`min-w-0 rounded-lg px-3 py-3 text-center ${highlight ? "bg-brand/10" : "bg-surface-2"}`}
     >
       <p className={`tnum text-xl font-bold ${highlight ? "text-brand" : ""}`}>{value}</p>
-      <p className="mt-0.5 truncate text-[11px] text-ink-dim">{label}</p>
+      <p className="mt-0.5 truncate text-2xs text-ink-dim">{label}</p>
     </div>
   );
 }
 
 function Footnote({ children }: { children: React.ReactNode }) {
-  return <p className="mt-3 text-[11px] leading-relaxed text-ink-dim">{children}</p>;
+  return <p className="mt-3 text-2xs leading-relaxed text-ink-dim">{children}</p>;
 }
 
 /**
@@ -304,7 +304,7 @@ export function HalvesPanel({ prediction }: { prediction: Prediction }) {
 
   return (
     <Panel title="Halves" hint="Half time and second half">
-      <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-ink-dim">Half-time result</p>
+      <p className="mb-3 text-2xs font-semibold uppercase tracking-wider text-ink-dim">Half-time result</p>
       <div className="space-y-3">
         {ht.map((r) => (
           <div key={r.label}>
@@ -326,7 +326,7 @@ export function HalvesPanel({ prediction }: { prediction: Prediction }) {
         </AskList>
       </div>
 
-      <p className="mb-2 mt-5 text-[11px] font-semibold uppercase tracking-wider text-ink-dim">Half time / full time, likeliest</p>
+      <p className="mb-2 mt-5 text-2xs font-semibold uppercase tracking-wider text-ink-dim">Half time / full time, likeliest</p>
       <ul className="space-y-1.5">
         {htft.map(([k, v]) => (
           <li key={k} className="flex items-baseline justify-between gap-3 text-sm">

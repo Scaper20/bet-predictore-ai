@@ -59,7 +59,7 @@ export function SportyBetLinesView({ tabs }: { tabs: { key: string; title: strin
 
 function Legend() {
   return (
-    <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-ink-dim">
+    <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-2xs text-ink-dim">
       <span>
         <span className="font-mono font-semibold text-ink">62%</span> our chance it wins
       </span>
@@ -83,7 +83,7 @@ function Table({ t }: { t: LineTable }) {
       <p className="border-b border-line bg-surface-2/60 px-3 py-2 text-xs font-semibold text-ink">{t.title}</p>
       <table className="w-full table-fixed text-sm">
         <thead>
-          <tr className="text-[10.5px] uppercase tracking-wider text-ink-dim">
+          <tr className="text-2xs uppercase tracking-wider text-ink-dim">
             {!one && <th className="w-[28%] px-3 py-1.5 text-left font-medium normal-case tracking-normal">{t.lineLabel}</th>}
             {t.sides.map((s) => (
               <th key={s} className="truncate px-2 py-1.5 text-right font-medium normal-case tracking-normal" title={s}>
@@ -116,7 +116,7 @@ function Cell({ c, lead }: { c: LineCell; lead: boolean }) {
   return (
     <span className="inline-flex flex-col items-end leading-tight">
       <span className={`tnum font-mono text-sm ${lead ? "font-semibold text-ink" : "text-ink-muted"}`}>{percent(c.win)}</span>
-      <span className="tnum flex items-baseline gap-1.5 font-mono text-[11px]">
+      <span className="tnum flex items-baseline gap-1.5 font-mono text-2xs">
         {c.refund > 0.005 && (
           <span className="text-ink-dim" title={`${percent(c.refund)} chance the stake (or half) comes back`}>
             ↺{percent(c.refund)}

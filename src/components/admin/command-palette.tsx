@@ -45,8 +45,8 @@ export function CommandPalette({ nav, onClose }: { nav: NavSection[]; onClose: (
 
   return (
     <div className="fixed inset-0 z-[60] flex items-start justify-center px-4 pt-[12vh]" role="dialog" aria-modal="true" aria-label="Jump to a page">
-      <button type="button" aria-label="Close" className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <div className="relative w-full max-w-lg overflow-hidden rounded-xl border border-line-strong bg-shell shadow-2xl" onKeyDown={onKeyDown}>
+      <button type="button" aria-label="Close" className="animate-overlay-in absolute inset-0 glass-scrim" onClick={onClose} />
+      <div className="animate-dialog-in relative w-full max-w-lg overflow-hidden rounded-xl border border-line-strong glass-panel" onKeyDown={onKeyDown}>
         <div className="flex items-center gap-3 border-b border-line px-4">
           <AdminIcon name="search" className="size-4 text-ink-dim" />
           <input
@@ -61,7 +61,7 @@ export function CommandPalette({ nav, onClose }: { nav: NavSection[]; onClose: (
             aria-label="Search pages"
             aria-activedescendant={items[cursor] ? `cmd-${items[cursor].href}` : undefined}
           />
-          <kbd className="rounded border border-line px-1.5 py-0.5 font-mono text-[10px] text-ink-dim">ESC</kbd>
+          <kbd className="rounded border border-line px-1.5 py-0.5 font-mono text-2xs text-ink-dim">ESC</kbd>
         </div>
         <ul className="max-h-[50vh] overflow-y-auto p-2" role="listbox">
           {items.length === 0 && <li className="px-3 py-6 text-center text-xs text-ink-dim">No page matches &ldquo;{query}&rdquo;.</li>}
@@ -77,7 +77,7 @@ export function CommandPalette({ nav, onClose }: { nav: NavSection[]; onClose: (
               >
                 <AdminIcon name={item.icon} className={`size-4 ${i === cursor ? "text-brand" : "text-ink-dim"}`} />
                 <span className="flex-1">{item.label}</span>
-                <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink-dim">{item.section}</span>
+                <span className="font-mono text-2xs uppercase tracking-[0.12em] text-ink-dim">{item.section}</span>
                 {i === cursor && <AdminIcon name="arrow" className="size-3.5 text-ink-dim" />}
               </button>
             </li>

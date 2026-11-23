@@ -71,7 +71,7 @@ export function MatchCard({ match, prediction }: { match: Match; prediction?: Pr
       </div>
 
       {live && (
-        <p className="mt-3 flex items-center gap-1.5 text-[11px] font-semibold text-brand">
+        <p className="mt-3 flex items-center gap-1.5 text-2xs font-semibold text-brand">
           ⚡ Live win probability inside
         </p>
       )}
@@ -79,7 +79,7 @@ export function MatchCard({ match, prediction }: { match: Match; prediction?: Pr
       {prediction && prediction.sufficiency.publishable && (
         <div className="mt-4 border-t border-line pt-4">
           <div className="mb-2.5 flex items-center justify-between gap-2">
-            <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-ink-dim">
+            <span className="flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-wider text-ink-dim">
               Model read
               {prediction.topPick && !isLockedPick(prediction.topPick) && isProLeague(match.league.code) && <ViewerPlanTag />}
             </span>
@@ -104,7 +104,7 @@ export function MatchCard({ match, prediction }: { match: Match; prediction?: Pr
 
       {prediction && !prediction.sufficiency.publishable && (
         <div className="mt-4 border-t border-line pt-3">
-          <p className="text-[11px] leading-relaxed text-ink-dim">
+          <p className="text-2xs leading-relaxed text-ink-dim">
             Not enough completed matches in this competition to publish a pick.
           </p>
         </div>
@@ -143,7 +143,7 @@ function Outcome({ label, value, isTop }: { label: string; value: number; isTop:
   return (
     <div className={`rounded-lg px-2.5 py-2 ${isTop ? "bg-brand/8" : "bg-surface-2"}`}>
       <div className="flex items-baseline justify-between gap-1">
-        <span className="text-[11px] font-semibold text-ink-dim">{label}</span>
+        <span className="text-2xs font-semibold text-ink-dim">{label}</span>
         <span className={`tnum text-xs font-bold ${isTop ? "text-brand" : "text-ink"}`}>
           {percent(value)}
         </span>

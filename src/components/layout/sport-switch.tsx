@@ -11,7 +11,7 @@ import { soonHref } from "@/lib/nav";
 export function SportSwitch({ size = "md", onNavigate }: { size?: "md" | "lg"; onNavigate?: () => void }) {
   const big = size === "lg";
   const tab = `flex items-center justify-center gap-2 rounded-[9px] font-semibold transition-colors ${
-    big ? "h-10 text-sm" : "h-8 px-3 text-[13px]"
+    big ? "h-10 text-sm" : "h-8 px-3 text-sm"
   }`;
   return (
     <div
@@ -26,7 +26,7 @@ export function SportSwitch({ size = "md", onNavigate }: { size?: "md" | "lg"; o
       <Link href={soonHref("basketball")} onClick={onNavigate} className={`${tab} text-ink-muted hover:text-ink`}>
         <HoopIcon />
         Basketball
-        <span className="rounded bg-surface-3 px-1.5 py-px text-[9px] font-bold uppercase tracking-wider text-ink-dim">Soon</span>
+        <span className="rounded bg-surface-3 px-1.5 py-px text-2xs font-bold uppercase tracking-wider text-ink-dim">Soon</span>
       </Link>
     </div>
   );

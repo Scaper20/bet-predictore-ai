@@ -159,7 +159,7 @@ export function BillingPlans({
               key={plan.id}
               ref={plan.id === chosen ? chosenRef : undefined}
               className={`card relative flex flex-col p-5 sm:p-7 ${
-                plan.id === chosen ? "border-brand ring-2 ring-brand/40" : plan.badge ? "border-brand/40 glow-brand" : ""
+                plan.id === chosen ? "border-brand ring-2 ring-brand/40" : plan.badge ? "border-brand/40" : ""
               }`}
             >
               {plan.id === chosen ? (
@@ -184,7 +184,7 @@ export function BillingPlans({
                   </span>
                 ) : null}
               </div>
-              {saving && <p className="mt-0.5 text-[11px] text-brand">Saves {money(saving.amount)} ({saving.percent}%)</p>}
+              {saving && <p className="mt-0.5 text-2xs text-brand">Saves {money(saving.amount)} ({saving.percent}%)</p>}
 
               <ul className="mt-4 flex-1 space-y-2">
                 {plan.features.map((f) => (
@@ -217,7 +217,7 @@ export function BillingPlans({
                 </Button>
               )}
               {plan.id !== "free" && !flutterwave && !button.disabled && !blocked && !unavailable && (
-                <p className="mt-2 text-center text-[11px] leading-snug text-ink-dim">
+                <p className="mt-2 text-center text-2xs leading-snug text-ink-dim">
                   Bank transfer, OPay, PalmPay, USSD or card. Pays for {SPAN[tierCycle]}, no auto-renew.
                   {renewable && (
                     <>

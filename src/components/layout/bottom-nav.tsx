@@ -51,7 +51,7 @@ export function BottomNav({ onOpenMenu, menuOpen }: { onOpenMenu: () => void; me
             <Icon name={t.icon} active={active} />
             {t.route === "live" && live !== null && live > 0 && (
               <span
-                className="tnum absolute -right-3 -top-1.5 grid min-w-4 place-items-center rounded-full bg-signal px-1 font-mono text-[9.5px] font-bold leading-4 text-canvas"
+                className="tnum absolute -right-3 -top-1.5 grid min-w-4 place-items-center rounded-full bg-signal px-1 font-mono text-2xs font-bold leading-4 text-canvas"
                 aria-label={`${live} live`}
               >
                 {live}
@@ -67,7 +67,7 @@ export function BottomNav({ onOpenMenu, menuOpen }: { onOpenMenu: () => void; me
   return (
     <nav data-bottom-nav
       aria-label="Primary"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-shell/92 backdrop-blur-xl lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-line glass-bar lg:hidden"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       <ul className={`grid grid-cols-5 ${HEIGHT_CLASS}`}>
@@ -122,7 +122,7 @@ function cell(active: boolean): string {
 
 function Label({ active, children }: { active: boolean; children: string }) {
   return (
-    <span className={`text-[10px] leading-none ${active ? "font-semibold text-brand" : "font-medium"}`}>{children}</span>
+    <span className={`text-2xs leading-none ${active ? "font-semibold text-brand" : "font-medium"}`}>{children}</span>
   );
 }
 

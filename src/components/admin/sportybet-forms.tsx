@@ -58,8 +58,8 @@ export function SportyBetForm({
         {pending && <Spinner className="size-3" />}
         {children}
       </Button>
-      {state.error && <p className="text-[11px] text-rose">{state.error}</p>}
-      {state.message && <p className="text-[11px] text-brand">{state.message}</p>}
+      {state.error && <p className="text-2xs text-rose">{state.error}</p>}
+      {state.message && <p className="text-2xs text-brand">{state.message}</p>}
     </form>
   );
 }

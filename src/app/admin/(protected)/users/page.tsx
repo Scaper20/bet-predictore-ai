@@ -82,8 +82,8 @@ export default async function AdminUsersPage({
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="font-mono text-[10.5px] uppercase tracking-[0.16em] text-brand">Customers</p>
-        <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight sm:text-[28px]">Users</h1>
+        <p className="font-mono text-2xs uppercase tracking-[0.16em] text-brand">Customers</p>
+        <h1 className="mt-1.5 font-display text-2xl font-semibold tracking-tight sm:text-3xl">Users</h1>
         <form className="flex w-full gap-2 sm:w-auto">
           <input
             type="search"

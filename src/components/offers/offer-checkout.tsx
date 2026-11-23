@@ -51,7 +51,7 @@ export function OfferCheckout({ slug, recipient, deadline, cta }: { slug: string
         {pending ? "Opening checkout…" : cta}
       </button>
       {error && <p className="text-center text-xs text-rose">{error}</p>}
-      <p className="text-center text-[11px] text-ink-dim">
+      <p className="text-center text-2xs text-ink-dim">
         Transfer, OPay, PalmPay, USSD or card
         {deadline && now !== null && (
           <>

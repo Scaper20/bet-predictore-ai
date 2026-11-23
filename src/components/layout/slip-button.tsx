@@ -41,7 +41,7 @@ export function SlipButton({ sport }: { sport: SportId }) {
       </svg>
       {count > 0 && (
         <span
-          className="tnum absolute -right-0.5 -top-0.5 grid min-w-4 place-items-center rounded-full bg-brand px-1 text-[10px] font-bold text-brand-ink"
+          className="tnum absolute -right-0.5 -top-0.5 grid min-w-4 place-items-center rounded-full bg-brand px-1 text-2xs font-bold text-brand-ink"
           aria-hidden
         >
           {count}

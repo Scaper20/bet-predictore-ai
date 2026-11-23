@@ -10,6 +10,13 @@ export const OPEN_SLIP_EVENT = "bx-open-slip";
 /** Opens the support chat (components/support/chat-widget.tsx). */
 export const OPEN_SUPPORT_EVENT = "bx-open-support";
 
+/** Opens the ⌘K command menu (components/layout/command-palette.tsx). */
+export const OPEN_PALETTE_EVENT = "bx-open-palette";
+
+export function openCommandPalette() {
+  window.dispatchEvent(new Event(OPEN_PALETTE_EVENT));
+}
+
 export function openSlipSheet() {
   window.dispatchEvent(new Event(OPEN_SLIP_EVENT));
 }

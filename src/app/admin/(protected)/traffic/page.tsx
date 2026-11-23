@@ -63,7 +63,7 @@ const bars = (rows: Ranked[], total?: number): BarRow[] =>
 
 function SourceHeader({ children, fetchedAt }: { children: ReactNode; fetchedAt: string }) {
   return (
-    <SectionLabel aside={<span className="font-mono text-[10.5px] text-ink-dim">Updated {new Date(fetchedAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Africa/Lagos" })} WAT · refreshes every 10 min</span>}>
+    <SectionLabel aside={<span className="font-mono text-2xs text-ink-dim">Updated {new Date(fetchedAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Africa/Lagos" })} WAT · refreshes every 10 min</span>}>
       {children}
     </SectionLabel>
   );
@@ -75,7 +75,7 @@ function SourceState({ result, name, steps }: { result: Exclude<SourceResult<unk
     return (
       <Panel title={`${name} didn't answer`} action={<StatusPill tone="rose">Error</StatusPill>}>
         <p className="text-sm text-ink-muted">The request failed, so there is nothing to show this time. It tries again in a minute.</p>
-        <p className="mt-3 rounded-md bg-surface-2 px-3 py-2 font-mono text-[11px] break-all text-ink-dim">{result.message}</p>
+        <p className="mt-3 rounded-md bg-surface-2 px-3 py-2 font-mono text-2xs break-all text-ink-dim">{result.message}</p>
       </Panel>
     );
   }
@@ -89,7 +89,7 @@ function SourceState({ result, name, steps }: { result: Exclude<SourceResult<unk
       <p className="mt-4 text-xs text-ink-dim">
         Still missing:{" "}
         {result.missing.map((m) => (
-          <code key={m} className="mr-1.5 rounded bg-surface-2 px-1.5 py-0.5 font-mono text-[11px] text-ink">
+          <code key={m} className="mr-1.5 rounded bg-surface-2 px-1.5 py-0.5 font-mono text-2xs text-ink">
             {m}
           </code>
         ))}
@@ -98,7 +98,7 @@ function SourceState({ result, name, steps }: { result: Exclude<SourceResult<unk
   );
 }
 
-const code = (s: string) => <code className="rounded bg-surface-2 px-1 py-0.5 font-mono text-[11px] text-ink">{s}</code>;
+const code = (s: string) => <code className="rounded bg-surface-2 px-1 py-0.5 font-mono text-2xs text-ink">{s}</code>;
 
 /* ----------------------------------------------------------------- Google */
 
@@ -300,7 +300,7 @@ function OursSection({ traffic, revenue }: { traffic: Awaited<ReturnType<typeof 
                     {s.referrerHost ?? (s.landingPage ? "Direct" : "No data")}
                     {s.utmSource && ` · ${s.utmSource}${s.utmMedium ? ` / ${s.utmMedium}` : ""}${s.utmCampaign ? ` (${s.utmCampaign})` : ""}`}
                   </p>
-                  <p className="mt-0.5 truncate font-mono text-[11px] text-ink-dim">{s.landingPage ?? "—"}</p>
+                  <p className="mt-0.5 truncate font-mono text-2xs text-ink-dim">{s.landingPage ?? "—"}</p>
                 </li>
               ))}
             </ul>

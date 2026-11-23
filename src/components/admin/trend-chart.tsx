@@ -45,7 +45,9 @@ function niceMax(max: number, f: TrendFormat): number {
  *
  * Marks: columns at most 24px wide with a 2px gap, rounded at the data end
  * and square at the baseline; hairline solid gridlines a step off the
- * surface.
+ * surface. Quiet by default: every column is a neutral step off the card and
+ * only today (and the column under the pointer) takes the accent, so the
+ * eye lands on the latest number first.
  */
 export function TrendChart({
   points,
@@ -82,7 +84,7 @@ export function TrendChart({
           {ticks.map((t) => (
             <span
               key={t}
-              className="tnum absolute right-0 -translate-y-1/2 font-mono text-[9.5px] text-ink-dim"
+              className="tnum absolute right-0 -translate-y-1/2 font-mono text-2xs text-ink-dim"
               style={{ top: `${100 - (t / top) * 100}%` }}
             >
               {fmt(t, format, true)}
@@ -109,13 +111,13 @@ export function TrendChart({
                   aria-describedby={active === i ? `${id}-tip` : undefined}
                 >
                   <span
-                    className={`relative w-full max-w-6 rounded-t-[4px] transition-opacity ${color} ${
-                      active === null || active === i ? "opacity-100" : "opacity-35"
-                    } ${p.value === 0 ? "opacity-0" : ""}`}
+                    className={`relative w-full max-w-6 rounded-t-[4px] transition-[opacity,background-color] duration-150 ${
+                      i === last || active === i ? color : "bg-surface-3"
+                    } ${active === null || active === i ? "opacity-100" : "opacity-50"} ${p.value === 0 ? "opacity-0" : ""}`}
                     style={{ height: `${Math.max(p.value > 0 ? 1.5 : 0, h)}%` }}
                   >
                     {labelled && active === null && (
-                      <span className="tnum absolute -top-4 left-1/2 -translate-x-1/2 whitespace-nowrap font-mono text-[9.5px] text-ink-muted">
+                      <span className="tnum absolute -top-4 left-1/2 -translate-x-1/2 whitespace-nowrap font-mono text-2xs text-ink-muted">
                         {fmt(p.value, format, true)}
                       </span>
                     )}
@@ -135,7 +137,7 @@ export function TrendChart({
               }}
             >
               <p className="tnum font-mono text-sm font-medium text-ink">{fmt(points[active].value, format)}</p>
-              <p className="text-[10.5px] text-ink-dim">
+              <p className="text-2xs text-ink-dim">
                 {dayLabel(points[active].day, true)}
                 {points[active].note ? ` · ${points[active].note}` : ""}
               </p>
@@ -143,7 +145,7 @@ export function TrendChart({
           )}
         </div>
       </div>
-      <div className="mt-2 flex justify-between pl-11 font-mono text-[9.5px] text-ink-dim" aria-hidden>
+      <div className="mt-2 flex justify-between pl-11 font-mono text-2xs text-ink-dim" aria-hidden>
         <span>{dayLabel(points[0].day)}</span>
         {n > 10 && <span>{dayLabel(points[Math.floor(n / 2)].day)}</span>}
         <span>{dayLabel(points[last].day)}</span>

@@ -39,6 +39,31 @@ export const MARKET_MODEL_FROM = Date.parse("2026-11-14T00:00:00+01:00");
  */
 export const BANDS_FROM = Date.parse("2026-11-20T00:00:00+01:00");
 
+/**
+ * 2026-11-28 00:00 in Lagos: from here every game with a SportyBet price is
+ * anchored to it (ModelOptions.marketRates): the model's expected goals are
+ * moved ANCHOR_WEIGHT of the way, in logs, toward the goals SportyBet's 1X2
+ * and over/under 2.5 prices imply, taken from the first board read for the
+ * game. Picks are published at most 48 hours ahead, so nothing already shown
+ * moves as long as this reaches production by 26 Nov.
+ *
+ * Live shadow (anchor_shadow, 431 games 6-23 Nov, 1X2 log loss, lower is better):
+ *   national-team and cup games  0.919 -> 0.853  (price 0.827), 156 games
+ *   other club leagues           1.071 -> 1.053  (price 1.037), 37 games
+ *   the 17 lab divisions         0.961 -> 0.950  (price 0.944), 238 games, 3 standard errors
+ * Over/under 2.5 improved in every group as well. docs/live-audit-2026-11-23.md.
+ */
+export const ANCHOR_FROM = Date.parse("2026-11-28T00:00:00+01:00");
+
+/** How far toward the price's goals the model moves. The only weight the shadow measured. */
+export const ANCHOR_WEIGHT = 0.5;
+
+/** The anchor weight for a game: 0 before ANCHOR_FROM. */
+export function anchorWeight(kickoff: string | number): number {
+  const at = typeof kickoff === "number" ? kickoff : Date.parse(kickoff);
+  return Number.isFinite(at) && at >= ANCHOR_FROM ? ANCHOR_WEIGHT : 0;
+}
+
 /** Share of a league's last-year training rows that must carry market goals for goals-v3 to apply. */
 export const MARKET_COVERAGE_MIN = 0.4;
 
